@@ -74,6 +74,7 @@ mesos-make: configure toor
 	cd build && make
 	cd build && make install DESTDIR=/dcos/toor
 
+.PHONY: shared-libs
 shared-libs: mesos-make
 	cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
 	cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/

@@ -81,6 +81,7 @@ shared-libs: mesos-make
 	cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
 	cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
 	cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
+	cp build/src/java/target/mesos-*.jar /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
 
 build:
 	mkdir -p build
@@ -89,7 +90,7 @@ build:
 configure: build bootstrap
 	cd build && ../mesos/configure \
 		--prefix=/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos \
-		--enable-optimize --disable-python --disable-java
+		--enable-optimize --disable-python
 
 .PHONY: bootstrap
 bootstrap: mesos

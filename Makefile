@@ -17,6 +17,8 @@ PKG_REL    = $(subst $(SPACE),.,$(strip $(ITEMS)))
 
 .PHONY: help
 help:
+	@echo "Build the DCOS tarball (requires Docker with volume mount support)"
+	@echo ""
 	@echo "Examples:"
 	@echo "  Snapshot build:"
 	@echo "    make all"

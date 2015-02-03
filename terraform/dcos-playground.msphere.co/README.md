@@ -1,4 +1,4 @@
-# dcos0.msphere.co
+# dcos-playground.msphere.co
 
 A Terraform managed test cluster for DCOS. All of the major setup elements are
 parameterized so it can be easily used as a starting point for other managed
@@ -19,11 +19,37 @@ cp terraform.tfvars.example terraform.tfvars
 vim terraform.tfvars
 ```
 
-### Test
+### Show
 
 Show details of currently deployed cluster
 ```
 terraform show
+```
+
+### Create
+
+If no cluster is currently deployed, then you'll need to re-create it and check
+in the new state.
+
+```
+./create.sh
+# Check in the new cluster state (including discovery_url.tf.json)
+git pull && git commit -a
+```
+
+### Connect
+
+Connect to the [Mesos](http://master0.dcos-playground.msphere.co:5050) and
+[Marathon](http://master0.dcos-playground.msphere.co:8080) web UI **requires
+an office or a VPN connection**.
+
+SSH to any of the instances with the username `core` and the
+[shared Mesosphere SSH key](https://mesosphere.onelogin.com/notes/13282).
+
+```
+ssh -i shared_key core@master0.dcos-playground.msphere.co
+ssh -i shared_key core@slave0.dcos-playground.msphere.co
+...
 ```
 
 ### Modify

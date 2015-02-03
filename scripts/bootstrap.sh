@@ -11,7 +11,7 @@ USAGE
 
 function globals {
   export REPO_ROOT="https://downloads.mesosphere.io"
-  export DCOS_TARBALL="dcos-0.0.1-0.1.20150130221546.4f9f3e0.tgz"
+  export DCOS_TARBALL="dcos-0.0.1-0.1.20150203225612.tgz"
   export JAVA_TARBALL="jre-7u75-linux-x64.tar.gz"
   export ZOOKEEPER_TARBALL="zookeeper-3.4.6.tar.gz"
   export MARATHON_TARBALL="marathon-0.8.0-RC1.tgz"

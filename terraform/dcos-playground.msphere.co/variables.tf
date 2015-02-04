@@ -48,5 +48,5 @@ variable "mesos_master_quorum" {
 }
 
 variable "slave_count" {
-  default = "3"
+  default = "1"
 }

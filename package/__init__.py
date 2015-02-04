@@ -56,15 +56,15 @@ import json
 import os
 import os.path
 
+
+local_cache = "/opt/mesosphere/packages"
+
 #TODO: /opt/mesosphere/packages
 package_base = "tests/resources/packages"
 usage_filename = "usage.json"
 run_base = "/opt/mesosphere/dcos"
 
 # TODO(cmaloney): Is Master / Is Slave?
-
-def not_implemented():
-  raise NotImplemented()
 
 class Package:
   kinds = dict()
@@ -104,7 +104,6 @@ class Package:
         return kinds[kind](path, usage)
 
     raise ValueError("Unknown package type.")
-
 
 
 class Module(Package):
@@ -183,6 +182,7 @@ class Systemd(Package):
   def __init__(self, path, usage):
     raise NotImplementedError()
 
+
 """Validates that a set of packages can be used together, namely checking
 
 1) There is exactly one mesos package
@@ -203,7 +203,7 @@ def validate(packages):
   has_mesos = False
   has_config = False
   has_systemd = False
-  raise NotImplemented()
+  raise NotImplementedError()
 
 
 # TODO(cmaloney): Support for framework packages(ala hdfs, marathon?)
@@ -238,14 +238,9 @@ def get_state(packages):
 def save_state(packages):
   pass
 
-
-
-
 def get_kind(usage):
   for kind in kinds():
     if kind in usage:
       return kind
 
-print(get_usage("mesos-0.22.0"))
-
-print(get_kind(get_usage("mesos-0.22.0")))
+def __init

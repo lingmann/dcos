@@ -14,7 +14,8 @@ function globals {
   export DCOS_TARBALL="dcos-0.0.1-0.1.20150203225612.tgz"
   export JAVA_TARBALL="jre-7u75-linux-x64.tar.gz"
   export ZOOKEEPER_TARBALL="zookeeper-3.4.6.tar.gz"
-  export MARATHON_TARBALL="marathon-0.8.0-RC1.tgz"
+  export MARATHON_VERSION="0.8.0"
+  export MARATHON_TARBALL="marathon-${MARATHON_VERSION}.tgz"
 }; globals
 
 function main {
@@ -49,7 +50,7 @@ function install_java {
 function install_marathon {
   local workdir="/opt/mesosphere/dcos/latest"
   cd "$workdir"
-  wget -nv "${REPO_ROOT}/marathon/v0.8.0-RC1/${MARATHON_TARBALL}" \
+  wget -nv "${REPO_ROOT}/marathon/${MARATHON_VERSION}/${MARATHON_TARBALL}" \
     -O "$MARATHON_TARBALL"
   tar xzf "${MARATHON_TARBALL}"
   rm -f "${workdir}/marathon"

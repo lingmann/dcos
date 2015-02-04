@@ -50,7 +50,7 @@ function install_java {
 function install_marathon {
   local workdir="/opt/mesosphere/dcos/latest"
   cd "$workdir"
-  wget -nv "${REPO_ROOT}/marathon/${MARATHON_VERSION}/${MARATHON_TARBALL}" \
+  wget -nv "${REPO_ROOT}/marathon/v${MARATHON_VERSION}/${MARATHON_TARBALL}" \
     -O "$MARATHON_TARBALL"
   tar xzf "${MARATHON_TARBALL}"
   rm -f "${workdir}/marathon"

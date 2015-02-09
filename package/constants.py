@@ -1,4 +1,4 @@
-
+version = "0.0"
 local_cache = "/opt/mesosphere/packages"
 
 # TODO: /opt/mesosphere/packages

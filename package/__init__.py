@@ -51,33 +51,64 @@ mesos install to the given directory.
 
 
 """
-from kinds.py import Package
+import json
+import os
+import os.path
+
+from package.exceptions import RepositoryError
+from package.kinds import Package
 
 
-"""Validates that a set of packages can be used together, namely checking
+def valid_active_set(packages):
+    # Validate that the config is reasonable.
 
-1) There is exactly one mesos package
-2) There is exactly one config package
-"""
+    def OneOfKind(kind):
+        pkgs_kind = list(filter(lambda pkg: pkg.kind == kind, packages))
+        if len(pkgs_kind) != 1:
+            raise RepositoryError(
+                "There should be exactly one active {0} packages. Current: {1}"
+                .format(kind, " ".join(pkgs_kind)))
 
+    # 1. There is exactly one mesos package.
+    OneOfKind("mesos")
 
-def activate(package_ids):
-    # Load all the packages info, ensuring they are on the host filesystem
-    loaded_packages = []
-    for id in package_ids:
-        loaded_packages.append(Package.load(id))
+    # 2. There is exactly one config package.
+    OneOfKind("config")
 
-    # TODO(cmaloney) Integrity check (signature, checksum)?
-
-    # Validate
-    raise NotImplementedError()
-
-
-def validate(packages):
-    raise NotImplementedError()
+    # Check that the config package is the right kind for this host.
 
 
-# TODO(cmaloney): Support for framework packages(ala hdfs, marathon?)
+class Repository:
+
+    def __init__(self, path):
+        self.__path = path
+
+    def list(self):
+        """List the available packages in the repository.
+
+        A package is a folder which contains a usage.json"""
+        packages = set()
+        for path in os.listdir(self.__path):
+            print(path)
+            if os.path.exists(os.path.join(self.__path, path, "usage.json")):
+                packages.add(path)
+        return packages
+
+    def get_active(self):
+        with open(os.path.join(self.__path, "active.json")) as f:
+            return set(json.load(f))
+
+    def load_packages(self, package_ids):
+        loaded_packages = list()
+        for id in package_ids:
+            loaded_packages.append(Package.load(os.path.join(self.__path, id)))
+        return loaded_packages
+
+    def integrity_check(self):
+        # Check that all packages in the local repository have valid
+        # signatures, are up to date, etc.
+        raise NotImplementedError()
+
 
 def kinds():
     return Package.kinds.keys()

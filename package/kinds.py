@@ -1,9 +1,11 @@
 import json
 import os
 
-from constants import run_base, usage_filename
+from package.constants import run_base, usage_filename
+from package.exceptions import PackageError
 
 
+# TODO(cmaloney): Validate usage.keys() should always be length 1.
 # TODO(cmaloney): Is Master / Is Slave?
 class Package:
     kinds = dict()
@@ -33,16 +35,18 @@ class Package:
 
     @staticmethod
     def load(path):
-        path
         filename = os.path.join(path, usage_filename)
-        with open(filename) as f:
-            usage = json.load(f)
+        try:
+            with open(filename) as f:
+                usage = json.load(f)
+        except FileNotFoundError as ex:
+            raise PackageError("No / unreadable usage.json in package: {0}".format(ex.strerror))
 
         for kind in Package.kinds:
             if kind in usage:
                 return Package.kinds[kind](path, usage)
 
-        raise ValueError("Unknown package type.")
+        raise ValueError("Unknown package type: {0}.".format(usage.keys()))
 
 
 class Module(Package):
@@ -94,14 +98,14 @@ class Config(Package):
     def __init__(self, path, usage):
         super().__init__('config', path, usage)
         info = usage['config']
-        self.__kind = info['kind']
+        self.__node_types = info['node_type']
         self.__version = info['version']
 
     @property
-    def kind(self):
+    def node_type(self):
         # kind gives us a sanity check so we don't apply a master config to
         # a slave or vice versa.(I)
-        return self.__kind
+        return self.__node_type
 
     @property
     def version(self):
@@ -111,19 +115,9 @@ class Config(Package):
 
         # TODO(cmaloney): Check valid for this type of system (master, config)
         os.symlink(
-            self.path + "/config", os.path.join(run_base, "config", self.kind))
-
-
-class Systemd(Package):
-    """Containts all the systemd files for running mesos"""
-
-    def __init__(self, path, usage):
-        raise NotImplementedError()
+            self.path + "/config", os.path.join(run_base, "config", self.node_type))
 
 
 Package.add_kind('config', Config)
 Package.add_kind('mesos', Mesos)
 Package.add_kind('module', Module)
-
-# Systemd unit files
-Package.add_kind('systemd', Systemd)

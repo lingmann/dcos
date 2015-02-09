@@ -1,10 +1,9 @@
 from setuptools import setup, find_packages
-from codecs import open
-from os import path
+from package.constants import version
 
 setup(
     name='dcos-pkg',
-    version=0.1,
+    version=version,
     description='DCOS blobg management + swapping',
     url='https://github.com/mesosphere/dcos-pkg',
     author='Mesosphere, Inc.',

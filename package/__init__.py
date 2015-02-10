@@ -141,17 +141,6 @@ class Repository:
                 packages.add(id)
         return packages
 
-    def get_active(self):
-        active_filename = self.get_active_filename()
-
-        if not os.path.exists(active_filename):
-            if os.path.exists(active_filename + ".old") or os.path.exists(active_filename + ".new"):
-                raise RepositoryError(
-                    "Broken deploy in history, see {0}.{new,old} for deploy state".format(active_filename))
-
-        with open(active_filename) as f:
-            return set(json.load(f))
-
     def load_packages(self, package_ids):
         loaded_packages = list()
         for id in package_ids:
@@ -171,14 +160,31 @@ class Repository:
     def remove(self, id):
         shutil.rmtree(self.package_path(id))
 
+
+class Install:
+
+    def __init__(self, root):
+        self.__root = root
+
     def get_active_filename(self):
-        return os.path.join(self.__path, "active.json")
+        return os.path.join(self.__root, "active.json")
+
+    def get_active(self):
+        active_filename = self.get_active_filename()
+
+        if not os.path.exists(active_filename):
+            if os.path.exists(active_filename + ".old") or os.path.exists(active_filename + ".new"):
+                raise RepositoryError(
+                    "Broken deploy in history, see {0}.{new,old} for deploy state".format(active_filename))
+
+        with open(active_filename) as f:
+            return set(json.load(f))
 
     # Updates the active file in a repository using a predictable atomic(ish) swap.
     class UpdateActive:
 
-        def __init__(self, repository, packages):
-            self.__active_name = repository.get_active_filename()
+        def __init__(self, install, packages):
+            self.__active_name = install.get_active_filename()
             self.__packages = packages
 
         def __enter__(self):
@@ -193,27 +199,26 @@ class Repository:
             if exc_type is None:
                 os.replace(self.__active_name + ".new", self.__active_name)
 
+    def activate(self, packages):
+        # Ensure the new set is reasonable
+        validate_active_set(packages)
 
-def activate(root, repository, packages):
-    # Ensure the new set is reasonable
-    validate_active_set(packages)
+        # Get the new config package
+        config_pkg = GetFirstPackageOfKind(packages, "config")
+        config_path = config_pkg.path
 
-    # Get the new config package
-    config_pkg = GetFirstPackageOfKind(packages, "config")
-    config_path = config_pkg.path
+        # Get the new mesos path
+        mesos_pkg = GetFirstPackageOfKind(packages, "mesos")
+        mesos_path = mesos_pkg.path
 
-    # Get the new mesos path
-    mesos_pkg = GetFirstPackageOfKind(packages, "mesos")
-    mesos_path = mesos_pkg.path
+        config_dir = os.path.join(self.__root, "config")
+        mesos_dir = os.path.join(self.__root, "mesos")
 
-    config_dir = os.path.join(root, "config")
-    mesos_dir = os.path.join(root, "mesos")
+        # Swap into place as atomically as possible
+        with Install.UpdateActive(self, packages):
+            os.remove(config_dir)
+            os.remove(mesos_dir)
 
-    # Swap into place as atomically as possible
-    with Repository.UpdateActive(repository, packages):
-        os.remove(config_dir)
-        os.remove(mesos_dir)
-
-        # Update filesystem symlinks for mesos, config
-        os.symlink(config_path, config_dir)
-        os.symlink(mesos_path, mesos_dir)
+            # Update filesystem symlinks for mesos, config
+            os.symlink(config_path, config_dir)
+            os.symlink(mesos_path, mesos_dir)

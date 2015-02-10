@@ -1,5 +1,5 @@
 import package.exceptions
-from package import Repository, valid_active_set
+from package import Repository, validate_active_set
 
 import pytest
 
@@ -26,7 +26,7 @@ def test_active(repository):
     assert active == set(["mesos-0.22.0", "mesos-config-ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
     # TODO(cmaloney): More comprehensive testing of the validation checks
-    valid_active_set(repository.load_packages(active))
+    validate_active_set(repository.load_packages(active))
 
 
 def test_load_bad(repository):

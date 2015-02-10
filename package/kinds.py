@@ -111,12 +111,6 @@ class Config(Package):
     def version(self):
         return self.__version
 
-    def activate(self):
-
-        # TODO(cmaloney): Check valid for this type of system (master, config)
-        os.symlink(
-            self.path + "/config", os.path.join(run_base, "config", self.node_type))
-
 
 Package.add_kind('config', Config)
 Package.add_kind('mesos', Mesos)

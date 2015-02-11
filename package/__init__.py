@@ -79,7 +79,16 @@ def validate_active_set(packages):
     # 2. There is exactly one config package.
     OneOfKind("config")
 
-    # Check that the config package is the right kind for this host.
+    ids = set(map(lambda pkg: pkg.id, packages))
+
+    # Every package in the set has all it's dependencies met
+    for package in packages:
+        if not package.requires.issubset(ids):
+            raise RepositoryError(
+                "Package {0} doesn't have all it's requirements met: {1} not a subset of {2}"
+                .format(package.id, ",".join(package.requires), ",".join(ids)))
+
+    # TODO(cmaloney): Validate config type matches host type?
 
 
 def get_env_file(packages):
@@ -111,7 +120,7 @@ class RemoteUrl(Remote):
                 shutil.copyfileobj(response, tmp_file)
 
             # Extract the package
-            shutil.ubpack_archive(tmp_file.name, target)
+            shutil.unpack_archive(tmp_file.name, target)
 
 
 # TODO(cmaloney): Add support for RemoteGithub, useful for grabbing config tarbals.

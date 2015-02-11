@@ -1,7 +1,7 @@
 import json
 import os
 
-from package.constants import run_base, usage_filename
+from package.constants import usage_filename
 from package.exceptions import PackageError
 
 
@@ -10,10 +10,11 @@ from package.exceptions import PackageError
 class Package:
     kinds = dict()
 
-    def __init__(self, kind, path, usage):
+    def __init__(self, kind, id, path, usage):
         self.__kind = kind
         self.__path = path
         self.__usage = usage
+        self.__requires = usage['requires']
 
     @property
     def kind(self):
@@ -22,6 +23,10 @@ class Package:
     @property
     def path(self):
         return self.__path
+
+    @property
+    def requires(self):
+        return self.__requires
 
     @property
     def usage(self):
@@ -49,39 +54,10 @@ class Package:
         raise ValueError("Unknown package type: {0}.".format(usage.keys()))
 
 
-class Module(Package):
-
-    def __init__(self, path, usage):
-        super().__init__('module', path, usage)
-        self.__flags = usage['module']
-
-        # Expand the module paths
-        for lib in self.__flags:
-            if lib['name']:
-                raise ValueError("Packaged modules may not use name")
-            else:
-                lib['file'] = os.path.join(path, lib['file'])
-
-            for module in lib['modules']:
-                if 'name' not in module:
-                    raise ValueError("Modules must have names")
-
-                # TODO(cmaloney): Add a mechanism for giving the list of
-                # optional and mandatory parameters to provide a better
-                # end-user configuration experience.
-                if 'parameters' in module:
-                    raise ValueError(
-                        "Packaged modules must not have default parameters.")
-
-    @property
-    def flags(self):
-        return self.__flags
-
-
 class Mesos(Package):
 
-    def __init__(self, path, usage):
-        super().__init__('mesos', path, usage)
+    def __init__(self, id, path, usage):
+        super().__init__('mesos', id, path, usage)
         info = usage['mesos']
         self.__version = info['version']
 
@@ -89,14 +65,11 @@ class Mesos(Package):
     def version(self):
         return self.__version
 
-    def activate(self):
-        os.symlink(self.path, os.path.join(run_base, "mesos"))
-
 
 class Config(Package):
 
-    def __init__(self, path, usage):
-        super().__init__('config', path, usage)
+    def __init__(self, id, path, usage):
+        super().__init__('config', id, path, usage)
         info = usage['config']
         self.__node_types = info['node_type']
         self.__version = info['version']
@@ -104,7 +77,7 @@ class Config(Package):
     @property
     def node_type(self):
         # kind gives us a sanity check so we don't apply a master config to
-        # a slave or vice versa.(I)
+        # a slave or vice versa.
         return self.__node_type
 
     @property
@@ -112,6 +85,14 @@ class Config(Package):
         return self.__version
 
 
+# Blobs used for zk, java, python, artemis/provisioning, packaging system, restart module
+class Blob(Package):
+
+    def __init__(self, id, path, usage):
+        super().__init__('mesos', id, path, usage)
+        info = usage['blob']
+        self.__kind = info['kind']
+
 Package.add_kind('config', Config)
 Package.add_kind('mesos', Mesos)
-Package.add_kind('module', Module)
+Package.add_kind('blob', Blob)

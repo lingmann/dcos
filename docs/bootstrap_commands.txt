@@ -1,8 +1,14 @@
 #!/bin/bash
 wget https://downloads.mesosphere.com/dcos-dist.tar.gz -o /tmp/dcos-dist.tar.gz
 tar -xzf dcos-dist.tar.gz /opt/mesosphere
-PATH=$PATH:/opt/mesosphere/bin
 
+# Run the bootstrap script which was downloaded as part of the distribution
+/opt/mesosphere/dcos-dist/bootstrap.sh
+
+# Inside the bootstrap script:
+PATH=$PATH:/opt/mesosphere/mesos-slave/bin:/opt/mesosphere/python/bin:/opt/mesosphere/packager/bin
+
+# Launch packager
 def is_slave():
   return os.path.exists(/opt/mesosphere/role/slave)
 
@@ -14,7 +20,7 @@ else
   # First master
   packager bootstrap --no-repository
 
-# packager --bootstrap does:
+# At this point we are inside packager bootstrap
 
 if master:
   wget http://{repository_url}/slave/active.json -o /opt/mesosphere/active.json.new

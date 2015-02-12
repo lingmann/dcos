@@ -1,0 +1,125 @@
+#!/bin/bash
+wget https://downloads.mesosphere.com/dcos-dist.tar.gz -o /tmp/dcos-dist.tar.gz
+tar -xzf dcos-dist.tar.gz /opt/mesosphere
+PATH=$PATH:/opt/mesosphere/bin
+
+def is_slave():
+  return os.path.exists(/opt/mesosphere/role/slave)
+
+if is_slave:
+  # First slave
+  packager bootstrap --repository={repository_url}
+
+else
+  # First master
+  packager bootstrap --no-repository
+
+# packager --bootstrap does:
+
+if master:
+  wget http://{repository_url}/slave/active.json -o /opt/mesosphere/active.json.new
+else
+  cp /opt/mesosphere/dcos-dist/active.json.default /opt/mesosphere/active.json.new
+
+guard_active_new = scope_guard(rm /opt/mesosphere/active.json.new)
+
+# Open and read active.json
+# The file contains a list of packages which should be active.
+# Store that into packages_to_activate
+packages_to_activate = load_json(/opt/mesosphere/active.json.new) # ["mesos-0.22.0", "mesos-config-12312312412"]
+for package in packages_to_activate
+  `packager fetch {package}`
+    # Note: Will use a secure temporary filename
+    - wget http://{repository_url}/packages/{package}.tar.gz -o /tmp/{package}.tar.gz
+    - tar -xzf /tmp/{package}.tar.gz /opt/mesosphere/packages/{package}/
+
+package_manifests = dict()
+
+for package in packages_to_activate
+  # load usage.json from the package.
+  package_manifests[package] = load_json(/opt/mesosphere/packages/{package}/active.json)
+
+# NOTE: We do validation to ensure the list of packages isn't going to cause
+# badness when we do procsesing later on. This is our guard against undefined behavior.
+# Things like writing out all the environment variables to a file, there is precedence
+# if we wrote out the same one twice, and it would be better to refuse to start
+# than have a sysadmin scratching his head wondering why it didn't apply.
+# Validate there are no overlapping provides.
+# Validate every package has it's set of "required" co-packages met.
+# Validate there are no overlapping systemd units in the packages
+# Validate there are no overlapping environment variables in the packages
+
+# Generate the final path by adding the paths for every package
+# TODO(cmaloney): There is going to be a security sensitive ordering here, because
+# if some package provides binaries which we expect to be mesos-slave. Some framework
+# Could think "I want to write a mesos-slave wrapper called `mesos-slave`" which will
+# execute the "real" mesos-slave, adding some special magic in.
+for package in packages_to_activate:
+  PATH += ":".join(/opt/mesosphere/packages/{package}/bin)
+
+# NOTE: if we used one directory we would require no duplicates and avoid this.
+# since the mesos package would always provide mesos-slave and that would always
+# conflict if another package tried to overwrite it.
+
+# Write all the environment variables packages expose + PATH into /opt/mesosphere/environment.new
+open("/opt/mesosphere/environment.new", "w")
+guard_active_new.add(rm /opt/mesosphere/environment.new)
+environment.write("PATH=" + path)
+
+# Make config at a well known location
+# Without this we __must__ ship systemd units + config + binaries for (say mesos) all in one big blob.
+# It is considerably simpler (And more reliable) to use well known names than rewrite the config on the fly.
+#
+# Explanation of the example:
+# The systemd unit needs to know
+# 1) The path to the mesos-{master, slave} binary
+# 2) The path to the configuration EnvironmentFile to use
+# 3) The extra environment variables to pass in (/opt/mesosphere/environment)
+#
+# If each of these lives in it's own package (Config __must__ be a seperate pakcage from mesos-slave so we can enable modules)
+# Then there is no way the systemd unit can know "this is the path to use".
+
+# Setup well known config locations
+# We must have config be a directory per package because things like mesos requires that credentials be stored
+# In a file, and we also need to supply an EnvironmentFile systemd to load in the flags for mesos.
+
+mkdir /opt/mesosphere/config.new/
+guard_active_new.add(rm /opt/mesosphere/config.new)
+
+for package in packages_to_activate:
+  ln -s /opt/mesosphere/{package}/config/ /opt/mesosphere/config.new/{package}/
+
+# No longer is removing the new config a good thing. We are doing the (as atomic as we can get it)
+guard_active_new.deactivate()
+
+# For this section we will alert if an operation doesn't work, because all of
+# these should have no possible failure, and don't really have a recovery
+# option since resetting is doing the same operation, but from old -> current.
+
+# TODO(cmaloney): Stop all running services (None, we're bootstrapping)
+# TODO(cmaloney): Archive active configuration if present (None, we're bootstrapping)
+# active.json - active.json.old
+# TODO(cmaloney): Disable old systemd units
+# TODO(cmaloney): It might be good to use hardlinks to make the .old variations
+# that way we keep running config "in a good state" as long as possible.
+
+# Swap new variants into place
+mvdir /opt/mesosphere/config.new /opt/mesosphere/config
+mv /opt/mesosphere/environment.new /opt/mesosphere/environment
+
+# Enable the systemd units so that we're in a good state if the machine reboots
+for package, manifest in package_manifests:
+  for systemd_unit in manifest.units:
+    # This makes a symlink.
+    # NOTE: WE might manually make these so we can guarantee all the old ones go away
+    # and the new ones replace them in every case.
+    exec(['systemctl','enable','/absolute/path/to/sysetmd_unit')
+
+# Force systemd to pick up the new configuration
+exec(['systemctl','daemon-reload'])
+
+# Start the services
+systemctl start {all the packages systemd units listed at once}
+
+# At this point we are up and running, ping the provisioner / deployment that we're exiting
+# and be done.

@@ -80,7 +80,7 @@ mesos-make: configure toor
 
 .PHONY: shared-libs
 shared-libs: mesos-make
-	bin/copy-libs.rb build/ /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
+	bin/copy-libs.rb toor/ toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
 
 build:
 	mkdir -p build

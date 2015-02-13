@@ -3,7 +3,7 @@ set -o errexit -o nounset -o pipefail -x
 
 function usage {
 cat <<USAGE
- USAGE: `basename $0`
+ USAGE: `basename "$0"`
   Builds Mesos inside a docker container.
   
  Required environment variables:
@@ -11,9 +11,6 @@ cat <<USAGE
   PKG_REL
 USAGE
 }; function --help { usage ;}; function -h { usage ;};
-
-: ${PKG_VER:?"ERROR: PKG_VER must be set"}
-: ${PKG_REL:?"ERROR: PKG_REL must be set"}
 
 function globals {
   export PKG_VER
@@ -29,6 +26,8 @@ function main {
 }
 
 function check_prereqs {
+  : ${PKG_VER:?"ERROR: PKG_VER must be set"}
+  : ${PKG_REL:?"ERROR: PKG_REL must be set"}
   if [ ! -d "${PROJECT_ROOT}/ext/mesos" ]
   then
     err "ERROR: expecting directory at ${PROJECT_ROOT}/ext/mesos"
@@ -71,7 +70,7 @@ function copy_shared_libs {
 }
 
 function msg { out "$*" >&2 ;}
-function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}
+function err { local x=$? ; msg "$*" ; return $(( x == 0 ? 1 : x )) ;}
 function out { printf '%s\n' "$*" ;}
 
 if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"

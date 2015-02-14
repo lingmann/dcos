@@ -1,7 +1,6 @@
-# Architecture
+# Architecture of getting dcos bits to machines
 
-## COmponent overview
-**DCOS CLI**: Issue commands to control the cluster
+*DCOS CLI*: Issue commands to control the cluster
  - dcos install module
  - dcos upgrade mesos {target-version}
  - dcos slave remove

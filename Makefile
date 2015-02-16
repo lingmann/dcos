@@ -44,7 +44,7 @@ ext/mesos.manifest:
 	sudo docker run \
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		-v $(CURDIR):/dcos $(DOCKER_IMAGE) bin/build_mesos.sh
-	# Chown files modified via Docker mount to UID/GID at time of make invocation
+	@# Chown files modified via Docker mount to UID/GID at time of make invocation
 	sudo chown -R $(UID):$(GID) ext/mesos build
 	@# Record state, used by other targets to determine DCOS version
 	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
@@ -64,7 +64,6 @@ tarball: mesos
 ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
 	@echo "Please check out at the desired build version. For example:"
-	@echo "  mkdir -p ext/mesos"
 	@echo "  git clone https://git-wip-us.apache.org/repos/asf/mesos.git ext/mesos"
 	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
 	@exit 1

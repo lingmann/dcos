@@ -6,6 +6,7 @@ UID          := $(shell id -u)
 GID          := $(shell id -g)
 PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
+ENVSUBST     ?= envsubst
 
 PKG_VER      ?= 0.0.1
 
@@ -68,6 +69,11 @@ assemble: marathon zookeeper java mesos
 		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tgz
 	@# Set up manifest contents
 	@cat ext/*.manifest > dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
+	#@# Build bootstrap script
+	@env "SUBST_PKG_VER=$($@_PKG_VER)" "SUBST_PKG_REL=$($@_PKG_REL)" \
+		$(ENVSUBST) '$$SUBST_PKG_VER:$$SUBST_PKG_REL' \
+		< src/scripts/bootstrap.sh \
+		> dist/bootstrap.sh
 	@# Checksum
 	@cd dist && sha256sum dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
 		dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256

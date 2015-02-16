@@ -68,8 +68,6 @@ assemble: marathon zookeeper java mesos
 		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tgz
 	@# Set up manifest contents
 	@cat ext/*.manifest > dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
-	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> \
-		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
 	@# Checksum
 	@cd dist && sha256sum dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
 		dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
@@ -108,6 +106,7 @@ ext/mesos.manifest:
 	@# Record state, used by other targets to determine DCOS version
 	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
 	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
+	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> $@
 
 .PHONY: docker_image
 docker_image:

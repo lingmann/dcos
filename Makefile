@@ -4,6 +4,7 @@ SPACE        := $(EMPTY) $(EMPTY)
 DOCKER_IMAGE := dcos-builder
 UID          := $(shell id -u)
 GID          := $(shell id -g)
+PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
 
 PKG_VER      ?= 0.0.1
@@ -70,7 +71,7 @@ clean:
 .PHONY: dist-clean
 dist-clean: clean
 	sudo rm -rf dist ext/*
-	sudo docker rmi -f $(DOCKER_IMAGE) || true
+	sudo docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################
 # Targets to test for pre-requisites

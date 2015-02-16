@@ -18,6 +18,19 @@ ifeq ($(origin PKG_REL), undefined)
 	PKG_REL    := $(subst $(SPACE),.,$(strip $(ITEMS)))
 endif
 
+ifeq ($(origin MESOS_GIT_SHA), undefined)
+	MESOS_GIT_SHA := \
+		$(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
+endif
+
+ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
+	$(error environment variable AWS_ACCESS_KEY_ID must be set)
+endif
+
+ifeq ($(origin AWS_SECRET_ACCESS_KEY), undefined)
+	$(error environment variable AWS_SECRET_ACCESS_KEY must be set)
+endif
+
 .PHONY: help
 help:
 	@echo "Build the DCOS tarball (requires Docker with volume mount support)"

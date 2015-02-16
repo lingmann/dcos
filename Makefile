@@ -34,8 +34,33 @@ help:
 	@echo "  MAKEFLAGS: $(MAKEFLAGS)"
 	@exit 0
 
-.PHONY: all
-all: tarball
+.PHONY: assemble
+assemble: marathon zookeeper java mesos
+	@# Extract PKG_VER and PKG_REL from the mesos manifest. Variables are global
+	@# and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' ext/mesos.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' ext/mesos.manifest))
+	@rm -rf dist && mkdir -p dist
+	@# Add external components to DCOS tarball
+	@cd ext && $(TAR) --numeric-owner --owner=0 --group=0 \
+		-cf ../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar \
+		marathon* zookeeper* java* mesos.manifest
+	@# Append Mesos build to DCOS tarball
+	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
+		$(TAR) --numeric-owner --owner=0 --group=0 \
+		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar mesos*
+	@gzip dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar
+	@mv dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar.gz \
+		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tgz
+	@# Set up manifest contents
+	@cat ext/*.manifest > dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
+	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> \
+		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
+	@# Checksum
+	@sha256sum dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
+		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
 
 .PHONY: mesos
 mesos: docker_image ext/mesos ext/mesos.manifest
@@ -53,13 +78,6 @@ ext/mesos.manifest:
 .PHONY: docker_image
 docker_image:
 	sudo docker build -t "$(DOCKER_IMAGE)" .
-
-.PHONY: tarball
-tarball: mesos
-	mkdir -p dist
-	cd build/mesos-toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL) && \
-		tar --numeric-owner --owner=0 --group=0 -cz \
-		-f ../../../../../../dist/dcos-$(PKG_VER)-$(PKG_REL).tgz mesos
 
 ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"

@@ -64,6 +64,15 @@ class CopyLibs
   end
 end
 
+if ARGV.length < 2
+  puts "Usage #{$0} <input executables/directories> <output directory>"
+  puts
+  puts "This script will check any input executables for shared libraries"
+  puts "they are linked against and copy those libraries to the output directory."
+  puts
+  exit 1
+end
+
 output_directory = ARGV.pop
 sources = ARGV
 

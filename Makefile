@@ -68,6 +68,41 @@ ext/mesos:
 	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
 	@exit 1
 
+.PHONY: marathon
+marathon: ext/marathon/marathon.jar
+
+ext/marathon/marathon.jar:
+	@echo "Downloading Marathon from $(MARATHON_URL)"
+	@# Transform paths in tarball so that marathon jar is extracted to desired
+	@# location. The wildcard pattern specified is pre-transform.
+	@wget -qO- "$(MARATHON_URL)" | \
+		$(TAR) -xzf - --transform 's,marathon-[0-9.]+/target/scala-[0-9.]+/marathon-assembly-[0-9.]+\.jar,marathon/marathon.jar,x' \
+		--show-transformed -C ext/ --wildcards '*/marathon-assembly-*.jar'
+	@echo 'MARATHON_URL="$(MARATHON_URL)"' > ext/marathon.manifest
+	@test -f $@
+
+.PHONY: zookeeper
+zookeeper: ext/zookeeper/bin/zkServer.sh
+
+ext/zookeeper/bin/zkServer.sh:
+	@echo "Downloading Zookeeper from $(ZOOKEEPER_URL)"
+	@wget -qO- "$(ZOOKEEPER_URL)" | \
+		$(TAR) -xzf - --transform 's,^zookeeper-[0-9.]+,zookeeper,x' \
+		--show-transformed -C ext/
+	@echo 'ZOOKEEPER_URL="$(ZOOKEEPER_URL)"' > ext/zookeeper.manifest
+	@test -f $@
+
+.PHONY: java
+java: ext/java/bin/java
+
+ext/java/bin/java:
+	@echo "Downloading Java from $(JAVA_URL)"
+	@wget -qO- "$(JAVA_URL)" | \
+		$(TAR) -xzf - --transform 's,^jre[0-9._]+,java,x' \
+		--show-transformed -C ext/
+	@echo 'JAVA_URL="$(JAVA_URL)"' > ext/java.manifest
+	@test -f $@
+
 .PHONY: clean
 clean:
 	sudo rm -rf build

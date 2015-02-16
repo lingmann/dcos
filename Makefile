@@ -10,25 +10,24 @@ TAR          ?= gtar
 PKG_VER      ?= 0.0.1
 
 ifeq ($(origin PKG_REL), undefined)
-	REL_MAJOR  := 0
-	REL_MINOR  := 1
-	REL_PATCH  := $(shell date -u +'%Y%m%d%H%M%S')
-	SHA        := $(shell git rev-parse --short HEAD)
-	ITEMS      := $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(SHA)
-	PKG_REL    := $(subst $(SPACE),.,$(strip $(ITEMS)))
+REL_MAJOR    := 0
+REL_MINOR    := 1
+REL_PATCH    := $(shell date -u +'%Y%m%d%H%M%S')
+SHA          := $(shell git rev-parse --short HEAD)
+ITEMS        := $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(SHA)
+PKG_REL      := $(subst $(SPACE),.,$(strip $(ITEMS)))
 endif
 
 ifeq ($(origin MESOS_GIT_SHA), undefined)
-	MESOS_GIT_SHA := \
-		$(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
+MESOS_GIT_SHA := $(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
 endif
 
 ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
-	$(error environment variable AWS_ACCESS_KEY_ID must be set)
+$(error environment variable AWS_ACCESS_KEY_ID must be set)
 endif
 
 ifeq ($(origin AWS_SECRET_ACCESS_KEY), undefined)
-	$(error environment variable AWS_SECRET_ACCESS_KEY must be set)
+$(error environment variable AWS_SECRET_ACCESS_KEY must be set)
 endif
 
 .PHONY: help

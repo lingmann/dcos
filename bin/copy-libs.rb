@@ -5,65 +5,71 @@ require 'fileutils'
 
 class CopyLibs
 
-	attr_reader :analysed, :libraries
+  attr_reader :analysed, :libraries
 
-	def initialize(sources, output_directory)
-		@sources, @output_directory = sources, output_directory
-		@libraries = {}
-		@analysed = false
-	end # def
+  def initialize(sources, output_directory)
+    @sources, @output_directory = sources, output_directory
+    @libraries = {}
+    @analysed = false
+  end # def
 
-	def analyse
-		@sources.each do |source|
-			raise "not a file: #{source}" unless File.exist?(source)
-			if File.directory?(source)
-				Find.find(source) do |file|
-					dependencies(file) if File.executable?(file) && File.file?(file)
-				end
-			else
-				dependencies(source)
-			end
-		end
-		@analysed = true
-	end # def
+  def analyse
+    @sources.each do |source|
+      raise "not readable: #{source}" unless File.readable?(source)
 
-	def dependencies(infile, depth = 0)
-		raise "recursion too deep" if depth > 100
+      if File.directory?(source)
+        Find.find(source) do |file|
+          dependencies(file) if File.executable?(file) && File.file?(file)
+        end
+      else
+        dependencies(source)
+      end
+    end
+    @analysed = true
+  end # def
 
-		puts "checking #{infile}"
-		cmd = "ldd '#{infile}'"
-		Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
-		  exit_status = wait_thr.value
-		  return unless exit_status.success?
+  def dependencies(infile, depth = 0)
+    raise "recursion too deep" if depth > 100
 
-		  while line = stdout.gets
-    		line = line.gsub(/^\s/, '').gsub(/\s+/, ' ')
-    		if /^(?<library>.*?)\s+=>\s+(?<library_path>\/.*?)\s+\([0-9a-fx]+\)/ =~ line
+    puts "checking #{infile}"
+    cmd = "ldd '#{infile}'"
+    Open3.popen3(cmd) do |stdin, stdout, stderr, wait_thr|
+      exit_status = wait_thr.value
+      return unless exit_status.success?
 
-    			if !@libraries.key?(library) && File.exist?(library_path)
-    				@libraries[library] = library_path
-    				dependencies(library_path, depth + 1)
-    			end
-    		end
-		  end # while
+      while line = stdout.gets
+        line = line.gsub(/^\s/, '').gsub(/\s+/, ' ')
+        if /^(?<library>.*?)\s+=>\s+(?<library_path>\/.*?)\s+\([0-9a-fx]+\)/ =~ line
 
-		end # Open3.popen3
-	end # def
+          if !@libraries.key?(library) && File.exist?(library_path)
+            @libraries[library] = library_path
+            dependencies(library_path, depth + 1)
+          end
+        end
+      end # while
 
-	def copy
-		raise "not a directory: #{@output_directory}" unless File.directory?(@output_directory)
+    end # Open3.popen3
+  end # def
 
-		analyse() unless @analysed
+  def copy
+    raise "not a writable directory: #{@output_directory}" unless \
+      File.directory?(@output_directory) && File.writable?(@output_directory)
 
-		@libraries.each do |library, library_path|
-			puts "copy #{library_path} => #{@output_directory}"
-			FileUtils.cp(library_path, @output_directory, :preserve => true)
-		end
-	end
+    analyse() unless @analysed
+
+    @libraries.each do |library, library_path|
+      puts "copy #{library_path} => #{@output_directory}"
+      FileUtils.cp(library_path, @output_directory, :preserve => true)
+    end
+  end
 end
 
 output_directory = ARGV.pop
 sources = ARGV
 
 cl = CopyLibs.new(sources, output_directory)
-cl.copy
+begin
+  cl.copy
+rescue => e
+  abort e.message
+end

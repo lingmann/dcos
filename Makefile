@@ -4,6 +4,7 @@ SPACE        := $(EMPTY) $(EMPTY)
 DOCKER_IMAGE := dcos-builder
 UID          := $(shell id -u)
 GID          := $(shell id -g)
+TAR          ?= gtar
 
 PKG_VER      ?= 0.0.1
 
@@ -70,3 +71,26 @@ clean:
 dist-clean: clean
 	sudo rm -rf dist ext/*
 	sudo docker rmi -f $(DOCKER_IMAGE) || true
+
+###############################################################################
+# Targets to test for pre-requisites
+###############################################################################
+
+.PHONY: prereqs
+prereqs: gtar docker sha256sum sed
+
+.PHONY: gtar
+gtar:
+	@hash $(TAR) 2>/dev/null || { echo >&2 "ERROR: GNU tar required for --transform"; exit 1; }
+
+.PHONY: docker
+docker:
+	@hash docker 2>/dev/null || { echo >&2 "ERROR: docker required"; exit 1; }
+
+.PHONY: sha256sum
+sha256sum:
+	@hash sha256sum 2>/dev/null || { echo >&2 "ERROR: sha256sum required"; exit 1; }
+
+.PHONY: sed
+sed:
+	@hash sed 2>/dev/null || { echo >&2 "ERROR: sed required"; exit 1; }

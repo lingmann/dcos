@@ -72,8 +72,8 @@ assemble: marathon zookeeper java mesos
 	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> \
 		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
 	@# Checksum
-	@sha256sum dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
-		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
+	@cd dist && sha256sum dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
+		dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
 
 .PHONY: publish
 publish:

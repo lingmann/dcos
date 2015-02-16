@@ -62,6 +62,28 @@ assemble: marathon zookeeper java mesos
 	@sha256sum dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
 		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
 
+.PHONY: publish
+publish:
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	@# Use docker image as a convenient way to run AWS CLI tools
+	@sudo docker run -v $(CURDIR):/dcos \
+		-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
+		-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
+		$(DOCKER_IMAGE) \
+		aws s3 mb s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
+	@sudo docker run -v $(CURDIR):/dcos \
+		-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
+		-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
+		$(DOCKER_IMAGE) \
+		aws s3 sync \
+		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
+		--recursive
+
 .PHONY: mesos
 mesos: docker_image ext/mesos ext/mesos.manifest
 

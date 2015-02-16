@@ -38,12 +38,17 @@ help:
 all: tarball
 
 .PHONY: mesos
-mesos: docker_image ext/mesos
+mesos: docker_image ext/mesos ext/mesos.manifest
+
+ext/mesos.manifest:
 	sudo docker run \
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		-v $(CURDIR):/dcos $(DOCKER_IMAGE) bin/build_mesos.sh
 	# Chown files modified via Docker mount to UID/GID at time of make invocation
 	sudo chown -R $(UID):$(GID) ext/mesos build
+	@# Record state, used by other targets to determine DCOS version
+	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
+	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
 
 .PHONY: docker_image
 docker_image:

@@ -9,6 +9,7 @@ RUN apt-get -qq update && apt-get -y install \
   cpp \
   patch \
   python-dev \
+  python-pip \
   git \
   libtool \
   default-jdk \
@@ -22,7 +23,6 @@ RUN apt-get -qq update && apt-get -y install \
   maven \
   libapr1-dev \
   libsvn-dev \
-  ruby \
-  ruby-dev
-RUN gem install --verbose fpm
+  ruby
+RUN pip install awscli
 WORKDIR /dcos

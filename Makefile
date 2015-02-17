@@ -11,7 +11,7 @@ DOCKER_RUN   ?= sudo docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
 	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
 
-PKG_VER      ?= 0.0.1
+PKG_VER      ?= 0.1.0
 
 ifeq ($(origin PKG_REL), undefined)
 REL_MAJOR    := 0

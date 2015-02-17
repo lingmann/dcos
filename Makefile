@@ -47,6 +47,9 @@ help:
 	@echo "  MAKEFLAGS: $(MAKEFLAGS)"
 	@exit 0
 
+.PHONY: all
+all: assemble
+
 .PHONY: assemble
 assemble: marathon zookeeper java mesos
 	@# Extract PKG_VER and PKG_REL from the mesos manifest. Variables are global
@@ -164,8 +167,8 @@ ext/java/bin/java:
 clean:
 	sudo rm -rf build
 
-.PHONY: dist-clean
-dist-clean: clean
+.PHONY: distclean
+distclean: clean
 	sudo rm -rf dist ext/*
 	sudo docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 

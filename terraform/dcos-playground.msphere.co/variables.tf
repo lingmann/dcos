@@ -51,6 +51,7 @@ variable "slave_count" {
   default = "1"
 }
 
+# Use s3.amazonaws.com to remove cloudfront cache layer
 variable "bootstrap_url" {
-  default = "https://downloads.mesosphere.io/dcos/snapshot/bootstrap.sh"
+  default = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/snapshot/bootstrap.sh"
 }

@@ -11,8 +11,6 @@ SHA       ?= $(shell git rev-parse --short HEAD)
 ITEMS      = $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(SHA)
 PKG_REL    = $(subst $(SPACE),.,$(strip $(ITEMS)))
 
-SUDO      ?= sudo
-
 ###############################################################################
 # Targets designed to run *outside* the Docker container
 ###############################################################################
@@ -37,7 +35,7 @@ help:
 .PHONY: all
 all: docker_image mesos
 	# Continue the make *inside* the Docker container
-	$(SUDO) docker run -v $(CURDIR):/dcos $(DOCKER_IMAGE) make \
+	sudo docker run -v $(CURDIR):/dcos $(DOCKER_IMAGE) make \
 		MAKEFLAGS=$(MAKEFLAGS) \
 		PKG_VER=$(PKG_VER) \
 		REL_MAJOR=$(REL_MAJOR) \
@@ -48,7 +46,7 @@ all: docker_image mesos
 
 .PHONY: docker_image
 docker_image:
-	$(SUDO) docker build -t "$(DOCKER_IMAGE)" .
+	sudo docker build -t "$(DOCKER_IMAGE)" .
 
 mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
@@ -59,11 +57,11 @@ mesos:
 
 .PHONY: clean
 clean:
-	$(SUDO) rm -rf build toor
+	sudo rm -rf build toor
 
 .PHONY: dist-clean
 dist-clean: clean
-	$(SUDO) docker rmi -f $(DOCKER_IMAGE)
+	sudo docker rmi -f $(DOCKER_IMAGE)
 
 ###############################################################################
 # Targets designed to run *inside* the Docker container

@@ -7,6 +7,9 @@ GID          := $(shell id -g)
 PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
 ENVSUBST     ?= envsubst
+DOCKER_RUN   ?= sudo docker run -v $(CURDIR):/dcos \
+	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
+	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
 
 PKG_VER      ?= 0.0.1
 
@@ -90,26 +93,33 @@ publish: docker_image
 	$(eval $@_PKG_REL := \
 		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
 	@# Use docker image as a convenient way to run AWS CLI tools
-	@sudo docker run -v $(CURDIR):/dcos \
-		-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
-		-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
-		$(DOCKER_IMAGE) \
-		aws s3 mb s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
-	@sudo docker run -v $(CURDIR):/dcos \
-		-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
-		-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY) \
-		$(DOCKER_IMAGE) \
-		aws s3 sync \
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
+		s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
 		--recursive
+
+.PHONY: publish-snapshot
+publish-snapshot: publish
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	@# Use docker image as a convenient way to run AWS CLI tools
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
+		s3://downloads.mesosphere.io/dcos/snapshot/
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
+		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/snapshot/
 
 .PHONY: mesos
 mesos: docker_image ext/mesos ext/mesos.manifest
 
 ext/mesos.manifest:
-	sudo docker run \
+	$(DOCKER_RUN) \
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
-		-v $(CURDIR):/dcos $(DOCKER_IMAGE) bin/build_mesos.sh
+		$(DOCKER_IMAGE) bin/build_mesos.sh
 	@# Chown files modified via Docker mount to UID/GID at time of make invocation
 	sudo chown -R $(UID):$(GID) ext/mesos build
 	@# Record state, used by other targets to determine DCOS version

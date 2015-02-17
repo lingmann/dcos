@@ -1,8 +1,8 @@
 # Package concepts
 
-*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z@._+-]. They may not contain ':', and may not start with a hyphen or a dot.
+*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z0-9@._+-]. They may not start with a hyphen or a dot.
 
-*Package ID*: `package-name:foobar` Combination package name + arbitrary other information (likely some sort of version indicator). The packaging system just cares that it can extract the package name from a package id, as well as can fetch the package from
+*Package ID*: `name-id` Combination package name + arbitrary other information (likely some sort of version indicator). The packaging system just cares that it can extract the package name from a package id, as well as can fetch the package from. The package id may not contain a '-'. Valid characters are [a-zA-Z0-9@._+-]
 
 ## Install directories
 

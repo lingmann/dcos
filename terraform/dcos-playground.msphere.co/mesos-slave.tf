@@ -54,6 +54,7 @@ coreos:
         Requires=bootstrap.service
         [Service]
         Restart=on-failure
+        Environment=JAVA_HOME=/opt/mesosphere/dcos/latest/java
         EnvironmentFile=/etc/environment
         ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-slave --master=zk://${aws_instance.mesos-master.private_ip}:2181/mesos --containerizers=docker,mesos --hostname=slave${count.index}.${var.uuid}.${var.domain} --log_dir=/var/log/mesos --executor_registration_timeout=5mins --isolation=cgroups/cpu,cgroups/mem --work_dir=/var/lib/mesos/slave
   fleet:

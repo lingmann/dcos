@@ -2,18 +2,37 @@ SHELL        := /bin/bash
 EMPTY        :=
 SPACE        := $(EMPTY) $(EMPTY)
 DOCKER_IMAGE := dcos-builder
+UID          := $(shell id -u)
+GID          := $(shell id -g)
+PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
+TAR          ?= gtar
+ENVSUBST     ?= envsubst
+DOCKER_RUN   ?= sudo docker run -v $(CURDIR):/dcos \
+	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
+	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
 
-PKG_VER   ?= 0.0.1
-REL_MAJOR ?= 0
-REL_MINOR ?= 1
-REL_PATCH ?= $(shell date -u +'%Y%m%d%H%M%S')
-SHA       ?= $(shell git rev-parse --short HEAD)
-ITEMS      = $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(SHA)
-PKG_REL    = $(subst $(SPACE),.,$(strip $(ITEMS)))
+PKG_VER      ?= 0.1.0
 
-###############################################################################
-# Targets designed to run *outside* the Docker container
-###############################################################################
+ifeq ($(origin PKG_REL), undefined)
+REL_MAJOR    := 0
+REL_MINOR    := 1
+REL_PATCH    := $(shell date -u +'%Y%m%d%H%M%S')
+SHA          := $(shell git rev-parse --short HEAD)
+ITEMS        := $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(SHA)
+PKG_REL      := $(subst $(SPACE),.,$(strip $(ITEMS)))
+endif
+
+ifeq ($(origin MESOS_GIT_SHA), undefined)
+MESOS_GIT_SHA := $(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
+endif
+
+ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
+$(error environment variable AWS_ACCESS_KEY_ID must be set)
+endif
+
+ifeq ($(origin AWS_SECRET_ACCESS_KEY), undefined)
+$(error environment variable AWS_SECRET_ACCESS_KEY must be set)
+endif
 
 .PHONY: help
 help:
@@ -28,76 +47,160 @@ help:
 	@echo "Configurable options via environment variable and defaults"
 	@echo "  PKG_VER: $(PKG_VER)"
 	@echo "  PKG_REL: $(PKG_REL)"
-	@echo "  SHA: $(SHA)"
 	@echo "  MAKEFLAGS: $(MAKEFLAGS)"
 	@exit 0
 
 .PHONY: all
-all: docker_image mesos
-	# Continue the make *inside* the Docker container
-	sudo docker run -v $(CURDIR):/dcos $(DOCKER_IMAGE) make \
-		MAKEFLAGS=$(MAKEFLAGS) \
-		PKG_VER=$(PKG_VER) \
-		REL_MAJOR=$(REL_MAJOR) \
-		REL_MINOR=$(REL_MINOR) \
-		REL_PATCH=$(REL_PATCH) \
-		SHA=$(SHA) \
-		tarball
+all: assemble
+
+.PHONY: assemble
+assemble: marathon zookeeper java mesos
+	@# Extract PKG_VER and PKG_REL from the mesos manifest. Variables are global
+	@# and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' ext/mesos.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' ext/mesos.manifest))
+	@rm -rf dist && mkdir -p dist
+	@# Add external components to DCOS tarball
+	@cd ext && $(TAR) --numeric-owner --owner=0 --group=0 \
+		-cf ../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar \
+		marathon* zookeeper* java* mesos.manifest
+	@# Append Mesos build to DCOS tarball
+	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
+		$(TAR) --numeric-owner --owner=0 --group=0 \
+		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar mesos*
+	@gzip dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar
+	@mv dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar.gz \
+		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tgz
+	@# Set up manifest contents
+	@cat ext/*.manifest > dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).manifest
+	#@# Build bootstrap script
+	@env "SUBST_PKG_VER=$($@_PKG_VER)" "SUBST_PKG_REL=$($@_PKG_REL)" \
+		$(ENVSUBST) '$$SUBST_PKG_VER:$$SUBST_PKG_REL' \
+		< src/scripts/bootstrap.sh \
+		> dist/bootstrap.sh
+	@# Checksum
+	@cd dist && sha256sum dcos-$($@_PKG_VER)-$($@_PKG_REL).* > \
+		dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
+
+.PHONY: publish
+publish: docker_image
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	@# Use docker image as a convenient way to run AWS CLI tools
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
+		s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
+		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
+		--recursive
+
+.PHONY: publish-snapshot
+publish-snapshot: publish
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	@# Use docker image as a convenient way to run AWS CLI tools
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
+		s3://downloads.mesosphere.io/dcos/snapshot/
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
+		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/snapshot/
+
+.PHONY: mesos
+mesos: docker_image ext/mesos ext/mesos.manifest
+
+ext/mesos.manifest:
+	$(DOCKER_RUN) \
+		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
+		$(DOCKER_IMAGE) bin/build_mesos.sh
+	@# Chown files modified via Docker mount to UID/GID at time of make invocation
+	sudo chown -R $(UID):$(GID) ext/mesos build
+	@# Record state, used by other targets to determine DCOS version
+	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
+	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
+	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> $@
 
 .PHONY: docker_image
 docker_image:
 	sudo docker build -t "$(DOCKER_IMAGE)" .
 
-mesos:
+ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
 	@echo "Please check out at the desired build version. For example:"
-	@echo "  git clone https://git-wip-us.apache.org/repos/asf/mesos.git mesos"
-	@echo "  pushd mesos && git checkout 0.21.1 && popd"
+	@echo "  git clone https://git-wip-us.apache.org/repos/asf/mesos.git ext/mesos"
+	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
 	@exit 1
+
+.PHONY: marathon
+marathon: ext/marathon/marathon.jar
+
+ext/marathon/marathon.jar:
+	@echo "Downloading Marathon from $(MARATHON_URL)"
+	@# Transform paths in tarball so that marathon jar is extracted to desired
+	@# location. The wildcard pattern specified is pre-transform.
+	@wget -qO- "$(MARATHON_URL)" | \
+		$(TAR) -xzf - --transform 's,marathon-[0-9.]+/target/scala-[0-9.]+/marathon-assembly-[0-9.]+\.jar,marathon/marathon.jar,x' \
+		--show-transformed -C ext/ --wildcards '*/marathon-assembly-*.jar'
+	@echo 'MARATHON_URL="$(MARATHON_URL)"' > ext/marathon.manifest
+	@test -f $@
+
+.PHONY: zookeeper
+zookeeper: ext/zookeeper/bin/zkServer.sh
+
+ext/zookeeper/bin/zkServer.sh:
+	@echo "Downloading Zookeeper from $(ZOOKEEPER_URL)"
+	@wget -qO- "$(ZOOKEEPER_URL)" | \
+		$(TAR) -xzf - --transform 's,^zookeeper-[0-9.]+,zookeeper,x' \
+		--show-transformed -C ext/
+	@echo 'ZOOKEEPER_URL="$(ZOOKEEPER_URL)"' > ext/zookeeper.manifest
+	@test -f $@
+
+.PHONY: java
+java: ext/java/bin/java
+
+ext/java/bin/java:
+	@echo "Downloading Java from $(JAVA_URL)"
+	@wget -qO- "$(JAVA_URL)" | \
+		$(TAR) -xzf - --transform 's,^jre[0-9._]+,java,x' \
+		--show-transformed -C ext/
+	@echo 'JAVA_URL="$(JAVA_URL)"' > ext/java.manifest
+	@test -f $@
 
 .PHONY: clean
 clean:
-	sudo rm -rf build toor
+	sudo rm -rf build
 
-.PHONY: dist-clean
-dist-clean: clean
-	sudo docker rmi -f $(DOCKER_IMAGE)
+.PHONY: distclean
+distclean: clean
+	sudo rm -rf dist ext/*
+	sudo docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################
-# Targets designed to run *inside* the Docker container
+# Targets to test for pre-requisites
 ###############################################################################
 
-.PHONY: tarball
-tarball: mesos-make shared-libs
-	cd toor && tar czvf dcos-$(PKG_VER)-$(PKG_REL).tgz opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)
+.PHONY: prereqs
+prereqs: gtar docker sha256sum sed
 
-.PHONY: mesos-make
-mesos-make: configure toor
-	cd build && make
-	cd build && make install DESTDIR=/dcos/toor
+.PHONY: gtar
+gtar:
+	@hash $(TAR) 2>/dev/null || { echo >&2 "ERROR: GNU tar required for --transform"; exit 1; }
 
-# TODO: Use output of ldd and grab all libs
-.PHONY: shared-libs
-shared-libs: mesos-make
-	cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
-	cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
-	cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
-	cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
-	cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
-	cp build/src/java/target/mesos-*.jar /dcos/toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos/lib/
+.PHONY: docker
+docker:
+	@hash docker 2>/dev/null || { echo >&2 "ERROR: docker required"; exit 1; }
 
-build:
-	mkdir -p build
+.PHONY: sha256sum
+sha256sum:
+	@hash sha256sum 2>/dev/null || { echo >&2 "ERROR: sha256sum required"; exit 1; }
 
-.PHONY: configure
-configure: build bootstrap
-	cd build && ../mesos/configure \
-		--prefix=/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL)/mesos \
-		--enable-optimize --disable-python
-
-.PHONY: bootstrap
-bootstrap: mesos
-	cd mesos && ./bootstrap
-
-toor:
-	mkdir -p toor
+.PHONY: sed
+sed:
+	@hash sed 2>/dev/null || { echo >&2 "ERROR: sed required"; exit 1; }

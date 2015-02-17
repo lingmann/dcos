@@ -50,3 +50,7 @@ variable "mesos_master_quorum" {
 variable "slave_count" {
   default = "1"
 }
+
+variable "bootstrap_url" {
+  default = "https://downloads.mesosphere.io/dcos/snapshot/bootstrap.sh"
+}

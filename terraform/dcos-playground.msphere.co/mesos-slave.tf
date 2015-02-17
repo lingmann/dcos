@@ -42,7 +42,7 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh
+        ExecStartPre=/usr/bin/wget -nv "${var.bootstrap_url}" -O /bootstrap.sh
         ExecStartPre=/usr/bin/chmod +x /bootstrap.sh
         ExecStart=/bootstrap.sh
     - name: mesos-slave.service

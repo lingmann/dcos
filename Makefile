@@ -7,7 +7,8 @@ GID          := $(shell id -g)
 PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
 ENVSUBST     ?= envsubst
-DOCKER_RUN   ?= sudo docker run -v $(CURDIR):/dcos \
+SUDO         ?= sudo
+DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
 	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
 
@@ -121,7 +122,7 @@ ext/mesos.manifest:
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		$(DOCKER_IMAGE) bin/build_mesos.sh
 	@# Chown files modified via Docker mount to UID/GID at time of make invocation
-	sudo chown -R $(UID):$(GID) ext/mesos build
+	$(SUDO) chown -R $(UID):$(GID) ext/mesos build
 	@# Record state, used by other targets to determine DCOS version
 	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
 	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
@@ -129,7 +130,7 @@ ext/mesos.manifest:
 
 .PHONY: docker_image
 docker_image:
-	sudo docker build -t "$(DOCKER_IMAGE)" .
+	$(SUDO) docker build -t "$(DOCKER_IMAGE)" .
 
 ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
@@ -175,12 +176,12 @@ ext/java/bin/java:
 
 .PHONY: clean
 clean:
-	sudo rm -rf build
+	$(SUDO) rm -rf build
 
 .PHONY: distclean
 distclean: clean
-	sudo rm -rf dist ext/*
-	sudo docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
+	$(SUDO) rm -rf dist ext/*
+	$(SUDO) docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################
 # Targets to test for pre-requisites

@@ -79,7 +79,7 @@ assemble: marathon zookeeper java mesos
 		dcos-$($@_PKG_VER)-$($@_PKG_REL).sha256
 
 .PHONY: publish
-publish:
+publish: docker_image
 	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
 	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
 	$(eval $@_PKG_VER := \

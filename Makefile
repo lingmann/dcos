@@ -66,7 +66,7 @@ assemble: marathon zookeeper java mesos
 	@# Add external components to DCOS tarball
 	@cd ext && $(TAR) --numeric-owner --owner=0 --group=0 \
 		-cf ../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar \
-		marathon* zookeeper* java* mesos.manifest
+		marathon zookeeper java *.manifest
 	@# Append Mesos build to DCOS tarball
 	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
 		$(TAR) --numeric-owner --owner=0 --group=0 \

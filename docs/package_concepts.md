@@ -30,7 +30,7 @@ Different things want to rely on finding certain packages at certain locations. 
   'environment' files inside of any package as well as a generated PATH and LD_LIBRARY_PATH containing the /opt/mesosphere/bin and /opt/mesosphere/lib
 /opt/mesosphere/bin/
 /opt/mesosphere/lib/
-/opt/mesosphere/config/
+/opt/mesosphere/etc/
 /opt/mesosphere/active/{name}/
 /opt/mesosphere/packages/{id}/
 /etc/systemd/system/dcos.target/

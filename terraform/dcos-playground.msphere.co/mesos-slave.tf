@@ -42,7 +42,7 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh
+        ExecStartPre=/usr/bin/wget -nv "${var.bootstrap_url}" -O /bootstrap.sh
         ExecStartPre=/usr/bin/chmod +x /bootstrap.sh
         ExecStart=/bootstrap.sh
     - name: mesos-slave.service
@@ -54,6 +54,7 @@ coreos:
         Requires=bootstrap.service
         [Service]
         Restart=on-failure
+        Environment=JAVA_HOME=/opt/mesosphere/dcos/latest/java
         EnvironmentFile=/etc/environment
         ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-slave --master=zk://${aws_instance.mesos-master.private_ip}:2181/mesos --containerizers=docker,mesos --hostname=slave${count.index}.${var.uuid}.${var.domain} --log_dir=/var/log/mesos --executor_registration_timeout=5mins --isolation=cgroups/cpu,cgroups/mem --work_dir=/var/lib/mesos/slave
   fleet:

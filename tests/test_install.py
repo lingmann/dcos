@@ -1,21 +1,34 @@
-from package import Install, Repository, activate
+""" Test reading and changing the active set of available packages"""
+
+from package import Install, Repository
 
 import pytest
-""" Test changing the active set of packages """
 
 
 @pytest.fixture
 def repository():
     return Repository("resources/packages")
 
-# All packages must be locally available
+
+@pytest.fixture
+def install():
+    return Install("resources/install", "resources/systemd")
 
 
-# No previous state, first active
-def test_new_activate(tmpdir, repository):
-    raise NotImplementedError()
-    activate(tmpdir, repository)
+# Test that the active set is detected correctly.
+def test_active(install):
+    active = install.get_active()
+    assert type(active) is set
 
-# Updating active
+    assert active == set(['mesos-config-ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8', 'mesos-0.22.0'])
 
-# Activate failed, loading old/new
+    # TODO(cmaloney): More comprehensive testing of the validation checks
+
+# TODO(cmaloney): All packages must be locally available in the repository
+
+
+# TODO(cmaloney): No previous state, first active
+
+# TODO(cmaloney): Updating active which is already full
+
+# TODO(cmaloney): Activate failed, loading old/new

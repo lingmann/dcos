@@ -1,13 +1,12 @@
 # Package concepts
 
-*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z0-9@._+-]. They may not start with a hyphen or a dot.
+*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z0-9@._+-]. They may not start with a hyphen or a dot. Must be at least 1 character long.
 
 *Package ID*: `name-id` Combination package name + arbitrary other information (likely some sort of version indicator). The packaging system just cares that it can extract the package name from a package id, as well as can fetch the package from. The package id may not contain a '-'. Valid characters are [a-zA-Z0-9@._+-]
 
 ## Install directories
 
 The packaging system makes use of some *well-known directories*. Well-known directories are used so that packages can find information from other packages without having to know the exact package version some piece is coming from.
-
 
 ## Package
 

@@ -1,135 +1,164 @@
 #!/usr/bin/env python3
 
 """
-Packages have ids for looking at the fs. Only one package of an id may
-be installed. There aren't sub-versions or anything at that level.
 
-Each package contains a usage.json.
-
-Note that we don't do anything other than listing installed packages, and sorting
-versions for components in UI. The actual ordering of versions is arbitrary because
-version numbers are hard. Things just work better if you follow something like
-semantic versioning.
-
-The usage.json describes the kind of data inside the package.
- Either:
- 1. mesos
- 2. mesos-module
- 3. config
-
-A package must be only one kind, and can only be enabled/disabled as a
-whole.
-
-usage.json format
-
-{
-  "mesos-module": ...
-  "mesos": {
-    "version": "version-string"
-  }
-}
-
-run_base folder layout
-######################################
-
-/config # Contains symlinks to current active configuration files.
-  mesos-master
-  mesos-slave
-  ...
-/mesos # Current installed mesos version
+See `docs/package_concepts.md` for the package layout.
 
 
-Config package layout
-########################################
+Packages have ids. Ids are composed of a name + blob. The blob is never
+introspected by the packaging stuff.
 
-/config # File containing the flags in whatever format is right for the kind.
-
-
-Mesos package layout
-#########################################
-mesos install to the given directory.
-
+Each package contains a usage.json. That contains a list of requires as well as
+envrionment variables from the package.
 
 """
 import json
 import os
 import os.path
+import re
 import shutil
 import urllib.parse
 import urllib.request
+from itertools import chain
 from tempfile import NamedTemporaryFile
 
-from package.exceptions import RepositoryError
-from package.kinds import Package
+from package.exceptions import PackageError, RepositoryError, ValidationError
+
+# TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
+# then just do the mutli-version stuff ourself and save a lot of re-implementation?
+
+# TODO(cmaloney): dcos.target.wants is what systemd ends up as.
+well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
+well_known_files = ["environment"]
+
+name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
+version_regex = "^[a-zA-Z0-9@_+:]+$"
 
 
-def validate_active_set(packages):
-    # Validate that the config is reasonable.
+class PackageId:
 
-    def OneOfKind(kind):
-        pkgs_kind = list(filter(lambda pkg: pkg.kind == kind, packages))
-        if len(pkgs_kind) != 1:
-            raise RepositoryError(
-                "There should be exactly one active {0} packages. Current: {1}"
-                .format(kind, " ".join(pkgs_kind)))
+    @staticmethod
+    def parse(id):
+        parts = id.rsplit('-', 1)
+        if len(parts) != 2:
+            raise ValidationError(
+                "Invalid package id {0} must contain a '-' seperating the name and version".format(id))
 
-    # 1. There is exactly one mesos package.
-    OneOfKind("mesos")
+        PackageId.validate_name(parts[0])
+        PackageId.validate_version(parts[1])
 
-    # 2. There is exactly one config package.
-    OneOfKind("config")
+        return parts[0], parts[1]
 
-    ids = set(map(lambda pkg: pkg.id, packages))
+    @staticmethod
+    def validate_name(name):
+        # [a-zA-Z0-9@._+-]
+        # May not start with '.' or '-'.
+        if not re.match(name_regex, name):
+            raise ValidationError("Invalid package name {0}. Must match the regex {1}".format(name, name_regex))
 
-    # Every package in the set has all it's dependencies met
+    @staticmethod
+    def validate_version(version):
+        # [a-zA-Z0-9@._+:]
+        # May not contain a '-'.
+        if not re.match(version_regex, version):
+            raise ValidationError(
+                "Invalid package version {0}. Must match the regex {1}".format(version, version_regex))
+
+    def __init__(self, id):
+        self.name, self.version = PackageId.parse(id)
+
+    def __repr__(self):
+        return '{0}-{1}'.format(self.name, self.version)
+
+
+class Package:
+
+    def __init__(self, path, id, usage):
+        self.__id = id
+        self.__path = path
+        self.__usage = usage
+
+    @property
+    def environment(self):
+        return self.__usage['environment']
+
+    @property
+    def id(self):
+        return self.__id
+
+    @property
+    def name(self):
+        return self.__id.name
+
+    @property
+    def path(self):
+        return self.__path
+
+    @property
+    def requires(self):
+        return self.__usage['requires']
+
+    @property
+    def version(self):
+        return self.__id.version
+
+    def __repr__(self):
+        return id
+
+
+# Check that a set of packages is reasonable.
+def validate_compatible(packages):
+    # Every package name appears only once.
+    names = set()
     for package in packages:
-        if not package.requires.issubset(ids):
-            raise RepositoryError(
-                "Package {0} doesn't have all it's requirements met: {1} not a subset of {2}"
-                .format(package.id, ",".join(package.requires), ",".join(ids)))
+        if package.name in names:
+            raise ValidationError(
+                "Repeated name {0} in set of packages {1}".format(package.name, ' '.join(packages)))
+        names.add(package.name)
 
-    # TODO(cmaloney): Validate config type matches host type?
+    # All requires are met.
+    # NOTE: Requires are given just to make it harder to accidentally
+    # break a cluster.
 
+    # Environment variables in packages, mapping from variable to package.
+    environment = dict()
 
-def get_env_file(packages):
-    """Get the command line options to activate the given package list."""
-    raise NotImplementedError()
+    for package in packages:
 
+        # All requirements of packages are met
+        for requirement in package.requires:
+            if requirement not in names:
+                raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}",
+                                      package,
+                                      requirement,
+                                      ' '.join(packages))
 
-class Remote:
+        # No repeated/conflicting environment variables.
+        for var in package.environment:
+            if var in environment:
+                raise ValidationError(
+                    "Repeated environment variable {0}. In both packages {1} and {2}.".format(
+                        var, environment[var], package))
+            environment[var] = package
 
-    def fetch_and_extract(id):
-        raise NotImplementedError()
-
-
-class RemoteUrl(Remote):
-
-    """Remote repository with all pacakges in a folder as tarballs."""
-
-    def __init__(self, url):
-        # TODO(cmaloney): Validate url format?
-        self.__url = url
-
-    def fetch_and_extract(self, id, target):
-        # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
-        # all the logic can go away, we gain integrity checking, etc.
-        filename = id + ".tar.gz"
-        url = urllib.parse.urljoin(self.__url, filename)
-        with NamedTemporaryFile(suffix=".tar.gz") as tmp_file:
-            with urllib.request.urlopen(url) as response:
-                shutil.copyfileobj(response, tmp_file)
-
-            # Extract the package
-            shutil.unpack_archive(tmp_file.name, target)
+    # TODO(cmaloney): More complete validation
+    #  - There are no repeated file/folder in the well_known_dirs
+    #  - There is a base set of required package names (packager, mesos, config)
+    #  - The config is for this specific type of host (master, slave)?
 
 
 # TODO(cmaloney): Add support for RemoteGithub, useful for grabbing config tarbals.
-def GetFirstPackageOfKind(packages, kind):
-    for package in packages:
-        if package.kind == kind:
-            return package
+def fetcher(self, base_url, id, target):
+    # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
+    # all the logic can go away, we gain integrity checking, etc.
+    filename = id + ".tar.gz"
+    url = urllib.parse.urljoin(base_url, filename)
+    with NamedTemporaryFile(suffix=".tar.gz") as tmp_file:
+        with urllib.request.urlopen(url) as response:
+            shutil.copyfileobj(response, tmp_file)
 
-    raise ValueError("No package of kind {0} in packages {1}".format(kind, packages))
+        # Extract the package
+        shutil.unpack_archive(tmp_file.name, target)
 
 
 class Repository:
@@ -150,84 +179,90 @@ class Repository:
                 packages.add(id)
         return packages
 
-    def load_packages(self, package_ids):
-        loaded_packages = list()
-        for id in package_ids:
-            loaded_packages.append(Package.load(self.package_path(id)))
-        return loaded_packages
+    # Load the given package
+    def load(self, id):
+        path = self.package_path(id)
+        filename = os.path.join(path, "usage.json")
+        usage = None
+        try:
+            with open(filename) as f:
+                usage = json.load(f)
+                print(usage)
+        except FileNotFoundError as ex:
+            raise PackageError("No / unreadable usage.json in package: {0}".format(ex.strerror))
+
+        if not isinstance(usage, dict):
+            raise PackageError("Usage should be a dictionary, not a {0}".format(type(usage).__name__))
+
+        return Package(path, id, usage)
+
+    def load_packages(self, ids):
+        packages = set()
+        for id in ids:
+            packages.add(self.load(id))
 
     def integrity_check(self):
         # Check that all packages in the local repository have valid
         # signatures, are up to date, all packages valid contents, etc.
         raise NotImplementedError()
 
-    def add(self, remote, id):
+    def add(self, fetcher, id):
         # TODO(cmaloney): Supply a temporary directory to extract to
-        # Then swap that into place.
-        remote.fetch_and_extract(remote, id, self.package_path(id))
+        # Then swap that into place, preventing partially-extracted things from
+        # becoming an issue.
+        fetcher(id, self.package_path(id))
 
     def remove(self, id):
         shutil.rmtree(self.package_path(id))
 
 
+# A rooted install tree.
+# Inside the install tree there will be all the well known folders and files as
+# described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root):
+    def __init__(self, root, systemd):
         self.__root = root
-
-    def get_active_filename(self):
-        return os.path.join(self.__root, "active.json")
+        self.__systemd = systemd
 
     def get_active(self):
-        active_filename = self.get_active_filename()
+        """the active folder has symlinks to all the active packages.
 
-        if not os.path.exists(active_filename):
-            if os.path.exists(active_filename + ".old") or os.path.exists(active_filename + ".new"):
+        Return the full package ids (The targets of the symlinks)."""
+        active_dir = os.path.join(self.__root, "active")
+
+        if not os.path.exists(active_dir):
+            if os.path.exists(active_dir + ".old") or os.path.exists(active_dir + ".new"):
                 raise RepositoryError(
-                    "Broken deploy in history, see {0}.{new,old} for deploy state".format(active_filename))
+                    ("Broken past deploy. See {0}.new for what the (potentially incomplete) new state shuold be " +
+                     "and optionally {0}.old if it exists for the complete previous state.").format(active_dir))
+            else:
+                raise RepositoryError(
+                    "Install directory {0} has no active folder. Has it been bootstrapped?".format(self.__root))
 
-        with open(active_filename) as f:
-            return set(json.load(f))
+        ids = set()
+        for name in os.listdir(active_dir):
+            package_path = os.path.realpath(os.path.join(active_dir, name))
+            # NOTE: We don't validate the id here because we want to be able to
+            # cope if there is somethign invalid in the current active dir.
+            ids.add(os.path.basename(package_path))
 
-    # Updates the active file in a repository using a predictable atomic(ish) swap.
-    class UpdateActive:
+        return ids
 
-        def __init__(self, install, packages):
-            self.__active_name = install.get_active_filename()
-            self.__packages = packages
-
-        def __enter__(self):
-            # Write out new state
-            with open(self.__active_name + '.new', 'w') as f:
-                json.dump(list(self.__packages), f)
-            # Archive old state
-            os.replace(self.__active_name, self.__active_name + '.old')
-
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            # Move new state into place if succesfully completed
-            if exc_type is None:
-                os.replace(self.__active_name + ".new", self.__active_name)
-
+    # Builds new working directories for the new active set, then swaps it into
+    # place as atomically as possible.
     def activate(self, packages):
         # Ensure the new set is reasonable
-        validate_active_set(packages)
+        validate_compatible(packages)
 
-        # Get the new config package
-        config_pkg = GetFirstPackageOfKind(packages, "config")
-        config_path = config_pkg.path
+        # Generate the new global directories, wiping out any previous
+        # deploy attempt first.
+        for name in chain(well_known_dirs, well_known_files):
+            os.path.join(self.__root, name + ".new")
 
-        # Get the new mesos path
-        mesos_pkg = GetFirstPackageOfKind(packages, "mesos")
-        mesos_path = mesos_pkg.path
+        for folder in ["bin", "etc", "lib"]:
+            pass
 
-        config_dir = os.path.join(self.__root, "config")
-        mesos_dir = os.path.join(self.__root, "mesos")
+        # The systemd new goes in /etc/systemd/dcos.target.wants.new rather than our install root
 
-        # Swap into place as atomically as possible
-        with Install.UpdateActive(self, packages):
-            os.remove(config_dir)
-            os.remove(mesos_dir)
-
-            # Update filesystem symlinks for mesos, config
-            os.symlink(config_path, config_dir)
-            os.symlink(mesos_path, mesos_dir)
+        # Swap into place.

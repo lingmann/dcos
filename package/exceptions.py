@@ -4,3 +4,7 @@ class RepositoryError(Exception):
 
 class PackageError(RepositoryError):
     pass
+
+
+class ValidationError(Exception):
+    pass

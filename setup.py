@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 from package.constants import version
 
 setup(
-    name='dcos-pkg',
+    name='pkgpanda',
     version=version,
-    description='DCOS blobg management + swapping',
-    url='https://github.com/mesosphere/dcos-pkg',
+    description='DCOS package/blob management + swapping',
+    url='https://mesosphere.com',
     author='Mesosphere, Inc.',
     author_email='support@mesosphere.io',
     license='TODO',

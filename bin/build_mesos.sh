@@ -16,6 +16,7 @@ function globals {
   export PKG_VER
   export PKG_REL
   export PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
+  export COPY_LIBS="${PROJECT_ROOT}/bin/copy-libs.rb"
 }; globals
 
 function main {
@@ -60,13 +61,10 @@ function build {
 }
 
 function copy_shared_libs {
-  local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
-  cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 "$libdir"
-  cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 "$libdir"
-  cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 "$libdir"
-  cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
-  cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
-  cp build/mesos-build/src/java/target/mesos-*.jar "$libdir"
+  local libdir="${PROJECT_ROOT}/build/lib"
+  mkdir -p "$libdir"
+  "$COPY_LIBS" "${PROJECT_ROOT}/build/mesos-toor/" "$libdir"
+  cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 }
 
 function msg { out "$*" >&2 ;}

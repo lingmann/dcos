@@ -71,9 +71,6 @@ assemble: marathon zookeeper java mesos
 	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
 		$(TAR) --numeric-owner --owner=0 --group=0 \
 		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar mesos*
-	@# Append shared libs to DCOS tarball
-	@cd build && $(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar lib
 	@# Compress
 	@gzip dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar
 	@mv dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar.gz \

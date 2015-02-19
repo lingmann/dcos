@@ -61,8 +61,7 @@ function build {
 }
 
 function copy_shared_libs {
-  local libdir="${PROJECT_ROOT}/build/lib"
-  mkdir -p "$libdir"
+  local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
   "$COPY_LIBS" "${PROJECT_ROOT}/build/mesos-toor/" "$libdir"
   cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 }

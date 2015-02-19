@@ -11,19 +11,7 @@ Every host must have indicated what "kind" of host it is (master, node)
 
 # Initial bootstrap (Master and slave)
 
-Masters and slaves always download the full bootstrap image for DCOS, and use
-that to get to the current cluster state.
-
-```
-curl downloads.mesosphere.com/dcos/bootstrap.tar.gz
-tar -xzf bootstrap.tar.gz
-/opt/mesosphere/bin/pkgpanda --bootstrap {seed_active_file}
-```
-TODO(cmaloney): Should we report status back to somewhere?
-
-`pkgpanda` will use the seed url to download an initial list of "active"
-packages. It will then fetch each of those packages and run a 'pkgpanda activate'.
-The activate will
+See: systemd/INSTALLING.md
 
 ## Master special steps
 Masters need to be able to serve all of the packages to new machines as they come up, as well as list the

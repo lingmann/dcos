@@ -40,6 +40,7 @@ Copy to `/etc/systemd/system/multi-user.target.wants/`:
 /active/mesos/bootstrap-systemd/mesos-slave.service
 ```
 
+TODO(cmaloney): Should we report status back to somewhere?
 
 # How it works
 
@@ -53,7 +54,13 @@ before it tries starting dcos.target.
 `dcos-download.service` when run downloads the dcos tarball and extracts it onto the host
 filesystem.
 
-`dcos-bootstrap.service` runs `pandapkg --bootstrap` which will put all the bits into the right place / activate the packages on the host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
+`dcos-bootstrap.service` runs `pandapkg bootstrap` which will put all the bits into the right place / activate the packages on the host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
 configuration and must be loaded before a new slave is started).
 
-The `pandapkg --bootstrap` will add a all the necessary systemd units to /etc/systemd/system/dcos.target.wants so they will be restarted on reboot, as well as performs a `systemctl daemon-reload` so systemd picks up the new target dependencies, and then a `systemctl start` to force the new targets to start.
+The `pandapkg bootstrap` will add a all the necessary systemd units to /etc/systemd/system/dcos.target.wants so they will be restarted on reboot, as well as performs a `systemctl daemon-reload` so systemd picks up the new target dependencies, and then a `systemctl start` to force the new targets to start.
+
+
+## TODO old notes to be merged into above.
+`pkgpanda` will use the seed url to download an initial list of "active"
+packages. It will then fetch each of those packages and run a 'pkgpanda activate'.
+The activate will

@@ -2,7 +2,7 @@
 """DCOS Package management local utility
 
 Usage:
-  pkgpanda --bootstrap
+  pkgpanda bootstrap
   pkgpanda list
   pkgpanda active
   pkgpanda fetch <id>

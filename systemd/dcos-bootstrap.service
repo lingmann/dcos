@@ -6,5 +6,5 @@ After=dcos-download.service
 Type=oneshot
 
 EnvironemntFile=/opt/mesosphere/environment
-ExecStart=/opt/mesosphere/bin/pkgpanda --bootstrap
+ExecStart=/opt/mesosphere/bin/pkgpanda bootstrap
 

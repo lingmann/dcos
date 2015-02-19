@@ -143,7 +143,7 @@ def validate_compatible(packages):
 
     # TODO(cmaloney): More complete validation
     #  - There are no repeated file/folder in the well_known_dirs
-    #  - There is a base set of required package names (packager, mesos, config)
+    #  - There is a base set of required package names (pkgpanda, mesos, config)
     #  - The config is for this specific type of host (master, slave)?
 
 

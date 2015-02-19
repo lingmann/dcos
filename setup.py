@@ -20,7 +20,7 @@ setup(
     install_requires=['docopt'],
     entry_points={
         'console_scripts': [
-            'dcos-pkg=package.cli:main',
+            'pkgpanda=package.cli:main',
         ],
     },
 )

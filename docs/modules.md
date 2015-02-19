@@ -33,7 +33,7 @@ soon.
 
 class PackagerProcess : public Process<PackagerProcess>
 {
-  PackagerProcess() : ProcessBase("packager") {}
+  PackagerProcess() : ProcessBase("pkgpanda") {}
   void initialize() final {
     route("/list.json", None, &PackagerProcess::List);
     route("/add", None, &PackagerProcess::Add);
@@ -43,7 +43,7 @@ class PackagerProcess : public Process<PackagerProcess>
   Future<Response> PackagerProcess::list(const Request& request)
   {
     // No arguments are needed, just call straight through
-    Try<Subproess> subprocess("packager", {"list","--format=json"});
+    Try<Subproess> subprocess("pkgpanda", {"list","--format=json"});
     if (subprocess.isError()) {
       return InternalServerError(subprocess.error());
     }

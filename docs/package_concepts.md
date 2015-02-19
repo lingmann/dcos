@@ -49,8 +49,8 @@ Why not make /{name}/{id-without-name}
 
 When things go wrong, how to recover
 1) Dump the host and load a new one, simplest safest
-2) Re-bootstrap with packager
-3) packager activate {list of packages}
+2) Re-bootstrap with pkgpanda
+3) pkgpanda activate {list of packages}
     - Fix problems if they happen
 
 NOTE: Packager should always overwrite / remove / replace .new when that is given.

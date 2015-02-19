@@ -2,10 +2,11 @@
 """DCOS Package management local utility
 
 Usage:
-  dcos-pkg list
-  dcos-pkg active
-  dcos-pkg fetch <id>
-  dcos-pkg activate <id>...
+  pkgpanda --bootstrap
+  pkgpanda list
+  pkgpanda active
+  pkgpanda fetch <id>
+  pkgpanda activate <id>...
 """
 
 from docopt import docopt

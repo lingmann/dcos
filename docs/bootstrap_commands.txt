@@ -6,21 +6,21 @@ tar -xzf dcos-dist.tar.gz /opt/mesosphere
 /opt/mesosphere/dcos-dist/bootstrap.sh
 
 # Inside the bootstrap script:
-PATH=$PATH:/opt/mesosphere/mesos-slave/bin:/opt/mesosphere/python/bin:/opt/mesosphere/packager/bin
+PATH=$PATH:/opt/mesosphere/mesos-slave/bin:/opt/mesosphere/python/bin:/opt/mesosphere/pkgpanda/bin
 
-# Launch packager
+# Launch pkgpanda
 def is_slave():
   return os.path.exists(/opt/mesosphere/role/slave)
 
 if is_slave:
   # First slave
-  packager bootstrap --repository={repository_url}
+  pkgpanda bootstrap --repository={repository_url}
 
 else
   # First master
-  packager bootstrap --no-repository
+  pkgpanda bootstrap --no-repository
 
-# At this point we are inside packager bootstrap
+# At this point we are inside pkgpanda bootstrap
 
 if master:
   wget http://{repository_url}/slave/active.json -o /opt/mesosphere/active.json.new
@@ -34,7 +34,7 @@ guard_active_new = scope_guard(rm /opt/mesosphere/active.json.new)
 # Store that into packages_to_activate
 packages_to_activate = load_json(/opt/mesosphere/active.json.new) # ["mesos-0.22.0", "mesos-config-12312312412"]
 for package in packages_to_activate
-  `packager fetch {package}`
+  `pkgpanda fetch {package}`
     # Note: Will use a secure temporary filename
     - wget http://{repository_url}/packages/{package}.tar.gz -o /tmp/{package}.tar.gz
     - tar -xzf /tmp/{package}.tar.gz /opt/mesosphere/packages/{package}/

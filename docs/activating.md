@@ -1,4 +1,4 @@
-# Activating Packages `packager activate`
+# Activating Packages `pkgpanda activate`
 
 The list if currently active packages is stored in 'active.json' inside of INSTALL_ROOT.
 

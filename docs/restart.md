@@ -5,13 +5,13 @@ Restarts + process management is handled through systemd for simplicity of imple
 ## Restart Steps
 
 The restart module knows how to restart mesos cleanly
-1. Have packager validate the new active config options are good
-1. Run packager activate to activate new packages
+1. Have pkgpanda validate the new active config options are good
+1. Run pkgpanda activate to activate new packages
 1. Stop mesos
 1. Wipe out work directory if requested "clean" / killall
 1. Start mesos
   - If mesos fails to start
-    1. `packager activate active.json.old`
+    1. `pkgpanda activate active.json.old`
     1. Start mesos
       - if mesos fails to start
         1. Report "HARD FAILURE/NODE LOST" to deployer, sysadmin introvention needed.

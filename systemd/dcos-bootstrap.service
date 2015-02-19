@@ -1,0 +1,10 @@
+[Unit]
+Requires=dcos-download.service
+After=dcos-download.service
+
+[Service]
+Type=oneshot
+
+EnvironemntFile=/opt/mesosphere/environment
+ExecStart=/opt/mesosphere/bin/pkgpanda --bootstrap
+

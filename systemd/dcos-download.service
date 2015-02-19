@@ -1,0 +1,10 @@
+[Unit]
+After=network-online.target
+Wants=network-online.target
+
+ConditionPathExists=!/opt/mesosphere/
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/curl https://download.mesosphere.io/dcos/distribution.tar.gz -o /tmp/distribution.tar.gz
+ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.gz -C /opt/mesosphere

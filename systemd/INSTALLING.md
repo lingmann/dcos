@@ -32,6 +32,12 @@ Copy to `/etc/systemd/system/multi-user.target.wants/`:
 ```
 /bin/pkgpanda
 /environment
+# These are activated based on the role.
+# In general running the config package which is installed should have a 'systemd'
+# folder which informs what systemd units to install to dcos.target.wants.
+# But that isn't setup / enabled yet.
+/active/mesos/bootstrap-systemd/mesos-master.service
+/active/mesos/bootstrap-systemd/mesos-slave.service
 ```
 
 
@@ -47,7 +53,7 @@ before it tries starting dcos.target.
 `dcos-download.service` when run downloads the dcos tarball and extracts it onto the host
 filesystem.
 
-`dcos-bootstrap.service` runs pandapkg which will put all the bits into the right place / activate the packages on the
-host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
+`dcos-bootstrap.service` runs `pandapkg --bootstrap` which will put all the bits into the right place / activate the packages on the host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
 configuration and must be loaded before a new slave is started).
 
+The `pandapkg --bootstrap` will add a all the necessary systemd units to /etc/systemd/system/dcos.target.wants so they will be restarted on reboot, as well as performs a `systemctl daemon-reload` so systemd picks up the new target dependencies, and then a `systemctl start` to force the new targets to start.

@@ -32,7 +32,7 @@ Different things want to rely on finding certain packages at certain locations. 
 /opt/mesosphere/etc/
 /opt/mesosphere/active/{name}/
 /opt/mesosphere/packages/{id}/
-/etc/systemd/system/dcos.target/
+/etc/systemd/system/dcos.target.wants/
 ```
 
 ### Assumed system files

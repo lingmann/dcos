@@ -23,6 +23,7 @@ function main {
   check_prereqs
   build
   copy_shared_libs
+  patch_interpreter
   msg "Finished building Mesos"
 }
 
@@ -64,6 +65,21 @@ function copy_shared_libs {
   local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
   "$COPY_LIBS" "${PROJECT_ROOT}/build/mesos-toor/" "$libdir"
   cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
+}
+
+function patch_interpreter {
+  local dcoslibdir="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
+  local libdir="${PROJECT_ROOT}/build/mesos-toor${dcoslibdir}"
+  local linker="/lib64/ld-linux-x86-64.so.2"
+  cp -p "$linker" "$libdir"
+  while IFS= read -d $'\0' -r file
+  do
+    if [[ $(patchelf --print-interpreter "$file" 2>/dev/null) == $linker ]]
+    then
+      echo "Patching interpreter on $file"
+      patchelf --set-interpreter "${dcoslibdir}/ld-linux-x86-64.so.2" "$file"
+    fi
+  done < <(find "${PROJECT_ROOT}/build/mesos-toor" -type f -executable -print0)
 }
 
 function msg { out "$*" >&2 ;}

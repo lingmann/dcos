@@ -23,6 +23,12 @@ RUN apt-get -qq update && apt-get -y install \
   maven \
   libapr1-dev \
   libsvn-dev \
-  ruby
+  ruby \
+  curl
 RUN pip install awscli
+RUN cd /tmp && \
+  curl -sSL http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.gz | tar xzf - && \
+  cd /tmp/patchelf* && \
+  ./configure && \
+  make install
 WORKDIR /dcos

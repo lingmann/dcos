@@ -16,7 +16,6 @@ class CopyLibs
   def analyse
     @sources.each do |source|
       raise "not readable: #{source}" unless File.readable?(source)
-
       if File.directory?(source)
         Find.find(source) do |file|
           dependencies(file) if File.executable?(file) && File.file?(file)
@@ -40,7 +39,6 @@ class CopyLibs
       while line = stdout.gets
         line = line.gsub(/^\s/, '').gsub(/\s+/, ' ')
         if /^(?<library>.*?)\s+=>\s+(?<library_path>\/.*?)\s+\([0-9a-fx]+\)/ =~ line
-
           if !@libraries.key?(library) && File.exist?(library_path)
             @libraries[library] = library_path
             dependencies(library_path, depth + 1)

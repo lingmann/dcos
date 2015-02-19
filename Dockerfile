@@ -23,6 +23,7 @@ RUN apt-get -qq update && apt-get -y install \
   maven \
   libapr1-dev \
   libsvn-dev \
-  ruby
+  ruby \
+  curl
 RUN pip install awscli
 WORKDIR /dcos

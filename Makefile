@@ -14,6 +14,8 @@ DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 
 PKG_VER      ?= 0.1.0
 
+PYTHON_VER   := 3.4.2
+
 ifeq ($(origin PKG_REL), undefined)
 REL_MAJOR    := 0
 REL_MINOR    := 1

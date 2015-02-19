@@ -147,8 +147,8 @@ def validate_compatible(packages):
     #  - The config is for this specific type of host (master, slave)?
 
 
-# TODO(cmaloney): Add support for RemoteGithub, useful for grabbing config tarbals.
-def fetcher(self, base_url, id, target):
+# TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
+def urllib_fetcher(self, base_url, id, target):
     # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
     # all the logic can go away, we gain integrity checking, etc.
     filename = id + ".tar.gz"

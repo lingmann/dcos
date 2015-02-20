@@ -12,7 +12,6 @@ Each package contains a usage.json. That contains a list of requires as well as
 envrionment variables from the package.
 
 """
-import json
 import os
 import os.path
 import re
@@ -23,6 +22,7 @@ from itertools import chain
 from tempfile import NamedTemporaryFile
 
 from package.exceptions import PackageError, RepositoryError, ValidationError
+from package.util import load_json
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -149,6 +149,7 @@ def validate_compatible(packages):
 
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
 def urllib_fetcher(self, base_url, id, target):
+    assert base_url
     # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
     # all the logic can go away, we gain integrity checking, etc.
     filename = id + ".tar.gz"
@@ -185,9 +186,7 @@ class Repository:
         filename = os.path.join(path, "usage.json")
         usage = None
         try:
-            with open(filename) as f:
-                usage = json.load(f)
-                print(usage)
+            usage = load_json(filename)
         except FileNotFoundError as ex:
             raise PackageError("No / unreadable usage.json in package: {0}".format(ex.strerror))
 
@@ -206,17 +205,26 @@ class Repository:
         # signatures, are up to date, all packages valid contents, etc.
         raise NotImplementedError()
 
+    # Add the given package to the repository.
+    # If the package is already in the repository does a no-op and returns false.
+    # Returns true otherwise.
     def add(self, fetcher, id):
+        # If the package already exists, return true
+        package_path = self.package_path(id)
+        if os.path.exists(package_path):
+            return False
+
         # TODO(cmaloney): Supply a temporary directory to extract to
         # Then swap that into place, preventing partially-extracted things from
         # becoming an issue.
         fetcher(id, self.package_path(id))
+        return True
 
     def remove(self, id):
         shutil.rmtree(self.package_path(id))
 
 
-# A rooted install tree.
+# A rooted instal lgtree.
 # Inside the install tree there will be all the well known folders and files as
 # described in `docs/package_concepts.md`
 class Install:

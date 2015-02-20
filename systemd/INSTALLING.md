@@ -17,7 +17,9 @@ Copy to `/etc/systemd/system/multi-user.target.wants/`:
  - package list from active master when bootstrapping
    ```
    /etc/dcos/bootstrap-flags/repository-url
-   /etc/dcos/bootstrap-flags/masters
+
+   # List of packages to activate
+   /etc/dcos/bootstrap-flags/active
    ```
 
  - Enable mesos master

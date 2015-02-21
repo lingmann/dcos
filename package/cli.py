@@ -11,7 +11,7 @@ Usage:
 Options:
     --root=<root>               Use an alternate root (useful for debugging) [default: /opt/mesosphere]
     --repository=<repository>   Use an alternate local package repository directory[default: /opt/mesosphere/]
-    --systemd=<systemd-dir>     Use an alternative directory for systemd. [default: /etc/systemd/dcos.target.wants/]
+    --role-dir=<role-dir>       Use an alternate directory for finding rules. [default: /etc/mesosphere/]
 """
 import json
 import os.path
@@ -70,7 +70,7 @@ def bootstrap(install, repository, arguments):
     # Should be set by loading out of fs or from one of the masters.
     assert to_activate is not None
 
-    install.activate(to_activate)
+    install.activate(repository, to_activate)
 
 
 def main():

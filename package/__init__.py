@@ -12,6 +12,7 @@ Each package contains a usage.json. That contains a list of requires as well as
 envrionment variables from the package.
 
 """
+import functools
 import os
 import os.path
 import re
@@ -29,7 +30,6 @@ from package.util import load_json
 
 # TODO(cmaloney): dcos.target.wants is what systemd ends up as.
 well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
-well_known_files = ["environment"]
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:]+$"
@@ -107,7 +107,7 @@ class Package:
 
 
 # Check that a set of packages is reasonable.
-def validate_compatible(packages):
+def validate_compatible(packages, roles):
     # Every package name appears only once.
     names = set()
     for package in packages:
@@ -143,6 +143,7 @@ def validate_compatible(packages):
 
     # TODO(cmaloney): More complete validation
     #  - There are no repeated file/folder in the well_known_dirs
+    #       - Including the roles subfolders.
     #  - There is a base set of required package names (pkgpanda, mesos, config)
     #  - The config is for this specific type of host (master, slave)?
 
@@ -233,6 +234,9 @@ class Install:
         self.__root = root
         self.__systemd = systemd
 
+        # Look up the machine roles
+        self.__roles = os.listdir("/etc/mesosphere/pkgpanda/roles/")
+
     def get_active(self):
         """the active folder has symlinks to all the active packages.
 
@@ -259,18 +263,61 @@ class Install:
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
-    def activate(self, packages):
+    def activate(self, repository, packages):
         # Ensure the new set is reasonable
-        validate_compatible(packages)
+        validate_compatible(packages, self.__roles)
+
+        def get_full_name(name, extension):
+            return os.path.join(self.__root, name + "." + extension)
 
         # Generate the new global directories, wiping out any previous
         # deploy attempt first.
-        for name in chain(well_known_dirs, well_known_files):
-            os.path.join(self.__root, name + ".new")
+        new_name = functools.partial(get_full_name, extension="new")
+        new_dirs = list(map(new_name, well_known_dirs))
+        new_env = new_name("environment")
 
-        for folder in ["bin", "etc", "lib"]:
-            pass
+        for name in chain(new_dirs, "environment"):
+            shutil.rmtree(name)
 
-        # The systemd new goes in /etc/systemd/dcos.target.wants.new rather than our install root
+        for dir in new_dirs:
+            os.path.makedirs(dir)
 
-        # Swap into place.
+        env_contents = ""
+        # Set the new LD_LIBRARY_PATH, PATH
+        env_contents += "LD_LIBRARY_PATH={0}/lib\n".format(self.__root)
+        env_contents += "PATH=/usr/bin:{0}".format(self.__root)
+
+        # Write contents to the new directories, files.
+        # Also Gather data for shared files.
+        for package in packages:
+            package_path = repository.package_path(package)
+
+            for new_dir, dir in zip(new_dirs, well_known_dirs):
+                pkg_dir = os.path.join(package_path, dir)
+                if not os.path.isdir(pkg_dir):
+                    continue
+
+                for name in os.listdir(pkg_dir):
+                    os.symlink(os.path.join(pkg_dir, name), os.path.join(new_dir, name))
+
+                # Symlink in all applicable role-based pieces.
+                for role in self.__roles:
+                    role_dir = os.path.isdir(os.path.join(pkg_dir, role))
+                    if not os.path.isdir(os.path.join(pkg_dir, role)):
+                        continue
+
+                    for name in os.listdir(role_dir):
+                        os.symlink(os.path.join(role_dir, name), os.path.join(new_dir, name))
+
+            env_path = os.path.join(package_path, "environment")
+            if os.path.exists(env_path):
+                # TODO(cmaloney) Write parsing matching the EnvironmentFile directive
+                # and check that no environment variable is specified by two packages.
+                env_contents += "# package: {0}\n".format(package)
+                with open(env_path) as pkg_env:
+                    env_contents += pkg_env.read()
+                env_contents += "\n"
+
+        # Write out environment
+        with open(new_env, "w+") as f:
+            f.write(env_contents)

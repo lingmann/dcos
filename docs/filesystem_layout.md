@@ -1,3 +1,4 @@
+Host overall filesystem layout:
 ```
 /etc/mesosphere/dcos-bootstrap/role/{master,slave}
 /etc/systemd/dcos.target.wants/
@@ -20,9 +21,28 @@
 			libexec/
 			...
 			systemd/
-				mesos-master.service
+				master/
+					mesos-master.service
 		java-ranodmversionstring/
 			...
 		zookeeper-0.123/
 			...
 ```
+
+
+Package layout:
+```
+usage.json # json file describing list of dependencies / requires of package either
+	# by name (mesos) or by specific package id (mesos-0.22)
+etc/
+bin/
+lib/
+environment
+systemd/
+	foo.service
+	{role}/
+		bar.service
+```
+
+
+

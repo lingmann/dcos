@@ -23,7 +23,7 @@ from itertools import chain
 from tempfile import NamedTemporaryFile
 
 from package.exceptions import PackageError, RepositoryError, ValidationError
-from package.util import load_json
+from package.util import if_exists, load_json
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -32,7 +32,7 @@ from package.util import load_json
 well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
-version_regex = "^[a-zA-Z0-9@_+:]+$"
+version_regex = "^[a-zA-Z0-9@_+:.]+$"
 
 
 class PackageId:
@@ -74,13 +74,15 @@ class PackageId:
 class Package:
 
     def __init__(self, path, id, usage):
+        if isinstance(id, str):
+            id = PackageId(id)
         self.__id = id
         self.__path = path
         self.__usage = usage
 
     @property
     def environment(self):
-        return self.__usage['environment']
+        return self.__usage.get('environment', dict())
 
     @property
     def id(self):
@@ -96,14 +98,14 @@ class Package:
 
     @property
     def requires(self):
-        return self.__usage['requires']
+        return frozenset(self.__usage.get('requires', list()))
 
     @property
     def version(self):
         return self.__id.version
 
     def __repr__(self):
-        return id
+        return str(id)
 
 
 # Check that a set of packages is reasonable.
@@ -134,12 +136,12 @@ def validate_compatible(packages, roles):
                                       ' '.join(packages))
 
         # No repeated/conflicting environment variables.
-        for var in package.environment:
-            if var in environment:
+        for k, v in package.environment.items():
+            if k in environment:
                 raise ValidationError(
                     "Repeated environment variable {0}. In both packages {1} and {2}.".format(
-                        var, environment[var], package))
-            environment[var] = package
+                        k, v, package))
+            environment[k] = package
 
     # TODO(cmaloney): More complete validation
     #  - There are no repeated file/folder in the well_known_dirs
@@ -200,6 +202,7 @@ class Repository:
         packages = set()
         for id in ids:
             packages.add(self.load(id))
+        return packages
 
     def integrity_check(self):
         # Check that all packages in the local repository have valid
@@ -230,12 +233,14 @@ class Repository:
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, systemd):
+    def __init__(self, root, config_dir):
         self.__root = root
-        self.__systemd = systemd
+        self.__config_dir = config_dir
 
         # Look up the machine roles
-        self.__roles = os.listdir("/etc/mesosphere/pkgpanda/roles/")
+        self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
+        if self.__roles is None:
+            self.__roles = []
 
     def get_active(self):
         """the active folder has symlinks to all the active packages.
@@ -261,6 +266,12 @@ class Install:
 
         return ids
 
+    def has_flag(self, name):
+        return os.path.exists(self.get_config_filename(name))
+
+    def get_config_filename(self, name):
+        return os.path.join(self.__config_dir, name)
+
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
     def activate(self, repository, packages):
@@ -277,10 +288,13 @@ class Install:
         new_env = new_name("environment")
 
         for name in chain(new_dirs, "environment"):
-            shutil.rmtree(name)
+            try:
+                shutil.rmtree(name)
+            except FileNotFoundError:
+                pass
 
         for dir in new_dirs:
-            os.path.makedirs(dir)
+            os.makedirs(dir)
 
         env_contents = ""
         # Set the new LD_LIBRARY_PATH, PATH
@@ -290,10 +304,8 @@ class Install:
         # Write contents to the new directories, files.
         # Also Gather data for shared files.
         for package in packages:
-            package_path = repository.package_path(package)
-
             for new_dir, dir in zip(new_dirs, well_known_dirs):
-                pkg_dir = os.path.join(package_path, dir)
+                pkg_dir = os.path.join(package.path, dir)
                 if not os.path.isdir(pkg_dir):
                     continue
 
@@ -309,14 +321,10 @@ class Install:
                     for name in os.listdir(role_dir):
                         os.symlink(os.path.join(role_dir, name), os.path.join(new_dir, name))
 
-            env_path = os.path.join(package_path, "environment")
-            if os.path.exists(env_path):
-                # TODO(cmaloney) Write parsing matching the EnvironmentFile directive
-                # and check that no environment variable is specified by two packages.
-                env_contents += "# package: {0}\n".format(package)
-                with open(env_path) as pkg_env:
-                    env_contents += pkg_env.read()
-                env_contents += "\n"
+            env_contents += "# package: {0}\n".format(package)
+            for k, v in package.environment.items():
+                env_contents += "{0}={1}\n".format(k, v)
+            env_contents += "\n"
 
         # Write out environment
         with open(new_env, "w+") as f:

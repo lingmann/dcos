@@ -10,8 +10,9 @@ Usage:
 
 Options:
     --root=<root>               Use an alternate root (useful for debugging) [default: /opt/mesosphere]
-    --repository=<repository>   Use an alternate local package repository directory[default: /opt/mesosphere/]
-    --role-dir=<role-dir>       Use an alternate directory for finding rules. [default: /etc/mesosphere/]
+    --repository=<repository>   Use an alternate local package repository directory[default: /opt/mesosphere/packages]
+    --config-dir=<conf-dir>     Use an alternate directory for finding machine
+                                configuration (roles, bootstrap flags). [default: /etc/mesosphere/]
 """
 import json
 import os.path
@@ -22,19 +23,13 @@ from urllib.request import urlopen
 from docopt import docopt
 from package import Install, Repository, urllib_fetcher
 from package.constants import version
-from package.util import load_json, load_string
+from package.util import if_exists, load_json, load_string
 
 
-def bootstrap(install, repository, arguments):
+def bootstrap(install, repository):
     # These files should be set by the environment which initially builds
     # the host (cloud-init).
-    masters = None
-    if os.path.exists("/etc/dcos/bootstrap-flags/masters"):
-        masters = load_json("/etc/dcos/bootstrap-flags/masters")
-
-    repository_url = None
-    if os.path.exists("/etc/dcos/bootstrap-flags/repository-url"):
-        repository_url = load_string("/etc/dcos/bootstrap-flags/repository-url")
+    repository_url = if_exists(load_string, install.get_config_filename("bootstrap-flags/repository-url"))
 
     # If there is 1+ master, grab the active config from a master. If the
     # config can't be grabbed from any of them, fail.
@@ -42,49 +37,38 @@ def bootstrap(install, repository, arguments):
         return urllib_fetcher(repository_url, id, target)
 
     to_activate = None
-    if masters is not None:
-        raise NotImplementedError()
-        # Get active package list for machine from one of the masters
-        # NOTE: Need to pass it base level of machine info so it can classify
-        # This machine
-        for master in masters:
-            try:
-                with urlopen(urljoin(repository_url, "/config/active.json")) as active_file:
-                    to_activate = json.read(active_file)
-                break
-            except:
-                pass
+    if repository_url:
+        # TODO(cmaloney): Support sending some basic info to the machine generating
+        # the active list of packages.
+        with urlopen(urljoin(repository_url, "config/active.json")) as active_file:
+            to_activate = json.read(active_file)
 
         if to_activate is None:
-            print("Unable to get list of packages to activate from master.")
+            print("Unable to get list of packages to activate from remote repository.")
             sys.exit(1)
 
-        # Ensure all packages are
-
+        # Ensure all packages are local
         for package in to_activate:
             repository.add(fetcher, package)
     else:
-        # Grab to_activate from the local filesystem
-        to_activate = load_json("/opt/mesosphere/bootstrap/active.json")
+        # Grab to_activate from the local filez
+        to_activate = load_json(install.get_config_filename("bootstrap-flags/active.json"))
 
-    # Should be set by loading out of fs or from one of the masters.
+    # Should be set by loading out of fs or from the local config server.
     assert to_activate is not None
 
-    install.activate(repository, to_activate)
+    install.activate(repository, repository.load_packages(to_activate))
 
 
 def main():
     arguments = docopt(__doc__, version="DCOS Package {}".format(version))
 
-    # TODO(cmaloney): DEBUG
-    print(arguments)
-
     # NOTE: Changing root or repository will likely break actually running packages.
-    install = Install(os.path.abspath(arguments['--root']), os.path.abspath(arguments['--systemd']))
+    install = Install(os.path.abspath(arguments['--root']), os.path.abspath(arguments['--config-dir']))
     repository = Repository(os.path.abspath(arguments['--repository']))
 
     if arguments['bootstrap']:
-        bootstrap(install, repository, arguments)
+        bootstrap(install, repository)
         sys.exit(0)
 
     print("unknown command")

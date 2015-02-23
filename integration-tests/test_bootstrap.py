@@ -1,8 +1,8 @@
+import os
 from subprocess import check_call
 
 
 def test_bootstrap(tmpdir):
-    conf_dir = tmpdir.mkdir("etc").join("active.json")
     check_call(["pkgpanda",
         "bootstrap",
         "--root={0}/root".format(tmpdir),

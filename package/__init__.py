@@ -31,6 +31,9 @@ from package.util import if_exists, load_json
 # TODO(cmaloney): dcos.target.wants is what systemd ends up as.
 well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
 reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
+env_header = """# Pandapkg provided environment variables
+LD_LIBRARY_PATH={0}/lib
+PATH=/usr/bin:{0}\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
@@ -305,10 +308,8 @@ class Install:
         for dir in new_dirs:
             os.makedirs(dir)
 
-        env_contents = ""
-        # Set the new LD_LIBRARY_PATH, PATH
-        env_contents += "LD_LIBRARY_PATH={0}/lib\n".format(self.__root)
-        env_contents += "PATH=/usr/bin:{0}".format(self.__root)
+        # Set the new LD_LIBRARY_PATH, PATH.
+        env_contents = env_header.format(self.__root)
 
         # Write contents to the new directories, files.
         # Also Gather data for shared files.
@@ -330,7 +331,7 @@ class Install:
                     for name in os.listdir(role_dir):
                         os.symlink(os.path.join(role_dir, name), os.path.join(new_dir, name))
 
-            env_contents += "# package: {0}\n".format(package)
+            env_contents += "# package: {0}\n".format(package.id)
             for k, v in package.environment.items():
                 env_contents += "{0}={1}\n".format(k, v)
             env_contents += "\n"

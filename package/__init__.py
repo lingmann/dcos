@@ -30,6 +30,7 @@ from package.util import if_exists, load_json
 
 # TODO(cmaloney): dcos.target.wants is what systemd ends up as.
 well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
+reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
@@ -112,11 +113,13 @@ class Package:
 def validate_compatible(packages, roles):
     # Every package name appears only once.
     names = set()
+    ids = set()
     for package in packages:
         if package.name in names:
             raise ValidationError(
                 "Repeated name {0} in set of packages {1}".format(package.name, ' '.join(packages)))
         names.add(package.name)
+        ids.add(str(package.id))
 
     # All requires are met.
     # NOTE: Requires are given just to make it harder to accidentally
@@ -127,16 +130,22 @@ def validate_compatible(packages, roles):
 
     for package in packages:
 
-        # All requirements of packages are met
+        # Check that all requirements of the package are met.
+        # Requirements can be specified on a package name or full version string.
         for requirement in package.requires:
-            if requirement not in names:
-                raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}",
-                                      package,
-                                      requirement,
-                                      ' '.join(packages))
+            if requirement not in names and requirement not in ids:
+                raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}".format(
+                                          package.id,
+                                          requirement,
+                                          ', '.join(str(x.id) for x in packages)))
 
-        # No repeated/conflicting environment variables.
+        # No repeated/conflicting environment variables with other packages as
+        # well as magic system enviornment variables.
         for k, v in package.environment.items():
+            if k in reserved_env_vars:
+                raise ValidationError(
+                    "{0} are reserved enviornment vars and cannot be specified in packages. Present in package {1}"
+                    .format(", ".join(reserved_env_vars), package))
             if k in environment:
                 raise ValidationError(
                     "Repeated environment variable {0}. In both packages {1} and {2}.".format(

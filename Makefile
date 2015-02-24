@@ -100,6 +100,9 @@ publish: docker_image
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
 		--recursive
+	@echo "Bootstrap URL's:"
+	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/bootstrap.sh"
+	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/bootstrap.sh"
 
 .PHONY: publish-snapshot
 publish-snapshot: publish

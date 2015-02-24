@@ -12,7 +12,6 @@ Each package contains a usage.json. That contains a list of requires as well as
 envrionment variables from the package.
 
 """
-import functools
 import os
 import os.path
 import re
@@ -287,55 +286,77 @@ class Install:
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
     def activate(self, repository, packages):
-        # Ensure the new set is reasonable
+        # Ensure the new set is reasonable.
         validate_compatible(packages, self.__roles)
 
-        def get_full_name(name, extension):
-            return os.path.join(self.__root, name + "." + extension)
+        # Build the absolute paths for the running config, new config location,
+        # and where to archive the config.
+        def make_abs(name):
+            return os.path.join(self.__root, name)
 
-        # Generate the new global directories, wiping out any previous
-        # deploy attempt first.
-        new_name = functools.partial(get_full_name, extension="new")
-        new_dirs = list(map(new_name, well_known_dirs))
-        new_env = new_name("environment")
+        active_names = list(map(make_abs, well_known_dirs + ["environment"]))
+        active_dirs = list(map(make_abs, well_known_dirs))
 
-        for name in chain(new_dirs, "environment"):
-            try:
+        new_names = [name + ".new" for name in active_names]
+        new_dirs = [name + ".new" for name in active_dirs]
+
+        old_names = [name + ".old" for name in active_names]
+
+        # Remove all pre-existing new and old directories
+        for name in chain(new_names, old_names):
+            if (os.path.exists(name)):
                 shutil.rmtree(name)
-            except FileNotFoundError:
-                pass
 
-        for dir in new_dirs:
-            os.makedirs(dir)
+        # Archive the current config if it is present (Might not be for bootstrapping).
+        for active, old in zip(active_names, old_names):
+            if os.path.exists(active):
+                os.link(active, old)
+
+        # Make the directories for the new config
+        for name in new_dirs:
+            os.makedirs(name)
+
+        # Fill in all the new contents
+        def symlink_all(src, dest):
+            if not os.path.isdir(src):
+                return
+
+            for name in os.listdir(src):
+                os.symlink(os.path.join(src, name), os.path.join(new, name))
 
         # Set the new LD_LIBRARY_PATH, PATH.
         env_contents = env_header.format(self.__root)
 
-        # Write contents to the new directories, files.
-        # Also Gather data for shared files.
+        # Add the folders, config in each package.
         for package in packages:
-            for new_dir, dir in zip(new_dirs, well_known_dirs):
-                pkg_dir = os.path.join(package.path, dir)
-                if not os.path.isdir(pkg_dir):
-                    continue
+            # Package folders
+            for new, dir_name in zip(new_dirs, well_known_dirs):
+                pkg_dir = os.path.join(package.path, dir_name)
+                assert os.path.isabs(pkg_dir)
 
-                for name in os.listdir(pkg_dir):
-                    os.symlink(os.path.join(pkg_dir, name), os.path.join(new_dir, name))
+                symlink_all(pkg_dir, new)
 
-                # Symlink in all applicable role-based pieces.
+                # Symlink all applicable role-based config
                 for role in self.__roles:
-                    role_dir = os.path.isdir(os.path.join(pkg_dir, role))
-                    if not os.path.isdir(os.path.join(pkg_dir, role)):
-                        continue
+                    role_dir = os.path.join(package.path, "{0}_{1}".format(dir_name, role))
+                    symlink_all(role_dir, new)
 
-                    for name in os.listdir(role_dir):
-                        os.symlink(os.path.join(role_dir, name), os.path.join(new_dir, name))
-
+            # Add to the environment contents
             env_contents += "# package: {0}\n".format(package.id)
             for k, v in package.environment.items():
                 env_contents += "{0}={1}\n".format(k, v)
             env_contents += "\n"
 
-        # Write out environment
+        # Write out the new environment file.
+        new_env = make_abs("environment.new")
         with open(new_env, "w+") as f:
             f.write(env_contents)
+
+        # TODO(cmaloney): stop all systemd services in dcos.target.wants
+
+        # Move the new contents to be the active contents
+        # TODO(cmaloney): Capture any failures here and roll-back if possible.
+        for new, active in zip(new_names, active_names):
+            os.rename(new, active)
+
+        # TODO(cmaloney): start all systemd services in dcos.target.wants

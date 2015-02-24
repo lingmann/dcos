@@ -1,9 +1,11 @@
 import os
 from subprocess import check_call
 
+
 def expect_folder(path, files):
     path_contents = os.listdir(path)
     assert set(path_contents) == set(files)
+
 
 def expect_fs(folder, contents):
     if isinstance(contents, list):
@@ -17,16 +19,18 @@ def expect_fs(folder, contents):
     else:
         raise ValueError("Invalid type {0} passed to expect_fs".format(type(contents)))
 
+
 def test_bootstrap(tmpdir):
     check_call(["pkgpanda",
-        "bootstrap",
-        "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
-        "--config-dir=resources/etc-active"
-        ])
+                "bootstrap",
+                "--root={0}/root".format(tmpdir),
+                "--repository=../tests/resources/packages",
+                "--config-dir=resources/etc-active"
+                ])
     # TODO(cmaloney): Validate things got placed correctly.
 
-    expect_fs("{0}/root".format(tmpdir),
+    expect_fs(
+        "{0}/root".format(tmpdir),
         {
             "bin": [
                 "mesos",
@@ -41,14 +45,15 @@ def test_bootstrap(tmpdir):
 
     # If we bootstarp the same directory again we should get .old files.
     check_call(["pkgpanda",
-        "bootstrap",
-        "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
-        "--config-dir=resources/etc-active"
-        ])
+                "bootstrap",
+                "--root={0}/root".format(tmpdir),
+                "--repository=../tests/resources/packages",
+                "--config-dir=resources/etc-active"
+                ])
     # TODO(cmaloney): Validate things got placed correctly.
 
-    expect_fs("{0}/root".format(tmpdir),
+    expect_fs(
+        "{0}/root".format(tmpdir),
         {
             "bin": [
                 "mesos",

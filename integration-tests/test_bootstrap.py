@@ -39,4 +39,35 @@ def test_bootstrap(tmpdir):
             "environment": None
         })
 
+    # If we bootstarp the same directory again we should get .old files.
+    check_call(["pkgpanda",
+        "bootstrap",
+        "--root={0}/root".format(tmpdir),
+        "--repository=../tests/resources/packages",
+        "--config-dir=resources/etc-active"
+        ])
+    # TODO(cmaloney): Validate things got placed correctly.
+
+    expect_fs("{0}/root".format(tmpdir),
+        {
+            "bin": [
+                "mesos",
+                "mesos-dir",
+                "mesos-master",
+                "mesos-slave"],
+            "lib": ["libmesos.so"],
+            "etc": ["foobar"],
+            "dcos.target.wants": [],
+            "environment": None,
+            "bin.old": [
+                "mesos",
+                "mesos-dir",
+                "mesos-master",
+                "mesos-slave"],
+            "lib.old": ["libmesos.so"],
+            "etc.old": ["foobar"],
+            "dcos.target.wants.old": [],
+            "environment.old": None
+        })
+
 # TODO(cmaloney): Test a full OS bootstrap using http://0pointer.de/blog/projects/changing-roots.html

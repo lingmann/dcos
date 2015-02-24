@@ -307,11 +307,6 @@ class Install:
             if (os.path.exists(name)):
                 shutil.rmtree(name)
 
-        # Archive the current config if it is present (Might not be for bootstrapping).
-        for active, old in zip(active_names, old_names):
-            if os.path.exists(active):
-                os.link(active, old)
-
         # Make the directories for the new config
         for name in new_dirs:
             os.makedirs(name)
@@ -353,6 +348,12 @@ class Install:
             f.write(env_contents)
 
         # TODO(cmaloney): stop all systemd services in dcos.target.wants
+
+        # TODO(cmaloney): There is a brief window here where active does not exist
+        # which is less than ideal.
+        for active, old in zip(active_names, old_names):
+            if os.path.exists(active):
+                os.rename(active, old)
 
         # Move the new contents to be the active contents
         # TODO(cmaloney): Capture any failures here and roll-back if possible.

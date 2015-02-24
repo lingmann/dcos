@@ -132,6 +132,17 @@ ext/mesos.manifest:
 	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
 	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> $@
 
+debug: docker_image
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	$(DOCKER_RUN) \
+		-i -t -e "PKG_VER=$($@_PKG_VER)" -e "PKG_REL=$($@_PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
+		$(DOCKER_IMAGE) bash
+
 .PHONY: docker_image
 docker_image:
 	$(SUDO) docker build -t "$(DOCKER_IMAGE)" .

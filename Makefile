@@ -72,7 +72,8 @@ assemble: marathon zookeeper java mesos
 	@# Append Mesos build to DCOS tarball
 	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
 		$(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar mesos*
+		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar *
+	@# Compress
 	@gzip dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar
 	@mv dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar.gz \
 		dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tgz
@@ -101,6 +102,9 @@ publish: docker_image
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
 		--recursive
+	@echo "Bootstrap URL's:"
+	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/bootstrap.sh"
+	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/bootstrap.sh"
 
 .PHONY: publish-snapshot
 publish-snapshot: publish
@@ -129,6 +133,17 @@ ext/mesos.manifest:
 	@echo 'DCOS_PKG_VER="$(PKG_VER)"' > $@
 	@echo 'DCOS_PKG_REL="$(PKG_REL)"' >> $@
 	@echo 'MESOS_GIT_SHA="$(MESOS_GIT_SHA)"' >> $@
+
+debug: docker_image
+	@# Extract DCOS_{PKG_VER,PKG_REL} from the mesos manifest. Variables are
+	@# global and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' dist/dcos*.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' dist/dcos*.manifest))
+	$(DOCKER_RUN) \
+		-i -t -e "PKG_VER=$($@_PKG_VER)" -e "PKG_REL=$($@_PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
+		$(DOCKER_IMAGE) bash
 
 .PHONY: docker_image
 docker_image:

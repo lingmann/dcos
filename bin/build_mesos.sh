@@ -16,7 +16,6 @@ function globals {
   export PKG_VER
   export PKG_REL
   export PROJECT_ROOT="$( cd "$( dirname "${BASH_SOURCE[0]}" )/.." && pwd )"
-  export COPY_LIBS="${PROJECT_ROOT}/bin/copy-libs.rb"
 }; globals
 
 function main {
@@ -69,21 +68,6 @@ function copy_shared_libs {
   cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
   cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
   cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
-}
-
-function patch_interpreter {
-  local dcoslibdir="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
-  local libdir="${PROJECT_ROOT}/build/mesos-toor${dcoslibdir}"
-  local linker="/lib64/ld-linux-x86-64.so.2"
-  cp -p "$linker" "$libdir"
-  while IFS= read -d $'\0' -r file
-  do
-    if [[ $(patchelf --print-interpreter "$file" 2>/dev/null) == $linker ]]
-    then
-      echo "Patching interpreter on $file"
-      patchelf --set-interpreter "${dcoslibdir}/ld-linux-x86-64.so.2" "$file"
-    fi
-  done < <(find "${PROJECT_ROOT}/build/mesos-toor" -type f -executable -print0)
 }
 
 # Return relative path from directory $2 (defaults to `pwd`) to directory $1.

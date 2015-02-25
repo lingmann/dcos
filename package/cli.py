@@ -5,8 +5,8 @@ Usage:
   pkgpanda bootstrap [options]
   pkgpanda list [options]
   pkgpanda active [options]
-  pkgpanda fetch [options] <id>
-  pkgpanda activate [options] <id>...
+  pkgpanda fetch <id>... [options]
+  pkgpanda activate <id>... [options]
 
 Options:
     --root=<root>               Use an alternate root (useful for debugging) [default: /opt/mesosphere]
@@ -71,9 +71,26 @@ def main():
         bootstrap(install, repository)
         sys.exit(0)
 
+    if arguments['list']:
+        for pkg in sorted(repository.list()):
+            print(pkg)
+        sys.exit(0)
+
+    if arguments['active']:
+        for pkg in sorted(install.get_active()):
+            print(pkg)
+        sys.exit(0)
+
+    if arguments['fetch']:
+        raise NotImplementedError()
+        sys.exit(0)
+
+    if arguments['activate']:
+        install.activate(repository, repository.load_packages(arguments['<id>']))
+        sys.exit(0)
+
     print("unknown command")
     sys.exit(1)
-    return 0
 
 
 if __name__ == "__main__":

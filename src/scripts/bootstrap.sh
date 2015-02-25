@@ -57,9 +57,11 @@ function check_perms {
 
 # Update latest symlink to point to extracted DCOS
 function set_latest {
+  pushd /opt/mesosphere/dcos
+  ln -s "${DCOS_PKG_VER}-${DCOS_PKG_REL}" latest_tmp
   # Atomic symlink update
-  ln -s "$EXTRACT_TO" /opt/mesosphere/dcos/latest_tmp && \
-    mv -Tf /opt/mesosphere/dcos/latest_tmp /opt/mesosphere/dcos/latest
+  mv -Tf latest_tmp latest
+  popd
 }
 
 # TODO: Move config logic to something that can be parameterized at boot time

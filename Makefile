@@ -101,7 +101,7 @@ publish: docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
 		--recursive
 	@echo "Bootstrap URL's:"

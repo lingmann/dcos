@@ -3,7 +3,9 @@ set -o errexit -o nounset -o pipefail
 
 function globals {
   # Any variables starting with SUBST_ are injected by build system
-  export REPO_ROOT="https://downloads.mesosphere.io/dcos"
+  # Set REPO_ROOT to the direct path to avoid cloudfront caching issues while
+  # in development.
+  export REPO_ROOT="https://s3.amazonaws.com/downloads.mesosphere.io/dcos"
   export DCOS_PKG_VER="${SUBST_PKG_VER}"
   export DCOS_PKG_REL="${SUBST_PKG_REL}"
   export EXTRACT_TO="/opt/mesosphere/dcos/${DCOS_PKG_VER}-${DCOS_PKG_REL}"

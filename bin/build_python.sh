@@ -9,7 +9,6 @@ cat <<USAGE
  Required environment variables:
   PKG_VER
   PKG_REL
-  PYTHON_VER
 USAGE
 }; function --help { usage ;}; function -h { usage ;};
 
@@ -30,42 +29,39 @@ function main {
 function check_prereqs {
   : ${PKG_VER:?"ERROR: PKG_VER must be set"}
   : ${PKG_REL:?"ERROR: PKG_REL must be set"}
-  : ${PYTHON_VER:?"ERROR: PYTHON_VER must be set"}
-}
-
-function python_download {
-  pushd "${PROJECT_ROOT}/build"
-  curl -o Python-${PYTHON_VER}.tgz https://www.python.org/ftp/python/${PYTHON_VER}/Python-${PYTHON_VER}.tgz && \
-  tar xzvf Python-${PYTHON_VER}.tgz && \
-  mv Python-${PYTHON_VER} python-build . && \
-  rm -f Python-${PYTHON_VER}.tgz
-  popd
+  if [ ! -d "${PROJECT_ROOT}/ext/python" ]
+  then
+    err "ERROR: expecting python source at ${PROJECT_ROOT}/ext/python"
+  fi
 }
 
 function python_configure {
+  mkdir -p "${PROJECT_ROOT}/build/python-build"
   pushd "${PROJECT_ROOT}/build/python-build"
-  ./configure --prefix="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/python"
+  # --enable-new-dtags sets both RPATH and RUNPATH, see: ld(1)
+  "${PROJECT_ROOT}/ext/python/configure" \
+    --enable-shared \
+    --prefix="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}" \
+    LDFLAGS="-Wl,-rpath=/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib,--enable-new-dtags"
   popd
 }
 
 function build {
-  mkdir -p "${PROJECT_ROOT}/build/python-toor"
-  python_download
   python_configure
   pushd "${PROJECT_ROOT}/build/python-build"
   make
+  mkdir -p "${PROJECT_ROOT}/build/python-toor"
   make install DESTDIR="${PROJECT_ROOT}/build/python-toor"
   popd
 }
 
 function copy_shared_libs {
-  local libdir="${PROJECT_ROOT}/build/python-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/python/lib"
+  local libdir="${PROJECT_ROOT}/build/python-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
   :
 }
 
 function create_symlinks {
-  pushd "${PROJECT_ROOT}/build/python-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/python/bin"
-  ln -s python3.4m python3.4
+  pushd "${PROJECT_ROOT}/build/python-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/bin"
   ln -s python3 python
   ln -s easy_install-3.4 easy_install-3
   ln -s easy_install-3 easy_install

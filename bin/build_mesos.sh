@@ -63,7 +63,11 @@ function build {
 
 function copy_shared_libs {
   local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
-  "$COPY_LIBS" "${PROJECT_ROOT}/build/mesos-toor/" "$libdir"
+  cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 "$libdir"
+  cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 "$libdir"
+  cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 "$libdir"
+  cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
+  cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
   cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 }
 

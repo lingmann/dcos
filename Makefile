@@ -70,7 +70,7 @@ assemble: marathon zookeeper java mesos
 	@# Append Mesos build to DCOS tarball
 	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
 		$(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar mesos*
+		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar *
 	@# Compress
 	@gzip dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar
 	@mv dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar.gz \

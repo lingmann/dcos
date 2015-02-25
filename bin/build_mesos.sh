@@ -23,7 +23,7 @@ function main {
   check_prereqs
   build
   copy_shared_libs
-  patch_interpreter
+  patch_rpath
   msg "Finished building Mesos"
 }
 
@@ -45,8 +45,8 @@ function mesos_bootstrap {
 function mesos_configure {
   pushd "${PROJECT_ROOT}/build/mesos-build"
   "${PROJECT_ROOT}/ext/mesos/configure" \
-    --prefix="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos" \
-    --enable-optimize --disable-python
+    --prefix="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}" \
+    --enable-optimize --disable-python LDFLAGS="-Wl,-rpath=XORIGIN"
   popd
 }
 
@@ -62,13 +62,13 @@ function build {
 }
 
 function copy_shared_libs {
-  local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
+  local libdir="${PROJECT_ROOT}/build/mesos-toor/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
   "$COPY_LIBS" "${PROJECT_ROOT}/build/mesos-toor/" "$libdir"
   cp "${PROJECT_ROOT}"/build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 }
 
 function patch_interpreter {
-  local dcoslibdir="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/mesos/lib"
+  local dcoslibdir="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
   local libdir="${PROJECT_ROOT}/build/mesos-toor${dcoslibdir}"
   local linker="/lib64/ld-linux-x86-64.so.2"
   cp -p "$linker" "$libdir"
@@ -78,6 +78,30 @@ function patch_interpreter {
     then
       echo "Patching interpreter on $file"
       patchelf --set-interpreter "${dcoslibdir}/ld-linux-x86-64.so.2" "$file"
+    fi
+  done < <(find "${PROJECT_ROOT}/build/mesos-toor" -type f -executable -print0)
+}
+
+# Return relative path from directory $2 (defaults to `pwd`) to directory $1.
+# $1: /foo/
+# $2: /foo/libexec/mesos/
+# =>: ../..
+function relative_path {
+  python -c "import os.path; print os.path.relpath('$1','${2:-$PWD}')"
+}
+
+function patch_rpath {
+  local rpath_regex='.*XORIGIN.*'
+  local dcoslibdir="/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib"
+  local libdir="${PROJECT_ROOT}/build/mesos-toor${dcoslibdir}"
+  while IFS= read -d $'\0' -r file
+  do
+    if [[ $(patchelf --print-rpath "$file" 2>/dev/null) =~ $rpath_regex ]]
+    then
+      local parent_dir=$(dirname "$file")
+      local new_rpath="\$ORIGIN/$(relative_path "$libdir" "$parent_dir")"
+      echo "Patching rpath on $file to $new_rpath"
+      patchelf --set-rpath "$new_rpath" "$file"
     fi
   done < <(find "${PROJECT_ROOT}/build/mesos-toor" -type f -executable -print0)
 }

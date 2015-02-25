@@ -55,7 +55,7 @@ help:
 all: assemble
 
 .PHONY: assemble
-assemble: marathon zookeeper java mesos
+assemble: marathon zookeeper java mesos python
 	@# Extract PKG_VER and PKG_REL from the mesos manifest. Variables are global
 	@# and as such are namespaced to the target ($@_) to prevent conflicts.
 	$(eval $@_PKG_VER := \
@@ -69,6 +69,10 @@ assemble: marathon zookeeper java mesos
 		marathon zookeeper java *.manifest
 	@# Append Mesos build to DCOS tarball
 	@cd build/mesos-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
+		$(TAR) --numeric-owner --owner=0 --group=0 \
+		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar *
+	@# Append Python build to DCOS tarball
+	@cd build/python-toor/opt/mesosphere/dcos/$($@_PKG_VER)-$($@_PKG_REL) && \
 		$(TAR) --numeric-owner --owner=0 --group=0 \
 		-rf ../../../../../../dist/dcos-$($@_PKG_VER)-$($@_PKG_REL).tar *
 	@# Compress
@@ -97,7 +101,7 @@ publish: docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 sync \
+	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$($@_PKG_VER)-$($@_PKG_REL)/ \
 		--recursive
 	@echo "Bootstrap URL's:"
@@ -153,6 +157,27 @@ ext/mesos:
 	@echo "  git clone https://git-wip-us.apache.org/repos/asf/mesos.git ext/mesos"
 	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
 	@exit 1
+
+.PHONY: python
+python: ext/python.manifest
+ext/python.manifest:
+	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
+	@# Extract PKG_VER and PKG_REL from the mesos manifest. Variables are global
+	@# and as such are namespaced to the target ($@_) to prevent conflicts.
+	$(eval $@_PKG_VER := \
+		$(shell sed -rn 's/^DCOS_PKG_VER=(.*)/\1/p' ext/mesos.manifest))
+	$(eval $@_PKG_REL := \
+		$(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' ext/mesos.manifest))
+	@echo "Downloading Python from $(PYTHON_URL)"
+	@wget -qO- "$(PYTHON_URL)" | \
+		$(TAR) -xzf - --transform 's,Python-[0-9.]+,python,x' \
+		--show-transformed -C ext/
+	$(DOCKER_RUN) \
+		-e "PKG_VER=$($@_PKG_VER)" -e "PKG_REL=$($@_PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
+		$(DOCKER_IMAGE) bin/build_python.sh
+	@# Chown files modified via Docker mount to UID/GID at time of make invocation
+	$(SUDO) chown -R $(UID):$(GID) ext/python build
+	@echo 'PYTHON_URL="$(PYTHON_URL)"' > $@
 
 .PHONY: marathon
 marathon: ext/marathon/marathon.jar

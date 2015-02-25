@@ -8,7 +8,7 @@ See `docs/package_concepts.md` for the package layout.
 Packages have ids. Ids are composed of a name + blob. The blob is never
 introspected by the packaging stuff.
 
-Each package contains a usage.json. That contains a list of requires as well as
+Each package contains a pkginfo.json. That contains a list of requires as well as
 envrionment variables from the package.
 
 """
@@ -206,22 +206,22 @@ class Repository:
     def list(self):
         """List the available packages in the repository.
 
-        A package is a folder which contains a usage.json"""
+        A package is a folder which contains a pkginfo.json"""
         packages = set()
         for id in os.listdir(self.__path):
-            if os.path.exists(os.path.join(self.package_path(id), "usage.json")):
+            if os.path.exists(os.path.join(self.package_path(id), "pkginfo.json")):
                 packages.add(id)
         return packages
 
     # Load the given package
     def load(self, id):
         path = self.package_path(id)
-        filename = os.path.join(path, "usage.json")
+        filename = os.path.join(path, "pkginfo.json")
         usage = None
         try:
             usage = load_json(filename)
         except FileNotFoundError as ex:
-            raise PackageError("No / unreadable usage.json in package: {0}".format(ex.strerror))
+            raise PackageError("No / unreadable pkginfo.json in package: {0}".format(ex.strerror))
 
         if not isinstance(usage, dict):
             raise PackageError("Usage should be a dictionary, not a {0}".format(type(usage).__name__))

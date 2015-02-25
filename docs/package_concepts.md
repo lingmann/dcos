@@ -23,7 +23,7 @@ Different things want to rely on finding certain packages at certain locations. 
 
 ## Special install files + directories
 `/opt/mesosphere/environment`
-  - All the environment variables to be used when running mesos. Compiled from a `environment` section in `usage.json` of every active package, as well as a generated PATH and LD_LIBRARY_PATH containing the /opt/mesosphere/bin and /opt/mesosphere/lib respectively.
+  - All the environment variables to be used when running mesos. Compiled from a `environment` section in `pkginfo.json` of every active package, as well as a generated PATH and LD_LIBRARY_PATH containing the /opt/mesosphere/bin and /opt/mesosphere/lib respectively.
 ```
 /opt/mesosphere/bin/
 /opt/mesosphere/lib/

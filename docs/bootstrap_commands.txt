@@ -42,8 +42,8 @@ for package in packages_to_activate
 package_manifests = dict()
 
 for package in packages_to_activate
-  # load usage.json from the package.
-  package_manifests[package] = load_json(/opt/mesosphere/packages/{package}/usage.json)
+  # load pkginfo.json from the package.
+  package_manifests[package] = load_json(/opt/mesosphere/packages/{package}/pkginfo.json)
 
 # NOTE: The active.json in an initial bootstrap where we got the packages from
 # a DCOS distribution should always pass

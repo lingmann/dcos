@@ -32,7 +32,7 @@ Host overall filesystem layout:
 
 Package layout:
 ```
-usage.json # json file describing list of dependencies / requires of package either
+pkginfo.json # json file describing list of dependencies / requires of package either
 	# by name (mesos) or by specific package id (mesos-0.22)
 	# Also lists environment variables to be loaded into the global environment.
 etc/

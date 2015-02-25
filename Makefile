@@ -184,6 +184,7 @@ marathon: ext/marathon/marathon.jar
 
 ext/marathon/marathon.jar:
 	@echo "Downloading Marathon from $(MARATHON_URL)"
+	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	@# Transform paths in tarball so that marathon jar is extracted to desired
 	@# location. The wildcard pattern specified is pre-transform.
 	@wget -qO- "$(MARATHON_URL)" | \
@@ -197,6 +198,7 @@ zookeeper: ext/zookeeper/bin/zkServer.sh
 
 ext/zookeeper/bin/zkServer.sh:
 	@echo "Downloading Zookeeper from $(ZOOKEEPER_URL)"
+	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	@wget -qO- "$(ZOOKEEPER_URL)" | \
 		$(TAR) -xzf - --transform 's,^zookeeper-[0-9.]+,zookeeper,x' \
 		--show-transformed -C ext/
@@ -208,6 +210,7 @@ java: ext/java/bin/java
 
 ext/java/bin/java:
 	@echo "Downloading Java from $(JAVA_URL)"
+	@if [[ "$(JAVA_URL)" == "" ]]; then echo "JAVA_URL is unset"; exit 1; fi
 	@wget -qO- "$(JAVA_URL)" | \
 		$(TAR) -xzf - --transform 's,^jre[0-9._]+,java,x' \
 		--show-transformed -C ext/

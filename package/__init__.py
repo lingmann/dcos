@@ -19,6 +19,7 @@ import shutil
 import urllib.parse
 import urllib.request
 from itertools import chain
+from subprocess import check_call
 from tempfile import NamedTemporaryFile
 
 from package.exceptions import PackageError, RepositoryError, ValidationError
@@ -36,6 +37,24 @@ PATH=/usr/bin:{0}\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
+
+
+# Manage starting/stopping all systemd services inside a folder.
+class Systemd:
+
+    def __init__(self, unit_dir):
+        self.__dir = unit_dir
+
+    def daemon_reload(self):
+        check_call(["systemctl", "daemon-reload"])
+
+    def start_all(self):
+        for path in os.listdir(self.__dir):
+            check_call(["systemctl", "start", path])
+
+    def stop_all(self):
+        for path in os.listdir(self.__dir):
+            check_call(["systemctl", "stop", path])
 
 
 class PackageId:

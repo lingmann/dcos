@@ -117,7 +117,7 @@ publish: docker_image
 	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
 
 .PHONY: publish-snapshot
-publish-snapshot: publish
+publish-snapshot: publish docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/snapshot/
@@ -144,8 +144,8 @@ ext/mesos:
 	@exit 1
 
 .PHONY: mesos
-mesos: build/mesos.manifest docker_image ext/mesos
-build/mesos.manifest:
+mesos: build/mesos.manifest ext/mesos
+build/mesos.manifest: docker_image
 	$(ANNOTATE) $(DOCKER_RUN) \
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		$(DOCKER_IMAGE) bin/build_mesos.sh &> build/mesos.log
@@ -158,7 +158,7 @@ build/mesos.manifest:
 
 .PHONY: python
 python: build/python.manifest
-build/python.manifest:
+build/python.manifest: docker_image
 	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
 	@echo "Downloading Python from $(PYTHON_URL)"
 	@wget -qO- "$(PYTHON_URL)" | \

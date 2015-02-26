@@ -8,6 +8,7 @@ PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
 ENVSUBST     ?= envsubst
 SUDO         ?= sudo
+ANNOTATE     ?= $(PROJECT_ROOT)/bin/annotate.sh
 DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
 	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)

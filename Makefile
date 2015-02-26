@@ -76,7 +76,7 @@ assemble: marathon zookeeper java mesos python
 	@# Append external components to DCOS tarball
 	@cd ext && $(TAR) --numeric-owner --owner=0 --group=0 \
 		-rf ../dist/dcos-$(PKG_VER)-$(PKG_REL).tar \
-		marathon zookeeper java *.manifest
+		marathon zookeeper java
 	@# Append build manifests to DCOS tarball
 	@cd build && $(TAR) --numeric-owner --owner=0 --group=0 \
 		-rf ../dist/dcos-$(PKG_VER)-$(PKG_REL).tar \
@@ -94,7 +94,7 @@ assemble: marathon zookeeper java mesos python
 	@mv dist/dcos-$(PKG_VER)-$(PKG_REL).tar.gz \
 		dist/dcos-$(PKG_VER)-$(PKG_REL).tgz
 	@# Set up manifest contents
-	@cat ext/*.manifest build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
+	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
 	#@# Build bootstrap script
 	@env "SUBST_PKG_VER=$(PKG_VER)" "SUBST_PKG_REL=$(PKG_REL)" \
 		$(ENVSUBST) '$$SUBST_PKG_VER:$$SUBST_PKG_REL' \
@@ -124,17 +124,6 @@ publish-snapshot: publish
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/snapshot/
 
-.PHONY: mesos
-mesos: ext/mesos.manifest docker_image ext/mesos
-ext/mesos.manifest:
-	$(DOCKER_RUN) \
-		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
-		$(DOCKER_IMAGE) bin/build_mesos.sh
-	@# Chown files modified via Docker mount to UID/GID at time of make invocation
-	$(SUDO) chown -R $(UID):$(GID) ext/mesos build
-	@# Record Mesos stuff to manifest
-	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
-
 debug: docker_image
 	$(DOCKER_RUN) \
 		-i -t -e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
@@ -142,7 +131,10 @@ debug: docker_image
 
 .PHONY: docker_image
 docker_image:
-	$(SUDO) docker build -t "$(DOCKER_IMAGE)" .
+	$(ANNOTATE) $(SUDO) docker build -t "$(DOCKER_IMAGE)" . \
+		&> build/docker_image.log
+	>&2 egrep '^stderr: ' build/docker_image.log || true
+	@echo "docker_image build complete"
 
 ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
@@ -151,25 +143,40 @@ ext/mesos:
 	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
 	@exit 1
 
+.PHONY: mesos
+mesos: build/mesos.manifest docker_image ext/mesos
+build/mesos.manifest:
+	$(ANNOTATE) $(DOCKER_RUN) \
+		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
+		$(DOCKER_IMAGE) bin/build_mesos.sh &> build/mesos.log
+	>&2 egrep '^stderr: ' build/mesos.log || true
+	@echo "mesos build complete"
+	@# Chown files modified via Docker mount to UID/GID at time of make invocation
+	$(SUDO) chown -R $(UID):$(GID) ext/mesos build
+	@# Record Mesos stuff to manifest
+	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
+
 .PHONY: python
-python: ext/python.manifest
-ext/python.manifest:
+python: build/python.manifest
+build/python.manifest:
 	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
 	@echo "Downloading Python from $(PYTHON_URL)"
 	@wget -qO- "$(PYTHON_URL)" | \
 		$(TAR) -xzf - --transform 's,Python-[0-9.]+,python,x' \
 		--show-transformed -C ext/
-	$(DOCKER_RUN) \
+	$(ANNOTATE) $(DOCKER_RUN) \
 		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
-		$(DOCKER_IMAGE) bin/build_python.sh
+		$(DOCKER_IMAGE) bin/build_python.sh &> build/python.log
+	>&2 egrep '^stderr: ' build/python.log || true
+	@echo "python build complete"
+
 	@# Chown files modified via Docker mount to UID/GID at time of make invocation
 	$(SUDO) chown -R $(UID):$(GID) ext/python build
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
 .PHONY: marathon
-marathon: ext/marathon/marathon.jar
-
-ext/marathon/marathon.jar:
+marathon: build/marathon.manifest
+build/marathon.manifest:
 	@echo "Downloading Marathon from $(MARATHON_URL)"
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	@# Transform paths in tarball so that marathon jar is extracted to desired
@@ -177,40 +184,35 @@ ext/marathon/marathon.jar:
 	@wget -qO- "$(MARATHON_URL)" | \
 		$(TAR) -xzf - --transform 's,marathon-[0-9.]+/target/scala-[0-9.]+/marathon-assembly-[0-9.]+\.jar,marathon/marathon.jar,x' \
 		--show-transformed -C ext/ --wildcards '*/marathon-assembly-*.jar'
-	@echo 'MARATHON_URL=$(MARATHON_URL)' > ext/marathon.manifest
-	@test -f $@
+	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
 .PHONY: zookeeper
-zookeeper: ext/zookeeper/bin/zkServer.sh
-
-ext/zookeeper/bin/zkServer.sh:
+zookeeper: build/zookeeper.manifest
+build/zookeeper.manifest:
 	@echo "Downloading Zookeeper from $(ZOOKEEPER_URL)"
 	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	@wget -qO- "$(ZOOKEEPER_URL)" | \
 		$(TAR) -xzf - --transform 's,^zookeeper-[0-9.]+,zookeeper,x' \
 		--show-transformed -C ext/
-	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > ext/zookeeper.manifest
-	@test -f $@
+	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
 .PHONY: java
-java: ext/java/bin/java
-
-ext/java/bin/java:
+java: build/java.manifest
+build/java.manifest:
 	@echo "Downloading Java from $(JAVA_URL)"
 	@if [[ "$(JAVA_URL)" == "" ]]; then echo "JAVA_URL is unset"; exit 1; fi
 	@wget -qO- "$(JAVA_URL)" | \
 		$(TAR) -xzf - --transform 's,^jre[0-9._]+,java,x' \
 		--show-transformed -C ext/
-	@echo 'JAVA_URL=$(JAVA_URL)' > ext/java.manifest
-	@test -f $@
+	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
 .PHONY: clean
 clean:
-	$(SUDO) rm -rf build
+	$(SUDO) rm -rf build dist
 
 .PHONY: distclean
 distclean: clean
-	$(SUDO) rm -rf dist ext/*
+	$(SUDO) rm -rf ext/*
 	$(SUDO) docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################

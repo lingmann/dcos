@@ -20,8 +20,9 @@ USAGE
 }; function --help { usage ;}; function -h { usage ;};
 
 function main {
-  # The second sed matches on everything that is not '^stdout: '
-  ("$@" | sed 's/^/stdout: /') 2>&1 | sed '/^stdout: /! s/^/stderr: /'
+  # Use process substitution to directly hook up stdout and stderr to separate
+  # sed instances. See: http://goo.gl/iwZkp
+  "$@" > >(sed 's/^/stdout: /') 2> >(sed 's/^/stderr: /' >&2)
 }
 
 if [[ ${1:-} ]] && declare -F | cut -d' ' -f3 | fgrep -qx -- "${1:-}"

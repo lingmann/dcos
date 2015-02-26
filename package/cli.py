@@ -5,7 +5,7 @@ Usage:
   pkgpanda bootstrap [options]
   pkgpanda list [options]
   pkgpanda active [options]
-  pkgpanda fetch <id>... [options]
+  pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda activate <id>... [options]
 
 Options:
@@ -17,6 +17,7 @@ Options:
 import json
 import os.path
 import sys
+from urllib.error import URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
 
@@ -82,7 +83,22 @@ def main():
         sys.exit(0)
 
     if arguments['fetch']:
-        raise NotImplementedError()
+        def fetcher(id, target):
+            return urllib_fetcher(arguments['--repository-url'], id, target)
+
+        for pkg_id in arguments['<id>']:
+            # TODO(cmaloney): Make this not use escape sequences when not at a
+            # `real` terminal.
+            sys.stdout.write("\rFetching: {0}".format(pkg_id))
+            sys.stdout.flush()
+            try:
+                repository.add(fetcher, pkg_id)
+            except URLError as ex:
+                print("\nUnable to fetch package {0}: {1}".format(pkg_id, ex.reason))
+                sys.exit(1)
+            sys.stdout.write("\rFetched: {0}\n".format(pkg_id))
+            sys.stdout.flush()
+
         sys.exit(0)
 
     if arguments['activate']:

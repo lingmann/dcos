@@ -16,11 +16,11 @@ import os
 import os.path
 import re
 import shutil
+import tempfile
 import urllib.parse
 import urllib.request
 from itertools import chain
 from subprocess import check_call
-from tempfile import NamedTemporaryFile
 
 from package.exceptions import PackageError, RepositoryError, ValidationError
 from package.util import if_exists, load_json
@@ -181,18 +181,39 @@ def validate_compatible(packages, roles):
 
 
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
-def urllib_fetcher(self, base_url, id, target):
+def urllib_fetcher(base_url, id, target):
     assert base_url
+    # TODO(cmaloney): That file:// urls are allowed in base_url is likely a security hole.
     # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
     # all the logic can go away, we gain integrity checking, etc.
     filename = id + ".tar.gz"
     url = urllib.parse.urljoin(base_url, filename)
-    with NamedTemporaryFile(suffix=".tar.gz") as tmp_file:
-        with urllib.request.urlopen(url) as response:
-            shutil.copyfileobj(response, tmp_file)
+    # TODO(cmaloney): Use a private tmp directory so there is no chance of a user
+    # intercepting the tarball + other validation data locally.
+    fd, temp_filename = tempfile.mkstemp(suffix=".tar.gz")
+    try:
+        # Download the package.
+        with os.fdopen(fd, "w+b") as f:
+            with urllib.request.urlopen(url) as response:
+                shutil.copyfileobj(response, f)
 
-        # Extract the package
-        shutil.unpack_archive(tmp_file.name, target)
+        # Extract the package. If there are any errors, delete the folder being extracted to.
+        # This is an explicit seperate step from the download to minimize chance of corruption when unpacking.
+        # TODO(cmaloney): Validate as much as possible the extraction will pass before taking any action.
+        try:
+            assert os.path.exists(temp_filename)
+            shutil.unpack_archive(temp_filename, target, "gztar")
+        except:
+            # If there are errors, we can't really cope since we are already in an error state.
+            shutil.rmtree(target, ignore_errors=True)
+            raise
+    except:
+        raise
+    finally:
+        try:
+            os.remove(temp_filename)
+        except:
+            pass
 
 
 class Repository:

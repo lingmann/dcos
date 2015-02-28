@@ -5,8 +5,8 @@ function usage {
 cat <<USAGE
  USAGE: `basename "$0"` command [args]
 
-  Convert stdout and stderr from the given command to an annotated stream on
-  stdout. For example:
+  Convert stdout and stderr from the given command to annotated stdout and
+  stderr streams. For example:
 
    $ `basename "$0"` echo "stdout"
    stdout: stdout

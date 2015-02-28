@@ -1,12 +1,12 @@
 from util import run
 
 list_output = """invalid-package
-mesos-0.22.0
-mesos-config-ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+mesos--0.22.0
+mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
 """
 
-active_output = """mesos-0.22.0
-mesos-config-ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+active_output = """mesos--0.22.0
+mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
 """
 
 

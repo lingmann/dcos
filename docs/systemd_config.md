@@ -1,6 +1,6 @@
 Misc. thoughts
 
-/opt/mesosphere/packages/{pkg-id}/package-contents
+/opt/mesosphere/packages/{package-id}/package-contents
 
 All packages are blobs, contain one file listing "required other packages"
 	- Needed for config -> modules basic validation

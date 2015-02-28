@@ -24,6 +24,7 @@ from urllib.request import urlopen
 from docopt import docopt
 from package import Install, Repository, urllib_fetcher
 from package.constants import version
+from package.exceptions import PackageError, ValidationError
 from package.util import if_exists, load_json, load_string
 
 
@@ -69,7 +70,11 @@ def main():
     repository = Repository(os.path.abspath(arguments['--repository']))
 
     if arguments['bootstrap']:
-        bootstrap(install, repository)
+        try:
+            bootstrap(install, repository)
+        except ValidationError as ex:
+            print("Validation Error: {0}".format(ex))
+            sys.exit(1)
         sys.exit(0)
 
     if arguments['list']:
@@ -102,7 +107,13 @@ def main():
         sys.exit(0)
 
     if arguments['activate']:
-        install.activate(repository, repository.load_packages(arguments['<id>']))
+        try:
+            install.activate(repository, repository.load_packages(arguments['<id>']))
+        except ValidationError as ex:
+            print("Validation Error: {0}".format(ex))
+            sys.exit(1)
+        except PackageError as ex:
+            print("Package Error: {0}".format(ex))
         sys.exit(0)
 
     print("unknown command")

@@ -9,23 +9,22 @@ Host overall filesystem layout:
 	etc/
 	environment
 	active/
-		mesos -> /opt/mesosphere/packages/mesos-0.22.0
+		mesos -> /opt/mesosphere/packages/mesos--0.22.0
 		java -> ...
 		zookeeper -> ...
 	packages/
-		mesos-config/
+		mesos-config--123/
 			etc/
-		mesos-0.22.0/
+		mesos--0.22.0/
 			bin/
 			lib/
 			libexec/
 			...
-			systemd/
-				master/
-					mesos-master.service
-		java-ranodmversionstring/
+			dcos.target.wants_master/
+				mesos-master.service
+		java--ranodmversionstring/
 			...
-		zookeeper-0.123/
+		zookeeper--0.123/
 			...
 ```
 

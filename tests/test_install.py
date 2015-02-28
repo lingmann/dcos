@@ -20,7 +20,7 @@ def test_active(install):
     active = install.get_active()
     assert type(active) is set
 
-    assert active == set(['mesos-config-ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8', 'mesos-0.22.0'])
+    assert active == set(['mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8', 'mesos--0.22.0'])
 
     # TODO(cmaloney): More comprehensive testing of the validation checks
 

@@ -1,5 +1,5 @@
 {
-	"requires": ["mesos-0.22.0", "mesos-config"],
+	"requires": ["mesos--0.22.0", "mesos-config"],
 	"environment": {
 		"FOO": "BAR",
 		"BAZ": "TEST"

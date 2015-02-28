@@ -1,9 +1,9 @@
 # Package concepts
 
 
-*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z0-9@._+-]. They may not start with a hyphen or a dot. Must be at least 1 character long.
+*Package Name*: The name which other packages will know this package by, used so that. Package names must be valid linux folder names, are case insensitive / always lower case. Valid characters are [a-zA-Z0-9@._+-]. They may not start with a hyphen or a dot. Must be at least 1 character long. A package name may not contain '--'.
 
-*Package ID*: `name-id` Combination package name + arbitrary other information (likely some sort of version indicator). The packaging system just cares that it can extract the package name from a package id, as well as can fetch the package from. The package id may not contain a '-'. Valid characters are [a-zA-Z0-9@._+-]. Once a package-id is used, that package-id should never be re-used with different package contents.
+*Package ID*: `name--id` Combination package name + arbitrary other information (likely some sort of version indicator). The packaging system just cares that it can extract the package name from a package id, as well as can fetch the package from. The package id may not contain a '-'. Valid characters are [a-zA-Z0-9@._+-]. A package-id may not contain '--'. Once a package-id is used, that package-id should never be re-used with different package contents.
 
 *pkginfo.json*: Metadata file containing the requrements of the package (either package names or package ids), as well as the environment variables provided by the package.
 
@@ -53,7 +53,7 @@ Different things want to rely on finding certain packages at certain locations. 
 Why don't we do /{name}/current
   - Then we can't atomically swap things into place, easier to get partial updates.
 
-Why not make /{name}/{id-without-name}
+Why not make /{name}/{id_without_name}
   - Who cleans up /{name}/?
   - Lots more logic to get wrong, coordination required.
 

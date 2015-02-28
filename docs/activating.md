@@ -40,8 +40,8 @@ packages have their symlinks removed (INSTALL_ROOT/bin, INSTALL_ROOT/systemd,
 ## Sample active.json
 ```
 [
-  "mesos-0.22.0",
-  "mesos-config",
-  "mesos-systemd"
+  "mesos--0.22.0",
+  "mesos-config-1",
+  "mesos-systemd-12"
 ]
 ```

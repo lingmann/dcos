@@ -61,10 +61,11 @@ class PackageId:
 
     @staticmethod
     def parse(id):
-        parts = id.rsplit('-', 1)
+        parts = id.split('--')
         if len(parts) != 2:
             raise ValidationError(
-                "Invalid package id {0} must contain a '-' seperating the name and version".format(id))
+                "Invalid package id {0}. Package ids may only contain one '--' " +
+                "which seperates the name and version".format(id))
 
         PackageId.validate_name(parts[0])
         PackageId.validate_version(parts[1])
@@ -90,21 +91,21 @@ class PackageId:
         self.name, self.version = PackageId.parse(id)
 
     def __repr__(self):
-        return '{0}-{1}'.format(self.name, self.version)
+        return '{0}--{1}'.format(self.name, self.version)
 
 
 class Package:
 
-    def __init__(self, path, id, usage):
+    def __init__(self, path, id, pkginfo):
         if isinstance(id, str):
             id = PackageId(id)
         self.__id = id
         self.__path = path
-        self.__usage = usage
+        self.__pkginfo = pkginfo
 
     @property
     def environment(self):
-        return self.__usage.get('environment', dict())
+        return self.__pkginfo.get('environment', dict())
 
     @property
     def id(self):
@@ -120,7 +121,7 @@ class Package:
 
     @property
     def requires(self):
-        return frozenset(self.__usage.get('requires', list()))
+        return frozenset(self.__pkginfo.get('requires', list()))
 
     @property
     def version(self):
@@ -238,16 +239,16 @@ class Repository:
     def load(self, id):
         path = self.package_path(id)
         filename = os.path.join(path, "pkginfo.json")
-        usage = None
+        pkginfo = None
         try:
-            usage = load_json(filename)
+            pkginfo = load_json(filename)
         except FileNotFoundError as ex:
             raise PackageError("No / unreadable pkginfo.json in package: {0}".format(ex.strerror))
 
-        if not isinstance(usage, dict):
-            raise PackageError("Usage should be a dictionary, not a {0}".format(type(usage).__name__))
+        if not isinstance(pkginfo, dict):
+            raise PackageError("Usage should be a dictionary, not a {0}".format(type(pkginfo).__name__))
 
-        return Package(path, id, usage)
+        return Package(path, id, pkginfo)
 
     def load_packages(self, ids):
         packages = set()

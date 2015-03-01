@@ -4,7 +4,7 @@ from package.constants import version
 setup(
     name='pkgpanda',
     version=version,
-    description='DCOS package/blob management + swapping',
+    description='Panda package manager and utilities',
     url='https://mesosphere.com',
     author='Mesosphere, Inc.',
     author_email='support@mesosphere.io',

@@ -1,5 +1,5 @@
 
-"""DCOS Package management local utility
+"""Panda package management
 
 Usage:
   pkgpanda bootstrap [options]
@@ -63,7 +63,7 @@ def bootstrap(install, repository):
 
 
 def main():
-    arguments = docopt(__doc__, version="DCOS Package {}".format(version))
+    arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
 
     # NOTE: Changing root or repository will likely break actually running packages.
     install = Install(os.path.abspath(arguments['--root']), os.path.abspath(arguments['--config-dir']))

@@ -21,6 +21,7 @@ setup(
     entry_points={
         'console_scripts': [
             'pkgpanda=package.cli:main',
+            'mkpanda=package.build.cli:main'
         ],
     },
 )

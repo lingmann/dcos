@@ -73,6 +73,11 @@ class PackageId:
         return parts[0], parts[1]
 
     @staticmethod
+    def from_parts(name, version):
+        # TODO(cmaloney): This format, then parse is less than ideal.
+        return PackageId("{0}--{1}".format(name, version))
+
+    @staticmethod
     def validate_name(name):
         # [a-zA-Z0-9@._+-]
         # May not start with '.' or '-'.

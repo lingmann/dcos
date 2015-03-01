@@ -6,6 +6,11 @@ def load_json(filename):
         return json.load(f)
 
 
+def write_json(filename, data):
+    with open(filename, "w+") as f:
+        return json.dump(data, f)
+
+
 def load_string(filename):
     with open(filename) as f:
         return f.read()

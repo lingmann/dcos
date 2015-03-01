@@ -1,0 +1,11 @@
+{
+  "name" : "mesos",
+  "docker": "mesosphere/mesos-build",
+  "sources" : {
+    "mesos" : {
+      "kind": "git",
+      "git" : "/home/cody/projects/mesos/",
+      "branch" : "master"
+    }
+  }
+}

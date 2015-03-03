@@ -15,7 +15,7 @@ def checkout_source(sources):
         raise ValidationError(
             "'src' directory already exists, did you have a previous build? " +
             "Currently all builds must be from scratch. Support should be " +
-            "added for re-using a src directory when possible.")
+            "added for re-using a src directory when possible. src={}".format(os.path.abspath("src")))
     os.mkdir("src")
     for src, info in sources.items():
         root = os.path.abspath("src/{0}".format(src))
@@ -35,7 +35,7 @@ def checkout_source(sources):
             }
         elif info['kind'] == 'url':
             url = urlparse(info['url'])
-            filename = os.path.basename(url.path)
+            filename = os.path.join(root, os.path.basename(url.path))
             # Download the file.
             with open(filename, "w+b") as f:
                 with urllib.request.urlopen(info['url']) as response:

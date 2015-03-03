@@ -59,6 +59,7 @@ def main():
         print("ERROR: Unable to find `buildinfo.json` in the current directory.")
         exit(-1)
 
+    # TODO(cmaloney): one buildinfo -> multiple packages builds.
     # TODO(cmaloney): allow a shorthand for single source packages.
     if "sources" not in buildinfo:
         raise ValidationError("Must specify at least one source to build package from.")

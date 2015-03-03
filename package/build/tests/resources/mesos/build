@@ -1,34 +1,10 @@
 #!/bin/bash
 set -o errexit -o nounset -o pipefail -x
 
-libdir="$PKG_PATH/lib"
-
-# TODO(cmaloney): Check prerequisites installed (glog, protobuf, boost)
-pushd "/pkg/src/mesos"
-./bootstrap
-popd
-
-mkdir -p build
-pushd build
-# TODO(cmaloney): --with-glog=/usr --with-protobuf=/usr --with-boost=/usr
-# TODO(cmaloney): DESTDIR builds so we don't have to build as root?
-"/pkg/src/mesos/configure" \
-  --prefix="$PKG_PATH" --enable-optimize --disable-python
-# TODO(cmaloney): -j8 is almost certainly wrong.
-make -j8
-
-make install
-popd
-
-# TODO(cmaloney): Make these a seperate mesos library package.
-# Copy the shared libraries from the system which mesos requires
-cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 "$libdir"
-cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 "$libdir"
-cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 "$libdir"
-cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
-cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
-
-# TODO(cmaloney): Shouldn't be needed...
-#cp build/mesos-build/src/java/target/mesos-*.jar "$libdir"
-
-echo "Finished building Mesos"
+# Make files in bin/lib will likely touch bin, lib of output. Test that.
+mkdir -p "$PKG_PATH/bin" "$PKG_PATH/lib"
+touch "$PKG_PATH/bin/mesos-master"
+touch "$PKG_PATH/bin/libmesos.so"
+echo "$PKG_VERSION" > "$PKG_PATH/version"
+touch "$PKG_ID"
+touch "$PKG_NAME"

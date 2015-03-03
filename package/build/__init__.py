@@ -1,5 +1,8 @@
 import os.path
+import shutil
+import urllib.request
 from subprocess import check_call, check_output
+from urllib.parse import urlparse
 
 from package.exceptions import ValidationError
 
@@ -18,20 +21,30 @@ def checkout_source(sources):
         root = os.path.abspath("src/{0}".format(src))
         os.mkdir(root)
 
-        # Fetch the source
-        if info['kind'] != 'git':
-            raise ValidationError("Currently only packages from git are supported")
+        if info['kind'] == 'git':
+            # TODO(cmaloney): This will go really badly when updating an existing repo...
+            check_call(["git", "clone", info['git'], "--branch", info["branch"], root])
 
-        # TODO(cmaloney): This will go really badly when updating an existing repo...
-        check_call(["git", "clone", info['git'], "--branch", info["branch"], root])
+            commit = check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip()
 
-        commit = check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip()
+            for patcher in info.get('patches', []):
+                raise NotImplementedError()
 
-        for patcher in info.get('patches', []):
-            raise NotImplementedError()
+            ids[src] = {
+                "commit": commit
+            }
+        elif info['kind'] == 'url':
+            url = urlparse(info['url'])
+            filename = os.path.basename(url.path)
+            # Download the file.
+            with open(filename, "w+b") as f:
+                with urllib.request.urlopen(info['url']) as response:
+                    shutil.copyfileobj(response, f)
 
-        ids[src] = {
-            "commit": commit
-        }
+            ids[src] = {
+                "sha1": check_output(["sha1sum", filename]).split()[0].decode('ascii')
+            }
+        else:
+            raise ValidationError("Currently only packages from url and git sources are supported")
 
     return ids

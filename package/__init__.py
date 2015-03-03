@@ -192,11 +192,11 @@ def urllib_fetcher(base_url, id, target):
     # TODO(cmaloney): That file:// urls are allowed in base_url is likely a security hole.
     # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
     # all the logic can go away, we gain integrity checking, etc.
-    filename = id + ".tar.gz"
+    filename = id + ".tar.xz"
     url = urllib.parse.urljoin(base_url, filename)
     # TODO(cmaloney): Use a private tmp directory so there is no chance of a user
     # intercepting the tarball + other validation data locally.
-    fd, temp_filename = tempfile.mkstemp(suffix=".tar.gz")
+    fd, temp_filename = tempfile.mkstemp(suffix=".tar.xz")
     try:
         # Download the package.
         with os.fdopen(fd, "w+b") as f:

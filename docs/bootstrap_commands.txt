@@ -1,6 +1,6 @@
 #!/bin/bash
-wget https://downloads.mesosphere.com/dcos-dist.tar.gz -o /tmp/dcos-dist.tar.gz
-tar -xzf dcos-dist.tar.gz /opt/mesosphere
+wget https://downloads.mesosphere.com/dcos-dist.tar.xz -o /tmp/dcos-dist.tar.xz
+tar -xzf dcos-dist.tar.xz /opt/mesosphere
 
 # Run the bootstrap script which was downloaded as part of the distribution
 /opt/mesosphere/dcos-dist/bootstrap.sh
@@ -36,8 +36,8 @@ packages_to_activate = load_json(/opt/mesosphere/active.json.new) # ["mesos-0.22
 for package in packages_to_activate
   `pkgpanda fetch {package}`
     # Note: Will use a secure temporary filename
-    - wget http://{repository_url}/packages/{package}.tar.gz -o /tmp/{package}.tar.gz
-    - tar -xzf /tmp/{package}.tar.gz /opt/mesosphere/packages/{package}/
+    - wget http://{repository_url}/packages/{package}.tar.xz -o /tmp/{package}.tar.xz
+    - tar -xzf /tmp/{package}.tar.xz /opt/mesosphere/packages/{package}/
 
 package_manifests = dict()
 

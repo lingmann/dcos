@@ -98,4 +98,4 @@ Dependencies / requirements
 
 Splitting up packages (mesos, master-config, mesos-config, etc)
 
-tar -czf mesos--0.22.0.tar.gz -C mesos--0.22.0 .
+tar -czf mesos--0.22.0.tar.xz -C mesos--0.22.0 .

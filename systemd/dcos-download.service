@@ -6,5 +6,5 @@ ConditionPathExists=!/opt/mesosphere/
 
 [Service]
 Type=oneshot
-ExecStartPre=/usr/bin/curl https://download.mesosphere.io/dcos/distribution.tar.gz -o /tmp/distribution.tar.gz
-ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.gz -C /opt/mesosphere
+ExecStartPre=/usr/bin/curl https://download.mesosphere.io/dcos/distribution.tar.xz -o /tmp/distribution.tar.xz
+ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere

@@ -6,5 +6,6 @@ mkdir -p "$PKG_PATH/bin" "$PKG_PATH/lib"
 touch "$PKG_PATH/bin/mesos-master"
 touch "$PKG_PATH/bin/libmesos.so"
 echo "$PKG_VERSION" > "$PKG_PATH/version"
-touch "$PKG_ID"
-touch "$PKG_NAME"
+touch "$PKG_PATH/$PKG_ID"
+touch "$PKG_PATH/$PKG_NAME"
+sudo chmod -R o+w $PKG_PATH

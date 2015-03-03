@@ -106,6 +106,8 @@ def main():
     # Copy the build info to the resulting tarball
     copyfile("src/build_ids.json", "result/build_ids.json")
     copyfile("buildinfo.json", "result/buildinfo.json")
+    # TODO(cmaloney): Fill pkginfo with useful data.
+    write_json("result/pkginfo.json", {})
 
     check_call([
         "docker",
@@ -136,8 +138,6 @@ def main():
 
     # TODO(cmaloney)  build info should be copied in here but can't really
     # because of docker and crazy folder root permissions...
-
-    # TODO(cmaloney): Generate pkginfo.json
 
     # Bundle the artifacts into the pkgpanda package
     pkg_path = abspath("{}.tar.xz".format(pkg_id))

@@ -180,9 +180,11 @@ build/marathon.manifest:
 	@echo "Downloading Marathon from $(MARATHON_URL)"
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	@# Transform paths in tarball so that marathon jar is extracted to desired
-	@# location. The wildcard pattern specified is pre-transform.
+	@# location. The wildcard pattern specified is pre-transform. To debug:
+	@# $(TAR) -tzf - --transform 's,sed pattern,replace,x' --show-transformed
 	@wget -qO- "$(MARATHON_URL)" | \
-		$(TAR) -xzf - --transform 's,marathon-[0-9.]+/target/scala-[0-9.]+/marathon-assembly-[0-9.]+\.jar,marathon/marathon.jar,x' \
+		$(TAR) -xzf - --transform \
+		's,marathon-[0-9\.RC\-]+/target/scala-[0-9.]+/marathon-assembly-[0-9\.RC\-]+\.jar,marathon/marathon.jar,x' \
 		--show-transformed -C ext/ --wildcards '*/marathon-assembly-*.jar'
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 

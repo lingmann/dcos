@@ -340,8 +340,8 @@ class Install:
         def make_abs(name):
             return os.path.join(self.__root, name)
 
-        active_names = list(map(make_abs, well_known_dirs + ["environment"]))
-        active_dirs = list(map(make_abs, well_known_dirs))
+        active_names = list(map(make_abs, well_known_dirs + ["environment", "active"]))
+        active_dirs = list(map(make_abs, well_known_dirs + ["active"]))
 
         new_names = [name + ".new" for name in active_names]
         new_dirs = [name + ".new" for name in active_dirs]
@@ -351,7 +351,10 @@ class Install:
         # Remove all pre-existing new and old directories
         for name in chain(new_names, old_names):
             if (os.path.exists(name)):
-                shutil.rmtree(name)
+                if os.path.isdir(name):
+                    shutil.rmtree(name)
+                else:
+                    os.remove(name)
 
         # Make the directories for the new config
         for name in new_dirs:
@@ -371,6 +374,9 @@ class Install:
         # Add the folders, config in each package.
         for package in packages:
             # Package folders
+            # NOTE: Since active is at the end of the folder list it will be
+            # removed by the zip. This is the desired behavior, since it will be
+            # populated later.
             for new, dir_name in zip(new_dirs, well_known_dirs):
                 pkg_dir = os.path.join(package.path, dir_name)
                 assert os.path.isabs(pkg_dir)
@@ -381,6 +387,9 @@ class Install:
                 for role in self.__roles:
                     role_dir = os.path.join(package.path, "{0}_{1}".format(dir_name, role))
                     symlink_all(role_dir, new)
+
+            # Add to the active folder
+            os.symlink(package.path, os.path.join(make_abs("active.new"), package.name))
 
             # Add to the environment contents
             env_contents += "# package: {0}\n".format(package.id)

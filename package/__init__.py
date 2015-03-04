@@ -12,6 +12,7 @@ Each package contains a pkginfo.json. That contains a list of requires as well a
 envrionment variables from the package.
 
 """
+import json
 import os
 import os.path
 import re
@@ -412,7 +413,20 @@ class Install:
     # TODO(cmaloney): Implement recovery properly.
     def do_activate_swap(self, extension):
         active_names = self.get_active_names()
+        state_filename = self._make_abs("install_progress")
+
+        # Record the state (atomically) on the filesystem so that if there is a
+        # hard/fast fail at any point the activate swap can continue.
+        def record_state(state):
+            # Atomically write all the state to disk, swap into place.
+            with open(state_filename + ".new", "w+") as f:
+                json.dump(state, f)
+                f.flush()
+                os.fsync(f.fileno())
+            os.rename(state_filename + ".new", state_filename)
+
         # TODO(cmaloney): stop all systemd services in dcos.target.wants
+        record_state({"stage": "save_old"})
 
         # Archive the current config.
         for active in active_names:
@@ -420,10 +434,15 @@ class Install:
             if os.path.exists(active):
                 os.rename(active, old_path)
 
+        record_state({"stage": "move_new"})
+
         # Move new / with extension into active.
         # TODO(cmaloney): Capture any failures here and roll-back if possible.
         for active in active_names:
             new_path = active + extension
             os.rename(new_path, active)
+
+        # All done.
+        os.remove(state_filename)
 
         # TODO(cmaloney): start all systemd services in dcos.target.wants

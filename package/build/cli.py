@@ -113,7 +113,15 @@ def main():
     copyfile("src/build_ids.json", "result/build_ids.json")
     copyfile("buildinfo.json", "result/buildinfo.json")
     # TODO(cmaloney): Fill pkginfo with useful data.
-    write_json("result/pkginfo.json", {})
+    pkginfo = {}
+    if 'requires' in buildinfo:
+        pkginfo['requires'] = buildinfo['requires']
+        # TODO(cmaloney): Validate every requires is a valid package name
+        # or package id.q
+        print("WARNING: requires are not currently installed to the build " +
+              "environment")
+
+    write_json("result/pkginfo.json", pkginfo)
 
     try:
         check_call([

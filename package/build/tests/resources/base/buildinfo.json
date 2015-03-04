@@ -1,5 +1,6 @@
 {
   "name" : "b",
+  "requires": ["test"],
   "sources" : {
     "b" : {
       "kind": "url",

@@ -20,18 +20,16 @@ from subprocess import CalledProcessError, check_call
 import package.build.constants
 from docopt import docopt
 from package import PackageId
-from package.build import checkout_source
+from package.build import checkout_source, sha1
 from package.exceptions import ValidationError
 from package.util import load_json, write_json
-
-sha1 = hashlib.sha1()
 
 
 def hash_checkout(item):
     def hash_str(s):
-        sha1 = hashlib.sha1()
-        sha1.update(s.encode('utf-8'))
-        return binascii.hexlify(sha1.digest()).decode('ascii')
+        hasher = hashlib.sha1()
+        hasher.update(s.encode('utf-8'))
+        return binascii.hexlify(hasher.digest()).decode('ascii')
 
     def hash_dict(d):
         item_hashes = []
@@ -78,8 +76,14 @@ def main():
     # Clone the repositories, apply patches as needed using the patch utilities
     checkout_ids = checkout_source(sources)
 
+    # Add the sha1sum of the buildinfo.json + build file to the build ids
+    build_ids = {"sources": checkout_ids}
+    build_ids['buildinfo'] = sha1("buildinfo.json")
+    build_ids['build'] = sha1("build")
+
     # Generate the package id (upstream sha1sum + build-number)
-    version_base = hash_checkout(checkout_ids)
+    version_base = hash_checkout(build_ids)
+
     # TODO(cmaloney): If there is already a build / we've been told to build an id
     # greater than last append the build id.
     version = None

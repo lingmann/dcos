@@ -7,6 +7,10 @@ from urllib.parse import urlparse
 from package.exceptions import ValidationError
 
 
+def sha1(filename):
+    return check_output(["sha1sum", filename]).split()[0].decode('ascii')
+
+
 def fetch_url(out_dir, url_str):
     url = urlparse(url_str)
 
@@ -59,7 +63,7 @@ def checkout_source(sources):
             # can so long as it has the same sha1sum.
             filename = fetch_url(root, info['url'])
             ids[src] = {
-                "sha1": check_output(["sha1sum", filename]).split()[0].decode('ascii')
+                "sha1": sha1(filename)
             }
         elif info['kind'] == 'url_extract':
             # Like url but do a tarball extract afterwards
@@ -70,7 +74,7 @@ def checkout_source(sources):
                 os.mkdir("tmp")
             filename = fetch_url("tmp", info['url'])
             ids[src] = {
-                "sha1": check_output(["sha1sum", filename]).split()[0].decode('ascii')
+                "sha1": sha1(filename)
             }
 
             check_call(["tar", "-xzf", filename, "--strip-components=1", "-C", root])

@@ -1,0 +1,10 @@
+{
+  "name" : "python",
+  "docker": "dcos-builder",
+  "sources" : {
+    "python" : {
+      "kind": "url",
+      "url": "https://www.python.org/ftp/python/3.4.3/Python-3.4.3.tgz"
+    }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "name" : "mesos",
+  "docker": "dcos-builder",
+  "sources" : {
+    "mesos" : {
+      "kind": "git",
+      "git" : "/home/cody/projects/mesos/",
+      "branch" : "master"
+    }
+  }
+}

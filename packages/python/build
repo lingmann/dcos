@@ -1,0 +1,21 @@
+#!/bin/bash
+set -o nounset -o pipefail
+
+# Extract the tarball
+mkdir -p "/pkg/python_src"
+tar -xzf /pkg/src/python/Python-3.4.3.tar.gz -C "/pkg/python_src" --strip-components=1
+
+# Build
+mkdir -p build
+pushd build
+/pkg/python_src/configure --enable-shared --prefix="$PKG_PATH"
+# TODO(cmaloney): LDFLAGS?
+# LDFLAGS="-Wl,-rpath=/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib,--enable-new-dtags"
+make -j8
+make install
+
+# Setup helper symlinks
+ln -s "$PKG_PATH/bin/python3" "$PKG_PATH/bin/python"
+ln -s "$PKG_PATH/bin/easy_install-3.4" "$PKG_PATH/bin/easy_install-3"
+ln -s "$PKG_PATH/bin/easy_install-3" "$PKG_PATH/bin/easy_install"
+ln -s "$PKG_PATH/bin/pip3" "$PKG_PATH/bin/pip"

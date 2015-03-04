@@ -1,0 +1,12 @@
+#!/bin/bash
+
+mkdir -p "$PKG_PATH/usr"
+
+tar -xzf /pkg/src/java/jre-7u75-linux-x64.tar.gz -C "$PKG_PATH/usr" --strip-components=1
+
+mkdir -p "$PKG_PATH/bin"
+ln -s "$PKG_PATH/usr/bin/java" "$PKG_PATH/bin/java"
+ln -s "$PKG_PATH/usr/bin/java_vm" "$PKG_PATH/bin/java_vm"
+
+# TODO(cmaloney): is this needed anymore?
+echo 'JAVA_URL="$(JAVA_URL)"' > "$PKG_PATH/java.manifest"

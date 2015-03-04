@@ -1,14 +1,10 @@
 #!/bin/bash
-set -o nounset -o pipefail
-
-# Extract the tarball
-mkdir -p "/pkg/python_src"
-tar -xzf /pkg/src/python/Python-3.4.3.tar.gz -C "/pkg/python_src" --strip-components=1
+set -o nounset -o pipefail -x
 
 # Build
 mkdir -p build
 pushd build
-/pkg/python_src/configure --enable-shared --prefix="$PKG_PATH"
+/pkg/src/python/configure --enable-shared --prefix="$PKG_PATH"
 # TODO(cmaloney): LDFLAGS?
 # LDFLAGS="-Wl,-rpath=/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib,--enable-new-dtags"
 make -j8

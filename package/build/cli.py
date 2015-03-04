@@ -12,11 +12,10 @@ Usage:
 import binascii
 import hashlib
 import sys
-from errno import EEXIST
 from os import mkdir
-from os.path import abspath
+from os.path import abspath, exists
 from shutil import copyfile
-from subprocess import check_call
+from subprocess import CalledProcessError, check_call
 
 import package.build.constants
 from docopt import docopt
@@ -59,14 +58,25 @@ def main():
         print("ERROR: Unable to find `buildinfo.json` in the current directory.")
         exit(-1)
 
+    # Don't build into an already existing result, will make non-reproducible builds.
+    if exists("result"):
+        print("result folder must not exist. It will be made when the package " +
+              "is built. {}".format(abspath("result")))
+
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
     # TODO(cmaloney): allow a shorthand for single source packages.
-    if "sources" not in buildinfo:
-        raise ValidationError("Must specify at least one source to build package from.")
+    sources = None
+    if "sources" in buildinfo:
+        sources = buildinfo['sources']
+    elif "single_source" in buildinfo:
+        sources = {buildinfo['name']: buildinfo['single_source']}
+    else:
+        raise ValidationError("Must specify at least one source to build " +
+                              "package from using 'sources' or 'single_source'.")
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities
-    checkout_ids = checkout_source(buildinfo["sources"])
+    checkout_ids = checkout_source(sources)
 
     # Generate the package id (upstream sha1sum + build-number)
     version_base = hash_checkout(checkout_ids)
@@ -97,11 +107,7 @@ def main():
     # Run the build, prepping the environment as necessary.
     write_json("src/build_ids.json", checkout_ids)
 
-    try:
-        mkdir("result")
-    except OSError as ex:
-        if ex.errno != EEXIST:
-            raise
+    mkdir("result")
 
     # Copy the build info to the resulting tarball
     copyfile("src/build_ids.json", "result/build_ids.json")
@@ -109,30 +115,37 @@ def main():
     # TODO(cmaloney): Fill pkginfo with useful data.
     write_json("result/pkginfo.json", {})
 
-    check_call([
-        "docker",
-        "run",
-        # TOOD(cmaloney): Disallow writing to well known files and directories?
-        # Source we checked out
-        # TODO(cmaloney): src should be read only...
-        "-v", "{}:/pkg/src:rw".format(abspath("src")),
-        # The build script
-        "-v", "{}:/pkg/build:ro".format(abspath("build")),
+    try:
+        check_call([
+            "docker",
+            "run",
+            # TOOD(cmaloney): Disallow writing to well known files and directories?
+            # Source we checked out
+            # TODO(cmaloney): src should be read only...
+            "-v", "{}:/pkg/src:rw".format(abspath("src")),
+            # The build script
+            "-v", "{}:/pkg/build:ro".format(abspath("build")),
 
-        # Getting the result out
-        "-v", "{0}:/opt/mesosphere/packages/{1}".format(abspath("result"), pkg_id),
-        # TODO(cmaloney): Install Dependencies, mount in well known files and dirs
-        # Info about the package
-        "-e", "PKG_VERSION={}".format(version),
-        "-e", "PKG_NAME={}".format(buildinfo['name']),
-        "-e", "PKG_ID={}".format(pkg_id),
-        "-e", "PKG_PATH={}".format("/opt/mesosphere/packages/{}".format(pkg_id)),
+            # Getting the result out
+            "-v", "{0}:/opt/mesosphere/packages/{1}".format(abspath("result"), pkg_id),
+            # TODO(cmaloney): Install Dependencies, mount in well known files and dirs
+            # Info about the package
+            "-e", "PKG_VERSION={}".format(version),
+            "-e", "PKG_NAME={}".format(buildinfo['name']),
+            "-e", "PKG_ID={}".format(pkg_id),
+            "-e", "PKG_PATH={}".format("/opt/mesosphere/packages/{}".format(pkg_id)),
 
-        # Build environment
-        docker_name,
+            # Build environment
+            docker_name,
 
-        # Run the build script
-        "/pkg/build"])
+            # Run the build script
+            "/bin/bash",
+            "-e",
+            "/pkg/build"])
+    except CalledProcessError as ex:
+        print("ERROR: docker exited non-zero: {}".format(ex.returncode))
+        print("Command: {}".format(' '.join(ex.cmd)))
+        sys.exit(1)
 
     print("Building package tarball")
 

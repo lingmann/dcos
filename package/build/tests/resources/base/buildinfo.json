@@ -1,0 +1,9 @@
+{
+  "name" : "b",
+  "sources" : {
+    "b" : {
+      "kind": "url",
+      "url" : "file:///etc/resolv.conf"
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "name" : "a",
+  "single_source" : {
+    "kind": "url",
+    "url" : "file:///etc/resolv.conf"
+  }
+}

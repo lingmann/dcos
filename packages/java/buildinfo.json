@@ -2,7 +2,7 @@
   "name" : "java",
   "sources" : {
     "java" : {
-      "kind": "url",
+      "kind": "url_extract",
       "url": "https://s3.amazonaws.com/downloads.mesosphere.io/java/jre-7u75-linux-x64.tar.gz"
     }
   }

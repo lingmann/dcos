@@ -1,0 +1,128 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Launches a Mesos cluster",
+
+  "Parameters" : {
+
+    "ClusterId" : {
+      "Description" : "Mesos cluster ID",
+      "Type" : "String",
+      "Default" : "mesos"
+    },
+    "AdminLocation" : {
+      "Description" : "The IP range to whitelist for admin access.",
+      "Type" : "String"
+    },
+    "MasterInstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "SlaveInstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "MasterInstanceCount" : {
+      "Description" : "Number of master nodes to launch",
+      "Type" : "Number",
+      "Default" : "1"
+    },
+    "SlaveInstanceCount" : {
+      "Description" : "Number of master nodes to launch",
+      "Type" : "Number",
+      "Default" : "1"
+    },
+    "MasterQuorumCount" : {
+      "Description" : "Number of masters needed for Mesos replicated log registry quorum (should be ceiling(<MasterInstanceCount>/2))",
+      "Type" : "Number",
+      "Default" : "1"
+    },
+    "InstanceAmi" : {
+      "Description" : "CoreOS AMI to use, specific to region",
+      "Type" : "String",
+      "Default" : "ami-6d85a15d"
+    },
+    "KeyName" : {
+      "Description" : "Name of SSH key to link",
+      "Type" : "String"
+    },
+    "DockerCredentials" : {
+      "Description" : "JSON string to be saved as .dockercfg",
+      "Type" : "String",
+      "Default" : "{}"
+    },
+    "VpcTemplateUrl" : {
+      "Description" : "URL of the VPC CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
+      "Type" : "String"
+    },
+    "MesosMasterTemplateUrl" : {
+      "Description" : "URL of the Mesos Master CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
+      "Type" : "String"
+    },
+    "MesosSlaveTemplateUrl" : {
+      "Description" : "URL of the Mesos Slave CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
+      "Type" : "String"
+    }
+  },
+
+  "Resources" : {
+
+    "VpcStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "Properties" : {
+        "TemplateURL" : { "Ref" : "VpcTemplateUrl" },
+        "TimeoutInMinutes" : "5",
+
+        "Parameters" : {
+          "AdminLocation" : { "Ref" : "AdminLocation" }
+        }
+      }
+    },
+    "MesosMasterStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "DependsOn" : "VpcStack",
+      "Properties" : {
+        "TemplateURL" : { "Ref" : "MesosMasterTemplateUrl" },
+        "TimeoutInMinutes" : "15",
+        "Parameters" : {
+          "InstanceAmi" : { "Ref": "InstanceAmi" },
+          "InstanceType" : { "Ref" : "MasterInstanceType" },
+          "KeyName" : { "Ref" : "KeyName" },
+          "InstanceCount" : { "Ref" : "MasterInstanceCount" },
+          "QuorumSize" : { "Ref" : "MasterQuorumCount" },
+          "VpcId" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.VpcId" ] },
+          "Subnets" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.Subnet" ] },
+          "AvailabilityZones": { "Fn::GetAtt" : [ "VpcStack", "Outputs.AvailabilityZone" ] },
+          "AdminSecurityGroup" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.AdminSecurityGroup" ] }
+        }
+      }
+    },
+    "MesosSlaveStack" : {
+      "Type" : "AWS::CloudFormation::Stack",
+      "DependsOn" : "MesosMasterStack",
+      "Properties" : {
+        "TemplateURL" : { "Ref" : "MesosSlaveTemplateUrl" },
+        "TimeoutInMinutes" : "15",
+        "Parameters" : {
+          "InstanceAmi" : { "Ref": "InstanceAmi" },
+          "InstanceType" : { "Ref" : "SlaveInstanceType" },
+          "KeyName" : { "Ref" : "KeyName" },
+          "InstanceCount" : { "Ref" : "SlaveInstanceCount" },
+          "MesosMasterSecurityGroup" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterSecurityGroup" ] },
+          "MesosMaster" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterConnectString" ] },
+          "MesosMasterLBSecurityGroup" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterLBSecurityGroup" ]},
+          "VpcId" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.VpcId" ] },
+          "Subnets" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.Subnet" ] },
+          "AvailabilityZones": { "Fn::GetAtt" : [ "VpcStack", "Outputs.AvailabilityZone" ] },
+          "AdminSecurityGroup" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.AdminSecurityGroup" ] }
+        }
+      }
+    }
+  }
+}

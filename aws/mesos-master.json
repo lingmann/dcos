@@ -1,0 +1,397 @@
+{
+  "AWSTemplateFormatVersion" : "2010-09-09",
+
+  "Description" : "Launches a pool of Mesos Masters",
+
+  "Parameters" : {
+    "InstanceAmi" : {
+      "Description" : "CoreOS AMI",
+      "Type" : "String"
+    },
+    "InstanceType" : {
+      "Description" : "EC2 instance type",
+      "Type" : "String",
+      "Default" : "t2.micro",
+      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "ConstraintDescription" : "must be a valid EC2 instance type."
+    },
+    "InstanceCount" : {
+      "Description" : "Number of nodes to launch",
+      "Type" : "Number",
+      "Default" : 1
+    },
+    "QuorumSize" : {
+      "Description" : "Mesos quorum size",
+      "Type" : "Number"
+    },
+    "AdminSecurityGroup" : {
+      "Description" : "Existing security group that should be granted administrative access to Mesos (e.g., 'sg-123456')",
+      "Type" : "AWS::EC2::SecurityGroup::Id"
+    },
+    "Subnets" : {
+      "Description" : "List of VPC subnets for the cluster. Must match the passed AvailabilityZones.",
+      "Type" : "List<AWS::EC2::Subnet::Id>"
+    },
+    "VpcId" : {
+      "Description" : "VPC associated with the provided subnets",
+      "Type" : "AWS::EC2::VPC::Id"
+    },
+    "AvailabilityZones" : {
+      "Description" : "(Optional) If passed, only launch nodes in these AZs (e.g., 'us-east-1a,us-east-1b'). Must match the passed Subnets.",
+      "Type" : "CommaDelimitedList",
+      "Default" : ""
+    },
+    "KeyName" : {
+      "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
+      "Type" : "AWS::EC2::KeyPair::KeyName"
+    },
+
+    "StackCreationTimeout" : {
+      "Description" : "Timeout on initial stack creation",
+      "Type" : "String",
+      "Default": "PT15M"
+    }
+  },
+
+  "Conditions" : {
+    "UseAllAvailabilityZones" : {"Fn::Equals" : [{ "Fn::Join" : ["", {"Ref" : "AvailabilityZones"} ]}, ""]}
+  },
+
+  "Resources" : {
+
+    "ExhibitorS3Bucket" : {
+      "Type" : "AWS::S3::Bucket"
+    },
+
+    "MasterRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "ec2.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Path": "/",
+        "Policies": [ {
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Version" : "2012-10-17",
+            "Statement": [ {
+              "Effect": "Allow",
+              "Action": [
+                "s3:AbortMultipartUpload",
+                "s3:DeleteObject",
+                "s3:GetBucketAcl",
+                "s3:GetBucketPolicy",
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListMultipartUploadParts",
+                "s3:PutObject",
+                "s3:PutObjectAcl"
+              ],
+              "Resource": [
+                { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
+                { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
+              ]
+            } ]
+          }
+        } ]
+      }
+    },
+
+    "MasterInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ {
+          "Ref": "MasterRole"
+        } ]
+      }
+    },
+
+    "ServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : {
+          "Fn::If" : [
+            "UseAllAvailabilityZones",
+            { "Fn::GetAZs" : "" },
+            {"Ref" : "AvailabilityZones"}
+          ]
+        },
+        "LaunchConfigurationName" : { "Ref" : "LaunchConfig" },
+        "MinSize" : { "Ref" : "InstanceCount" },
+        "MaxSize" : { "Ref" : "InstanceCount" },
+        "DesiredCapacity" : { "Ref" : "InstanceCount" },
+        "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" }, { "Ref" : "InternalMasterLoadBalancer"} ],
+        "VPCZoneIdentifier" : { "Ref" : "Subnets" },
+        "Tags" : [
+          {
+            "Key" : "role",
+            "Value" : "mesos-master",
+            "PropagateAtLaunch" : "true"
+          }
+        ]
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : { "Ref" : "StackCreationTimeout" }
+        }
+      }
+    },
+
+    "LaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Ref" : "InstanceAmi" },
+        "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
+        "AssociatePublicIpAddress" : "true",
+        "InstanceType" : { "Ref" : "InstanceType" },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          "#cloud-config\n",
+          "coreos:\n",
+
+          "  units:\n",
+
+          "    - name: bootstrap.service\n",
+          "      command: start\n",
+          "      content: |\n",
+          "        [Unit]\n",
+          "        Description=Bootstrap DCOS\n",
+          "        [Service]\n",
+          "        Type=oneshot\n",
+          "        RemainAfterExit=yes\n",
+          "        ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh\n",
+          "        ExecStartPre=/usr/bin/chmod +x /bootstrap.sh\n",
+          "        ExecStart=/bootstrap.sh\n",
+
+          "    - name: zookeeper.service\n",
+          "      command: start\n",
+          "      content: |\n",
+          "        [Unit]\n",
+          "        Description=Zookeeper\n",
+          "        After=bootstrap.service\n",
+          "        Requires=bootstrap.service\n",
+          "        [Service]\n",
+          "        Restart=on-failure\n",
+          "        ExecStartPre=/usr/bin/bash -c \"/usr/bin/systemctl set-environment",
+                    " EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\"\n",
+          "        ExecStartPre=/usr/bin/bash -c \"/usr/bin/systemctl set-environment",
+                    " AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile}",
+                      " | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')\"\n",
+          "        ExecStartPre=/usr/bin/bash -c \"/usr/bin/systemctl set-environment",
+                    " AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile}",
+                      " | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')\"\n",
+          "        ExecStart=/usr/bin/docker run --rm ",
+                    " -p 8181:8181 -p 2181:2181 -p 2888:2888 -p 3888:3888 ",
+                    " -e 'AWS_REGION=", { "Ref" : "AWS::Region" }, "'",
+                    " -e 'S3_BUCKET=", { "Ref" : "ExhibitorS3Bucket" }, "'",
+                    " -e 'S3_PREFIX=exhibitor'",
+                    " -e \"AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}\"",
+                    " -e \"AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}\"",
+                    " -e \"HOSTNAME=${EC2_PUBLIC_HOSTNAME}\"",
+                    " thefactory/zookeeper-exhibitor:3.4.6_1.5.2 \n",
+
+          "    - name: mesos-master.service\n",
+          "      command: start\n",
+          "      content: |\n",
+          "        [Unit]\n",
+          "        Description=Mesos Master\n",
+          "        After=zookeeper.service\n",
+          "        Requires=zookeeper.service\n",
+          "        [Service]\n",
+          "        Restart=on-failure\n",
+          "        EnvironmentFile=/etc/environment\n",
+          "        ExecStartPre=/usr/bin/bash -c \"while",
+                      " [[ $(expr",
+                        " `curl -s http://localhost:8181/exhibitor/v1/cluster/list",
+                        " | /usr/bin/grep -Eo '\\\"servers\\\":\\W*\\[.*\\]'",
+                        " | /usr/bin/grep -o ,",
+                        " | /usr/bin/wc -l`",
+                        " + 1)",
+                      " -lt ", { "Ref" : "InstanceCount"},
+                    " ]]; do echo 'ZK cluster not yet converged, waiting 5 seconds'; sleep 5; done\"\n",
+          "        ExecStartPre=/usr/bin/bash -c \"/usr/bin/systemctl set-environment",
+                    " EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\"\n",
+          "        ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-master",
+                    " --log_dir=/var/log/mesos",
+                    " --work_dir=/var/lib/mesos/master",
+                    " --zk=zk://${EC2_PUBLIC_HOSTNAME}:2181/mesos",
+                    " --hostname=${EC2_PUBLIC_HOSTNAME}",
+                    " --cluster=", {"Ref" : "AWS::StackName"},
+                    " --quorum=", {"Ref" : "QuorumSize"}, "\n",
+
+          "    - name: marathon.service\n",
+          "      command: start\n",
+          "      content: |\n",
+          "        [Unit]\n",
+          "        Description=Marathon\n",
+          "        After=mesos-master.service\n",
+          "        Requires=mesos-master.service\n",
+          "        [Service]\n",
+          "        Restart=on-failure\n",
+          "        EnvironmentFile=/etc/environment\n",
+          "        Environment=JAVA_HOME=/opt/mesosphere/dcos/latest/java\n",
+          "        Environment=JAVA_LIBRARY_PATH=/opt/mesosphere/dcos/latest/mesos/lib\n",
+          "        Environment=MESOS_NATIVE_JAVA_LIBRARY=/opt/mesosphere/dcos/latest/mesos/lib/libmesos.so\n",
+          "        Environment=LD_LIBRARY_PATH=/opt/mesosphere/dcos/latest/mesos/lib\n",
+          "        ExecStartPre=/usr/bin/bash -c \"/usr/bin/systemctl set-environment",
+                    " EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)\"\n",
+          "        ExecStart=/opt/mesosphere/dcos/latest/java/bin/java -jar /opt/mesosphere/dcos/latest/marathon/marathon.jar",
+                    " --zk zk://${EC2_PUBLIC_HOSTNAME}:2181/marathon",
+                    " --master zk://${EC2_PUBLIC_HOSTNAME}:2181/mesos",
+                    " --hostname ${EC2_PUBLIC_HOSTNAME}\n",
+
+          "    - name: cfn-signal.service\n",
+          "      command: start\n",
+          "      content: |\n",
+          "        [Unit]\n",
+          "        Description=Signal CloudFormation Success\n",
+          "        After=mesos-master.service\n",
+          "        Requires=mesos-master.service\n",
+          "        [Service]\n",
+          "        Type=oneshot\n",
+          "        RemainAfterExit=yes\n",
+          "        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap\n",
+          "        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap\n",
+          "        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap",
+                    " cfn-signal -e 0 ",
+                      " --resource ServerGroup",
+                      " --stack ", { "Ref" : "AWS::StackName" },
+                      " --region ", { "Ref" : "AWS::Region" }, "\n"
+        ]]}}
+      }
+    },
+
+    "MasterSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Mesos Masters",
+        "VpcId" : { "Ref" : "VpcId" },
+        "SecurityGroupIngress" : [
+          { "IpProtocol" : "tcp", "FromPort" : "5050", "ToPort" : "5050", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
+          { "IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
+          { "IpProtocol" : "tcp", "FromPort" : "2181", "ToPort" : "2181", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} }
+        ]
+      }
+    },
+
+    "MasterToMasterIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "MasterSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "MasterSecurityGroup" }
+      }
+    },
+
+    "LbSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Mesos Master LB",
+        "VpcId" : { "Ref" : "VpcId" }
+      }
+    },
+
+    "InternalMasterLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "Subnets": { "Ref": "Subnets" },
+        "Scheme": "internal",
+        "Listeners" : [
+          {
+            "LoadBalancerPort" : "5050",
+            "Protocol" : "HTTP",
+            "InstancePort" : "5050",
+            "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "2181",
+            "Protocol" : "TCP",
+            "InstancePort" : "2181",
+            "InstanceProtocol" : "TCP"
+          },
+          {
+            "LoadBalancerPort" : "8080",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8080",
+            "InstanceProtocol" : "HTTP"
+          }],
+        "HealthCheck" : {
+          "Target" : "HTTP:5050/health",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "2",
+          "Interval" : "30",
+          "Timeout" : "5"
+        }
+      }
+    },
+
+    "ElasticLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "Subnets": { "Ref": "Subnets" },
+        "Listeners" : [
+          {
+            "LoadBalancerPort" : "5050",
+            "Protocol" : "HTTP",
+            "InstancePort" : "5050",
+            "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "2181",
+            "Protocol" : "TCP",
+            "InstancePort" : "2181",
+            "InstanceProtocol" : "TCP"
+          },
+          {
+            "LoadBalancerPort" : "8080",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8080",
+            "InstanceProtocol" : "HTTP"
+          }],
+        "HealthCheck" : {
+          "Target" : "HTTP:5050/health",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "2",
+          "Interval" : "30",
+          "Timeout" : "5"
+        }
+      }
+    }
+  },
+
+  "Outputs" : {
+    "DnsAddress" : {
+      "Description" : "Mesos Master",
+      "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
+    },
+    "MesosMasterSecurityGroup" : {
+      "Value" : { "Ref" : "MasterSecurityGroup" }
+    },
+    "MesosMasterLBSecurityGroup" : {
+      "Value" : { "Ref" : "LbSecurityGroup" }
+    },
+    "MesosMasterConnectString" : {
+      "Value": { "Fn::Join" : [ "", [
+          "zk://",
+          {"Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ]},
+          ":2181",
+          "/mesos"
+      ]]}
+    }
+  }
+}

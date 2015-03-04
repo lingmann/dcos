@@ -7,6 +7,27 @@ from urllib.parse import urlparse
 from package.exceptions import ValidationError
 
 
+def fetch_url(out_dir, url_str):
+    url = urlparse(url_str)
+
+    # Handle file:// urls specially since urllib will interpret them to have a
+    # netloc when they never have a netloc...
+    if url.scheme == 'file':
+        path = url_str[len('file://'):]
+        abspath = os.path.abspath(path)
+        filename = os.path.join(out_dir, os.path.basename(path))
+        shutil.copyfile(abspath, filename)
+        return filename
+    else:
+        filename = os.path.join(out_dir, os.path.basename(url.path))
+        # Download the file.
+        with open(filename, "w+b") as f:
+            with urllib.request.urlopen(url_str) as response:
+                shutil.copyfileobj(response, f)
+
+        return filename
+
+
 # TODO(cmaloney): Validate sources has all expected fields...
 def checkout_source(sources):
     ids = dict()
@@ -34,16 +55,26 @@ def checkout_source(sources):
                 "commit": commit
             }
         elif info['kind'] == 'url':
-            url = urlparse(info['url'])
-            filename = os.path.join(root, os.path.basename(url.path))
-            # Download the file.
-            with open(filename, "w+b") as f:
-                with urllib.request.urlopen(info['url']) as response:
-                    shutil.copyfileobj(response, f)
-
+            # TODO(cmaloney): While src can't be reused, the downloaded tarball
+            # can so long as it has the same sha1sum.
+            filename = fetch_url(root, info['url'])
             ids[src] = {
                 "sha1": check_output(["sha1sum", filename]).split()[0].decode('ascii')
             }
+        elif info['kind'] == 'url_extract':
+            # Like url but do a tarball extract afterwards
+            # TODO(cmaloney): While src can't be reused, the downloaded tarball
+            # can so long as it has the same sha1sum.
+            # TODO(cmaloney): Generalize "Stashing the grabbed copy".
+            if not os.path.exists("tmp"):
+                os.mkdir("tmp")
+            filename = fetch_url("tmp", info['url'])
+            ids[src] = {
+                "sha1": check_output(["sha1sum", filename]).split()[0].decode('ascii')
+            }
+
+            check_call(["tar", "-xzf", filename, "--strip-components=1", "-C", root])
+
         else:
             raise ValidationError("Currently only packages from url and git sources are supported")
 

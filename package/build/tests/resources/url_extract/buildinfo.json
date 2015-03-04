@@ -1,0 +1,7 @@
+{
+  "name" : "a",
+  "single_source" : {
+    "kind": "url_extract",
+    "url" : "file://foo.tar.gz"
+  }
+}

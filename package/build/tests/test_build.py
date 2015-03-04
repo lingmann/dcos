@@ -16,3 +16,7 @@ def test_build(tmpdir):
 
 def test_single_source(tmpdir):
     package("resources/single_source", tmpdir)
+
+
+def test_url_extract(tmpdir):
+    package("resources/url_extract", tmpdir)

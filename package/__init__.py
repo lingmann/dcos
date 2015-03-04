@@ -329,6 +329,12 @@ class Install:
     def get_config_filename(self, name):
         return os.path.join(self.__config_dir, name)
 
+    def _make_abs(self, name):
+        return os.path.join(self.__root, name)
+
+    def get_active_names(self):
+        return list(map(self._make_abs, well_known_dirs + ["environment", "active"]))
+
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
     def activate(self, repository, packages):
@@ -337,11 +343,8 @@ class Install:
 
         # Build the absolute paths for the running config, new config location,
         # and where to archive the config.
-        def make_abs(name):
-            return os.path.join(self.__root, name)
-
-        active_names = list(map(make_abs, well_known_dirs + ["environment", "active"]))
-        active_dirs = list(map(make_abs, well_known_dirs + ["active"]))
+        active_names = self.get_active_names()
+        active_dirs = list(map(self._make_abs, well_known_dirs + ["active"]))
 
         new_names = [name + ".new" for name in active_names]
         new_dirs = [name + ".new" for name in active_dirs]
@@ -389,7 +392,7 @@ class Install:
                     symlink_all(role_dir, new)
 
             # Add to the active folder
-            os.symlink(package.path, os.path.join(make_abs("active.new"), package.name))
+            os.symlink(package.path, os.path.join(self._make_abs("active.new"), package.name))
 
             # Add to the environment contents
             env_contents += "# package: {0}\n".format(package.id)
@@ -398,21 +401,29 @@ class Install:
             env_contents += "\n"
 
         # Write out the new environment file.
-        new_env = make_abs("environment.new")
+        new_env = self._make_abs("environment.new")
         with open(new_env, "w+") as f:
             f.write(env_contents)
 
+        self.do_activate_swap(".new")
+
+    # Does an atomic(ish) upgrade swap with support for recovering if
+    # only part of the swap happens before a reboot.
+    # TODO(cmaloney): Implement recovery properly.
+    def do_activate_swap(self, extension):
+        active_names = self.get_active_names()
         # TODO(cmaloney): stop all systemd services in dcos.target.wants
 
-        # TODO(cmaloney): There is a brief window here where active does not exist
-        # which is less than ideal.
-        for active, old in zip(active_names, old_names):
+        # Archive the current config.
+        for active in active_names:
+            old_path = active + ".old"
             if os.path.exists(active):
-                os.rename(active, old)
+                os.rename(active, old_path)
 
-        # Move the new contents to be the active contents
+        # Move new / with extension into active.
         # TODO(cmaloney): Capture any failures here and roll-back if possible.
-        for new, active in zip(new_names, active_names):
-            os.rename(new, active)
+        for active in active_names:
+            new_path = active + extension
+            os.rename(new_path, active)
 
         # TODO(cmaloney): start all systemd services in dcos.target.wants

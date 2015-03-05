@@ -43,17 +43,26 @@ version_regex = "^[a-zA-Z0-9@_+:.]+$"
 # Manage starting/stopping all systemd services inside a folder.
 class Systemd:
 
-    def __init__(self, unit_dir):
+    def __init__(self, unit_dir, active=False):
+        self.__active = active
         self.__dir = unit_dir
 
     def daemon_reload(self):
+        if not self.__active:
+            return
         check_call(["systemctl", "daemon-reload"])
 
     def start_all(self):
+        if not self.__active:
+            return
         for path in os.listdir(self.__dir):
             check_call(["systemctl", "start", path])
 
     def stop_all(self):
+        if not self.__active:
+            return
+        if not os.path.exists(self.__dir):
+            return
         for path in os.listdir(self.__dir):
             check_call(["systemctl", "stop", path])
 
@@ -291,9 +300,10 @@ class Repository:
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, config_dir):
+    def __init__(self, root, config_dir, manage_systemd):
         self.__root = os.path.abspath(root)
         self.__config_dir = os.path.abspath(config_dir)
+        self.__manage_systemd = manage_systemd
 
         # Look up the machine roles
         self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
@@ -431,6 +441,7 @@ class Install:
     def swap_active(self, extension, archive=True):
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
+        systemd = Systemd(self._make_abs("dcos.target.wants"), self.__manage_systemd)
 
         # Record the state (atomically) on the filesystem so that if there is a
         # hard/fast fail at any point the activate swap can continue.
@@ -447,6 +458,9 @@ class Install:
             # TODO(cmaloney): stop all systemd services in dcos.target.wants
             record_state({"stage": "archive"})
 
+            # Stop all systemd services
+            systemd.stop_all()
+
             # Archive the current config.
             for active in active_names:
                 old_path = active + ".old"
@@ -457,11 +471,14 @@ class Install:
 
         # Move new / with extension into active.
         # TODO(cmaloney): Capture any failures here and roll-back if possible.
+        # TODO(cmaloney): Alert for any failures here.
         for active in active_names:
             new_path = active + extension
             os.rename(new_path, active)
 
+        # Start all systemd services in dcos.target.wants
+        systemd.daemon_reload()
+        systemd.start_all()
+
         # All done.
         os.remove(state_filename)
-
-        # TODO(cmaloney): start all systemd services in dcos.target.wants

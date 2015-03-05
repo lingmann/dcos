@@ -10,10 +10,11 @@ Usage:
   pkgpanda activate --recover
 
 Options:
-    --root=<root>               Use an alternate root (useful for debugging) [default: /opt/mesosphere]
     --repository=<repository>   Use an alternate local package repository directory[default: /opt/mesosphere/packages]
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
                                 configuration (roles, bootstrap flags). [default: /etc/mesosphere/]
+    --root=<root>               Testing: Use an alternate root [default: /opt/mesosphere]
+    --no-systemd                Testing: Don't try starting/stopping systemd services
 """
 import json
 import os.path
@@ -67,7 +68,10 @@ def main():
     arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
 
     # NOTE: Changing root or repository will likely break actually running packages.
-    install = Install(os.path.abspath(arguments['--root']), os.path.abspath(arguments['--config-dir']))
+    install = Install(
+        os.path.abspath(arguments['--root']),
+        os.path.abspath(arguments['--config-dir']),
+        not arguments['--no-systemd'])
     repository = Repository(os.path.abspath(arguments['--repository']))
 
     if arguments['bootstrap']:

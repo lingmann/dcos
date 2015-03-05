@@ -10,7 +10,8 @@ def test_bootstrap(tmpdir):
                 "bootstrap",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
-                "--config-dir=resources/etc-active"
+                "--config-dir=resources/etc-active",
+                "--no-systemd"
                 ])
     # TODO(cmaloney): Validate things got placed correctly.
 
@@ -45,7 +46,8 @@ def test_bootstrap(tmpdir):
                 "bootstrap",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
-                "--config-dir=resources/etc-active"
+                "--config-dir=resources/etc-active",
+                "--no-systemd"
                 ])
     # TODO(cmaloney): Validate things got placed correctly.
 
@@ -91,7 +93,8 @@ def test_activate(tmpdir):
                 "bootstrap",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
-                "--config-dir=resources/etc-active"
+                "--config-dir=resources/etc-active",
+                "--no-systemd"
                 ])
 
     assert run(["pkgpanda",
@@ -100,7 +103,8 @@ def test_activate(tmpdir):
                 "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
-                "--config-dir=resources/etc-active"]) == ""
+                "--config-dir=resources/etc-active",
+                "--no-systemd"]) == ""
 
     # Check introspection to active is working right.
     active = set(check_output([
@@ -117,7 +121,8 @@ def test_activate(tmpdir):
                 "mesos--0.22.0",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
-                "--config-dir=resources/etc-active"]) == ""
+                "--config-dir=resources/etc-active",
+                "--no-systemd"]) == ""
 
     # Check introspection to active is workign right.
     active = set(check_output([

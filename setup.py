@@ -15,13 +15,16 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-
     packages=find_packages(exclude=['tests']),
     install_requires=['docopt'],
     entry_points={
         'console_scripts': [
             'pkgpanda=package.cli:main',
-            'mkpanda=package.build.cli:main'
+            'mkpanda=package.build.cli:main',
+            'pkgpandastrap=package.bootstrap:main'
         ],
     },
+    package_data={
+        '': ['*.service', '*.target']
+    }
 )

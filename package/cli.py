@@ -10,11 +10,12 @@ Usage:
   pkgpanda activate --recover
 
 Options:
-    --repository=<repository>   Use an alternate local package repository directory[default: /opt/mesosphere/packages]
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
                                 configuration (roles, bootstrap flags). [default: /etc/mesosphere/]
-    --root=<root>               Testing: Use an alternate root [default: /opt/mesosphere]
-    --no-systemd                Testing: Don't try starting/stopping systemd services
+    --no-systemd                Don't try starting/stopping systemd services
+    --root=<root>               Testing only: Use an alternate root [default: /opt/mesosphere]
+    --repository=<repository>   Testing only: Use an alternate local package
+                                repository directory[default: /opt/mesosphere/packages]
 """
 import json
 import os.path

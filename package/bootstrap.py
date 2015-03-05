@@ -45,7 +45,7 @@ def main():
         if not filename.endswith(".tar.xz"):
             print("ERROR: Packages must be packaged / end with .tar.xz")
             os.exit(1)
-        pkg_id = filename[:len(".tar.xz")]
+        pkg_id = filename[:-len(".tar.xz")]
         pkg_ids.append(pkg_id)
 
         # TODO(camloney): Allow grabbing packages via http.
@@ -54,7 +54,10 @@ def main():
         repository.add(local_fetcher, pkg_id)
 
     # Mark the appropriate roles.
-    config_dir = make_abs("/etc/mesosphere")
+    config_dir = make_abs("etc/mesosphere")
+    if os.path.exists(config_dir):
+        shutil.rmtree(config_dir)
+    os.makedirs(config_dir)
     for role in arguments['--role']:
         make_file(os.path.join(config_dir, role))
 
@@ -63,7 +66,7 @@ def main():
     install.activate(repository, repository.load_packages(pkg_ids))
 
     if arguments['tarball']:
-        check_call(["tar", -"-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
+        check_call(["tar", "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
         os.exit(1)
 
     if arguments['container']:

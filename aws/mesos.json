@@ -12,7 +12,12 @@
     },
     "AdminLocation" : {
       "Description" : "The IP range to whitelist for admin access.",
-      "Type" : "String"
+      "Type" : "String",
+      "MinLength" : "9",
+      "MaxLength" : "18",
+      "Default" : "0.0.0.0/0",
+      "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+      "ConstraintDescription" : "must be a valid CIDR."
     },
     "MasterInstanceType" : {
       "Description" : "EC2 instance type",
@@ -50,7 +55,7 @@
     },
     "KeyName" : {
       "Description" : "Name of SSH key to link",
-      "Type" : "String"
+      "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "DockerCredentials" : {
       "Description" : "JSON string to be saved as .dockercfg",

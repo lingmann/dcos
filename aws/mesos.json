@@ -64,15 +64,18 @@
     },
     "VpcTemplateUrl" : {
       "Description" : "URL of the VPC CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
-      "Type" : "String"
+      "Type" : "String",
+      "Default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-vpc.json"
     },
     "MesosMasterTemplateUrl" : {
       "Description" : "URL of the Mesos Master CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
-      "Type" : "String"
+      "Type" : "String",
+      "Default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-master.json"
     },
     "MesosSlaveTemplateUrl" : {
       "Description" : "URL of the Mesos Slave CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",
-      "Type" : "String"
+      "Type" : "String",
+      "Default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-slave.json"
     }
   },
 

@@ -1,3 +1,5 @@
+import binascii
+import hashlib
 import os.path
 import shutil
 import urllib.request
@@ -9,6 +11,27 @@ from package.exceptions import ValidationError
 
 def sha1(filename):
     return check_output(["sha1sum", filename]).split()[0].decode('ascii')
+
+
+def hash_checkout(item):
+    def hash_str(s):
+        hasher = hashlib.sha1()
+        hasher.update(s.encode('utf-8'))
+        return binascii.hexlify(hasher.digest()).decode('ascii')
+
+    def hash_dict(d):
+        item_hashes = []
+        for k in sorted(d.keys()):
+            assert isinstance(k, str)
+            item_hashes.append("{0}={1}".format(k, hash_checkout(d[k])))
+        return hash_str(",".join(item_hashes))
+
+    if isinstance(item, str) or isinstance(item, bytes):
+        return hash_str(item)
+    elif isinstance(item, dict):
+        return hash_dict(item)
+    else:
+        raise NotImplementedError()
 
 
 def fetch_url(out_dir, url_str):

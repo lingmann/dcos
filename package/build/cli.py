@@ -9,8 +9,6 @@ Usage:
   mkpanda
 """
 
-import binascii
-import hashlib
 import sys
 from os import mkdir
 from os.path import abspath, exists
@@ -20,30 +18,9 @@ from subprocess import CalledProcessError, check_call
 import package.build.constants
 from docopt import docopt
 from package import PackageId
-from package.build import checkout_source, sha1
+from package.build import checkout_source, hash_checkout, sha1
 from package.exceptions import ValidationError
 from package.util import load_json, write_json
-
-
-def hash_checkout(item):
-    def hash_str(s):
-        hasher = hashlib.sha1()
-        hasher.update(s.encode('utf-8'))
-        return binascii.hexlify(hasher.digest()).decode('ascii')
-
-    def hash_dict(d):
-        item_hashes = []
-        for k in sorted(d.keys()):
-            assert isinstance(k, str)
-            item_hashes.append("{0}={1}".format(k, hash_checkout(d[k])))
-        return hash_str(",".join(item_hashes))
-
-    if isinstance(item, str) or isinstance(item, bytes):
-        return hash_str(item)
-    elif isinstance(item, dict):
-        return hash_dict(item)
-    else:
-        raise NotImplementedError()
 
 
 def main():

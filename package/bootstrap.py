@@ -44,7 +44,7 @@ def main():
         filename = os.path.basename(pkg_path)
         if not filename.endswith(".tar.xz"):
             print("ERROR: Packages must be packaged / end with .tar.xz")
-            os.exit(1)
+            sys.exit(1)
         pkg_id = filename[:-len(".tar.xz")]
         pkg_ids.append(pkg_id)
 
@@ -67,7 +67,7 @@ def main():
 
     if arguments['tarball']:
         check_call(["tar", "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
-        os.exit(1)
+        sys.exit(0)
 
     if arguments['container']:
         # Setup base systemd units.

@@ -226,7 +226,7 @@ def urllib_fetcher(base_url, id, target):
 class Repository:
 
     def __init__(self, path):
-        self.__path = path
+        self.__path = os.path.abspath(path)
 
     def package_path(self, id):
         return os.path.join(self.__path, id)
@@ -292,8 +292,8 @@ class Repository:
 class Install:
 
     def __init__(self, root, config_dir):
-        self.__root = root
-        self.__config_dir = config_dir
+        self.__root = os.path.abspath(root)
+        self.__config_dir = os.path.abspath(config_dir)
 
         # Look up the machine roles
         self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
@@ -331,7 +331,7 @@ class Install:
         return os.path.join(self.__config_dir, name)
 
     def _make_abs(self, name):
-        return os.path.join(self.__root, name)
+        return os.path.abspath(os.path.join(self.__root, name))
 
     def get_active_names(self):
         return list(map(self._make_abs, well_known_dirs + ["environment", "active"]))
@@ -383,6 +383,7 @@ class Install:
             # populated later.
             for new, dir_name in zip(new_dirs, well_known_dirs):
                 pkg_dir = os.path.join(package.path, dir_name)
+                assert os.path.isabs(new)
                 assert os.path.isabs(pkg_dir)
 
                 symlink_all(pkg_dir, new)
@@ -406,12 +407,28 @@ class Install:
         with open(new_env, "w+") as f:
             f.write(env_contents)
 
-        self.do_activate_swap(".new")
+        self.swap_active(".new")
+
+    def recover_swap_active(self):
+        state_filename = self._make_abs("install_progress")
+        if not os.path.exists(state_filename):
+            return False, "Path does not exist: {}".format(state_filename)
+        state = load_json(state_filename)
+        extension = state['extension']
+        stage = state['stage']
+        if stage == 'archive':
+            self.swap_active(extension, True)
+        elif stage == 'move_new':
+            self.swap_active(extension, False)
+        else:
+            raise ValueError("Unexpected state to recover from {}".format(state))
+
+        return True, ""
 
     # Does an atomic(ish) upgrade swap with support for recovering if
     # only part of the swap happens before a reboot.
     # TODO(cmaloney): Implement recovery properly.
-    def do_activate_swap(self, extension):
+    def swap_active(self, extension, archive=True):
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
 
@@ -420,19 +437,21 @@ class Install:
         def record_state(state):
             # Atomically write all the state to disk, swap into place.
             with open(state_filename + ".new", "w+") as f:
+                state['extension'] = extension
                 json.dump(state, f)
                 f.flush()
                 os.fsync(f.fileno())
             os.rename(state_filename + ".new", state_filename)
 
-        # TODO(cmaloney): stop all systemd services in dcos.target.wants
-        record_state({"stage": "save_old"})
+        if archive:
+            # TODO(cmaloney): stop all systemd services in dcos.target.wants
+            record_state({"stage": "archive"})
 
-        # Archive the current config.
-        for active in active_names:
-            old_path = active + ".old"
-            if os.path.exists(active):
-                os.rename(active, old_path)
+            # Archive the current config.
+            for active in active_names:
+                old_path = active + ".old"
+                if os.path.exists(active):
+                    os.rename(active, old_path)
 
         record_state({"stage": "move_new"})
 

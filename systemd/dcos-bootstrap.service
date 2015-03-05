@@ -1,10 +1,13 @@
 [Unit]
+Description=Prep the Pkgpanda working directories for this host.
 Requires=dcos-download.service
 After=dcos-download.service
+
+ConditionPathExists=/opt/mesosphere/bootstrap
 
 [Service]
 Type=oneshot
 
 EnvironemntFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/bin/pkgpanda bootstrap
-
+ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap

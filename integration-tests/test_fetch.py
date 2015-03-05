@@ -1,6 +1,8 @@
 import os
 
-from util import run, expect_fs
+from package.util import expect_fs
+
+from util import run
 
 fetch_output = """\rFetching: mesos--0.22.0\rFetched: mesos--0.22.0\n"""
 

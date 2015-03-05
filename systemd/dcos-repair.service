@@ -1,0 +1,8 @@
+[Unit]
+Description=Finish a partially-completed pkgpanda upgrade swap
+ConditionPathExists=/opt/mesosphere
+ConditionPathExists=/opt/mesosphere/install_progress
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mesosphere/bin/pkgpanda activate --recover

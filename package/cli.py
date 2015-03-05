@@ -7,6 +7,7 @@ Usage:
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda activate <id>... [options]
+  pkgpanda activate --recover
 
 Options:
     --root=<root>               Use an alternate root (useful for debugging) [default: /opt/mesosphere]
@@ -107,14 +108,20 @@ def main():
         sys.exit(0)
 
     if arguments['activate']:
-        try:
-            install.activate(repository, repository.load_packages(arguments['<id>']))
-        except ValidationError as ex:
-            print("Validation Error: {0}".format(ex))
-            sys.exit(1)
-        except PackageError as ex:
-            print("Package Error: {0}".format(ex))
-        sys.exit(0)
+        if arguments['--recover']:
+            took_action, msg = install.recover_swap_active()
+            if not took_action:
+                print("No recovery performed: {}".format(msg))
+            sys.exit(0)
+        else:
+            try:
+                install.activate(repository, repository.load_packages(arguments['<id>']))
+            except ValidationError as ex:
+                print("Validation Error: {0}".format(ex))
+                sys.exit(1)
+            except PackageError as ex:
+                print("Package Error: {0}".format(ex))
+            sys.exit(0)
 
     print("unknown command")
     sys.exit(1)

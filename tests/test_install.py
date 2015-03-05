@@ -1,6 +1,9 @@
 """ Test reading and changing the active set of available packages"""
 
+import shutil
+
 from package import Install, Repository
+from package.util import expect_fs
 
 import pytest
 
@@ -32,3 +35,50 @@ def test_active(install):
 # TODO(cmaloney): Updating active which is already full
 
 # TODO(cmaloney): Activate failed, loading old/new
+
+def test_recovery_noop(install):
+    # No action if nothing to do
+    action, _ = install.recover_swap_active()
+    assert not action
+
+
+def test_recovery_archive(tmpdir, repository):
+    # Recover from the "archive" state correctly.
+    shutil.copytree("resources/install_recovery_archive", str(tmpdir.join("install")), symlinks=True)
+    install = Install(str(tmpdir.join("install")), "resources/systemd")
+    action, _ = install.recover_swap_active()
+    assert action
+
+    # TODO(cmaloney): expect_fs
+    expect_fs(
+        str(tmpdir.join("install")),
+        {
+            "active": ["mesos"],
+            "active.old": ["mesos"],
+            "bin": ["mesos", "mesos-dir"],
+            "dcos.target.wants": [],
+            "environment": None,
+            "environment.old": None,
+            "etc": None,
+            "lib": ["libmesos.so"]
+        })
+
+
+def test_recovery_move_new(tmpdir, repository):
+    # From the "move_new" state correctly.
+    shutil.copytree("resources/install_recovery_move", str(tmpdir.join("install")), symlinks=True)
+    install = Install(str(tmpdir.join("install")), "resources/systemd")
+    action, _ = install.recover_swap_active()
+    assert action
+
+    # TODO(cmaloney): expect_fs
+    expect_fs(
+        str(tmpdir.join("install")),
+        {
+            "active": ["mesos"],
+            "bin": ["mesos", "mesos-dir"],
+            "dcos.target.wants": [],
+            "environment": None,
+            "etc": None,
+            "lib": ["libmesos.so"]
+        })

@@ -3,10 +3,12 @@
 Copy to `/etc/systemd/system`:
  - dcos-bootstrap.service
  - dcos-download.service
+ - dcos-repair.service
 
 Copy to `/etc/systemd/system/multi-user.target.wants/`:
  - dcos.target
 
+Symlink /etc/systemd/system/dcos.target.wants -> /opt/mesosphere/dcos.target.wants
 
 
 *NOTE*: All of this config lives outside of /opt/mesosphere for dcos-download.service to work right, as well as alll of /opt/mesosphere to be filled in by extracting the dcos distribution.

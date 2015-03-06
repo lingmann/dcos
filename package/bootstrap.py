@@ -67,7 +67,8 @@ def main():
     install.activate(repository, repository.load_packages(pkg_ids))
 
     if arguments['tarball']:
-        check_call(["tar", "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
+        check_call(["tar", "-cJf", "--numeric-owner", "--owner=0", "--group=0",
+            "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
         sys.exit(0)
 
     if arguments['container']:

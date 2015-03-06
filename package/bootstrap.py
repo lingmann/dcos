@@ -68,7 +68,7 @@ def main():
 
     if arguments['tarball']:
         check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",
-            "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
+                   "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
         sys.exit(0)
 
     if arguments['container']:

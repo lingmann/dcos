@@ -296,6 +296,34 @@ class Repository:
         shutil.rmtree(self.package_path(id))
 
 
+# Create folders and symlink files inside the folders. Allows multiple
+# packages to have the same folder and provide it publicly.
+def symlink_tree(src, dest):
+    for name in os.listdir(src):
+        src_path = os.path.join(src, name)
+        dest_path = os.path.join(dest, name)
+        # Symlink files and symlinks directly. For directories make a
+        # real directory and symlink everything inside.
+        # NOTE: We could relax this and follow symlinks, but then we
+        # need to be careful about recursive filesystem layouts.
+        if os.path.isdir(src_path) and not os.path.islink(src_path):
+            if os.path.exists(dest_path):
+                # We can only merge a directory into a directory.
+                # We won't merge into a symlink directory because that could
+                # result in a package editing inside another package.
+                if not os.path.isdir(dest_path) and not os.path.islink(dest_path):
+                    raise ValidationError(
+                        "Can't merge a file `{0}` and directory (or symlink) `{1}` with the same name."
+                        .format(src_path, dest_path))
+            else:
+                os.makedirs(dest_path)
+
+            # Recuse into the directory symlinking everything so long as the directory isn't
+            symlink_tree(src_path, dest_path)
+        else:
+            os.symlink(src_path, dest_path)
+
+
 # A rooted instal lgtree.
 # Inside the install tree there will be all the well known folders and files as
 # described in `docs/package_concepts.md`
@@ -380,8 +408,7 @@ class Install:
             if not os.path.isdir(src):
                 return
 
-            for name in os.listdir(src):
-                os.symlink(os.path.join(src, name), os.path.join(new, name))
+            symlink_tree(src, dest)
 
         # Set the new LD_LIBRARY_PATH, PATH.
         env_contents = env_header.format(self.__root)

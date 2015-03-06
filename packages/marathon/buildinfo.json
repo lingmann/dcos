@@ -3,6 +3,6 @@
   "requires": ["java"],
   "single_source": {
     "kind": "url_extract",
-    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/marathon/v0.8.1-RC1/marathon-0.8.1-RC1.tgz"
+    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/marathon/v0.8.1-RC2/marathon-0.8.1-RC2.tgz"
   }
 }

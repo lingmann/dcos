@@ -3,7 +3,7 @@
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",
-    "git" : "/home/cody/projects/mesos/",
+    "git" : "https://git-wip-us.apache.org/repos/asf/mesos.git",
     "branch" : "master"
   }
 }

@@ -154,7 +154,8 @@ def validate_compatible(packages, roles):
     for package in packages:
         if package.name in names:
             raise ValidationError(
-                "Repeated name {0} in set of packages {1}".format(package.name, ' '.join(packages)))
+                "Repeated name {0} in set of packages {1}".format(
+                    package.name, ' '.join(map(str, packages))))
         names.add(package.name)
         ids.add(str(package.id))
 

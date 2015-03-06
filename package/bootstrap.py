@@ -15,6 +15,7 @@ Usage:
 import os
 import os.path
 import shutil
+import sys
 from subprocess import check_call
 
 import package

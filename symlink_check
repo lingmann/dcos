@@ -4,8 +4,13 @@ set -o errexit -o nounset -o pipefail
 # TODO: Convert to a tox unit test
 
 function main {
+  if [ $# -eq 0 ]
+  then
+    msg "ERROR: must provide directories to scan as an argument"
+    exit 1
+  fi
   hash symlinks 2>/dev/null || { sudo apt-get -y install symlinks >/dev/null; }
-  local non_relative_links=$(symlinks -vr .|grep -v '^relative:')
+  local non_relative_links=$(symlinks -vr "$@" 2>/dev/null|grep -v '^relative:')
   if [ "$non_relative_links" ]
   then
     msg "ERROR: Non-relative symlinks detected"

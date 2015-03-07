@@ -71,7 +71,10 @@ def checkout_source(sources):
 
         if info['kind'] == 'git':
             # TODO(cmaloney): This will go really badly when updating an existing repo...
-            check_call(["git", "clone", info['git'], "--branch", info["branch"], root])
+            check_call(["git", "clone", info['git'], root])
+
+            # info["branch"] can be a branch, tag, or commit sha
+            check_call(["git", "-C", root, "checkout", "-f", info["branch"]])
 
             commit = check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip()
 

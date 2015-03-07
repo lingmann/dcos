@@ -76,7 +76,7 @@ def checkout_source(sources):
             # info["branch"] can be a branch, tag, or commit sha
             check_call(["git", "-C", root, "checkout", "-f", info["branch"]])
 
-            commit = check_output(["git", "rev-parse", "HEAD"]).decode('ascii').strip()
+            commit = check_output(["git", "-C", root, "rev-parse", "HEAD"]).decode('ascii').strip()
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()

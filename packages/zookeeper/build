@@ -1,0 +1,7 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+mkdir -p "$PKG_PATH/usr/"
+
+cp -rp /pkg/src/zookeeper "$PKG_PATH/usr"
+sudo chmod -R o+r "$PKG_PATH/usr"

@@ -15,8 +15,9 @@ from os.path import abspath, exists
 from shutil import copyfile
 from subprocess import CalledProcessError, check_call
 
-import package.build.constants
 from docopt import docopt
+
+import package.build.constants
 from package import PackageId
 from package.build import checkout_source, hash_checkout, sha1
 from package.exceptions import ValidationError

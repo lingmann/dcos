@@ -25,6 +25,7 @@ from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from docopt import docopt
+
 from package import Install, Repository, urllib_fetcher
 from package.constants import version
 from package.exceptions import PackageError, ValidationError

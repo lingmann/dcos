@@ -8,6 +8,7 @@ PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 TAR          ?= gtar
 ENVSUBST     ?= envsubst
 SUDO         ?= sudo
+JQ					 ?= jq
 ANNOTATE     ?= $(PROJECT_ROOT)/bin/annotate.sh
 DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
@@ -222,7 +223,7 @@ distclean: clean
 ###############################################################################
 
 .PHONY: prereqs
-prereqs: gtar docker sha256sum sed
+prereqs: gtar docker sha256sum sed jq
 
 .PHONY: gtar
 gtar:
@@ -239,3 +240,7 @@ sha256sum:
 .PHONY: sed
 sed:
 	@hash sed 2>/dev/null || { echo >&2 "ERROR: sed required"; exit 1; }
+
+.PHONY: jq
+jq:
+	@hash $(JQ) 2>/dev/null || { echo >&2 "ERROR: jq required"; exit 1; }

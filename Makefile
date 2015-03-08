@@ -5,7 +5,6 @@ DOCKER_IMAGE := dcos-builder
 UID          := $(shell id -u)
 GID          := $(shell id -g)
 PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
-TAR          ?= gtar
 ENVSUBST     ?= envsubst
 SUDO         ?= sudo
 JQ					 ?= jq
@@ -219,11 +218,7 @@ distclean: clean
 ###############################################################################
 
 .PHONY: prereqs
-prereqs: gtar docker sha256sum sed jq
-
-.PHONY: gtar
-gtar:
-	@hash $(TAR) 2>/dev/null || { echo >&2 "ERROR: GNU tar required for --transform"; exit 1; }
+prereqs: docker sha256sum sed jq
 
 .PHONY: docker
 docker:

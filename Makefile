@@ -18,6 +18,10 @@ ifeq ($(origin MESOS_GIT_SHA), undefined)
 MESOS_GIT_SHA := $(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
 endif
 
+ifeq ($(origin MESOS_GIT_URL), undefined)
+MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos
+endif
+
 ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
 $(error environment variable AWS_ACCESS_KEY_ID must be set)
 endif

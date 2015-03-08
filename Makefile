@@ -76,28 +76,13 @@ build/dcos.manifest:
 all: assemble
 
 .PHONY: assemble
-assemble: marathon zookeeper java mesos python
+assemble: build/marathon.manifest build/zookeeper.manifest build/java.manifest
+assemble: build/mesos.manifest build/python.manifest
 	@rm -rf dist && mkdir -p dist
-	@# Append external components to DCOS tarball
-	@cd ext && $(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../dist/dcos-$(PKG_VER)-$(PKG_REL).tar \
-		marathon zookeeper java
-	@# Append build manifests to DCOS tarball
-	@cd build && $(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../dist/dcos-$(PKG_VER)-$(PKG_REL).tar \
-		*.manifest
-	@# Append Mesos build to DCOS tarball
-	@cd build/mesos-toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL) && \
-		$(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../../../../../../dist/dcos-$(PKG_VER)-$(PKG_REL).tar *
-	@# Append Python build to DCOS tarball
-	@cd build/python-toor/opt/mesosphere/dcos/$(PKG_VER)-$(PKG_REL) && \
-		$(TAR) --numeric-owner --owner=0 --group=0 \
-		-rf ../../../../../../dist/dcos-$(PKG_VER)-$(PKG_REL).tar *
-	@# Compress
-	@gzip dist/dcos-$(PKG_VER)-$(PKG_REL).tar
-	@mv dist/dcos-$(PKG_VER)-$(PKG_REL).tar.gz \
-		dist/dcos-$(PKG_VER)-$(PKG_REL).tgz
+	@cp build/*/*.tar.xz dist
+	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
+	@$(SUDO) rm -rf /opt/mesosphere
+	@cd dist && $(SUDO) pkgpandastrap tarball --role=slave / *.tar.xz
 	@# Set up manifest contents
 	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
 	#@# Build bootstrap script
@@ -106,11 +91,11 @@ assemble: marathon zookeeper java mesos python
 		< src/scripts/bootstrap.sh \
 		> dist/bootstrap.sh
 	@# Checksum
-	@cd dist && sha256sum dcos-$(PKG_VER)-$(PKG_REL).* > \
+	@cd dist && sha256sum *.tar.xz *.manifest *.sh > \
 		dcos-$(PKG_VER)-$(PKG_REL).sha256
 
 .PHONY: publish
-publish: docker_image
+publish: build/docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/
@@ -122,24 +107,26 @@ publish: docker_image
 	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
 
 .PHONY: publish-snapshot
-publish-snapshot: publish docker_image
+publish-snapshot: publish build/docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/snapshot/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/snapshot/
 
-debug: docker_image
+debug: build/docker_image
 	$(DOCKER_RUN) \
 		-i -t -e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		$(DOCKER_IMAGE) bash
 
 .PHONY: docker_image
-docker_image:
+docker_image: build/docker_image
+build/docker_image:
 	$(ANNOTATE) $(SUDO) docker build -t "$(DOCKER_IMAGE)" . \
 		&> build/docker_image.log
 	>&2 egrep '^stderr: ' build/docker_image.log || true
 	@echo "docker_image build complete"
+	@cat Dockerfile > $@
 
 ext/mesos:
 	@echo "ERROR: mesos checkout required at the desired build version"
@@ -149,68 +136,73 @@ ext/mesos:
 	@exit 1
 
 .PHONY: mesos
-mesos: build/mesos.manifest ext/mesos
-build/mesos.manifest: docker_image
-	$(ANNOTATE) $(DOCKER_RUN) \
-		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
-		$(DOCKER_IMAGE) bin/build_mesos.sh &> build/mesos.log
+mesos: build/mesos.manifest
+build/mesos.manifest: build/docker_image ext/mesos
+	$(SUDO) rm -rf build/mesos
+	cp -rp packages/mesos build
+	@# Update package buildinfo
+	cat packages/mesos/buildinfo.json \
+		| $(JQ) --arg sha "$(MESOS_GIT_SHA)" --arg url "$(MESOS_GIT_URL)" \
+		'.single_source.branch = $$sha | .single_source.git = $$url' \
+		> build/mesos/buildinfo.json
+	cd build/mesos && $(ANNOTATE) mkpanda &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
-	@echo "mesos build complete"
-	@# Chown files modified via Docker mount to UID/GID at time of make invocation
-	$(SUDO) chown -R $(UID):$(GID) ext/mesos build
-	@# Record Mesos stuff to manifest
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
 
 .PHONY: python
 python: build/python.manifest
-build/python.manifest: docker_image
+build/python.manifest: build/docker_image
 	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
-	@echo "Downloading Python from $(PYTHON_URL)"
-	@wget -qO- "$(PYTHON_URL)" | \
-		$(TAR) -xzf - --transform 's,Python-[0-9.]+,python,x' \
-		--show-transformed -C ext/
-	$(ANNOTATE) $(DOCKER_RUN) \
-		-e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
-		$(DOCKER_IMAGE) bin/build_python.sh &> build/python.log
+	$(SUDO) rm -rf build/python
+	cp -rp packages/python build
+	@# Update package buildinfo
+	cat packages/python/buildinfo.json \
+		| $(JQ) --arg url "$(PYTHON_URL)" '.single_source.git = $$url' \
+		> build/python/buildinfo.json
+	cd build/python && $(ANNOTATE) mkpanda &> ../python.log
 	>&2 egrep '^stderr: ' build/python.log || true
-	@echo "python build complete"
-
-	@# Chown files modified via Docker mount to UID/GID at time of make invocation
-	$(SUDO) chown -R $(UID):$(GID) ext/python build
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
 .PHONY: marathon
 marathon: build/marathon.manifest
-build/marathon.manifest:
-	@echo "Downloading Marathon from $(MARATHON_URL)"
+build/marathon.manifest: build/docker_image
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
-	@# Transform paths in tarball so that marathon jar is extracted to desired
-	@# location. The wildcard pattern specified is pre-transform. To debug:
-	@# $(TAR) -tzf - --transform 's,sed pattern,replace,x' --show-transformed
-	@wget -qO- "$(MARATHON_URL)" | \
-		$(TAR) -xzf - --transform \
-		's,marathon-[0-9\.RC\-]+/target/scala-[0-9.]+/marathon-assembly-[0-9\.RC\-]+\.jar,marathon/marathon.jar,x' \
-		--show-transformed -C ext/ --wildcards '*/marathon-assembly-*.jar'
+	$(SUDO) rm -rf build/marathon
+	cp -rp packages/marathon build
+	@# Update package buildinfo
+	cat packages/marathon/buildinfo.json \
+		| $(JQ) --arg url "$(MARATHON_URL)" '.single_source.git = $$url' \
+		> build/marathon/buildinfo.json
+	cd build/marathon && $(ANNOTATE) mkpanda &> ../marathon.log
+	>&2 egrep '^stderr: ' build/marathon.log || true
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
 .PHONY: zookeeper
 zookeeper: build/zookeeper.manifest
-build/zookeeper.manifest:
-	@echo "Downloading Zookeeper from $(ZOOKEEPER_URL)"
+build/zookeeper.manifest: build/docker_image
 	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
-	@wget -qO- "$(ZOOKEEPER_URL)" | \
-		$(TAR) -xzf - --transform 's,^zookeeper-[0-9.]+,zookeeper,x' \
-		--show-transformed -C ext/
+	$(SUDO) rm -rf build/zookeeper
+	cp -rp packages/zookeeper build
+	@# Update package buildinfo
+	cat packages/zookeeper/buildinfo.json \
+		| $(JQ) --arg url "$(ZOOKEEPER_URL)" '.single_source.git = $$url' \
+		> build/zookeeper/buildinfo.json
+	cd build/zookeeper && $(ANNOTATE) mkpanda &> ../zookeeper.log
+	>&2 egrep '^stderr: ' build/zookeeper.log || true
 	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
 .PHONY: java
 java: build/java.manifest
-build/java.manifest:
-	@echo "Downloading Java from $(JAVA_URL)"
+build/java.manifest: build/docker_image
 	@if [[ "$(JAVA_URL)" == "" ]]; then echo "JAVA_URL is unset"; exit 1; fi
-	@wget -qO- "$(JAVA_URL)" | \
-		$(TAR) -xzf - --transform 's,^jre[0-9._]+,java,x' \
-		--show-transformed -C ext/
+	$(SUDO) rm -rf build/java
+	cp -rp packages/java build
+	@# Update package buildinfo
+	cat packages/java/buildinfo.json \
+		| $(JQ) --arg url "$(JAVA_URL)" '.single_source.git = $$url' \
+		> build/java/buildinfo.json
+	cd build/java && $(ANNOTATE) mkpanda &> ../java.log
+	>&2 egrep '^stderr: ' build/java.log || true
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
 .PHONY: clean

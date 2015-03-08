@@ -105,13 +105,14 @@ publish: build/docker_image
 	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
 	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
 
-.PHONY: publish-snapshot
-publish-snapshot: publish build/docker_image
+.PHONY: publish-link
+publish-link: publish build/docker_image
+	@if [[ "$(PUBLISH_LINK)" == "" ]]; then echo "PUBLISH_LINK is unset"; exit 1; fi
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
-		s3://downloads.mesosphere.io/dcos/snapshot/
+		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/snapshot/
+		/dcos/dist/bootstrap.sh s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
 
 debug: build/docker_image
 	$(DOCKER_RUN) \

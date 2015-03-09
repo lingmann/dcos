@@ -66,9 +66,13 @@ def main():
     install = package.Install(pkgpanda_root, config_dir, False)
     install.activate(repository, repository.load_packages(pkg_ids))
 
+    # Mark the tarball as a bootstrap tarball/filesystem so that
+    # dcos-setup.service will fire.
+    make_file(make_abs("opt/mesosphere/bootstrap"))
+
     if arguments['tarball']:
         check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",
-                   "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
+                    "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
         sys.exit(0)
 
     if arguments['container']:

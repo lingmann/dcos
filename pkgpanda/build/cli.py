@@ -6,9 +6,14 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda
+  mkpanda [--repository-path=<path>]
+
+Options:
+  --repository-path=<path>  Path to pkgpanda repository containing all the
+                            dependencies. [default: ~/.pkgpanda/repository]
 """
 
+import os.path
 import sys
 from os import mkdir
 from os.path import abspath, exists
@@ -17,9 +22,9 @@ from subprocess import CalledProcessError, check_call
 
 import pkgpanda.build.constants
 from docopt import docopt
-from pkgpanda import PackageId
+from pkgpanda import PackageId, Repository
 from pkgpanda.build import checkout_source, hash_checkout, sha1
-from pkgpanda.exceptions import ValidationError
+from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, write_json
 
 
@@ -43,7 +48,8 @@ class DockerCmd:
 
 
 def main():
-    docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
+    arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
+    print
 
     # Load the package build info
     try:
@@ -52,10 +58,14 @@ def main():
         print("ERROR: Unable to find `buildinfo.json` in the current directory.")
         exit(-1)
 
-    # Don't build into an already existing result, will make non-reproducible builds.
+    # Build pkginfo over time, translating fields from buildinfo.
+    pkginfo = {}
+
+    # Only fresh builds are allowed which don't overlap existing artifacts.
     if exists("result"):
         print("result folder must not exist. It will be made when the package " +
               "is built. {}".format(abspath("result")))
+        sys.exit(1)
 
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
     # TODO(cmaloney): allow a shorthand for single source packages.
@@ -67,6 +77,69 @@ def main():
     else:
         raise ValidationError("Must specify at least one source to build " +
                               "package from using 'sources' or 'single_source'.")
+
+    # Load the repository
+    repo_path = os.path.normpath(os.path.expanduser(arguments['--repository-path']))
+    repository = Repository(repo_path)
+
+    active_packages = list()
+    active_package_names = set()
+    # Verify all requires are in the repository.
+    if 'requires' in buildinfo:
+        # Final package has the same requires as the build.
+        pkginfo['requires'] = buildinfo['requires']
+
+        repo_packages = set(map(PackageId, repository.list()))
+
+        bad_requires = False
+        to_check = buildinfo['requires']
+        while to_check:
+            pkg_str = to_check.pop(0)
+            if pkg_str in active_package_names:
+                continue
+
+            try:
+                if PackageId.is_id(pkg_str):
+                    repository.load(pkg_str)
+                else:
+                    ids = list(pkg_id for pkg_id in repo_packages if pkg_id.name == pkg_str)
+                    if len(ids) == 0:
+                        print("No package with name {} in repository".format(pkg_str))
+                        sys.exit(1)
+                    elif len(ids) > 1:
+                        print(
+                            "Multiple packages for name {} in repository ".format(pkg_str) +
+                            "Only one package of a name may be present when " +
+                            "name-only dependencies are used")
+                        sys.exit(1)
+
+                    package = repository.load(ids[0])
+
+                # Mark the package as active so we don't check it again and
+                # infinite loop on cycles.
+                active_packages.append(package)
+                active_package_names.add(package.name)
+
+                # Add the dependencies of the package to the set which will be
+                # activated.
+                # TODO(cmaloney): All these 'transitive' dependencies shouldn't
+                # be available to the package being built, only what depends on
+                # them directly.
+                to_check += package.requires
+            except ValidationError as ex:
+                print("ERROR validating package needed as dependency {0}: {1}".format(pkg_str, ex))
+                bad_requires = True
+            except PackageError as ex:
+                print("ERROR loading package needed as dependency {0}: {1}".format(pkg_str, ex))
+                bad_requires = True
+
+        if bad_requires:
+            sys.exit(1)
+
+        # TODO(cmaloney): Validate every requires is a valid package name
+        # or package id.q
+        print("WARNING: requires are not currently installed to the build " +
+              "environment")
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities
@@ -112,14 +185,6 @@ def main():
     # Copy the build info to the resulting tarball
     copyfile("src/build_ids.json", "result/build_ids.json")
     copyfile("buildinfo.json", "result/buildinfo.json")
-    # TODO(cmaloney): Fill pkginfo with useful data.
-    pkginfo = {}
-    if 'requires' in buildinfo:
-        pkginfo['requires'] = buildinfo['requires']
-        # TODO(cmaloney): Validate every requires is a valid package name
-        # or package id.q
-        print("WARNING: requires are not currently installed to the build " +
-              "environment")
 
     write_json("result/pkginfo.json", pkginfo)
 

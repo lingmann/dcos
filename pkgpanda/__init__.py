@@ -23,7 +23,7 @@ import urllib.request
 from itertools import chain
 from subprocess import check_call
 
-from pkgpanda.exceptions import PackageError, RepositoryError, ValidationError
+from pkgpanda.exceptions import InstallError, PackageError, ValidationError
 from pkgpanda.util import if_exists, load_json
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
@@ -93,6 +93,10 @@ class PackageId:
         # May not start with '.' or '-'.
         if not re.match(name_regex, name):
             raise ValidationError("Invalid package name {0}. Must match the regex {1}".format(name, name_regex))
+
+    @staticmethod
+    def is_id(package_str):
+        return package_str.count('--') == 1
 
     @staticmethod
     def validate_version(version):
@@ -246,13 +250,20 @@ class Repository:
 
         A package is a folder which contains a pkginfo.json"""
         packages = set()
+        if not os.path.exists(self.__path):
+            return packages
+
         for id in os.listdir(self.__path):
-            if os.path.exists(os.path.join(self.package_path(id), "pkginfo.json")):
+            if PackageId.is_id(id):
                 packages.add(id)
         return packages
 
     # Load the given package
     def load(self, id):
+
+        # Validate the package id.
+        PackageId(id)
+
         path = self.package_path(id)
         filename = os.path.join(path, "pkginfo.json")
         pkginfo = None
@@ -347,11 +358,11 @@ class Install:
 
         if not os.path.exists(active_dir):
             if os.path.exists(active_dir + ".old") or os.path.exists(active_dir + ".new"):
-                raise RepositoryError(
+                raise InstallError(
                     ("Broken past deploy. See {0}.new for what the (potentially incomplete) new state shuold be " +
                      "and optionally {0}.old if it exists for the complete previous state.").format(active_dir))
             else:
-                raise RepositoryError(
+                raise InstallError(
                     "Install directory {0} has no active folder. Has it been bootstrapped?".format(self.__root))
 
         ids = set()

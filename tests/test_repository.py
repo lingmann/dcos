@@ -15,14 +15,14 @@ def test_list(repository):
     packages = repository.list()
     assert type(packages) is set
     assert packages == set(
-        ['mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8', 'mesos--0.22.0', "invalid-package"])
+        ['mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8', 'mesos--0.22.0'])
 
 
 def test_load_bad(repository):
-    with pytest.raises(pkgpanda.exceptions.PackageError):
+    with pytest.raises(pkgpanda.exceptions.ValidationError):
         repository.load_packages(["invalid-package"])
 
 
 def test_load_nonexistant(repository):
     with pytest.raises(pkgpanda.exceptions.PackageError):
-        repository.load_packages(["Not a package"])
+        repository.load_packages(["missing-package--42"])

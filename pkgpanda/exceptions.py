@@ -1,8 +1,8 @@
-class RepositoryError(Exception):
+class InstallError(Exception):
     pass
 
 
-class PackageError(RepositoryError):
+class PackageError(Exception):
     pass
 
 

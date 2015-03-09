@@ -81,7 +81,7 @@ assemble: build/mesos.manifest build/python.manifest
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
 	@$(SUDO) rm -rf /opt/mesosphere
-	@cd dist && pkgpandastrap tarball --role=slave / *.tar.xz
+	@cd dist && pkgpanda-mkbootstrap tarball --role=slave / *.tar.xz
 	@# Set up manifest contents
 	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
 	#@# Build bootstrap script

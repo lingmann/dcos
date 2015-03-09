@@ -59,7 +59,7 @@ Why not make /{name}/{id_without_name}
 
 When things go wrong, how to recover
 1) Dump the host and load a new one, simplest safest
-2) Re-bootstrap with pkgpanda
+2) `pkgpanda setup` the host.
 3) pkgpanda activate {list of packages}
     - Fix problems if they happen
 

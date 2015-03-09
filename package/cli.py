@@ -2,7 +2,7 @@
 """Panda package management
 
 Usage:
-  pkgpanda bootstrap [options]
+  pkgpanda setup [options]
   pkgpanda list [options]
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
@@ -11,7 +11,7 @@ Usage:
 
 Options:
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
-                                configuration (roles, bootstrap flags). [default: /etc/mesosphere/]
+                                configuration (roles, setup flags). [default: /etc/mesosphere/]
     --no-systemd                Don't try starting/stopping systemd services
     --root=<root>               Testing only: Use an alternate root [default: /opt/mesosphere]
     --repository=<repository>   Testing only: Use an alternate local package
@@ -31,10 +31,10 @@ from package.exceptions import PackageError, ValidationError
 from package.util import if_exists, load_json, load_string
 
 
-def bootstrap(install, repository):
+def setup(install, repository):
     # These files should be set by the environment which initially builds
     # the host (cloud-init).
-    repository_url = if_exists(load_string, install.get_config_filename("bootstrap-flags/repository-url"))
+    repository_url = if_exists(load_string, install.get_config_filename("setup-flags/repository-url"))
 
     # If there is 1+ master, grab the active config from a master. If the
     # config can't be grabbed from any of them, fail.
@@ -57,7 +57,7 @@ def bootstrap(install, repository):
             repository.add(fetcher, package)
     else:
         # Grab to_activate from the local filez
-        to_activate = load_json(install.get_config_filename("bootstrap-flags/active.json"))
+        to_activate = load_json(install.get_config_filename("setup-flags/active.json"))
 
     # Should be set by loading out of fs or from the local config server.
     assert to_activate is not None
@@ -75,9 +75,9 @@ def main():
         not arguments['--no-systemd'])
     repository = Repository(os.path.abspath(arguments['--repository']))
 
-    if arguments['bootstrap']:
+    if arguments['setup']:
         try:
-            bootstrap(install, repository)
+            setup(install, repository)
         except ValidationError as ex:
             print("Validation Error: {0}".format(ex))
             sys.exit(1)

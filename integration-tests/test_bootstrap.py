@@ -7,7 +7,7 @@ from util import run
 
 def test_bootstrap(tmpdir):
     check_call(["pkgpanda",
-                "bootstrap",
+                "setup",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
                 "--config-dir=resources/etc-active",
@@ -43,7 +43,7 @@ def test_bootstrap(tmpdir):
 
     # If we bootstarp the same directory again we should get .old files.
     check_call(["pkgpanda",
-                "bootstrap",
+                "setup",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
                 "--config-dir=resources/etc-active",
@@ -90,7 +90,7 @@ def test_bootstrap(tmpdir):
 def test_activate(tmpdir):
     # TODO(cmaloney): Depending on bootstrap here is less than ideal, but meh.
     check_call(["pkgpanda",
-                "bootstrap",
+                "setup",
                 "--root={0}/root".format(tmpdir),
                 "--repository=../tests/resources/packages",
                 "--config-dir=resources/etc-active",
@@ -138,4 +138,4 @@ def test_activate(tmpdir):
     # TODO(cmaloney): expect_fs
 
 
-# TODO(cmaloney): Test a full OS bootstrap using http://0pointer.de/blog/projects/changing-roots.html
+# TODO(cmaloney): Test a full OS setup using http://0pointer.de/blog/projects/changing-roots.html

@@ -9,5 +9,5 @@ ConditionPathExists=/opt/mesosphere/bootstrap
 Type=oneshot
 
 EnvironemntFile=/opt/mesosphere/environment
-ExecStart=/opt/mesosphere/bin/pkgpanda bootstrap
+ExecStart=/opt/mesosphere/bin/pkgpanda setup
 ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap

@@ -1,7 +1,7 @@
 # Initial host setup
 
 Copy to `/etc/systemd/system`:
- - dcos-bootstrap.service
+ - dcos-setup.service
  - dcos-download.service
  - dcos-repair.service
 
@@ -16,12 +16,12 @@ Symlink /etc/systemd/system/dcos.target.wants -> /opt/mesosphere/dcos.target.wan
 
 ## Bootstrap configuration
 
- - package list from active master when bootstrapping
+ - package list from active master when setting up the host.
    ```
-   /etc/dcos/bootstrap-flags/repository-url
+   /etc/dcos/setup-flags/repository-url
 
    # List of packages to activate
-   /etc/dcos/bootstrap-flags/active
+   /etc/dcos/setup-flags/active
    ```
 
  - Enable mesos master
@@ -36,19 +36,13 @@ Symlink /etc/systemd/system/dcos.target.wants -> /opt/mesosphere/dcos.target.wan
 ```
 /bin/pkgpanda
 /environment
-# These are activated based on the role.
-# In general running the config package which is installed should have a 'systemd'
-# folder which informs what systemd units to install to dcos.target.wants.
-# But that isn't setup / enabled yet.
-/active/mesos/bootstrap-systemd/mesos-master.service
-/active/mesos/bootstrap-systemd/mesos-slave.service
 ```
 
 TODO(cmaloney): Should we report status back to somewhere?
 
 # How it works
 
-`dcos.target` depends upon `dcos-bootstrap.service`. `dcos-bootstrap.service` depends on
+`dcos.target` depends upon `dcos-setup.service`. `dcos-setup.service` depends on
 `dcos-download.service`
 
 `dcos.target` is put into `/etc/systemd/system/multi-user.target.wants` so that is started
@@ -58,10 +52,10 @@ before it tries starting dcos.target.
 `dcos-download.service` when run downloads the dcos tarball and extracts it onto the host
 filesystem.
 
-`dcos-bootstrap.service` runs `pandapkg bootstrap` which will put all the bits into the right place / activate the packages on the host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
+`dcos-setup.service` runs `pandapkg setup` which will put all the bits into the right place / activate the packages on the host, updating the set of packages if required (From the initial install of dcos a specific mesos module was added to the
 configuration and must be loaded before a new slave is started).
 
-The `pandapkg bootstrap` will add a all the necessary systemd units to /etc/systemd/system/dcos.target.wants so they will be restarted on reboot, as well as performs a `systemctl daemon-reload` so systemd picks up the new target dependencies, and then a `systemctl start` to force the new targets to start.
+The `pandapkg setup` will add a all the necessary systemd units to /etc/systemd/system/dcos.target.wants so they will be restarted on reboot, as well as performs a `systemctl daemon-reload` so systemd picks up the new target dependencies, and then a `systemctl start` to force the new targets to start.
 
 
 ## TODO old notes to be merged into above.

@@ -1,5 +1,5 @@
 [Unit]
 After=dcos-repair.service
 Requires=dcos-repair.service
-After=dcos-bootstrap.service
-Requires=dcos-bootstrap.service
+After=dcos-setup.service
+Requires=dcos-setup.service

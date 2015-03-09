@@ -1,4 +1,9 @@
 #!/bin/bash
+
+# NOTE: This document is somewhat out of date, was used as an overall design guide.
+# See the implementation of `pkgpanda setup` as well as `systemd/INSTALLING.md` for
+# what currently happens.
+
 wget https://downloads.mesosphere.com/dcos-dist.tar.xz -o /tmp/dcos-dist.tar.xz
 tar -xzf dcos-dist.tar.xz /opt/mesosphere
 

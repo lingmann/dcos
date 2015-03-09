@@ -1,6 +1,9 @@
 Host overall filesystem layout:
 ```
-/etc/mesosphere/dcos-bootstrap/role/{master,slave}
+/etc/mesosphere/roles/{master,slave}
+/etc/mesosphere/setup-flags/
+	active.json
+	repository-url
 /etc/systemd/dcos.target.wants/
 	mesos-master.service
 /opt/mesosphere/

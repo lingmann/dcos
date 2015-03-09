@@ -5,7 +5,7 @@ from pkgpanda.util import expect_fs
 from util import run
 
 
-def test_bootstrap(tmpdir):
+def test_setup(tmpdir):
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
@@ -41,7 +41,7 @@ def test_bootstrap(tmpdir):
 
     assert active == set(["mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
-    # If we bootstarp the same directory again we should get .old files.
+    # If we setup the same directory again we should get .old files.
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
@@ -88,7 +88,7 @@ def test_bootstrap(tmpdir):
 
 
 def test_activate(tmpdir):
-    # TODO(cmaloney): Depending on bootstrap here is less than ideal, but meh.
+    # TODO(cmaloney): Depending on setup here is less than ideal, but meh.
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),

@@ -1,5 +1,5 @@
 from setuptools import setup, find_packages
-from package.constants import version
+from pkgpanda.constants import version
 
 setup(
     name='pkgpanda',
@@ -19,9 +19,9 @@ setup(
     install_requires=['docopt'],
     entry_points={
         'console_scripts': [
-            'pkgpanda=package.cli:main',
-            'mkpanda=package.build.cli:main',
-            'pkgpandastrap=package.bootstrap:main'
+            'pkgpanda=pkgpanda.cli:main',
+            'mkpanda=pkgpanda.build.cli:main',
+            'pkgpandastrap=pkgpanda.bootstrap:main'
         ],
     },
     package_data={

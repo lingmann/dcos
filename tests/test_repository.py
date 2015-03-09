@@ -1,7 +1,7 @@
 """Test functionality of the local package repository"""
 
-import package.exceptions
-from package import Repository
+import pkgpanda.exceptions
+from pkgpanda import Repository
 
 import pytest
 
@@ -19,10 +19,10 @@ def test_list(repository):
 
 
 def test_load_bad(repository):
-    with pytest.raises(package.exceptions.PackageError):
+    with pytest.raises(pkgpanda.exceptions.PackageError):
         repository.load_packages(["invalid-package"])
 
 
 def test_load_nonexistant(repository):
-    with pytest.raises(package.exceptions.PackageError):
+    with pytest.raises(pkgpanda.exceptions.PackageError):
         repository.load_packages(["Not a package"])

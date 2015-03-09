@@ -25,10 +25,10 @@ from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from docopt import docopt
-from package import Install, Repository, urllib_fetcher
-from package.constants import version
-from package.exceptions import PackageError, ValidationError
-from package.util import if_exists, load_json, load_string
+from pkgpanda import Install, Repository, urllib_fetcher
+from pkgpanda.constants import version
+from pkgpanda.exceptions import PackageError, ValidationError
+from pkgpanda.util import if_exists, load_json, load_string
 
 
 def setup(install, repository):

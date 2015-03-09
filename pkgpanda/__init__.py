@@ -23,8 +23,8 @@ import urllib.request
 from itertools import chain
 from subprocess import check_call
 
-from package.exceptions import PackageError, RepositoryError, ValidationError
-from package.util import if_exists, load_json
+from pkgpanda.exceptions import PackageError, RepositoryError, ValidationError
+from pkgpanda.util import if_exists, load_json
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?

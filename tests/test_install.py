@@ -2,8 +2,8 @@
 
 import shutil
 
-from package import Install, Repository
-from package.util import expect_fs
+from pkgpanda import Install, Repository
+from pkgpanda.util import expect_fs
 
 import pytest
 

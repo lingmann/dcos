@@ -18,7 +18,7 @@ import shutil
 import sys
 from subprocess import check_call
 
-import package
+import pkgpanda
 from docopt import docopt
 
 
@@ -36,7 +36,7 @@ def main():
         return os.path.join(root, path)
 
     pkgpanda_root = make_abs("opt/mesosphere")
-    repository = package.Repository(os.path.join(pkgpanda_root, "packages"))
+    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
 
     # Fetch all the packages to the root
     pkg_ids = list()
@@ -63,7 +63,7 @@ def main():
         make_file(os.path.join(config_dir, role))
 
     # Activate the packages inside the repository.
-    install = package.Install(pkgpanda_root, config_dir, False)
+    install = pkgpanda.Install(pkgpanda_root, config_dir, False)
     install.activate(repository, repository.load_packages(pkg_ids))
 
     # Mark the tarball as a bootstrap tarball/filesystem so that

@@ -15,16 +15,16 @@ from os.path import abspath, exists
 from shutil import copyfile
 from subprocess import CalledProcessError, check_call
 
-import package.build.constants
+import pkgpanda.build.constants
 from docopt import docopt
-from package import PackageId
-from package.build import checkout_source, hash_checkout, sha1
-from package.exceptions import ValidationError
-from package.util import load_json, write_json
+from pkgpanda import PackageId
+from pkgpanda.build import checkout_source, hash_checkout, sha1
+from pkgpanda.exceptions import ValidationError
+from pkgpanda.util import load_json, write_json
 
 
 def main():
-    docopt(__doc__, version="mkpanda {}".format(package.build.constants.version))
+    docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
 
     # Load the package build info
     try:

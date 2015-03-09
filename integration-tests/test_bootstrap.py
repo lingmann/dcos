@@ -1,6 +1,6 @@
 from subprocess import check_call, check_output
 
-from package.util import expect_fs
+from pkgpanda.util import expect_fs
 
 from util import run
 

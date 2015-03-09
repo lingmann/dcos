@@ -6,7 +6,7 @@ import urllib.request
 from subprocess import check_call, check_output
 from urllib.parse import urlparse
 
-from package.exceptions import ValidationError
+from pkgpanda.exceptions import ValidationError
 
 
 def sha1(filename):

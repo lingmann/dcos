@@ -1,6 +1,6 @@
 import os
 
-from package.util import expect_fs
+from pkgpanda.util import expect_fs
 
 from util import run
 

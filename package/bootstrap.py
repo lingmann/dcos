@@ -55,7 +55,7 @@ def main():
         repository.add(local_fetcher, pkg_id)
 
     # Mark the appropriate roles.
-    config_dir = make_abs("etc/mesosphere")
+    config_dir = make_abs("etc/mesosphere/roles/")
     if os.path.exists(config_dir):
         shutil.rmtree(config_dir)
     os.makedirs(config_dir)

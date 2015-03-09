@@ -1,8 +1,9 @@
 """Test functionality of the local package repository"""
 
 import package.exceptions
-import pytest
 from package import Repository
+
+import pytest
 
 
 @pytest.fixture

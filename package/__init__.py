@@ -173,9 +173,9 @@ def validate_compatible(packages, roles):
         for requirement in package.requires:
             if requirement not in names and requirement not in ids:
                 raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}".format(
-                                      package.id,
-                                      requirement,
-                                      ', '.join(str(x.id) for x in packages)))
+                                          package.id,
+                                          requirement,
+                                          ', '.join(str(x.id) for x in packages)))
 
         # No repeated/conflicting environment variables with other packages as
         # well as magic system enviornment variables.

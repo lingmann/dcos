@@ -2,9 +2,10 @@
 
 import shutil
 
-import pytest
 from package import Install, Repository
 from package.util import expect_fs
+
+import pytest
 
 
 @pytest.fixture

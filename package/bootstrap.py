@@ -18,9 +18,8 @@ import shutil
 import sys
 from subprocess import check_call
 
-from docopt import docopt
-
 import package
+from docopt import docopt
 
 
 def make_file(name):

@@ -18,6 +18,11 @@ fleetctl journal ...
 curl http://169.254.169.254/latest/user-data
 ```
 
+## Test cloud config user data stored in a local file
+```
+coreos-cloudinit --from-file /tmp/user-data.yml
+```
+
 ## Execute arbitrary bash code/variable subst in systemd units
 
 https://gist.github.com/nickjacob/9909574

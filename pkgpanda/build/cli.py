@@ -61,6 +61,9 @@ def main():
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
 
+    # Build up the docker command arguments over time, translating fields as needed.
+    cmd = DockerCmd()
+
     # Only fresh builds are allowed which don't overlap existing artifacts.
     if exists("result"):
         print("result folder must not exist. It will be made when the package " +
@@ -167,6 +170,7 @@ def main():
         print("This option will be removed once enough of the dependencies " +
               "are in pkgpanda form that everything can just use pkgpanda " +
               "dependencies.")
+    cmd.container = docker_name
 
     # TODO(cmaloney): Mount and run a wrapper script that installs
     # dependencies.
@@ -188,8 +192,6 @@ def main():
 
     write_json("result/pkginfo.json", pkginfo)
 
-    cmd = DockerCmd()
-    cmd.container = docker_name
     # TOOD(cmaloney): Disallow writing to well known files and directories?
     # Source we checked out
     cmd.volumes = {

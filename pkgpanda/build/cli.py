@@ -144,7 +144,7 @@ def main():
     # Bundle the artifacts into the pkgpanda package
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
     check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",
-               "-cJf", pkg_path, "-C", "result", "."])
+                "-cJf", pkg_path, "-C", "result", "."])
     print("Package built, available at {}".format(pkg_path))
     sys.exit(0)
 

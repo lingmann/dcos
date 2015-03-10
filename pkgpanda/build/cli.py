@@ -23,6 +23,25 @@ from pkgpanda.exceptions import ValidationError
 from pkgpanda.util import load_json, write_json
 
 
+class DockerCmd:
+
+    volumes = dict()
+    environment = dict()
+    container = str()
+
+    def run(self, cmd):
+        docker = ["docker", "run"]
+        for host_path, container_path in self.volumes.items():
+            docker += ["-v", "{0}:{1}".format(host_path, container_path)]
+
+        for k, v in self.environment.items():
+            docker += ["-e", "{0}={1}".format(k, v)]
+
+        docker.append(self.container)
+        docker += cmd
+        check_call(docker)
+
+
 def main():
     docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
 
@@ -104,33 +123,29 @@ def main():
 
     write_json("result/pkginfo.json", pkginfo)
 
+    cmd = DockerCmd()
+    cmd.container = docker_name
+    # TOOD(cmaloney): Disallow writing to well known files and directories?
+    # Source we checked out
+    cmd.volumes = {
+        # TODO(cmaloney): src should be read only...
+        abspath("src"): "/pkg/src:rw",
+        # The build script
+        abspath("build"): "/pkg/build:ro",
+        # Getting the result out
+        abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id)
+        # TODO(cmaloney): Install Dependencies, mount in well known files and dirs
+        # Info about the package
+        }
+    cmd.environment = {
+        "PKG_VERSION": version,
+        "PKG_NAME": buildinfo['name'],
+        "PKG_ID": pkg_id,
+        "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id)
+    }
+
     try:
-        check_call([
-            "docker",
-            "run",
-            # TOOD(cmaloney): Disallow writing to well known files and directories?
-            # Source we checked out
-            # TODO(cmaloney): src should be read only...
-            "-v", "{}:/pkg/src:rw".format(abspath("src")),
-            # The build script
-            "-v", "{}:/pkg/build:ro".format(abspath("build")),
-
-            # Getting the result out
-            "-v", "{0}:/opt/mesosphere/packages/{1}".format(abspath("result"), pkg_id),
-            # TODO(cmaloney): Install Dependencies, mount in well known files and dirs
-            # Info about the package
-            "-e", "PKG_VERSION={}".format(version),
-            "-e", "PKG_NAME={}".format(buildinfo['name']),
-            "-e", "PKG_ID={}".format(pkg_id),
-            "-e", "PKG_PATH={}".format("/opt/mesosphere/packages/{}".format(pkg_id)),
-
-            # Build environment
-            docker_name,
-
-            # Run the build script
-            "/bin/bash",
-            "-e",
-            "/pkg/build"])
+        cmd.run(["/bin/bash", "-e", "/pkg/build"])
     except CalledProcessError as ex:
         print("ERROR: docker exited non-zero: {}".format(ex.returncode))
         print("Command: {}".format(' '.join(ex.cmd)))

@@ -342,13 +342,15 @@ class Install:
 
     def __init__(self, root, config_dir, manage_systemd):
         self.__root = os.path.abspath(root)
-        self.__config_dir = os.path.abspath(config_dir)
+        self.__config_dir = os.path.abspath(config_dir) if config_dir else None
         self.__manage_systemd = manage_systemd
 
         # Look up the machine roles
-        self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
-        if self.__roles is None:
-            self.__roles = []
+        self.__roles = []
+        if self.__config_dir:
+            self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
+            if self.__roles is None:
+                self.__roles = []
 
     def get_active(self):
         """the active folder has symlinks to all the active packages.

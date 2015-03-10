@@ -15,14 +15,16 @@ Options:
 
 import os.path
 import sys
+import tempfile
+from itertools import chain
 from os import mkdir
 from os.path import abspath, exists
-from shutil import copyfile
+from shutil import copyfile, rmtree
 from subprocess import CalledProcessError, check_call
 
 import pkgpanda.build.constants
 from docopt import docopt
-from pkgpanda import PackageId, Repository
+from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_source, hash_checkout, sha1
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, write_json
@@ -45,6 +47,23 @@ class DockerCmd:
         docker.append(self.container)
         docker += cmd
         check_call(docker)
+
+
+def rewrite_symlinks(root, old_prefix, new_prefix):
+    # Find the symlinks and rewrite them from old_prefix to new_prefix
+    # All symlinks not beginning with old_prefix are ignored because
+    # packages may contain arbitrary symlinks.
+    for root_dir, dirs, files in os.walk(root):
+        for name in chain(files, dirs):
+            full_path = os.path.join(root_dir, name)
+            if os.path.islink(full_path):
+                # Rewrite old_prefix to new_prefix if present.
+                target = os.readlink(full_path)
+                if target.startswith(old_prefix):
+                    new_target = os.path.join(new_prefix, target[len(old_prefix)+1:].lstrip('/'))
+                    # Remove the old link and write a new one.
+                    os.remove(full_path)
+                    os.symlink(new_target, full_path)
 
 
 def main():
@@ -81,6 +100,11 @@ def main():
         raise ValidationError("Must specify at least one source to build " +
                               "package from using 'sources' or 'single_source'.")
 
+    # Packages need directories inside the fake install root (otherwise docker
+    # will try making the directories on a readonly filesystem), so build the
+    # install root now, and make the package directories in it as we go.
+    install_dir = tempfile.mkdtemp(prefix="pkgpanda-")
+
     # Load the repository
     repo_path = os.path.normpath(os.path.expanduser(arguments['--repository-path']))
     repository = Repository(repo_path)
@@ -96,6 +120,9 @@ def main():
 
         bad_requires = False
         to_check = buildinfo['requires']
+        if type(to_check) != list:
+            print("`requires` in buildinfo.json must be an array of dependencies.")
+            sys.exit(1)
         while to_check:
             pkg_str = to_check.pop(0)
             if pkg_str in active_package_names:
@@ -107,7 +134,7 @@ def main():
                 else:
                     ids = list(pkg_id for pkg_id in repo_packages if pkg_id.name == pkg_str)
                     if len(ids) == 0:
-                        print("No package with name {} in repository".format(pkg_str))
+                        print("No package with name {0} in repository {1}".format(pkg_str, repo_path))
                         sys.exit(1)
                     elif len(ids) > 1:
                         print(
@@ -116,7 +143,12 @@ def main():
                             "name-only dependencies are used")
                         sys.exit(1)
 
-                    package = repository.load(ids[0])
+                    package = repository.load(str(ids[0]))
+
+                # Mount the package into the docker container.
+                cmd.volumes[package.path] = "/opt/mesosphere/packages/{}:ro".format(package.id)
+
+                os.makedirs(os.path.join(install_dir, "packages/{}".format(package.id)))
 
                 # Mark the package as active so we don't check it again and
                 # infinite loop on cycles.
@@ -139,10 +171,18 @@ def main():
         if bad_requires:
             sys.exit(1)
 
-        # TODO(cmaloney): Validate every requires is a valid package name
-        # or package id.q
-        print("WARNING: requires are not currently installed to the build " +
-              "environment")
+    # Activate the packages so that we have a proper path, environment
+    # variables.
+    # TODO(cmaloney): RAII type thing for temproary directory so if we
+    # don't get all the way through things will be cleaned up?
+    install = Install(install_dir, None, False)
+    install.activate(repository, active_packages)
+    # Rewrite all the symlinks inside the active path because we will
+    # be mounting the folder into a docker container, and the absolute
+    # paths to the packages will change.
+    # TODO(cmaloney): This isn't very clean, it would be much nicer to
+    # just run pkgpanda inside the package.
+    rewrite_symlinks(install_dir, repo_path, "/opt/mesosphere/packages/")
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities
@@ -192,18 +232,21 @@ def main():
 
     write_json("result/pkginfo.json", pkginfo)
 
+    # Make the folder for the package we are building. If docker does it, it
+    # gets auto-created with root permissions and we can't actually delete it.
+    os.makedirs(os.path.join(install_dir, "packages", str(pkg_id)))
+
     # TOOD(cmaloney): Disallow writing to well known files and directories?
     # Source we checked out
-    cmd.volumes = {
+    cmd.volumes.update({
         # TODO(cmaloney): src should be read only...
         abspath("src"): "/pkg/src:rw",
         # The build script
         abspath("build"): "/pkg/build:ro",
         # Getting the result out
-        abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id)
-        # TODO(cmaloney): Install Dependencies, mount in well known files and dirs
-        # Info about the package
-        }
+        abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
+        install_dir: "/opt/mesosphere:ro"
+        })
     cmd.environment = {
         "PKG_VERSION": version,
         "PKG_NAME": buildinfo['name'],
@@ -212,11 +255,18 @@ def main():
     }
 
     try:
+        # TODO(cmaloney): Run a wrapper which sources
+        # /opt/mesosphere/environment then runs a build. Also should fix
+        # ownership of /opt/mesosphere/packages/{pkg_id} post build.
         cmd.run(["/bin/bash", "-e", "/pkg/build"])
     except CalledProcessError as ex:
         print("ERROR: docker exited non-zero: {}".format(ex.returncode))
         print("Command: {}".format(' '.join(ex.cmd)))
         sys.exit(1)
+
+    # Clean up the temporary install dir used for dependencies.
+    # TODO(cmaloney): Move to an RAII wrapper.
+    rmtree(install_dir)
 
     print("Building package tarball")
 

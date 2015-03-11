@@ -20,6 +20,10 @@ make -j8
 make install
 popd
 
+mkdir -p "$PKG_PATH/bin"
+ln -s "$PKG_PATH/sbin/mesos-master" "$PKG_PATH/bin/mesos-master"
+ln -s "$PKG_PATH/sbin/mesos-slave" "$PKG_PATH/bin/mesos-slave"
+
 # TODO(cmaloney): Make these a seperate mesos library package.
 # Copy the shared libraries from the system which mesos requires
 cp /usr/lib/x86_64-linux-gnu/libsasl2.so.2 "$libdir"

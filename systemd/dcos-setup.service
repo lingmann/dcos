@@ -8,6 +8,6 @@ ConditionPathExists=/opt/mesosphere/bootstrap
 [Service]
 Type=oneshot
 
-EnvironemntFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/bin/pkgpanda setup
 ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap

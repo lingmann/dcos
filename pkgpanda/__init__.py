@@ -34,7 +34,7 @@ well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
 reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 env_header = """# Pandapkg provided environment variables
 LD_LIBRARY_PATH={0}/lib
-PATH=/usr/bin:{0}\n\n"""
+PATH=/usr/bin:{0}/bin\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"

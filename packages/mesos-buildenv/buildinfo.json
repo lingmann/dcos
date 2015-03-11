@@ -1,0 +1,9 @@
+{
+  "name": "mesos-buildenv",
+  "docker": "dcos-builder",
+  "single_source": {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/mesos-buildenv.git",
+    "branch": "master"
+  }
+}

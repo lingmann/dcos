@@ -13,7 +13,10 @@ pushd build
 # TODO(cmaloney): --with-glog=/usr --with-protobuf=/usr --with-boost=/usr
 # TODO(cmaloney): DESTDIR builds so we don't have to build as root?
 "/pkg/src/mesos/configure" \
-  --prefix="$PKG_PATH" --enable-optimize --disable-python
+  --prefix="$PKG_PATH" --enable-optimize --disable-python \
+  --with-glog=/opt/mesosphere/active/mesos-buildenv \
+  --with-protobuf=/opt/mesosphere/active/mesos-buildenv \
+  --with-boost=/opt/mesosphere/active/mesos-buildenv \
 # TODO(cmaloney): -j8 is almost certainly wrong.
 make -j8
 

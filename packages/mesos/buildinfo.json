@@ -1,10 +1,10 @@
 {
   "name" : "mesos",
-  "requires": ["zookeeper"],
+  "requires": ["zookeeper", "mesos-buildenv"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",
-    "git" : "https://git-wip-us.apache.org/repos/asf/mesos.git",
-    "branch" : "master"
+    "git": "git@github.com:mesosphere/mesos-private.git",
+    "branch" : "0.22_ldadd"
   }
 }

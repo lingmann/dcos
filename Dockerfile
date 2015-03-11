@@ -24,7 +24,8 @@ RUN apt-get -qq update && apt-get -y install \
   libapr1-dev \
   libsvn-dev \
   ruby \
-  curl
+  curl \
+  wget
 RUN pip install awscli
 RUN cd /tmp && \
   curl -sSL http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.gz | tar xzf - && \

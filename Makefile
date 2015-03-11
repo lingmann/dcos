@@ -114,9 +114,9 @@ publish-link: publish build/docker_image
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/bootstrap.tar.xz s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/dcos-*.manifest s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.manifest
+		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).manifest s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.manifest
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/dcos-*.sha256 s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.sha256
+		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).sha256 s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.sha256
 
 debug: build/docker_image
 	$(DOCKER_RUN) \

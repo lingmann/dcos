@@ -1,0 +1,8 @@
+[Unit]
+Description=Zookeeper
+[Service]
+Restart=on-failure
+Environment=SYSTEMD_LOG_LEVEL=debug
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+ExecStart=/opt/mesosphere/active/zookeeper/usr/zookeeper/bin/zkServer.sh start-foreground

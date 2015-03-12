@@ -1,0 +1,8 @@
+{
+  "name" : "mesos-dns",
+  "requires": ["mesos"],
+  "single_source": {
+    "kind": "url",
+    "url": "file://build"
+  }
+}

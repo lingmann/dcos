@@ -94,7 +94,7 @@ assemble: build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 		dcos-$(PKG_VER)-$(PKG_REL).sha256
 
 .PHONY: publish
-publish: build/docker_image
+publish: | build/docker_image
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/
@@ -106,7 +106,7 @@ publish: build/docker_image
 	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
 
 .PHONY: publish-link
-publish-link: publish build/docker_image
+publish-link: publish | build/docker_image
 	@if [[ "$(PUBLISH_LINK)" == "" ]]; then echo "PUBLISH_LINK is unset"; exit 1; fi
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
@@ -118,13 +118,13 @@ publish-link: publish build/docker_image
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).sha256 s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.sha256
 
-debug: build/docker_image
+debug: | build/docker_image
 	$(DOCKER_RUN) \
 		-i -t -e "PKG_VER=$(PKG_VER)" -e "PKG_REL=$(PKG_REL)" -e "MAKEFLAGS=$(MAKEFLAGS)" \
 		$(DOCKER_IMAGE) bash
 
 .PHONY: docker_image
-docker_image: build/docker_image
+docker_image: | build/docker_image
 build/docker_image:
 	$(ANNOTATE) $(SUDO) docker build -t "$(DOCKER_IMAGE)" . \
 		&> build/docker_image.log
@@ -141,7 +141,7 @@ ext/mesos:
 
 .PHONY: mesos
 mesos: build/mesos.manifest
-build/mesos.manifest: build/docker_image ext/mesos
+build/mesos.manifest: ext/mesos | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build
 	@# Update package buildinfo
@@ -155,7 +155,7 @@ build/mesos.manifest: build/docker_image ext/mesos
 
 .PHONY: python
 python: build/python.manifest
-build/python.manifest: build/docker_image
+build/python.manifest: | build/docker_image
 	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/python
 	cp -rp packages/python build
@@ -169,7 +169,7 @@ build/python.manifest: build/docker_image
 
 .PHONY: marathon
 marathon: build/marathon.manifest
-build/marathon.manifest: build/docker_image
+build/marathon.manifest: | build/docker_image
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/marathon
 	cp -rp packages/marathon build
@@ -183,7 +183,7 @@ build/marathon.manifest: build/docker_image
 
 .PHONY: zookeeper
 zookeeper: build/zookeeper.manifest
-build/zookeeper.manifest: build/docker_image
+build/zookeeper.manifest: | build/docker_image
 	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/zookeeper
 	cp -rp packages/zookeeper build
@@ -197,7 +197,7 @@ build/zookeeper.manifest: build/docker_image
 
 .PHONY: java
 java: build/java.manifest
-build/java.manifest: build/docker_image
+build/java.manifest: | build/docker_image
 	@if [[ "$(JAVA_URL)" == "" ]]; then echo "JAVA_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/java
 	cp -rp packages/java build
@@ -211,7 +211,7 @@ build/java.manifest: build/docker_image
 
 .PHONY: mesos-dns
 mesos-dns: build/mesos-dns.manifest
-build/mesos-dns.manifest: build/docker_image
+build/mesos-dns.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-dns
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) mkpanda &> ../mesos-dns.log

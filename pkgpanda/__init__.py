@@ -74,8 +74,8 @@ class PackageId:
         parts = id.split('--')
         if len(parts) != 2:
             raise ValidationError(
-                "Invalid package id {0}. Package ids may only contain one '--' " +
-                "which seperates the name and version".format(id))
+                "Invalid package id {0}. Package ids may only ".format(id) +
+                "contain one '--' which seperates the name and version")
 
         PackageId.validate_name(parts[0])
         PackageId.validate_version(parts[1])
@@ -201,6 +201,23 @@ def validate_compatible(packages, roles):
     #  - The config is for this specific type of host (master, slave)?
 
 
+def extract_tarball(path, target):
+    """Extract the tarball into target.
+
+    If there are any errors, delete the folder being extracted to.
+    """
+    # TODO(cmaloney): Validate extraction will pass before unpacking as much as possible.
+    # TODO(cmaloney): Unpack into a temporary directory then move into place to
+    # prevent partial extraction from ever laying around on the filesystem.
+    try:
+        assert os.path.exists(path)
+        shutil.unpack_archive(path, target, "gztar")
+    except:
+        # If there are errors, we can't really cope since we are already in an error state.
+        shutil.rmtree(target, ignore_errors=True)
+        raise
+
+
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
 def urllib_fetcher(base_url, id, target):
     assert base_url
@@ -218,16 +235,9 @@ def urllib_fetcher(base_url, id, target):
             with urllib.request.urlopen(url) as response:
                 shutil.copyfileobj(response, f)
 
-        # Extract the package. If there are any errors, delete the folder being extracted to.
-        # This is an explicit seperate step from the download to minimize chance of corruption when unpacking.
-        # TODO(cmaloney): Validate as much as possible the extraction will pass before taking any action.
-        try:
-            assert os.path.exists(temp_filename)
-            shutil.unpack_archive(temp_filename, target, "gztar")
-        except:
-            # If there are errors, we can't really cope since we are already in an error state.
-            shutil.rmtree(target, ignore_errors=True)
-            raise
+        # Extraction is an explicit seperate step from the download to minimize
+        # chance of corruption when unpacking.
+        extract_tarball(temp_filename, target)
     except:
         raise
     finally:
@@ -295,6 +305,7 @@ class Repository:
         # If the package already exists, return true
         package_path = self.package_path(id)
         if os.path.exists(package_path):
+            print("Package already added.")
             return False
 
         # TODO(cmaloney): Supply a temporary directory to extract to

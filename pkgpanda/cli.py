@@ -1,4 +1,3 @@
-
 """Panda package management
 
 Usage:
@@ -15,20 +14,34 @@ Options:
     --no-systemd                Don't try starting/stopping systemd services
     --root=<root>               Testing only: Use an alternate root [default: /opt/mesosphere]
     --repository=<repository>   Testing only: Use an alternate local package
-                                repository directory[default: /opt/mesosphere/packages]
+                                repository directory [default: /opt/mesosphere/packages]
 """
+
 import json
 import os.path
 import sys
+from itertools import groupby
 from urllib.error import URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from docopt import docopt
-from pkgpanda import Install, Repository, urllib_fetcher
+from pkgpanda import Install, PackageId, Repository, urllib_fetcher
 from pkgpanda.constants import version
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import if_exists, load_json, load_string
+
+
+def print_repo_list(packages):
+    pkg_ids = list(map(PackageId, sorted(packages)))
+    for name, group_iter in groupby(pkg_ids, lambda x: x.name):
+        group = list(group_iter)
+        if len(group) == 1:
+            print(group[0])
+        else:
+            print(name + ':')
+            for package in group:
+                print("  " + package.version)
 
 
 def setup(install, repository):
@@ -84,8 +97,7 @@ def main():
         sys.exit(0)
 
     if arguments['list']:
-        for pkg in sorted(repository.list()):
-            print(pkg)
+        print_repo_list(repository.list())
         sys.exit(0)
 
     if arguments['active']:

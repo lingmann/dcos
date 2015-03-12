@@ -6,7 +6,10 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [--repository-path=<path>]
+  mkpanda [options]
+  mkpanda add <package-tarball> [options]
+  mkpanda list [options]
+  mkpanda remove <name-or-id> [options]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -24,8 +27,9 @@ from subprocess import CalledProcessError, check_call
 
 import pkgpanda.build.constants
 from docopt import docopt
-from pkgpanda import Install, PackageId, Repository
+from pkgpanda import Install, PackageId, Repository, extract_tarball
 from pkgpanda.build import checkout_source, hash_checkout, sha1
+from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, write_json
 
@@ -66,11 +70,64 @@ def rewrite_symlinks(root, old_prefix, new_prefix):
                     os.symlink(new_target, full_path)
 
 
+# package {id, name} + repo -> package id
+def get_package_id(pkg_str, repo_packages, repo_path):
+    if PackageId.is_id(pkg_str):
+        return pkg_str
+    else:
+        ids = list(pkg_id for pkg_id in repo_packages if pkg_id.name == pkg_str)
+        if len(ids) == 0:
+            print("No package with name {0} in repository {1}".format(pkg_str, repo_path))
+            sys.exit(1)
+        elif len(ids) > 1:
+            print(
+                "Multiple packages for name {} in repository ".format(pkg_str) +
+                "Only one package of a name may be present when " +
+                "using a name rather than id.")
+            sys.exit(1)
+        return ids[0]
+
+
 def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
-    print
 
-    # Load the package build info
+    # Load the repository
+    repo_path = os.path.normpath(os.path.expanduser(arguments['--repository-path']))
+    repository = Repository(repo_path)
+    repo_packages = set(map(PackageId, repository.list()))
+
+    # Repository management commands.
+    if arguments['add']:
+        # Extract Package Id (Filename must be path/{pkg-id}.tar.xz).
+        path = arguments['<package-tarball>']
+        name = os.path.basename(path)
+
+        if not name.endswith('.tar.xz'):
+            print("ERROR: Can only add package tarballs which have names " +
+                  "like {pkg-id}.tar.xz")
+
+        pkg_id = name[:-len('.tar.xz')]
+
+        # Validate the package id
+        PackageId(pkg_id)
+
+        def fetch(_, target):
+            extract_tarball(path, target)
+
+        repository.add(fetch, pkg_id)
+        sys.exit(0)
+
+    if arguments['list']:
+        print_repo_list(repository.list())
+        sys.exit(0)
+
+    if arguments['remove']:
+        pkg_id = get_package_id(arguments['<name-or-id>'], repo_packages, repo_path)
+        repository.remove(pkg_id)
+        sys.exit(0)
+
+    # No command -> build package.
+    # Load the package build info.
     try:
         buildinfo = load_json("buildinfo.json")
     except FileNotFoundError:
@@ -105,18 +162,12 @@ def main():
     # install root now, and make the package directories in it as we go.
     install_dir = tempfile.mkdtemp(prefix="pkgpanda-")
 
-    # Load the repository
-    repo_path = os.path.normpath(os.path.expanduser(arguments['--repository-path']))
-    repository = Repository(repo_path)
-
     active_packages = list()
     active_package_names = set()
     # Verify all requires are in the repository.
     if 'requires' in buildinfo:
         # Final package has the same requires as the build.
         pkginfo['requires'] = buildinfo['requires']
-
-        repo_packages = set(map(PackageId, repository.list()))
 
         bad_requires = False
         to_check = buildinfo['requires']
@@ -125,25 +176,13 @@ def main():
             sys.exit(1)
         while to_check:
             pkg_str = to_check.pop(0)
-            if pkg_str in active_package_names:
-                continue
-
             try:
-                if PackageId.is_id(pkg_str):
-                    repository.load(pkg_str)
-                else:
-                    ids = list(pkg_id for pkg_id in repo_packages if pkg_id.name == pkg_str)
-                    if len(ids) == 0:
-                        print("No package with name {0} in repository {1}".format(pkg_str, repo_path))
-                        sys.exit(1)
-                    elif len(ids) > 1:
-                        print(
-                            "Multiple packages for name {} in repository ".format(pkg_str) +
-                            "Only one package of a name may be present when " +
-                            "name-only dependencies are used")
-                        sys.exit(1)
+                pkg_id = get_package_id(pkg_str, repo_packages, repo_path)
+                if pkg_id in active_package_names:
+                    continue
 
-                    package = repository.load(str(ids[0]))
+                # TODO(cmaloney): The str here is ugly.
+                package = repository.load(str(pkg_id))
 
                 # Mount the package into the docker container.
                 cmd.volumes[package.path] = "/opt/mesosphere/packages/{}:ro".format(package.id)

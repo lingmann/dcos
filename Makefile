@@ -76,7 +76,7 @@ all: assemble
 
 .PHONY: assemble
 assemble: build/marathon.manifest build/zookeeper.manifest build/java.manifest
-assemble: build/mesos.manifest build/python.manifest
+assemble: build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -208,6 +208,15 @@ build/java.manifest: build/docker_image
 	cd build/java && $(ANNOTATE) mkpanda &> ../java.log
 	>&2 egrep '^stderr: ' build/java.log || true
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
+
+.PHONY: mesos-dns
+mesos-dns: build/mesos-dns.manifest
+build/mesos-dns.manifest: build/docker_image
+	$(SUDO) rm -rf build/mesos-dns
+	cp -rp packages/mesos-dns build
+	cd build/mesos-dns && $(ANNOTATE) mkpanda &> ../mesos-dns.log
+	>&2 egrep '^stderr: ' build/mesos-dns.log || true
+	touch $@
 
 .PHONY: clean
 clean:

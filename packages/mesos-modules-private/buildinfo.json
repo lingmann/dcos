@@ -1,0 +1,10 @@
+{
+  "name" : "mesos-modules-private",
+  "requires": ["mesos-buildenv", "mesos"],
+  "docker": "dcos-builder",
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/mesos-modules-private.git",
+    "branch" : "pkgpanda-master-only"
+  }
+}

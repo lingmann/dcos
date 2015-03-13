@@ -123,7 +123,8 @@ def main():
 
     if arguments['remove']:
         pkg_id = get_package_id(arguments['<name-or-id>'], repo_packages, repo_path)
-        repository.remove(pkg_id)
+        # TODO(cmaloney): the str() here is ugly.
+        repository.remove(str(pkg_id))
         sys.exit(0)
 
     # No command -> build package.

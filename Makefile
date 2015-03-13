@@ -157,7 +157,7 @@ build/mesos.manifest: | build/docker_image
 
 .PHONY: mesos-buildenv
 mesos-buildenv: build/mesos-buildenv.manifest
-build/mesos-buildenv.manifest: ext/mesos-buildenv | build/docker_image
+build/mesos-buildenv.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-buildenv
 	cp -rp packages/mesos-buildenv build
 	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log

@@ -7,7 +7,8 @@ GID          := $(shell id -g)
 PROJECT_ROOT := $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 ENVSUBST     ?= envsubst
 SUDO         ?= sudo
-JQ					 ?= jq
+JQ           ?= jq
+MKPANDA      ?= mkpanda --repository-path=$(PROJECT_ROOT)/build/repo
 ANNOTATE     ?= $(PROJECT_ROOT)/bin/annotate.sh
 DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
@@ -159,7 +160,7 @@ build/mesos.manifest: | build/docker_image
 		| $(JQ) --arg sha "$(MESOS_GIT_SHA)" --arg url "$(MESOS_GIT_URL)" \
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/mesos/buildinfo.json
-	cd build/mesos && $(ANNOTATE) mkpanda &> ../mesos.log
+	cd build/mesos && $(ANNOTATE) $(MKPANDA) &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
 
@@ -174,8 +175,8 @@ build/mesos-buildenv.manifest: | build/docker_image
 		--arg url "$(MESOS_BUILDENV_GIT_URL)" \
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/mesos-buildenv/buildinfo.json
-	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
-	mkpanda add build/mesos-buildenv/*.tar.xz
+	cd build/mesos-buildenv && $(ANNOTATE) $(MKPANDA) &> ../mesos-buildenv.log
+	$(MKPANDA) add build/mesos-buildenv/*.tar.xz
 	touch $@
 
 .PHONY: python

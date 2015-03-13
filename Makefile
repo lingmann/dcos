@@ -21,6 +21,14 @@ ifeq ($(origin MESOS_GIT_URL), undefined)
 MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos
 endif
 
+ifeq ($(origin MESOS_BUILDENV_GIT_SHA), undefined)
+MESOS_GIT_SHA := $(shell cd ext/mesos-buildenv 2>/dev/null && git rev-parse HEAD)
+endif
+
+ifeq ($(origin MESOS_BUILDENV_GIT_URL), undefined)
+MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos-buildenv
+endif
+
 ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
 $(error environment variable AWS_ACCESS_KEY_ID must be set)
 endif
@@ -160,6 +168,12 @@ mesos-buildenv: build/mesos-buildenv.manifest
 build/mesos-buildenv.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-buildenv
 	cp -rp packages/mesos-buildenv build
+	@# Update package buildinfo
+	cat packages/mesos-buildenv/buildinfo.json \
+		| $(JQ) --arg sha "$(MESOS_BUILDENV_GIT_SHA)" \
+		--arg url "$(MESOS_BUILDENV_GIT_URL)" \
+		'.single_source.branch = $$sha | .single_source.git = $$url' \
+		> build/mesos-buildenv/buildinfo.json
 	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
 	>&2 egrep '^stderr: ' build/mesos-buildenv.log || true
 	mkpanda list || true

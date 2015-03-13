@@ -175,7 +175,7 @@ build/mesos-buildenv.manifest: | build/docker_image
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/mesos-buildenv/buildinfo.json
 	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
-	mkpanda add $(wildcard build/mesos-buildenv-buildenv/*.tar.xz)
+	mkpanda add $(wildcard build/mesos-buildenv/*.tar.xz)
 	touch $@
 
 .PHONY: python

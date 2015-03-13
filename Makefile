@@ -189,7 +189,7 @@ build/python.manifest: | build/docker_image
 	cat packages/python/buildinfo.json \
 		| $(JQ) --arg url "$(PYTHON_URL)" '.single_source.git = $$url' \
 		> build/python/buildinfo.json
-	cd build/python && $(ANNOTATE) mkpanda &> ../python.log
+	cd build/python && $(ANNOTATE) $(MKPANDA) &> ../python.log
 	>&2 egrep '^stderr: ' build/python.log || true
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
@@ -203,7 +203,7 @@ build/marathon.manifest: | build/docker_image
 	cat packages/marathon/buildinfo.json \
 		| $(JQ) --arg url "$(MARATHON_URL)" '.single_source.git = $$url' \
 		> build/marathon/buildinfo.json
-	cd build/marathon && $(ANNOTATE) mkpanda &> ../marathon.log
+	cd build/marathon && $(ANNOTATE) $(MKPANDA) &> ../marathon.log
 	>&2 egrep '^stderr: ' build/marathon.log || true
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
@@ -217,7 +217,7 @@ build/zookeeper.manifest: | build/docker_image
 	cat packages/zookeeper/buildinfo.json \
 		| $(JQ) --arg url "$(ZOOKEEPER_URL)" '.single_source.git = $$url' \
 		> build/zookeeper/buildinfo.json
-	cd build/zookeeper && $(ANNOTATE) mkpanda &> ../zookeeper.log
+	cd build/zookeeper && $(ANNOTATE) $(MKPANDA) &> ../zookeeper.log
 	>&2 egrep '^stderr: ' build/zookeeper.log || true
 	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
@@ -231,7 +231,7 @@ build/java.manifest: | build/docker_image
 	cat packages/java/buildinfo.json \
 		| $(JQ) --arg url "$(JAVA_URL)" '.single_source.git = $$url' \
 		> build/java/buildinfo.json
-	cd build/java && $(ANNOTATE) mkpanda &> ../java.log
+	cd build/java && $(ANNOTATE) $(MKPANDA) &> ../java.log
 	>&2 egrep '^stderr: ' build/java.log || true
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
@@ -240,7 +240,7 @@ mesos-dns: build/mesos-dns.manifest
 build/mesos-dns.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-dns
 	cp -rp packages/mesos-dns build
-	cd build/mesos-dns && $(ANNOTATE) mkpanda &> ../mesos-dns.log
+	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
 	>&2 egrep '^stderr: ' build/mesos-dns.log || true
 	touch $@
 

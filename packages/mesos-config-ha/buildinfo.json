@@ -1,0 +1,7 @@
+{
+  "name" : "mesos-config-ha",
+  "single_source": {
+    "kind": "url",
+    "url": "file://README.md"
+  }
+}

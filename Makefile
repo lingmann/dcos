@@ -152,6 +152,7 @@ ext/mesos:
 .PHONY: mesos
 mesos: build/mesos.manifest
 build/mesos.manifest: ext/mesos build/mesos-buildenv.manifest
+build/mesos.manifest: build/mesos-config-ha.manifest
 build/mesos.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build
@@ -242,6 +243,16 @@ build/mesos-dns.manifest: | build/docker_image
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
 	>&2 egrep '^stderr: ' build/mesos-dns.log || true
+	touch $@
+
+.PHONY: mesos-config-ha
+mesos-config-ha: build/mesos-config-ha.manifest
+build/mesos-config-ha.manifest: | build/docker_image
+	$(SUDO) rm -rf build/mesos-config-ha
+	cp -rp packages/mesos-config-ha build
+	cd build/mesos-config-ha && $(ANNOTATE) $(MKPANDA) &> ../mesos-config-ha.log
+	>&2 egrep '^stderr: ' build/mesos-config-ha.log || true
+	$(MKPANDA) add build/mesos-config-ha/*.tar.xz
 	touch $@
 
 .PHONY: clean

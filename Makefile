@@ -175,8 +175,6 @@ build/mesos-buildenv.manifest: | build/docker_image
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/mesos-buildenv/buildinfo.json
 	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
-	>&2 egrep '^stderr: ' build/mesos-buildenv.log || true
-	mkpanda list || true
 	mkpanda add $(wildcard build/mesos-buildenv-buildenv/*.tar.xz)
 	touch $@
 

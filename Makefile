@@ -77,6 +77,7 @@ all: assemble
 .PHONY: assemble
 assemble: build/marathon.manifest build/zookeeper.manifest build/java.manifest
 assemble: build/mesos.manifest build/python.manifest build/mesos-dns.manifest
+assemble: build/mesos-buildenv.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -141,7 +142,8 @@ ext/mesos:
 
 .PHONY: mesos
 mesos: build/mesos.manifest
-build/mesos.manifest: ext/mesos | build/docker_image
+build/mesos.manifest: ext/mesos build/mesos-buildenv.manifest
+build/mesos.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build
 	@# Update package buildinfo
@@ -152,6 +154,17 @@ build/mesos.manifest: ext/mesos | build/docker_image
 	cd build/mesos && $(ANNOTATE) mkpanda &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
+
+.PHONY: mesos-buildenv
+mesos-buildenv: build/mesos-buildenv.manifest
+build/mesos-buildenv.manifest: ext/mesos-buildenv | build/docker_image
+	$(SUDO) rm -rf build/mesos-buildenv
+	cp -rp packages/mesos-buildenv build
+	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
+	>&2 egrep '^stderr: ' build/mesos-buildenv.log || true
+	mkpanda list || true
+	mkpanda add build/mesos-buildenv-buildenv/*.tar.xz
+	touch $@
 
 .PHONY: python
 python: build/python.manifest

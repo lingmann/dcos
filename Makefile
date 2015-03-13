@@ -1,4 +1,4 @@
-SHELL        := /bin/bash
+SHELL        := /bin/bash -O extglob
 EMPTY        :=
 SPACE        := $(EMPTY) $(EMPTY)
 DOCKER_IMAGE := dcos-builder

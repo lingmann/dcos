@@ -1,4 +1,4 @@
-SHELL        := /bin/bash -O extglob
+SHELL        := /bin/bash
 EMPTY        :=
 SPACE        := $(EMPTY) $(EMPTY)
 DOCKER_IMAGE := dcos-builder
@@ -177,7 +177,7 @@ build/mesos-buildenv.manifest: | build/docker_image
 	cd build/mesos-buildenv && $(ANNOTATE) mkpanda &> ../mesos-buildenv.log
 	>&2 egrep '^stderr: ' build/mesos-buildenv.log || true
 	mkpanda list || true
-	mkpanda add build/mesos-buildenv-buildenv/*.tar.xz
+	mkpanda add $(wildcard build/mesos-buildenv-buildenv/*.tar.xz)
 	touch $@
 
 .PHONY: python

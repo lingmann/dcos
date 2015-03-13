@@ -22,11 +22,11 @@ MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos
 endif
 
 ifeq ($(origin MESOS_BUILDENV_GIT_SHA), undefined)
-MESOS_GIT_SHA := $(shell cd ext/mesos-buildenv 2>/dev/null && git rev-parse HEAD)
+MESOS_BUILDENV_GIT_SHA := $(shell cd ext/mesos-buildenv 2>/dev/null && git rev-parse HEAD)
 endif
 
 ifeq ($(origin MESOS_BUILDENV_GIT_URL), undefined)
-MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos-buildenv
+MESOS_BUILDENV_GIT_URL := $(PROJECT_ROOT)/ext/mesos-buildenv
 endif
 
 ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)

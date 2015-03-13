@@ -1,6 +1,6 @@
 {
   "name" : "mesos",
-  "requires": ["zookeeper", "mesos-buildenv"],
+  "requires": ["mesos-buildenv"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",

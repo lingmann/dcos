@@ -1,0 +1,9 @@
+{
+  "name" : "pkgpanda",
+  "requires": ["python"],
+  "single_source": {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/pkgpanda.git",
+    "branch": "master"
+  }
+}

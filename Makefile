@@ -30,6 +30,14 @@ ifeq ($(origin MESOS_BUILDENV_GIT_URL), undefined)
 MESOS_BUILDENV_GIT_URL := $(PROJECT_ROOT)/ext/mesos-buildenv
 endif
 
+ifeq ($(origin PKGPANDA_GIT_URL), undefined)
+PKGPANDA_GIT_URL := $(PROJECT_ROOT)/ext/pkgpanda
+endif
+
+ifeq ($(origin PKGPANDA_GIT_SHA), undefined)
+PKGPANDA_GIT_SHA := $(shell cd ext/pkgpanda 2>/dev/null && git rev-parse HEAD)
+endif
+
 ifeq ($(origin AWS_ACCESS_KEY_ID), undefined)
 $(error environment variable AWS_ACCESS_KEY_ID must be set)
 endif
@@ -254,6 +262,20 @@ build/mesos-config-ha.manifest: | build/docker_image
 	>&2 egrep '^stderr: ' build/mesos-config-ha.log || true
 	$(MKPANDA) add build/mesos-config-ha/*.tar.xz
 	touch $@
+
+.PHONY: pkgpanda
+pkgpanda: build/pkgpanda.manifest
+build/pkgpanda.manifest: | build/docker_image
+	$(SUDO) rm -rf build/pkgpanda
+	cp -rp packages/pkgpanda build
+	@# Update package buildinfo
+	cat packages/pkgpanda/buildinfo.json \
+		| $(JQ) --arg sha "$(PKGPANDA_GIT_SHA)" --arg url "$(PKGPANDA_GIT_URL)" \
+		'.single_source.branch = $$sha | .single_source.git = $$url' \
+		> build/pkgpanda/buildinfo.json
+	cd build/pkgpanda && $(ANNOTATE) mkpanda &> ../pkgpanda.log
+	>&2 egrep '^stderr: ' build/pkgpanda.log || true
+	@echo 'PKGPANDA_GIT_SHA=$(PKGPANDA_GIT_SHA)' > $@
 
 .PHONY: clean
 clean:

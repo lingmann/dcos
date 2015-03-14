@@ -171,6 +171,7 @@ build/mesos.manifest: | build/docker_image
 		> build/mesos/buildinfo.json
 	cd build/mesos && $(ANNOTATE) $(MKPANDA) &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
+	$(MKPANDA) add build/mesos/*.tar.xz
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
 
 .PHONY: mesos-buildenv
@@ -205,7 +206,7 @@ build/python.manifest: | build/docker_image
 
 .PHONY: marathon
 marathon: build/marathon.manifest
-build/marathon.manifest: | build/docker_image
+build/marathon.manifest: build/java.manifest | build/docker_image
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/marathon
 	cp -rp packages/marathon build
@@ -215,11 +216,12 @@ build/marathon.manifest: | build/docker_image
 		> build/marathon/buildinfo.json
 	cd build/marathon && $(ANNOTATE) $(MKPANDA) &> ../marathon.log
 	>&2 egrep '^stderr: ' build/marathon.log || true
+	$(MKPANDA) add build/marathon/*.tar.xz
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
 .PHONY: zookeeper
 zookeeper: build/zookeeper.manifest
-build/zookeeper.manifest: | build/docker_image
+build/zookeeper.manifest: build/java.manifest | build/docker_image
 	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/zookeeper
 	cp -rp packages/zookeeper build
@@ -229,6 +231,7 @@ build/zookeeper.manifest: | build/docker_image
 		> build/zookeeper/buildinfo.json
 	cd build/zookeeper && $(ANNOTATE) $(MKPANDA) &> ../zookeeper.log
 	>&2 egrep '^stderr: ' build/zookeeper.log || true
+	$(MKPANDA) add build/zookeeper/*.tar.xz
 	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
 .PHONY: java
@@ -243,15 +246,17 @@ build/java.manifest: | build/docker_image
 		> build/java/buildinfo.json
 	cd build/java && $(ANNOTATE) $(MKPANDA) &> ../java.log
 	>&2 egrep '^stderr: ' build/java.log || true
+	$(MKPANDA) add build/java/*.tar.xz
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
 .PHONY: mesos-dns
 mesos-dns: build/mesos-dns.manifest
-build/mesos-dns.manifest: | build/docker_image
+build/mesos-dns.manifest: build/mesos.manifest | build/docker_image
 	$(SUDO) rm -rf build/mesos-dns
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
 	>&2 egrep '^stderr: ' build/mesos-dns.log || true
+	$(MKPANDA) add build/mesos-dns/*.tar.xz
 	touch $@
 
 .PHONY: mesos-config-ha

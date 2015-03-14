@@ -96,9 +96,9 @@ def checkout_source(sources):
             # TODO(cmaloney): While src can't be reused, the downloaded tarball
             # can so long as it has the same sha1sum.
             # TODO(cmaloney): Generalize "Stashing the grabbed copy".
-            if not os.path.exists("tmp"):
-                os.mkdir("tmp")
-            filename = fetch_url("tmp", info['url'])
+            if not os.path.exists("cache"):
+                os.mkdir("cache")
+            filename = fetch_url("cache", info['url'])
             ids[src] = {
                 "sha1": sha1(filename)
             }

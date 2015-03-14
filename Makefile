@@ -279,7 +279,7 @@ build/pkgpanda.manifest: build/python.manifest | build/docker_image
 		| $(JQ) --arg sha "$(PKGPANDA_GIT_SHA)" --arg url "$(PKGPANDA_GIT_URL)" \
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/pkgpanda/buildinfo.json
-	cd build/pkgpanda && $(ANNOTATE) mkpanda &> ../pkgpanda.log
+	cd build/pkgpanda && $(ANNOTATE) $(MKPANDA) &> ../pkgpanda.log
 	>&2 egrep '^stderr: ' build/pkgpanda.log || true
 	$(MKPANDA) add build/pkgpanda/*.tar.xz
 	@echo 'PKGPANDA_GIT_SHA=$(PKGPANDA_GIT_SHA)' > $@

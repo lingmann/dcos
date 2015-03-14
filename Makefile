@@ -94,7 +94,7 @@ all: assemble
 .PHONY: assemble
 assemble: build/marathon.manifest build/zookeeper.manifest build/java.manifest
 assemble: build/mesos.manifest build/python.manifest build/mesos-dns.manifest
-assemble: build/mesos-buildenv.manifest
+assemble: build/mesos-buildenv.manifest build/pkgpanda.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -200,6 +200,7 @@ build/python.manifest: | build/docker_image
 		> build/python/buildinfo.json
 	cd build/python && $(ANNOTATE) $(MKPANDA) &> ../python.log
 	>&2 egrep '^stderr: ' build/python.log || true
+	$(MKPANDA) add build/python/*.tar.xz
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
 .PHONY: marathon
@@ -265,7 +266,7 @@ build/mesos-config-ha.manifest: | build/docker_image
 
 .PHONY: pkgpanda
 pkgpanda: build/pkgpanda.manifest
-build/pkgpanda.manifest: | build/docker_image
+build/pkgpanda.manifest: build/python.manifest | build/docker_image
 	$(SUDO) rm -rf build/pkgpanda
 	cp -rp packages/pkgpanda build
 	@# Update package buildinfo
@@ -275,6 +276,7 @@ build/pkgpanda.manifest: | build/docker_image
 		> build/pkgpanda/buildinfo.json
 	cd build/pkgpanda && $(ANNOTATE) mkpanda &> ../pkgpanda.log
 	>&2 egrep '^stderr: ' build/pkgpanda.log || true
+	$(MKPANDA) add build/pkgpanda/*.tar.xz
 	@echo 'PKGPANDA_GIT_SHA=$(PKGPANDA_GIT_SHA)' > $@
 
 .PHONY: clean

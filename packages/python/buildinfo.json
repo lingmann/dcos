@@ -3,6 +3,6 @@
   "docker": "dcos-builder",
   "single_source": {
     "kind": "url_extract",
-    "url": "https://www.python.org/ftp/python/3.4.3/Python-3.4.3.tgz"
+    "url": "https://www.python.org/ftp/python/3.4.2/Python-3.4.2.tgz"
   }
 }

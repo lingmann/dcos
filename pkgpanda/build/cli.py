@@ -16,10 +16,10 @@ Options:
                             dependencies. [default: ~/.pkgpanda/repository]
 """
 
+import copy
 import os.path
 import sys
 import tempfile
-import copy
 from itertools import chain
 from os import mkdir
 from os.path import abspath, exists

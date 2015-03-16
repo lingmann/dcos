@@ -38,7 +38,7 @@ cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
 # TODO(cmaloney): Shouldn't be needed...
 #cp build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 
-systemd_master="$PKG_PATH"/dcos.target.wants/master/master.service
+systemd_master="$PKG_PATH"/dcos.target.wants_master/master.service
 mkdir -p "$(dirname "$systemd_master")"
 cat <<'EOF' > "$systemd_master"
 [Unit]
@@ -53,7 +53,7 @@ EnvironmentFile=/opt/mesosphere/active/mesos-config/mesos-master
 ExecStart=/opt/mesosphere/active/mesos/sbin/mesos-master
 EOF
 
-systemd_slave="$PKG_PATH"/dcos.target.wants/slave/slave.service
+systemd_slave="$PKG_PATH"/dcos.target.wants_slave/slave.service
 mkdir -p "$(dirname "$systemd_slave")"
 cat <<'EOF' > "$systemd_slave"
 [Unit]

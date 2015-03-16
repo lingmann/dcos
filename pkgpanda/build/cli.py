@@ -19,6 +19,7 @@ Options:
 import os.path
 import sys
 import tempfile
+import copy
 from itertools import chain
 from os import mkdir
 from os.path import abspath, exists
@@ -172,7 +173,7 @@ def main():
         pkginfo['requires'] = buildinfo['requires']
 
         bad_requires = False
-        to_check = buildinfo['requires']
+        to_check = copy.deepcopy(buildinfo['requires'])
         if type(to_check) != list:
             print("`requires` in buildinfo.json must be an array of dependencies.")
             sys.exit(1)
@@ -211,6 +212,10 @@ def main():
 
         if bad_requires:
             sys.exit(1)
+
+    # Copy over environment settings
+    if 'environment' in buildinfo:
+        pkginfo['environment'] = buildinfo['environment']
 
     # Activate the packages so that we have a proper path, environment
     # variables.

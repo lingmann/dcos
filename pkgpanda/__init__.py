@@ -58,7 +58,7 @@ class Systemd:
         for path in os.listdir(self.__dir):
             unit_path = os.path.join(self.__dir, path)
             # Only start units
-            if os.path.isdir(unit_path)
+            if os.path.isdir(unit_path):
                 continue
 
             check_call(["systemctl", "start", unit_path])

@@ -171,6 +171,7 @@ build/mesos.manifest: | build/docker_image
 		> build/mesos/buildinfo.json
 	cd build/mesos && $(ANNOTATE) $(MKPANDA) &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
+	$(MKPANDA) remove mesos || true
 	$(MKPANDA) add build/mesos/*.tar.xz
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
 
@@ -186,6 +187,7 @@ build/mesos-buildenv.manifest: | build/docker_image
 		'.single_source.branch = $$sha | .single_source.git = $$url' \
 		> build/mesos-buildenv/buildinfo.json
 	cd build/mesos-buildenv && $(ANNOTATE) $(MKPANDA) &> ../mesos-buildenv.log
+	$(MKPANDA) remove mesos-buildenv || true
 	$(MKPANDA) add build/mesos-buildenv/*.tar.xz
 	touch $@
 
@@ -201,6 +203,7 @@ build/python.manifest: | build/docker_image
 		> build/python/buildinfo.json
 	cd build/python && $(ANNOTATE) $(MKPANDA) &> ../python.log
 	>&2 egrep '^stderr: ' build/python.log || true
+	$(MKPANDA) remove python || true
 	$(MKPANDA) add build/python/*.tar.xz
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
@@ -216,6 +219,7 @@ build/marathon.manifest: | build/java.manifest build/docker_image
 		> build/marathon/buildinfo.json
 	cd build/marathon && $(ANNOTATE) $(MKPANDA) &> ../marathon.log
 	>&2 egrep '^stderr: ' build/marathon.log || true
+	$(MKPANDA) remove marathon || true
 	$(MKPANDA) add build/marathon/*.tar.xz
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
@@ -231,6 +235,7 @@ build/zookeeper.manifest: | build/java.manifest build/docker_image
 		> build/zookeeper/buildinfo.json
 	cd build/zookeeper && $(ANNOTATE) $(MKPANDA) &> ../zookeeper.log
 	>&2 egrep '^stderr: ' build/zookeeper.log || true
+	$(MKPANDA) remove zookeeper || true
 	$(MKPANDA) add build/zookeeper/*.tar.xz
 	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
@@ -246,6 +251,7 @@ build/java.manifest: | build/docker_image
 		> build/java/buildinfo.json
 	cd build/java && $(ANNOTATE) $(MKPANDA) &> ../java.log
 	>&2 egrep '^stderr: ' build/java.log || true
+	$(MKPANDA) remove java || true
 	$(MKPANDA) add build/java/*.tar.xz
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
@@ -256,6 +262,7 @@ build/mesos-dns.manifest: | build/mesos.manifest build/docker_image
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
 	>&2 egrep '^stderr: ' build/mesos-dns.log || true
+	$(MKPANDA) remove mesos-dns || true
 	$(MKPANDA) add build/mesos-dns/*.tar.xz
 	touch $@
 
@@ -266,6 +273,7 @@ build/mesos-config-ha.manifest: | build/docker_image
 	cp -rp packages/mesos-config-ha build
 	cd build/mesos-config-ha && $(ANNOTATE) $(MKPANDA) &> ../mesos-config-ha.log
 	>&2 egrep '^stderr: ' build/mesos-config-ha.log || true
+	$(MKPANDA) remove mesos-config-ha || true
 	$(MKPANDA) add build/mesos-config-ha/*.tar.xz
 	touch $@
 
@@ -281,6 +289,7 @@ build/pkgpanda.manifest: | build/python.manifest build/docker_image
 		> build/pkgpanda/buildinfo.json
 	cd build/pkgpanda && $(ANNOTATE) $(MKPANDA) &> ../pkgpanda.log
 	>&2 egrep '^stderr: ' build/pkgpanda.log || true
+	$(MKPANDA) remove pkgpanda || true
 	$(MKPANDA) add build/pkgpanda/*.tar.xz
 	@echo 'PKGPANDA_GIT_SHA=$(PKGPANDA_GIT_SHA)' > $@
 

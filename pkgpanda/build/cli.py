@@ -9,7 +9,7 @@ Usage:
   mkpanda [options]
   mkpanda add <package-tarball> [options]
   mkpanda list [options]
-  mkpanda remove <name-or-id> [options]
+  mkpanda remove <name-or-id>... [options]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -122,9 +122,10 @@ def main():
         sys.exit(0)
 
     if arguments['remove']:
-        pkg_id = get_package_id(arguments['<name-or-id>'], repo_packages, repo_path)
-        # TODO(cmaloney): the str() here is ugly.
-        repository.remove(str(pkg_id))
+        for package in arguments['<name-or-id>']:
+            pkg_id = get_package_id(package, repo_packages, repo_path)
+            # TODO(cmaloney): the str() here is ugly.
+            repository.remove(str(pkg_id))
         sys.exit(0)
 
     # No command -> build package.

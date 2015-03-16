@@ -56,7 +56,12 @@ class Systemd:
         if not self.__active:
             return
         for path in os.listdir(self.__dir):
-            check_call(["systemctl", "start", os.path.join(self.__dir, path)])
+            unit_path = os.path.join(self.__dir, path)
+            # Only start units
+            if os.path.isdir(unit_path)
+                continue
+
+            check_call(["systemctl", "start", unit_path])
 
     def stop_all(self):
         if not self.__active:
@@ -64,8 +69,13 @@ class Systemd:
         if not os.path.exists(self.__dir):
             return
         for path in os.listdir(self.__dir):
+            unit_path = os.path.join(self.__dir, path)
+
+            # Skip directories
+            if os.path.isdir(unit_path):
+                continue
             try:
-                check_call(["systemctl", "stop", os.path.join(self.__dir, path)])
+                check_call(["systemctl", "stop", unit_path])
             except CalledProcessError as ex:
                 # If the service doesn't exist, don't error. This happens when a
                 # bootstrap tarball has just been extracted but nothing started
@@ -287,7 +297,7 @@ class Repository:
         try:
             pkginfo = load_json(filename)
         except FileNotFoundError as ex:
-            raise PackageError("No / unreadable pkginfo.json in package: {0}".format(ex.strerror))
+            raise PackageError("No / unreadable pkginfo.json in package: {0}".format(ex.strerror)) from ex
 
         if not isinstance(pkginfo, dict):
             raise PackageError("Usage should be a dictionary, not a {0}".format(type(pkginfo).__name__))

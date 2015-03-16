@@ -95,6 +95,7 @@ all: assemble
 assemble: | build/marathon.manifest build/zookeeper.manifest build/java.manifest
 assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
+assemble: | build/mesos-config-ha.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -160,7 +161,6 @@ ext/mesos:
 .PHONY: mesos
 mesos: | build/mesos.manifest
 build/mesos.manifest: | ext/mesos build/mesos-buildenv.manifest
-build/mesos.manifest: | build/mesos-config-ha.manifest
 build/mesos.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build

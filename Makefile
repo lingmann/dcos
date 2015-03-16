@@ -268,7 +268,7 @@ build/mesos-dns.manifest: | build/mesos.manifest build/docker_image
 
 .PHONY: mesos-config-ha
 mesos-config-ha: | build/mesos-config-ha.manifest
-build/mesos-config-ha.manifest: | build/docker_image
+build/mesos-config-ha.manifest: | build/docker_image build/mesos.manifest
 	$(SUDO) rm -rf build/mesos-config-ha
 	cp -rp packages/mesos-config-ha build
 	cd build/mesos-config-ha && $(ANNOTATE) $(MKPANDA) &> ../mesos-config-ha.log

@@ -160,7 +160,7 @@ class Package:
         return self.__id.version
 
     def __repr__(self):
-        return str(id)
+        return str(self.__id)
 
 
 # Check that a set of packages is reasonable.

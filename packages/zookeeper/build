@@ -5,3 +5,16 @@ mkdir -p "$PKG_PATH/usr/"
 
 cp -rp /pkg/src/zookeeper "$PKG_PATH/usr"
 sudo chmod -R o+r "$PKG_PATH/usr"
+
+zookeeper_service="$PKG_PATH"/dcos.target.wants_master/zookeeper.service
+mkdir -p "$(dirname "$zookeeper_service")"
+cat <<'EOF' > "$zookeeper_service"
+[Unit]
+Description=Zookeeper
+[Service]
+Restart=on-failure
+Environment=SYSTEMD_LOG_LEVEL=debug
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+ExecStart=/opt/mesosphere/active/zookeeper/usr/zookeeper/bin/zkServer.sh start-foreground
+EOF

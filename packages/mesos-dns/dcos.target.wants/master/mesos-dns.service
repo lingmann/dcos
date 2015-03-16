@@ -1,8 +1,0 @@
-[Unit]
-Description=Mesos-DNS
-[Service]
-TimeoutStartSec=0
-ExecStartPre=-/usr/bin/docker kill mesos-dns
-ExecStartPre=-/usr/bin/docker rm mesos-dns
-ExecStartPre=/usr/bin/docker pull mesosphere/mesos-dns
-ExecStart=/bin/sh -c 'docker run --name=mesos-dns --net=host -t mesosphere/mesos-dns /bin/sh -c \'echo "{\\"masters\\":[\\"127.0.0.1:5050\\"],\\"refreshSeconds\\":60,\\"ttl\\":60,\\"domain\\":\\"mesos\\",\\"port\\":53,\\"resolvers\\":[\\"172.16.0.23\\"],\\"timeout\\":5}" > /derp.json && /mesos-dns -v -config=/derp.json\''

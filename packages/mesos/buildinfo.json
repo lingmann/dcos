@@ -1,6 +1,6 @@
 {
   "name" : "mesos",
-  "requires": ["mesos-buildenv", "mesos-config-ha"],
+  "requires": ["mesos-buildenv"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",

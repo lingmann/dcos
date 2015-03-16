@@ -55,27 +55,23 @@ class Systemd:
     def start_all(self):
         if not self.__active:
             return
-        for path in os.listdir(self.__dir):
-            unit_path = os.path.join(self.__dir, path)
-            # Only start units
-            if os.path.isdir(unit_path):
+        for name in os.listdir(self.__dir):
+            if os.path.isdir(os.path.join(self.__dir, name)):
                 continue
 
-            check_call(["systemctl", "start", unit_path])
+            check_call(["systemctl", "start", name])
 
     def stop_all(self):
         if not self.__active:
             return
         if not os.path.exists(self.__dir):
             return
-        for path in os.listdir(self.__dir):
-            unit_path = os.path.join(self.__dir, path)
-
+        for name in os.listdir(self.__dir):
             # Skip directories
-            if os.path.isdir(unit_path):
+            if os.path.isdir(os.path.join(self.__dir, name)):
                 continue
             try:
-                check_call(["systemctl", "stop", unit_path])
+                check_call(["systemctl", "stop", name])
             except CalledProcessError as ex:
                 # If the service doesn't exist, don't error. This happens when a
                 # bootstrap tarball has just been extracted but nothing started

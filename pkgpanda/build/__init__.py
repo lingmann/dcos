@@ -34,25 +34,28 @@ def hash_checkout(item):
         raise NotImplementedError()
 
 
-def fetch_url(out_dir, url_str):
+def get_filename(out_dir, url_str):
+    url = urlparse(url_str)
+    if url.scheme == 'file':
+        path = url_str[len('file://'):]
+        return os.path.join(out_dir, os.path.basename(path))
+    else:
+        return os.path.join(out_dir, os.path.basename(url.path))
+
+
+def fetch_url(out_filename, url_str):
     url = urlparse(url_str)
 
     # Handle file:// urls specially since urllib will interpret them to have a
     # netloc when they never have a netloc...
     if url.scheme == 'file':
-        path = url_str[len('file://'):]
-        abspath = os.path.abspath(path)
-        filename = os.path.join(out_dir, os.path.basename(path))
-        shutil.copyfile(abspath, filename)
-        return filename
+        abspath = os.path.abspath(url_str[len('file://'):])
+        shutil.copyfile(abspath, out_filename)
     else:
-        filename = os.path.join(out_dir, os.path.basename(url.path))
         # Download the file.
-        with open(filename, "w+b") as f:
+        with open(out_filename, "w+b") as f:
             with urllib.request.urlopen(url_str) as response:
                 shutil.copyfileobj(response, f)
-
-        return filename
 
 
 # TODO(cmaloney): Validate sources has all expected fields...
@@ -69,12 +72,31 @@ def checkout_source(sources):
         root = os.path.abspath("src/{0}".format(src))
         os.mkdir(root)
 
-        if info['kind'] == 'git':
-            # TODO(cmaloney): This will go really badly when updating an existing repo...
-            check_call(["git", "clone", info['git'], root])
+        # Stash directory for download reuse between builds.
+        cache_dir = os.path.abspath("cache")
+        if not os.path.exists(cache_dir):
+            os.mkdir(cache_dir)
 
+        if info['kind'] == 'git':
+            # Do a git clone if the cache folder doesn't exist yet, otherwise
+            # do a git pull of everything.
+            bare_folder = os.path.abspath("cache/{0}.git".format(src))
+            if not os.path.exists(bare_folder):
+                check_call(["git", "clone", "--bare", "--progress", info['git'], bare_folder])
+            else:
+                check_call(["git", "-C", bare_folder, "fetch", info['git'], "-t", "--progress"])
+
+            # Clone into `src/`.
+            check_call(["git", "clone", bare_folder, root])
+
+            # Checkout from the bare repo in the cache folder the specific branch
+            # sha1 or tag requested.
             # info["branch"] can be a branch, tag, or commit sha
             check_call(["git", "-C", root, "checkout", "-f", info["branch"]])
+
+            # TODO(cmaloney): Support patching.
+            for patcher in info.get('patches', []):
+                raise NotImplementedError()
 
             commit = check_output(["git", "-C", root, "rev-parse", "HEAD"]).decode('ascii').strip()
 
@@ -85,25 +107,37 @@ def checkout_source(sources):
                 "commit": commit
             }
         elif info['kind'] == 'url':
+            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+
+            # if the file isn't downloaded yet, get it.
+            if not os.path.exists(cache_filename):
+                fetch_url(cache_filename, info['url'])
+
             # TODO(cmaloney): While src can't be reused, the downloaded tarball
-            # can so long as it has the same sha1sum.
-            filename = fetch_url(root, info['url'])
+            # can so long as it has the same sha1gsum.
             ids[src] = {
-                "sha1": sha1(filename)
+                "sha1": sha1(cache_filename)
             }
+
+            # Copy the file(s) into src/
+            # TODO(cmaloney): Hardlink to save space?
+            filename = get_filename(root, info['url'])
+            shutil.copyfile(cache_filename, filename)
         elif info['kind'] == 'url_extract':
             # Like url but do a tarball extract afterwards
             # TODO(cmaloney): While src can't be reused, the downloaded tarball
             # can so long as it has the same sha1sum.
             # TODO(cmaloney): Generalize "Stashing the grabbed copy".
-            if not os.path.exists("cache"):
-                os.mkdir("cache")
-            filename = fetch_url("cache", info['url'])
+            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+            if not os.path.exists(cache_filename):
+                fetch_url(cache_filename, info['url'])
+
             ids[src] = {
-                "sha1": sha1(filename)
+                "sha1": sha1(cache_filename)
             }
 
-            check_call(["tar", "-xzf", filename, "--strip-components=1", "-C", root])
+            # Extract the files into src.
+            check_call(["tar", "-xzf", cache_filename, "--strip-components=1", "-C", root])
 
         else:
             raise ValidationError("Currently only packages from url and git sources are supported")

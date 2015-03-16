@@ -21,7 +21,7 @@ import tempfile
 import urllib.parse
 import urllib.request
 from itertools import chain
-from subprocess import check_call
+from subprocess import CalledProcessError, check_call
 
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
 from pkgpanda.util import if_exists, load_json
@@ -56,7 +56,7 @@ class Systemd:
         if not self.__active:
             return
         for path in os.listdir(self.__dir):
-            check_call(["systemctl", "start", path])
+            check_call(["systemctl", "start", os.path.join(self.__dir, path)])
 
     def stop_all(self):
         if not self.__active:
@@ -64,7 +64,14 @@ class Systemd:
         if not os.path.exists(self.__dir):
             return
         for path in os.listdir(self.__dir):
-            check_call(["systemctl", "stop", path])
+            try:
+                check_call(["systemctl", "stop", os.path.join(self.__dir, path)])
+            except CalledProcessError as ex:
+                # If the service doesn't exist, don't error. This happens when a
+                # bootstrap tarball has just been extracted but nothing started
+                # yet during first activation.
+                if ex.returncode != 5:
+                    raise
 
 
 class PackageId:

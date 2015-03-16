@@ -92,9 +92,9 @@ build/dcos.manifest:
 all: assemble
 
 .PHONY: assemble
-assemble: build/marathon.manifest build/zookeeper.manifest build/java.manifest
-assemble: build/mesos.manifest build/python.manifest build/mesos-dns.manifest
-assemble: build/mesos-buildenv.manifest build/pkgpanda.manifest
+assemble: | build/marathon.manifest build/zookeeper.manifest build/java.manifest
+assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
+assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -158,9 +158,9 @@ ext/mesos:
 	@exit 1
 
 .PHONY: mesos
-mesos: build/mesos.manifest
-build/mesos.manifest: ext/mesos build/mesos-buildenv.manifest
-build/mesos.manifest: build/mesos-config-ha.manifest
+mesos: | build/mesos.manifest
+build/mesos.manifest: | ext/mesos build/mesos-buildenv.manifest
+build/mesos.manifest: | build/mesos-config-ha.manifest
 build/mesos.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build
@@ -175,7 +175,7 @@ build/mesos.manifest: | build/docker_image
 	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
 
 .PHONY: mesos-buildenv
-mesos-buildenv: build/mesos-buildenv.manifest
+mesos-buildenv: | build/mesos-buildenv.manifest
 build/mesos-buildenv.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-buildenv
 	cp -rp packages/mesos-buildenv build
@@ -190,7 +190,7 @@ build/mesos-buildenv.manifest: | build/docker_image
 	touch $@
 
 .PHONY: python
-python: build/python.manifest
+python: | build/python.manifest
 build/python.manifest: | build/docker_image
 	@if [[ "$(PYTHON_URL)" == "" ]]; then echo "PYTHON_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/python
@@ -205,8 +205,8 @@ build/python.manifest: | build/docker_image
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
 .PHONY: marathon
-marathon: build/marathon.manifest
-build/marathon.manifest: build/java.manifest | build/docker_image
+marathon: | build/marathon.manifest
+build/marathon.manifest: | build/java.manifest build/docker_image
 	@if [[ "$(MARATHON_URL)" == "" ]]; then echo "MARATHON_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/marathon
 	cp -rp packages/marathon build
@@ -220,8 +220,8 @@ build/marathon.manifest: build/java.manifest | build/docker_image
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
 .PHONY: zookeeper
-zookeeper: build/zookeeper.manifest
-build/zookeeper.manifest: build/java.manifest | build/docker_image
+zookeeper: | build/zookeeper.manifest
+build/zookeeper.manifest: | build/java.manifest build/docker_image
 	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/zookeeper
 	cp -rp packages/zookeeper build
@@ -235,7 +235,7 @@ build/zookeeper.manifest: build/java.manifest | build/docker_image
 	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
 
 .PHONY: java
-java: build/java.manifest
+java: | build/java.manifest
 build/java.manifest: | build/docker_image
 	@if [[ "$(JAVA_URL)" == "" ]]; then echo "JAVA_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/java
@@ -250,8 +250,8 @@ build/java.manifest: | build/docker_image
 	@echo 'JAVA_URL=$(JAVA_URL)' > $@
 
 .PHONY: mesos-dns
-mesos-dns: build/mesos-dns.manifest
-build/mesos-dns.manifest: build/mesos.manifest | build/docker_image
+mesos-dns: | build/mesos-dns.manifest
+build/mesos-dns.manifest: | build/mesos.manifest build/docker_image
 	$(SUDO) rm -rf build/mesos-dns
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
@@ -260,7 +260,7 @@ build/mesos-dns.manifest: build/mesos.manifest | build/docker_image
 	touch $@
 
 .PHONY: mesos-config-ha
-mesos-config-ha: build/mesos-config-ha.manifest
+mesos-config-ha: | build/mesos-config-ha.manifest
 build/mesos-config-ha.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-config-ha
 	cp -rp packages/mesos-config-ha build
@@ -270,8 +270,8 @@ build/mesos-config-ha.manifest: | build/docker_image
 	touch $@
 
 .PHONY: pkgpanda
-pkgpanda: build/pkgpanda.manifest
-build/pkgpanda.manifest: build/python.manifest | build/docker_image
+pkgpanda: | build/pkgpanda.manifest
+build/pkgpanda.manifest: | build/python.manifest build/docker_image
 	$(SUDO) rm -rf build/pkgpanda
 	cp -rp packages/pkgpanda build
 	@# Update package buildinfo

@@ -172,7 +172,7 @@ def validate_compatible(packages, roles):
         if package.name in names:
             raise ValidationError(
                 "Repeated name {0} in set of packages {1}".format(
-                    package.name, ' '.join(map(str, packages))))
+                    package.name, ' '.join(map(lambda x: str(x.id), packages))))
         names.add(package.name)
         ids.add(str(package.id))
 
@@ -293,7 +293,7 @@ class Repository:
         try:
             pkginfo = load_json(filename)
         except FileNotFoundError as ex:
-            raise PackageError("No / unreadable pkginfo.json in package: {0}".format(ex.strerror)) from ex
+            raise PackageError("No / unreadable pkginfo.json in {0}: {1}".format(id, ex.strerror)) from ex
 
         if not isinstance(pkginfo, dict):
             raise PackageError("Usage should be a dictionary, not a {0}".format(type(pkginfo).__name__))

@@ -6,6 +6,7 @@ Usage:
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda list [options]
+  pkgpanda remove <id>... [options]
   pkgpanda setup [options]
 
 Options:
@@ -140,6 +141,32 @@ def main():
             except PackageError as ex:
                 print("Package Error: {0}".format(ex))
             sys.exit(0)
+
+    if arguments['remove']:
+        # Make sure none of the packages are active
+        active_packages = install.get_active()
+        active = active_packages.intersection(set(arguments['<id>']))
+        if len(active) > 0:
+            print("Refusing to remove active packages {0}".format(" ".join(sorted(list(active)))))
+            sys.exit(1)
+
+        for pkg_id in arguments['<id>']:
+            sys.stdout.write("\rRemoving: {0}".format(pkg_id))
+            sys.stdout.flush()
+            try:
+                # Validate package id, that package is installed.
+                PackageId(pkg_id)
+                repository.remove(pkg_id)
+            except ValidationError:
+                print("\nInvalid package id {0}".format(pkg_id))
+                sys.exit(1)
+            except OSError as ex:
+                print("\nError removing package {0}".format(pkg_id))
+                print(ex)
+                sys.exit(1)
+            sys.stdout.write("\rRemoved: {0}\n".format(pkg_id))
+            sys.stdout.flush()
+        sys.exit(0)
 
     print("unknown command")
     sys.exit(1)

@@ -331,7 +331,10 @@ class Repository:
         return True
 
     def remove(self, id):
-        shutil.rmtree(self.package_path(id))
+        path = self.package_path(id)
+        if not os.path.exists(path):
+            return
+        shutil.rmtree(path)
 
 
 # Create folders and symlink files inside the folders. Allows multiple

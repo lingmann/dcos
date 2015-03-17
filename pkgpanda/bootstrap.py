@@ -22,6 +22,7 @@ import pkgpanda
 from docopt import docopt
 from pkgpanda.util import write_json
 
+
 def make_file(name):
     with open(name, 'a'):
         pass

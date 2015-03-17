@@ -64,7 +64,7 @@ def main():
         make_file(os.path.join(config_dir, role))
 
     # Activate the packages inside the repository.
-    install = pkgpanda.Install(pkgpanda_root, config_dir, False)
+    install = pkgpanda.Install(pkgpanda_root, config_dir, False, True)
     install.activate(repository, repository.load_packages(pkg_ids))
 
     # Mark the tarball as a bootstrap tarball/filesystem so that

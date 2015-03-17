@@ -142,7 +142,7 @@ publish-link: publish | build/docker_image
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/config
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL)/config/active.json \
+		/dcos/dist/config/active.json \
 		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/config/active.json
 
 debug: | build/docker_image

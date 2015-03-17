@@ -60,7 +60,7 @@ def setup(install, repository):
         # TODO(cmaloney): Support sending some basic info to the machine generating
         # the active list of packages.
         with urlopen(urljoin(repository_url, "config/active.json")) as active_file:
-            to_activate = json.read(active_file)
+            to_activate = json.load(active_file)
 
         if to_activate is None:
             print("Unable to get list of packages to activate from remote repository.")

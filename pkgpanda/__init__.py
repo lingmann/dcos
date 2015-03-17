@@ -537,9 +537,9 @@ class Install:
             new_path = active + extension
             os.rename(new_path, active)
 
+        # All done with what we need to redo if host restarts.
+        os.remove(state_filename)
+
         # Start all systemd services in dcos.target.wants
         systemd.daemon_reload()
         systemd.start_all()
-
-        # All done.
-        os.remove(state_filename)

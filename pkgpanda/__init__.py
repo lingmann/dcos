@@ -43,8 +43,9 @@ version_regex = "^[a-zA-Z0-9@_+:.]+$"
 # Manage starting/stopping all systemd services inside a folder.
 class Systemd:
 
-    def __init__(self, unit_dir, active=False):
+    def __init__(self, unit_dir, active, block):
         self.__active = active
+        self.__block = block
         self.__dir = unit_dir
 
     def daemon_reload(self):
@@ -55,7 +56,10 @@ class Systemd:
     def start_all(self):
         if not self.__active:
             return
-        check_call(["systemctl", "start", "dcos.target"])
+        cmd = ["systemctl", "start", "dcos.target"]
+        if not self.__block:
+            cmd.append("--no-block")
+        check_call(cmd)
 
     def stop_all(self):
         if not self.__active:
@@ -67,7 +71,10 @@ class Systemd:
             if os.path.isdir(os.path.join(self.__dir, name)):
                 continue
             try:
-                check_call(["systemctl", "stop", name])
+                cmd = ["systemctl", "stop", name]
+                if not self.__block:
+                    cmd.append("--no-block")
+                check_call(cmd)
             except CalledProcessError as ex:
                 # If the service doesn't exist, don't error. This happens when a
                 # bootstrap tarball has just been extracted but nothing started
@@ -360,10 +367,11 @@ def symlink_tree(src, dest):
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, config_dir, manage_systemd):
+    def __init__(self, root, config_dir, manage_systemd, block_systemd):
         self.__root = os.path.abspath(root)
         self.__config_dir = os.path.abspath(config_dir) if config_dir else None
         self.__manage_systemd = manage_systemd
+        self.__block_systemd = block_systemd
 
         # Look up the machine roles
         self.__roles = []
@@ -502,7 +510,7 @@ class Install:
     def swap_active(self, extension, archive=True):
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
-        systemd = Systemd(self._make_abs("dcos.target.wants"), self.__manage_systemd)
+        systemd = Systemd(self._make_abs("dcos.target.wants"), self.__manage_systemd, self.__block_systemd)
 
         # Record the state (atomically) on the filesystem so that if there is a
         # hard/fast fail at any point the activate swap can continue.

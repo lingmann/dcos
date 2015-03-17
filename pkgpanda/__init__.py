@@ -55,11 +55,7 @@ class Systemd:
     def start_all(self):
         if not self.__active:
             return
-        for name in os.listdir(self.__dir):
-            if os.path.isdir(os.path.join(self.__dir, name)):
-                continue
-
-            check_call(["systemctl", "start", name])
+        check_call(["systemctl", "start", "dcos.target"])
 
     def stop_all(self):
         if not self.__active:

@@ -20,7 +20,7 @@ from subprocess import check_call
 
 import pkgpanda
 from docopt import docopt
-
+from pkgpanda.util import write_json
 
 def make_file(name):
     with open(name, 'a'):
@@ -69,6 +69,9 @@ def main():
     # Mark the tarball as a bootstrap tarball/filesystem so that
     # dcos-setup.service will fire.
     make_file(make_abs("opt/mesosphere/bootstrap"))
+
+    # Write out an active.json for the bootstrap tarball
+    write_json("active.json", pkg_ids)
 
     if arguments['tarball']:
         check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",

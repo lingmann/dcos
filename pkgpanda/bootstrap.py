@@ -8,7 +8,7 @@ new hosts remotely.
 TODO(cmaloney): Support only installing a subset of the packages.
 
 Usage:
-    pkgpandastrap (tarball|container) [--role=<role>...] <root> <package>...
+    pkgpanda-mkbootstrap (tarball|container) [--role=<role>...] <root> <package>...
 
 """
 

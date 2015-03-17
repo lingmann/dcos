@@ -1,0 +1,15 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+mkdir -p $PKG_PATH/usr
+cp -rp /pkg/src/hdfs-mesos/* $PKG_PATH/usr
+
+mkdir -p $PKG_PATH/bin
+ln -s $PKG_PATH/usr/bin/hdfs-mesos* $PKG_PATH/bin
+
+mkdir -p $PKG_PATH/etc/hadoop
+ln -s $PKG_PATH/usr/etc/hadoop/hdfs-site.xml $PKG_PATH/etc/hadoop/hdfs-site.xml
+ln -s $PKG_PATH/usr/etc/hadoop/mesos-site.xml $PKG_PATH/etc/hadoop/mesos-site.xml
+
+mkdir -p $PKG_PATH/lib
+ln -s $PKG_PATH/usr/lib/*.jar $PKG_PATH/lib/

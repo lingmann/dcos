@@ -5,6 +5,8 @@ mkdir -p "$PKG_PATH/usr"
 cp -rp "/pkg/src/java" "$PKG_PATH/usr"
 
 #edit JVM DNS caching timeout
+echo "" >> $PKG_PATH/usr/java/lib/security/java.security
+echo "#Updated DNS cache ttl" >> $PKG_PATH/usr/java/lib/security/java.security
 echo "networkaddress.cache.ttl=30" >> $PKG_PATH/usr/java/lib/security/java.security
 
 mkdir -p "$PKG_PATH/bin"

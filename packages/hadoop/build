@@ -1,0 +1,18 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+mkdir -p $PKG_PATH/usr
+rm -rf /pkg/src/hadoop/share/doc
+cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
+
+mkdir -p $PKG_PATH/bin
+ln -s $PKG_PATH/usr/bin/* $PKG_PATH/bin/
+
+#remove HDFS site so hdfs FW can use its own
+rm $PKG_PATH/usr/etc/hadoop/hdfs-site.xml
+
+mkdir -p $PKG_PATH/etc/hadoop
+ln -s $PKG_PATH/usr/etc/hadoop/* $PKG_PATH/etc/hadoop/
+
+mkdir -p $PKG_PATH/lib
+ln -s $PKG_PATH/usr/lib/* $PKG_PATH/lib/

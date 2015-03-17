@@ -1,0 +1,8 @@
+{
+  "name" : "hadoop",
+  "version" : "2.5.0",
+  "single_source" : {
+    "kind": "url_extract",
+    "url": "https://archive.apache.org/dist/hadoop/core/hadoop-2.5.0/hadoop-2.5.0.tar.gz"
+  }
+}

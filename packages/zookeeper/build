@@ -18,3 +18,9 @@ EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/active/zookeeper/usr/zookeeper/bin/zkServer.sh start-foreground
 EOF
+
+cat <<'EOF' > "${PKG_PATH}/usr/zookeeper/conf/zoo.cfg"
+tickTime=2000
+dataDir=/var/lib/zookeeper
+clientPort=2181
+EOF

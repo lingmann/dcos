@@ -12,6 +12,7 @@ Options:
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
                                 configuration (roles, setup flags). [default: /etc/mesosphere/]
     --no-systemd                Don't try starting/stopping systemd services
+    --no-block-systemd          Don't block waiting for systemd services to come up.
     --root=<root>               Testing only: Use an alternate root [default: /opt/mesosphere]
     --repository=<repository>   Testing only: Use an alternate local package
                                 repository directory [default: /opt/mesosphere/packages]
@@ -85,7 +86,7 @@ def main():
     install = Install(
         os.path.abspath(arguments['--root']),
         os.path.abspath(arguments['--config-dir']),
-        not arguments['--no-systemd'])
+        not arguments['--no-systemd'], not arguments['--no-block-systemd'])
     repository = Repository(os.path.abspath(arguments['--repository']))
 
     if arguments['setup']:

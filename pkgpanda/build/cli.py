@@ -221,7 +221,7 @@ def main():
     # variables.
     # TODO(cmaloney): RAII type thing for temproary directory so if we
     # don't get all the way through things will be cleaned up?
-    install = Install(install_dir, None, False)
+    install = Install(install_dir, None, False, True)
     install.activate(repository, active_packages)
     # Rewrite all the symlinks inside the active path because we will
     # be mounting the folder into a docker container, and the absolute

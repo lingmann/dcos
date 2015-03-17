@@ -1,12 +1,12 @@
 """Panda package management
 
 Usage:
-  pkgpanda setup [options]
-  pkgpanda list [options]
-  pkgpanda active [options]
-  pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda activate <id>... [options]
   pkgpanda activate --recover
+  pkgpanda active [options]
+  pkgpanda fetch --repository-url=<url> <id>... [options]
+  pkgpanda list [options]
+  pkgpanda setup [options]
 
 Options:
     --config-dir=<conf-dir>     Use an alternate directory for finding machine

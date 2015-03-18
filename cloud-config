@@ -1,0 +1,17 @@
+#cloud-config
+coreos:
+    units:
+    - name: systemd-resolved.service
+      mask: true
+      command: stop
+    - name: mesos-resolv.service
+      command: start
+      "content: |\n",
+        "[Unit]\n",
+        "Description=Mesos-resolv\n",
+        "[Service]\n",
+        "TimeoutStartSec=0\n",
+        "ExecStartPre=-/usr/bin/docker kill mesos-resolv\n",
+        "ExecStartPre=-/usr/bin/docker rm mesos-resolv\n",
+        "ExecStartPre=/usr/bin/docker pull mesosphere/mesos-resolv:master\n",
+        "ExecStart=/bin/sh -c 'docker run --name=mesos-resolv -t mesosphere/mesos-resolv:master internal-mycluster-Internal-8S38YDOZEX7I-1526785631.us-west-2.elb.amazonaws.com > /etc/resolv.conf'\n",

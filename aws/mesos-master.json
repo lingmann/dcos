@@ -267,7 +267,19 @@
                     " cfn-signal -e 0 ",
                       " --resource ServerGroup",
                       " --stack ", { "Ref" : "AWS::StackName" },
-                      " --region ", { "Ref" : "AWS::Region" }, "\n"
+                      " --region ", { "Ref" : "AWS::Region" }, "\n",
+
+          "write_files:\n",
+          "    - path: /etc/mesosphere/cloudenv\n",
+          "      permissions: 0644\n",
+          "      owner: root\n",
+          "      content: |\n",
+          "        AWS_REGION=", { "Ref" : "AWS::Region" }, "\n",
+          "        EXHIBITOR_S3_BUCKET=", { "Ref" : "ExhibitorS3Bucket" }, "\n",
+          "        STACKNAME=", { "Ref" : "AWS::StackName"}, "\n",
+          "        MESOS_MASTER_INTERNAL_ELB=", { "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ]}, "\n",
+          "        MESOS_MASTER_EXTERNAL_ELB=", { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}, "\n",
+          "        MASTER_INSTANCE_COUNT=", { "Ref" : "InstanceCount" }, "\n"
         ]]}}
       }
     },

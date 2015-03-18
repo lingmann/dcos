@@ -1,0 +1,17 @@
+#!/bin/bash
+set -o nounset -o pipefail
+
+apt-get update
+
+# install npm
+curl -sL https://deb.nodesource.com/setup | sudo bash -
+apt-get -y install nodejs
+
+pushd /pkg/src/dcos-ui
+# install npm deps
+npm run clean
+npm install
+npm install -g broccoli-cli
+
+cp -rp /pkg/src/dcos-ui "$PKG_PATH/usr"
+sudo chmod -R o+r "$PKG_PATH/usr"

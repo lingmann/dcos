@@ -1,0 +1,9 @@
+{
+  "name" : "dcos-ui",
+  "docker": "dcos-builder",
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-ui.git",
+    "branch" : "master"
+  }
+}

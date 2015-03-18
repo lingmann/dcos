@@ -1,17 +1,15 @@
 #!/bin/bash
 set -o nounset -o pipefail
 
-apt-get update
+# Download external debian because the debian one is patched in ways that break
+# stuff from npm...
+curl http://nodejs.org/dist/v0.12.0/node-v0.12.0-linux-x64.tar.gz -o node-v0.12.0-linux-x64.tar.gz
+tar -xzf node-v0.12.0-linux-x64.tar.gz
+export PATH=$PATH:`pwd`/node-v0.12.0-linux-x64/bin
 
-# install npm
-curl -sL https://deb.nodesource.com/setup | sudo bash -
-apt-get -y install nodejs
 
-pushd /pkg/src/dcos-ui
-# install npm deps
-npm run clean
+cd "/pkg/src/dcos-ui"
 npm install
 npm install -g broccoli-cli
-
-cp -rp /pkg/src/dcos-ui "$PKG_PATH/usr"
-sudo chmod -R o+r "$PKG_PATH/usr"
+npm run dist
+cp -r dist/ "$PKG_PATH"/usr

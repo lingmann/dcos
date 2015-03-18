@@ -6,3 +6,15 @@ coreos:
       command: stop
     - name: mesos-resolv.service
       command: start
+
+write_files:
+    - path: /etc/mesosphere/cloudenv
+      permissions: 0644
+      owner: root
+      content: |
+      AWS_REGION={ "Ref" : "AWS::Region" }
+      EXHIBITOR_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
+      STACKNAME={ "Ref" : "AWS::StackName" }
+      MESOS_MASTER_INTERNAL_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
+      MESOS_MASTER_EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
+      MASTER_INSTANCE_COUNT={ "Ref" : "InstanceCount" }

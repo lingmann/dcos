@@ -6,6 +6,6 @@
     "url": "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/pkgpanda/hdfs-mesos-0.0.2.tgz"
   },
   "environment": {
-    "HDFS_MESOS_ROOT": "/opt/mesosphere"
+    "HDFS_MESOS_CONFIG_PATH": "/opt/mesosphere/etc/hadoop/hdfs-site.xml"
   }
 }

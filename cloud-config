@@ -1,20 +1,43 @@
 #cloud-config
 coreos:
-    units:
+  units:
     - name: systemd-resolved.service
       mask: true
       command: stop
-    - name: mesos-resolv.service
+    - name: bootstrap.service
       command: start
+      content: |
+        [Unit]
+        Description=Bootstrap DCOS
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh
+        ExecStartPre=/usr/bin/chmod +x /bootstrap.sh
+        ExecStart=/bootstrap.sh
+    - name: cfn-signal.service
+      command: start
+      content: |
+        [Unit]
+        Description=Signal CloudFormation Success
+        After=bootstrap.service
+        Requires=bootstrap.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        Environment='AWS_STACK_NAME={ "Ref" : "AWS::StackName" }' 'AWS_REGION={ "Ref" : "AWS::Region" }'
+        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap cfn-signal -e 0 --resource ServerGroup --stack $AWS_STACK_NAME --region $AWS_REGION
 
 write_files:
     - path: /etc/mesosphere/cloudenv
       permissions: 0644
       owner: root
       content: |
-      AWS_REGION={ "Ref" : "AWS::Region" }
-      EXHIBITOR_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
-      STACKNAME={ "Ref" : "AWS::StackName" }
-      MESOS_MASTER_INTERNAL_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
-      MESOS_MASTER_EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
-      MASTER_INSTANCE_COUNT={ "Ref" : "InstanceCount" }
+        AWS_REGION={ "Ref" : "AWS::Region" }
+        EXHIBITOR_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
+        STACKNAME={ "Ref" : "AWS::StackName" }
+        MESOS_MASTER_INTERNAL_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
+        MESOS_MASTER_EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
+        MASTER_INSTANCE_COUNT={ "Ref" : "InstanceCount" }

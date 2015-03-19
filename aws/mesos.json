@@ -124,6 +124,7 @@
           "InstanceCount" : { "Ref" : "SlaveInstanceCount" },
           "MesosMasterSecurityGroup" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterSecurityGroup" ] },
           "MesosMaster" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterConnectString" ] },
+          "MesosMasterInternalELB" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterInternalELB" ] },
           "MesosMasterLBSecurityGroup" : { "Fn::GetAtt" : [ "MesosMasterStack", "Outputs.MesosMasterLBSecurityGroup" ]},
           "VpcId" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.VpcId" ] },
           "Subnets" : { "Fn::GetAtt" : [ "VpcStack", "Outputs.Subnet" ] },

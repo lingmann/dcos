@@ -24,6 +24,10 @@
       "Description" : "Mesos master connect string (e.g., 'host1:5050,host2:5050')",
       "Type" : "String"
     },
+    "MesosMasterInternalELB" : {
+      "Description" : "Internal load balancer to find Mesos master.",
+      "Type" : "String"
+    },
     "MesosMasterSecurityGroup" : {
       "Description" : "Security group of Mesos Master nodes. If passed, CloudFormation will configure the SG to allow access from the launched slaves. If not passed, you'll need to grant this on your own.",
       "Type" : "String",

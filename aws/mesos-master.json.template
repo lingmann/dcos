@@ -271,6 +271,10 @@ $CLOUD_CONFIG
       "Description" : "Mesos Master",
       "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
     },
+    "MesosMasterInternalELB" : {
+      "Description" : "Internal load balancer to find Mesos master.",
+      "Value" : { "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ]}
+    },
     "MesosMasterSecurityGroup" : {
       "Value" : { "Ref" : "MasterSecurityGroup" }
     },

@@ -25,10 +25,13 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        Environment='AWS_STACK_NAME={ "Ref" : "AWS::StackName" }' 'AWS_REGION={ "Ref" : "AWS::Region" }'
         ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
         ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
-        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap cfn-signal -e 0 --resource ServerGroup --stack $AWS_STACK_NAME --region $AWS_REGION
+        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
+          cfn-signal -e 0 \
+          --resource ServerGroup \
+          --stack { "Ref" : "AWS::StackName" } \
+          --region { "Ref" : "AWS::Region" }
 
 write_files:
     - path: /etc/mesosphere/cloudenv

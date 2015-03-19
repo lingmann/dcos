@@ -18,4 +18,5 @@ check:
 	aws cloudformation validate-template --template-url https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-vpc.json
 
 make_template:
-	python bin/cloud_config_cf.py aws/mesos-master.json.template cloud-config > aws/mesos-master.json
+	python bin/cloud_config_cf.py aws/mesos-master.json.template master-cloud-config > aws/mesos-master.json
+	python bin/cloud_config_cf.py aws/mesos-slave.json.template slave-cloud-config > aws/mesos-slave.json

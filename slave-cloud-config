@@ -39,4 +39,31 @@ coreos:
         ExecStartPre=-/usr/bin/docker rm mesos-resolv
         ExecStartPre=/usr/bin/docker pull mesosphere/mesos-resolv:master
         ExecStart=/bin/sh -c 'docker run --name=mesos-resolv -t mesosphere/mesos-resolv:master { "Ref" : "MesosMasterInternalELB" } > /etc/resolv.conf'
+    - name: cfn-signal.service
+      command: start
+      content: |
+        [Unit]
+        Description=Signal CloudFormation Success
+        After=bootstrap.service
+        Requires=bootstrap.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
+          cfn-signal -e 0 \
+          --resource ServerGroup \
+          --stack { "Ref" : "AWS::StackName" } \
+          --region { "Ref" : "AWS::Region" }
 
+write_files:
+    - path: /etc/mesosphere/cloudenv
+      permissions: 0644
+      owner: root
+      content: |
+        AWS_REGION={ "Ref" : "AWS::Region" }
+        STACKNAME={ "Ref" : "AWS::StackName" }
+        MESOS_MASTER_INTERNAL_ELB={ "Ref" : "MesosMasterInternalELB" }
+        MESOS_MASTER_CONNECT_STRING={ "Ref" : "MesosMaster" }
+        SLAVE_INSTANCE_COUNT={ "Ref" : "InstanceCount" }

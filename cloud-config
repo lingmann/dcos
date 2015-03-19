@@ -15,6 +15,19 @@ coreos:
         ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh
         ExecStartPre=/usr/bin/chmod +x /bootstrap.sh
         ExecStart=/bootstrap.sh
+    - name: config-writer.service
+      command: start
+      content: |
+        [Unit]
+        Description=Write out dynamic config values
+        [Service]
+        RestartSec=10sec
+        Restart=always
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment instance_profile=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile})"
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')"
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')"
+        ExecStart=/usr/bin/bash -c 'touch /etc/mesosphere/cloudenv-dyn && echo "EC2_PUBLIC_HOSTNAME=${EC2_PUBLIC_HOSTNAME}" > /etc/mesosphere/cloudenv-dyn && echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> /etc/mesosphere/cloudenv-dyn && echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> /etc/mesosphere/cloudenv-dyn'
     - name: cfn-signal.service
       command: start
       content: |

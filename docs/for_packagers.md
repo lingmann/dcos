@@ -10,6 +10,14 @@ Pkgpanda operates by swapping out (roughly atomically) one set of active package
 
 There are two
 
+## Package build environment
+
+See: [buildinfo.json](buildinfo.json.md)
+
+ - Environment variables
+ - Package directories
+ -
+
 # TODO
 LD_LIBRARY_PATH, PATH, roles (bin_slave, bin_master)
 

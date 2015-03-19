@@ -23,6 +23,7 @@ import json
 import os.path
 import sys
 from itertools import groupby
+from subprocess import check_call
 from urllib.error import URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
@@ -55,6 +56,30 @@ def setup(install, repository):
     # config can't be grabbed from any of them, fail.
     def fetcher(id, target):
         return urllib_fetcher(repository_url, id, target)
+
+    # Copy host/cluster-specific packages from setup-packages folder into
+    # the repository. Do not overwrite or merge existing packages, hard fail
+    # instead.
+    setup_pkg_dir = install.get_config_filename("setup-packages")
+    for pkg_id_str in os.listdir(setup_pkg_dir):
+        if not PackageId.is_id(pkg_id_str):
+            print("Invalid package id in setup package: {}".format(pkg_id_str))
+            sys.exit(1)
+        pkg_id = PackageId(pkg_id_str)
+        if pkg_id.version != "setup":
+            print("Setup packages (those in `{0}`) must have the version setup. Bad package: {1}"
+                  .format(setup_pkg_dir, pkg_id_str))
+            sys.exit(1)
+
+        # Make sure there is no existing package
+        if repository.has_package(pkg_id_str):
+            print("WARNING: Ignoring already installed package {}".format(pkg_id_str))
+
+        def copy_fetcher(id, target):
+            src_pkg_path = os.path.join(setup_pkg_dir, pkg_id_str) + "/"
+            check_call(["cp", "-rp", src_pkg_path, target])
+
+        repository.add(copy_fetcher, pkg_id_str)
 
     to_activate = None
     if repository_url:

@@ -1,3 +1,4 @@
+from shutil import copytree
 from subprocess import check_call, check_output
 
 from pkgpanda.util import expect_fs
@@ -5,11 +6,18 @@ from pkgpanda.util import expect_fs
 from util import run
 
 
+def tmp_repository(tmpdir, repo_dir="../tests/resources/packages"):
+    repo_path = tmpdir.join("repository")
+    copytree(repo_dir, str(repo_path))
+    return repo_path
+
+
 def test_setup(tmpdir):
+    repo_path = tmp_repository(tmpdir)
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
-                "--repository=../tests/resources/packages",
+                "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
@@ -18,14 +26,14 @@ def test_setup(tmpdir):
     expect_fs(
         "{0}/root".format(tmpdir),
         {
-            "active": ["mesos", "mesos-config"],
+            "active": ["env", "mesos", "mesos-config"],
             "bin": [
                 "mesos",
                 "mesos-dir",
                 "mesos-master",
                 "mesos-slave"],
             "lib": ["libmesos.so"],
-            "etc": ["foobar"],
+            "etc": ["foobar", "some.json"],
             "dcos.target.wants": [],
             "environment": None
         })
@@ -35,17 +43,17 @@ def test_setup(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
+        "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode("utf-8").split())
 
-    assert active == set(["mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
+    assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
     # If we setup the same directory again we should get .old files.
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
-                "--repository=../tests/resources/packages",
+                "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
@@ -54,24 +62,24 @@ def test_setup(tmpdir):
     expect_fs(
         "{0}/root".format(tmpdir),
         {
-            "active": ["mesos", "mesos-config"],
+            "active": ["env", "mesos", "mesos-config"],
             "bin": [
                 "mesos",
                 "mesos-dir",
                 "mesos-master",
                 "mesos-slave"],
             "lib": ["libmesos.so"],
-            "etc": ["foobar"],
+            "etc": ["foobar", "some.json"],
             "dcos.target.wants": [],
             "environment": None,
-            "active.old": ["mesos", "mesos-config"],
+            "active.old": ["env", "mesos", "mesos-config"],
             "bin.old": [
                 "mesos",
                 "mesos-dir",
                 "mesos-master",
                 "mesos-slave"],
             "lib.old": ["libmesos.so"],
-            "etc.old": ["foobar"],
+            "etc.old": ["foobar", "some.json"],
             "dcos.target.wants.old": [],
             "environment.old": None
         })
@@ -81,18 +89,19 @@ def test_setup(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
+        "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
-    assert active == set(["mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
+    assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
 
 def test_activate(tmpdir):
+    repo_path = tmp_repository(tmpdir)
     # TODO(cmaloney): Depending on setup here is less than ideal, but meh.
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
-                "--repository=../tests/resources/packages",
+                "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
@@ -102,7 +111,7 @@ def test_activate(tmpdir):
                 "mesos--0.22.0",
                 "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8",
                 "--root={0}/root".format(tmpdir),
-                "--repository=../tests/resources/packages",
+                "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"]) == ""
 
@@ -111,7 +120,7 @@ def test_activate(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
+        "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
     assert active == set(["mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
@@ -120,7 +129,7 @@ def test_activate(tmpdir):
                 "activate",
                 "mesos--0.22.0",
                 "--root={0}/root".format(tmpdir),
-                "--repository=../tests/resources/packages",
+                "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"]) == ""
 
@@ -129,7 +138,7 @@ def test_activate(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
-        "--repository=../tests/resources/packages",
+        "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
 

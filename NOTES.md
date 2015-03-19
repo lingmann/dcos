@@ -4,3 +4,4 @@
  - Should enable managing systemd service files / adding them to dcos.target.wants from packages.
  - Can't upgrade / change dcos.target, dcos-setup.service, dcos-download.service, mesos-master.service, mesos-slave.service
  - Cannot add repository_url, masters after startup
+ - mkpanda should use Repository.has_package()

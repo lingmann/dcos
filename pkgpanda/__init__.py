@@ -271,6 +271,11 @@ class Repository:
     def package_path(self, id):
         return os.path.join(self.__path, id)
 
+    def has_package(self, id):
+        # Matches check in list() so the two functions provide consistent
+        # results.
+        return os.path.exists(self.package_path(id)) and PackageId.is_id(id)
+
     def list(self):
         """List the available packages in the repository.
 

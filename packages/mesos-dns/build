@@ -36,7 +36,7 @@ cp /go/src/github.com/mesosphere/mesos-dns/mesos-dns $PKG_PATH/bin/mesos-dns
 # Create the service file
 service="$PKG_PATH"/dcos.target.wants_master/mesos-dns.service
 mkdir -p "$(dirname "$service")"
-cat <<'EOF' > "$service"
+cat <<EOF > "$service"
 [Unit]
 Description=Mesos DNS
 [Service]

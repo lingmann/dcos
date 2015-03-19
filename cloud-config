@@ -28,6 +28,17 @@ coreos:
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')"
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')"
         ExecStart=/usr/bin/bash -c 'touch /etc/mesosphere/cloudenv-dyn && echo "EC2_PUBLIC_HOSTNAME=${EC2_PUBLIC_HOSTNAME}" > /etc/mesosphere/cloudenv-dyn && echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> /etc/mesosphere/cloudenv-dyn && echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> /etc/mesosphere/cloudenv-dyn'
+    - name: mesos-dns.service
+      command: start
+      content: |
+        [Unit]
+        Description=Mesos-DNS
+        [Service]
+        TimeoutStartSec=0
+        ExecStartPre=-/usr/bin/docker kill mesos-dns
+        ExecStartPre=-/usr/bin/docker rm mesos-dns
+        ExecStartPre=/usr/bin/docker pull mesosphere/mesos-dns
+        ExecStart=/bin/sh -c 'docker run --name=mesos-dns --net=host -t mesosphere/mesos-dns /bin/sh -c \'echo "{\\"masters\\":[\\"127.0.0.1:5050\\"],\\"refreshSeconds\\":60,\\"ttl\\":60,\\"domain\\":\\"mesos\\",\\"port\\":53,\\"resolvers\\":[\\"172.16.0.23\\"],\\"timeout\\":5}" > /derp.json && /mesos-dns -v -config=/derp.json\''
     - name: cfn-signal.service
       command: start
       content: |

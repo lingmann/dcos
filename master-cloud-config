@@ -23,7 +23,7 @@ coreos:
         [Service]
         RestartSec=10sec
         Restart=always
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment instance_profile=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile})"
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment instance_profile=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/)"
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')"
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')"
@@ -39,6 +39,25 @@ coreos:
         ExecStartPre=-/usr/bin/docker rm mesos-dns
         ExecStartPre=/usr/bin/docker pull mesosphere/mesos-dns
         ExecStart=/bin/sh -c 'docker run --name=mesos-dns --net=host -t mesosphere/mesos-dns /bin/sh -c \'echo "{\\"masters\\":[\\"127.0.0.1:5050\\"],\\"refreshSeconds\\":60,\\"ttl\\":60,\\"domain\\":\\"mesos\\",\\"port\\":53,\\"resolvers\\":[\\"172.16.0.23\\"],\\"timeout\\":5}" > /derp.json && /mesos-dns -v -config=/derp.json\''
+    - name: zookeeper.service
+      command: start
+      content: |
+        [Unit]
+        Description=Zookeeper
+        After=bootstrap.service
+        After=config-writer.service
+        Requires=bootstrap.service
+        EnvironmentFile=/etc/mesosphere/cloudenv-dyn
+        [Service]
+        Restart=on-failure
+        ExecStart=/usr/bin/docker run --rm -p 8181:8181 -p 2181:2181 -p 2888:2888 -p 3888:3888 \
+        -e AWS_REGION={ "Ref" : "AWS::Region" } \
+        -e S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" } \
+        -e S3_PREFIX=exhibitor \
+        -e AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID} \
+        -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
+        -e HOSTNAME=${EC2_PUBLIC_HOSTNAME} \
+        thefactory/zookeeper-exhibitor:3.4.6_1.5.2
     - name: cfn-signal.service
       command: start
       content: |

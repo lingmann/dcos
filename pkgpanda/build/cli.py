@@ -304,7 +304,12 @@ def main():
         # TODO(cmaloney): Run a wrapper which sources
         # /opt/mesosphere/environment then runs a build. Also should fix
         # ownership of /opt/mesosphere/packages/{pkg_id} post build.
-        cmd.run(["/bin/bash", "-e", "/pkg/build"])
+        cmd.run([
+            "/bin/bash",
+            "-o", "nounset",
+            "-o", "pipefail",
+            "-o", "errexit",
+            "/pkg/build"])
     except CalledProcessError as ex:
         print("ERROR: docker exited non-zero: {}".format(ex.returncode))
         print("Command: {}".format(' '.join(ex.cmd)))

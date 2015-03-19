@@ -8,7 +8,7 @@
     },
     "mesos-dns": {
       "kind": "git",
-      "git": "git@github.com:mesosphere/mesos-dns.git",
+      "git": "https://github.com/mesosphere/mesos-dns.git",
       "branch": "zk"
     }
   }

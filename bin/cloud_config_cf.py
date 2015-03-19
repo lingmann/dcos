@@ -11,7 +11,7 @@ import sys
 
 
 TEMPLATE_VARIABLE="$CLOUD_CONFIG"
-AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{.*})(?P<after>.*)")
+AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
 
 def escape_cloud_config(content_str):

@@ -1,7 +1,15 @@
 {
   "name" : "mesos-dns",
-  "single_source": {
-    "kind": "url",
-    "url": "file://build"
+  "docker": "dcos-builder",
+  "sources": {
+    "go": {
+      "kind": "url_extract",
+      "url": "https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz"
+    },
+    "mesos-dns": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/mesos-dns.git",
+      "branch": "zk"
+    }
   }
 }

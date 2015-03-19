@@ -1,15 +1,47 @@
 #!/bin/bash
-set -o nounset -o pipefail
+set -x
 
-master_service="$PKG_PATH"/dcos.target.wants_master/mesos-dns.service
-mkdir -p "$(dirname "$master_service")"
-cat <<'EOF' > "$master_service"
+# Setup go environment
+mkdir -p /go/src/github.com/mesosphere
+ln -s /pkg/src/mesos-dns /go/src/github.com/mesosphere/mesos-dns
+export GOPATH=/go
+export GOROOT=/pkg/src/go/
+export PATH=$PATH:$GOROOT/bin
+
+# Get the dependencies
+go get github.com/gogo/protobuf/proto
+go get github.com/golang/glog
+go get github.com/mesos/mesos-go/detector
+go get github.com/mesos/mesos-go/mesosproto
+go get github.com/mesos/mesos-go/mesosutil
+go get github.com/mesos/mesos-go/upid
+go get github.com/miekg/dns
+go get github.com/samuel/go-zookeeper/zk
+go get github.com/stretchr/objx
+go get github.com/stretchr/testify/assert
+go get github.com/stretchr/testify/mock
+go get golang.org/x/net/context
+
+# Build mesos-dns
+pushd /go/src/github.com/mesosphere/mesos-dns
+go build
+popd
+
+# TODO(cmaloney): PKG_PATH should always exist in the container
+# Install to pkg-path
+mkdir -p $PKG_PATH/bin
+cp /go/src/github.com/mesosphere/mesos-dns/mesos-dns $PKG_PATH/bin/mesos-dns
+
+
+# Create the service file
+service="$PKG_PATH"/dcos.target.wants_master/mesos-dns.service
+mkdir -p "$(dirname "$service")"
+cat <<'EOF' > "$service"
 [Unit]
-Description=Mesos-DNS
+Description=Mesos DNS
 [Service]
 TimeoutStartSec=0
-ExecStartPre=-/usr/bin/docker kill mesos-dns
-ExecStartPre=-/usr/bin/docker rm mesos-dns
-ExecStartPre=/usr/bin/docker pull mesosphere/mesos-dns
-ExecStart=/bin/sh -c 'docker run --name=mesos-dns --net=host -t mesosphere/mesos-dns /bin/sh -c \'echo "{\\"masters\\":[\\"127.0.0.1:5050\\"],\\"refreshSeconds\\":60,\\"ttl\\":60,\\"domain\\":\\"mesos\\",\\"port\\":53,\\"resolvers\\":[\\"172.16.0.23\\"],\\"timeout\\":5}" > /derp.json && /mesos-dns -v -config=/derp.json\''
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+ExecStart=$PKG_PATH/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.config.json
 EOF

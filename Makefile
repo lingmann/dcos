@@ -95,7 +95,6 @@ all: assemble
 assemble: | build/marathon.manifest build/zookeeper.manifest build/java.manifest
 assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
-assemble: | build/mesos-config-ha.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -272,17 +271,6 @@ build/mesos-dns.manifest: | build/mesos.manifest build/docker_image
 	>&2 egrep '^stderr: ' build/mesos-dns.log || true
 	$(MKPANDA) remove mesos-dns || true
 	$(MKPANDA) add build/mesos-dns/*.tar.xz
-	touch $@
-
-.PHONY: mesos-config-ha
-mesos-config-ha: | build/mesos-config-ha.manifest
-build/mesos-config-ha.manifest: | build/docker_image build/mesos.manifest
-	$(SUDO) rm -rf build/mesos-config-ha
-	cp -rp packages/mesos-config-ha build
-	cd build/mesos-config-ha && $(ANNOTATE) $(MKPANDA) &> ../mesos-config-ha.log
-	>&2 egrep '^stderr: ' build/mesos-config-ha.log || true
-	$(MKPANDA) remove mesos-config-ha || true
-	$(MKPANDA) add build/mesos-config-ha/*.tar.xz
 	touch $@
 
 .PHONY: pkgpanda

@@ -25,6 +25,7 @@ import sys
 from itertools import groupby
 from subprocess import check_call
 from urllib.error import URLError
+from urllib.error import HTTPError
 from urllib.parse import urljoin
 from urllib.request import urlopen
 
@@ -85,11 +86,16 @@ def setup(install, repository):
     if repository_url:
         # TODO(cmaloney): Support sending some basic info to the machine generating
         # the active list of packages.
-        with urlopen(urljoin(repository_url, "config/active.json")) as active_file:
-            to_activate = json.load(active_file)
-
-        if to_activate is None:
-            print("Unable to get list of packages to activate from remote repository.")
+        active_url = urljoin(repository_url, "config/active.json")
+        try:
+            req = urllib.request.urlopen(active_url)
+            to_activate = json.loads(req.read().decode('utf-8'))
+        except HTTPError as ex:
+            print("Unable to get list of packages to activate from: {0}".format(active_url))
+            print(ex)
+            sys.exit(1)
+        except ValueError as ex:
+            print("Unable to decode as JSON: {0}".format(active_url))
             sys.exit(1)
 
         # Ensure all packages are local

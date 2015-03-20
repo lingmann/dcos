@@ -87,7 +87,7 @@ def setup(install, repository):
         # the active list of packages.
         active_url = urljoin(repository_url, "config/active.json")
         try:
-            req = urllib.request.urlopen(active_url)
+            req = urlopen(active_url)
             to_activate = json.loads(req.read().decode('utf-8'))
         except HTTPError as ex:
             print("Unable to get list of packages to activate from: {0}".format(active_url))

@@ -24,8 +24,7 @@ import os.path
 import sys
 from itertools import groupby
 from subprocess import check_call
-from urllib.error import URLError
-from urllib.error import HTTPError
+from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
 from urllib.request import urlopen
 

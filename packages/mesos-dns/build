@@ -43,5 +43,5 @@ Description=Mesos DNS
 TimeoutStartSec=0
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=/opt/mesosphere/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.json
+ExecStart=/opt/mesosphere/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.json -logtostderr=true -v=2
 EOF

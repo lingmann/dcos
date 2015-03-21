@@ -100,10 +100,11 @@ assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
 	@$(SUDO) rm -rf /opt/mesosphere
 	@cd dist && pkgpanda-mkbootstrap tarball --role=slave / *.tar.xz
-	@mkdir dist/config
 	@# Append the dynamic setup packages to the default active.json
+	@mkdir dist/config
 	@jq '. + ["mesos-config--setup", "mesos-dns-config--setup"]' \
 		dist/active.json > dist/config/active.json
+	@rm dist/active.json
 	@# Set up manifest contents
 	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
 	#@# Build bootstrap script

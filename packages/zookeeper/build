@@ -12,15 +12,15 @@ cat <<'EOF' > "$zookeeper_service"
 [Unit]
 Description=Zookeeper
 [Service]
-Restart=on-failure
-Environment=SYSTEMD_LOG_LEVEL=debug
-EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=/opt/mesosphere/active/zookeeper/usr/zookeeper/bin/zkServer.sh start-foreground
-EOF
-
-cat <<'EOF' > "${PKG_PATH}/usr/zookeeper/conf/zoo.cfg"
-tickTime=2000
-dataDir=/var/lib/zookeeper
-clientPort=2181
+EnvironmentFile=/opt/mesosphere/etc/cloudenv
+EnvironmentFile=/opt/mesosphere/etc/zookeeper
+Restart=on-failure
+ExecStart=/usr/bin/docker run --rm \
+  -p 2181:2181 -p 2888:2888 -p 3888:3888 \
+  -p ${EXHIBITOR_WEB_UI_PORT}:${EXHIBITOR_WEB_UI_PORT} \
+  --env-file=/opt/mesosphere/environment \
+  --env-file=/opt/mesosphere/etc/cloudenv \
+  --env-file=/opt/mesosphere/etc/zookeeper \
+  thefactory/zookeeper-exhibitor:3.4.6_1.5.2
 EOF

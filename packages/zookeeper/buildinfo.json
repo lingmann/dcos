@@ -2,7 +2,7 @@
   "name" : "zookeeper",
   "requires": ["java"],
   "single_source": {
-    "kind": "url_extract",
-    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/zookeeper/zookeeper-3.4.6.tar.gz"
+    "kind": "url",
+    "url": "file://build"
   }
 }

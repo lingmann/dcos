@@ -237,18 +237,13 @@ build/marathon.manifest: | build/java.manifest build/docker_image
 .PHONY: zookeeper
 zookeeper: | build/zookeeper.manifest
 build/zookeeper.manifest: | build/java.manifest build/docker_image
-	@if [[ "$(ZOOKEEPER_URL)" == "" ]]; then echo "ZOOKEEPER_URL is unset"; exit 1; fi
 	$(SUDO) rm -rf build/zookeeper
 	cp -rp packages/zookeeper build
-	@# Update package buildinfo
-	cat packages/zookeeper/buildinfo.json \
-		| $(JQ) --arg url "$(ZOOKEEPER_URL)" '.single_source.git = $$url' \
-		> build/zookeeper/buildinfo.json
 	cd build/zookeeper && $(ANNOTATE) $(MKPANDA) &> ../zookeeper.log
 	>&2 egrep '^stderr: ' build/zookeeper.log || true
 	$(MKPANDA) remove zookeeper || true
 	$(MKPANDA) add build/zookeeper/*.tar.xz
-	@echo 'ZOOKEEPER_URL=$(ZOOKEEPER_URL)' > $@
+	touch $@
 
 .PHONY: java
 java: | build/java.manifest

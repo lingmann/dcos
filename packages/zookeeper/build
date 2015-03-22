@@ -19,7 +19,7 @@ Restart=on-failure
 ExecStart=/usr/bin/docker run --rm \
   -p 2181:2181 -p 2888:2888 -p 3888:3888 \
   -p ${EXHIBITOR_WEB_UI_PORT}:${EXHIBITOR_WEB_UI_PORT} \
-  -e HOSTNAME:${EC2_PUBLIC_HOSTNAME} \
+  -e HOSTNAME=${EC2_PUBLIC_HOSTNAME} \
   --env-file=/opt/mesosphere/etc/cloudenv \
   --env-file=/opt/mesosphere/etc/zookeeper \
   thefactory/zookeeper-exhibitor:3.4.6_1.5.4

@@ -7,6 +7,4 @@ cp -rp "/pkg/src/java" "$PKG_PATH/usr"
 mkdir -p "$PKG_PATH/bin"
 ln -s "$PKG_PATH/usr/java/bin/java" "$PKG_PATH/bin/java"
 ln -s "$PKG_PATH/usr/java/bin/java_vm" "$PKG_PATH/bin/java_vm"
-
-# TODO(cmaloney): is this needed anymore?
-echo 'JAVA_URL="$(JAVA_URL)"' > "$PKG_PATH/java.manifest"
+ln -s "$PKG_PATH/usr/java/bin/jps" "$PKG_PATH/bin/jps"

@@ -19,7 +19,6 @@ Restart=on-failure
 ExecStart=/usr/bin/docker run --rm \
   -p 2181:2181 -p 2888:2888 -p 3888:3888 \
   -p ${EXHIBITOR_WEB_UI_PORT}:${EXHIBITOR_WEB_UI_PORT} \
-  --env-file=/opt/mesosphere/environment \
   --env-file=/opt/mesosphere/etc/cloudenv \
   --env-file=/opt/mesosphere/etc/zookeeper \
   thefactory/zookeeper-exhibitor:3.4.6_1.5.2

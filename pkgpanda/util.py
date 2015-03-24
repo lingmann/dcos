@@ -3,8 +3,11 @@ import os
 
 
 def load_json(filename):
-    with open(filename) as f:
-        return json.load(f)
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except ValueError as ex:
+        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
 
 
 def write_json(filename, data):

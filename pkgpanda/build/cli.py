@@ -135,7 +135,10 @@ def main():
         buildinfo = load_json("buildinfo.json")
     except FileNotFoundError:
         print("ERROR: Unable to find `buildinfo.json` in the current directory.")
-        exit(-1)
+        sys.exit(1)
+    except ValueError as ex:
+        print("ERROR:", ex)
+        sys.exit(1)
 
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:

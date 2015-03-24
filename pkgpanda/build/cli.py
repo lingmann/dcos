@@ -8,6 +8,7 @@ the necessary dependencies.
 Usage:
   mkpanda [options]
   mkpanda add <package-tarball> [options]
+  mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
 
@@ -129,13 +130,29 @@ def main():
             repository.remove(str(pkg_id))
         sys.exit(0)
 
-    # No command -> build package.
     # Load the package build info.
     try:
         buildinfo = load_json("buildinfo.json")
     except FileNotFoundError:
         print("ERROR: Unable to find `buildinfo.json` in the current directory.")
         exit(-1)
+
+    # Only clean in valid build locations (Why this is after buildinfo.json)
+    if arguments['clean']:
+        # Run a docker container to remove src/ and result/
+        cmd = DockerCmd()
+        cmd.volumes = {
+            # TODO(cmaloney): src should be read only...
+            abspath("src"): "/pkg/src:rw",
+            # Getting the result out
+            abspath("result"): "/pkg/result:rw"
+        }
+        cmd.container = "ubuntu:14.04"
+        cmd.run(["rm", "-rf", "/pkg/src/*", "/pkg/result/*"])
+        check_call(["rm", "-rf", "src", "result"])
+        sys.exit(0)
+
+    # No command -> build package.
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}

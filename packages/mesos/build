@@ -21,6 +21,7 @@ pushd build
 make -j8
 
 make install
+cp src/java/target/mesos-*.jar "$libdir"
 popd
 
 mkdir -p "$PKG_PATH/bin"
@@ -34,9 +35,6 @@ cp /usr/lib/x86_64-linux-gnu/libsvn_delta-1.so.1 "$libdir"
 cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 "$libdir"
 cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
 cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
-
-# TODO(cmaloney): Shouldn't be needed...
-#cp build/mesos-build/src/java/target/mesos-*.jar "$libdir"
 
 systemd_master="$PKG_PATH"/dcos.target.wants_master/mesos-master.service
 mkdir -p "$(dirname "$systemd_master")"

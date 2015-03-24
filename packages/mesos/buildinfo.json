@@ -6,5 +6,9 @@
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-private.git",
     "branch" : "0.22_ldadd"
+  },
+  "environment": {
+    "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",
+    "MESOS_NATIVE_JAVA_LIBRARY": "/opt/mesosphere/lib/libmesos.so"
   }
 }

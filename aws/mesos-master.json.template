@@ -105,6 +105,45 @@
         } ]
       }
     },
+    "IAMUser" : {
+      "Type" : "AWS::IAM::User",
+      "Properties" : {
+        "Policies": [ {
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Version" : "2012-10-17",
+            "Statement": [ {
+              "Effect": "Allow",
+              "Action": [
+                "s3:AbortMultipartUpload",
+                "s3:DeleteObject",
+                "s3:GetBucketAcl",
+                "s3:GetBucketPolicy",
+                "s3:GetObject",
+                "s3:GetObjectAcl",
+                "s3:ListBucket",
+                "s3:ListBucketMultipartUploads",
+                "s3:ListMultipartUploadParts",
+                "s3:PutObject",
+                "s3:PutObjectAcl"
+              ],
+              "Resource": [
+                { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
+                { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
+              ]
+            } ]
+          }
+        } ]
+      }
+    },
+
+    "HostKeys" : {
+      "Type" : "AWS::IAM::AccessKey",
+      "Properties" : {
+        "UserName" : { "Ref" : "IAMUser" }
+      }
+    },
+
 
     "MasterInstanceProfile": {
       "Type": "AWS::IAM::InstanceProfile",
@@ -172,6 +211,7 @@ $CLOUD_CONFIG
         "SecurityGroupIngress" : [
           { "IpProtocol" : "tcp", "FromPort" : "5050", "ToPort" : "5050", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
+          { "IpProtocol" : "tcp", "FromPort" : "8181", "ToPort" : "8181", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "2181", "ToPort" : "2181", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} }
         ]
       }
@@ -216,6 +256,12 @@ $CLOUD_CONFIG
             "InstanceProtocol" : "TCP"
           },
           {
+            "LoadBalancerPort" : "8181",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8181",
+            "InstanceProtocol" : "HTTP"
+          },
+          {
             "LoadBalancerPort" : "8080",
             "Protocol" : "HTTP",
             "InstancePort" : "8080",
@@ -248,6 +294,12 @@ $CLOUD_CONFIG
             "Protocol" : "TCP",
             "InstancePort" : "2181",
             "InstanceProtocol" : "TCP"
+          },
+          {
+            "LoadBalancerPort" : "8181",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8181",
+            "InstanceProtocol" : "HTTP"
           },
           {
             "LoadBalancerPort" : "8080",

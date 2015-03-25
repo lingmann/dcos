@@ -23,22 +23,39 @@ coreos:
         [Service]
         RestartSec=10sec
         Restart=always
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment instance_profile=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile})"
         ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')"
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')"
-        ExecStart=/usr/bin/bash -c 'touch /etc/mesosphere/cloudenv-dyn && echo "EC2_PUBLIC_HOSTNAME=${EC2_PUBLIC_HOSTNAME}" > /etc/mesosphere/cloudenv-dyn && echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> /etc/mesosphere/cloudenv-dyn && echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> /etc/mesosphere/cloudenv-dyn'
+        ExecStart=/usr/bin/bash -c 'touch /etc/mesosphere/cloudenv-dyn && echo "EC2_PUBLIC_HOSTNAME=${EC2_PUBLIC_HOSTNAME}" > /etc/mesosphere/cloudenv-dyn'
     - name: mesos-resolv.service
       command: start
       content: |
         [Unit]
         Description=Mesos-resolv
+        After=cfn-signal.service
         [Service]
         TimeoutStartSec=0
         ExecStartPre=-/usr/bin/docker kill mesos-resolv
         ExecStartPre=-/usr/bin/docker rm mesos-resolv
         ExecStartPre=/usr/bin/docker pull mesosphere/mesos-resolv:master
         ExecStart=/bin/sh -c 'docker run --name=mesos-resolv -t mesosphere/mesos-resolv:master { "Ref" : "MesosMasterInternalELB" } > /etc/resolv.conf'
+    - name: mesos-slave.service
+      command: start
+      content: |
+        [Unit]
+        Description=Mesos Slave
+        After=bootstrap.service
+        After=config-writer.service
+        Requires=bootstrap.service
+        EnvironmentFile=/etc/mesosphere/cloudenv-dyn
+        [Service]
+        Restart=on-failure
+        ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-slave \
+        --master={ "Ref" : "MesosMaster" } \
+        --containerizers=docker,mesos \
+        --hostname=${EC2_PUBLIC_HOSTNAME} \
+        --log_dir=/var/log/mesos \
+        --executor_registration_timeout=5mins \
+        --isolation=cgroups/cpu,cgroups/mem \
+        --work_dir=/var/lib/mesos/slave
     - name: cfn-signal.service
       command: start
       content: |
@@ -67,3 +84,4 @@ write_files:
         MESOS_MASTER_INTERNAL_ELB={ "Ref" : "MesosMasterInternalELB" }
         MESOS_MASTER_CONNECT_STRING={ "Ref" : "MesosMaster" }
         SLAVE_INSTANCE_COUNT={ "Ref" : "InstanceCount" }
+        MACHINE_IMAGE={ "Ref" : "InstanceAmi" }

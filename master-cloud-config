@@ -1,9 +1,6 @@
 #cloud-config
 coreos:
   units:
-    - name: systemd-resolved.service
-      mask: true
-      command: stop
     - name: bootstrap.service
       command: start
       content: |
@@ -15,19 +12,6 @@ coreos:
         ExecStartPre=/usr/bin/wget -nv https://s3.amazonaws.com/downloads.mesosphere.io/dcos/bootstrap.sh -O /bootstrap.sh
         ExecStartPre=/usr/bin/chmod +x /bootstrap.sh
         ExecStart=/bootstrap.sh
-    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        RestartSec=10sec
-        Restart=always
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment instance_profile=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/)"
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_ACCESS_KEY_ID=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep AccessKeyId | cut -d':' -f2 | sed 's/[^0-9A-Z]*//g')"
-        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment AWS_SECRET_ACCESS_KEY=$(curl -s http://169.254.169.254/latest/meta-data/iam/security-credentials/${instance_profile} | grep SecretAccessKey | cut -d':' -f2 | sed 's/[^0-9A-Za-z/+=]*//g')"
-        ExecStart=/usr/bin/bash -c 'touch /etc/mesosphere/cloudenv-dyn && echo "EC2_PUBLIC_HOSTNAME=${EC2_PUBLIC_HOSTNAME}" > /etc/mesosphere/cloudenv-dyn && echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}" >> /etc/mesosphere/cloudenv-dyn && echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}" >> /etc/mesosphere/cloudenv-dyn'
     - name: mesos-dns.service
       command: start
       content: |
@@ -45,11 +29,11 @@ coreos:
         [Unit]
         Description=Zookeeper
         After=bootstrap.service
-        After=config-writer.service
         Requires=bootstrap.service
-        EnvironmentFile=/etc/mesosphere/cloudenv-dyn
+        EnvironmentFile=/etc/mesosphere/cloudenv
         [Service]
         Restart=on-failure
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
         ExecStart=/usr/bin/docker run --rm -p 8181:8181 -p 2181:2181 -p 2888:2888 -p 3888:3888 \
         -e AWS_REGION={ "Ref" : "AWS::Region" } \
         -e S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" } \
@@ -58,6 +42,23 @@ coreos:
         -e AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY} \
         -e HOSTNAME=${EC2_PUBLIC_HOSTNAME} \
         thefactory/zookeeper-exhibitor:3.4.6_1.5.2
+    - name: mesos-master.service
+      command: start
+      content: |
+        [Unit]
+        Description=Mesos Master
+        After=zookeeper.service
+        Requires=zookeeper.service
+        EnvironmentFile=/etc/environment
+        [Service]
+        ExecStartPre=/usr/bin/bash -c "/usr/bin/systemctl set-environment EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname)"
+        ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-master \
+        --log_dir=/var/log/mesos \
+        --work_dir=/var/lib/mesos/master \
+        --zk=zk://${EC2_PUBLIC_HOSTNAME}:2181/mesos \
+        --hostname=${EC2_PUBLIC_HOSTNAME} \
+        --cluster={ "Ref" : "AWS::StackName" } \
+        --quorum={ "Ref" : "QuorumSize" }
     - name: cfn-signal.service
       command: start
       content: |
@@ -87,3 +88,7 @@ write_files:
         MESOS_MASTER_INTERNAL_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
         MESOS_MASTER_EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
         MASTER_INSTANCE_COUNT={ "Ref" : "InstanceCount" }
+        QUORUM_SIZE={ "Ref" : "QuorumSize" }
+        MACHINE_IMAGE={ "Ref" : "InstanceAmi" }
+        AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
+        AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }

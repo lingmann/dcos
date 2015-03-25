@@ -92,7 +92,7 @@ build/dcos.manifest:
 all: assemble
 
 .PHONY: assemble
-assemble: | build/marathon.manifest build/zookeeper.manifest build/java.manifest
+assemble: | build/marathon.manifest build/exhibitor.manifest build/java.manifest
 assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
 	@rm -rf dist && mkdir -p dist
@@ -234,15 +234,15 @@ build/marathon.manifest: | build/java.manifest build/docker_image
 	$(MKPANDA) add build/marathon/*.tar.xz
 	@echo 'MARATHON_URL=$(MARATHON_URL)' > $@
 
-.PHONY: zookeeper
-zookeeper: | build/zookeeper.manifest
-build/zookeeper.manifest: | build/java.manifest build/docker_image
-	$(SUDO) rm -rf build/zookeeper
-	cp -rp packages/zookeeper build
-	cd build/zookeeper && $(ANNOTATE) $(MKPANDA) &> ../zookeeper.log
-	>&2 egrep '^stderr: ' build/zookeeper.log || true
-	$(MKPANDA) remove zookeeper || true
-	$(MKPANDA) add build/zookeeper/*.tar.xz
+.PHONY: exhibitor
+exhibitor: | build/exhibitor.manifest
+build/exhibitor.manifest: | build/java.manifest build/docker_image
+	$(SUDO) rm -rf build/exhibitor
+	cp -rp packages/exhibitor build
+	cd build/exhibitor && $(ANNOTATE) $(MKPANDA) &> ../exhibitor.log
+	>&2 egrep '^stderr: ' build/exhibitor.log || true
+	$(MKPANDA) remove exhibitor || true
+	$(MKPANDA) add build/exhibitor/*.tar.xz
 	touch $@
 
 .PHONY: java

@@ -47,7 +47,7 @@ StartLimitInterval=0
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
-ExecStart=/opt/mesosphere/active/mesos/sbin/mesos-master
+ExecStart=$PKG_PATH/sbin/mesos-master
 EOF
 
 systemd_slave="$PKG_PATH"/dcos.target.wants_slave/mesos-slave.service
@@ -61,7 +61,7 @@ StartLimitInterval=0
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
-ExecStart=/opt/mesosphere/dcos/latest/mesos/sbin/mesos-slave
+ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
 
 echo "Finished building Mesos"

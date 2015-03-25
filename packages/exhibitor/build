@@ -8,8 +8,8 @@ exhibitor_path="$PKG_PATH"/usr/exhibitor
 mkdir -p "$exhibitor_path"
 pushd "$exhibitor_path"
 cp /pkg/src/exhibitor/exhibitor-standalone/src/main/resources/buildscripts/standalone/maven/pom.xml .
-mvn clean package
-ln -s target/exhibitor-1.0.jar exhibitor.jar
+mvn assembly:single
+ln -s target/exhibitor-1.0-jar-with-dependencies.jar exhibitor.jar
 rm pom.xml
 popd
 

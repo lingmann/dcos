@@ -43,6 +43,7 @@ cat <<'EOF' > "$systemd_master"
 Description=Mesos Master
 [Service]
 Restart=on-failure
+StartLimitInterval=0
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
@@ -56,6 +57,7 @@ cat <<'EOF' > "$systemd_slave"
 Description=Mesos Slave
 [Service]
 Restart=on-failure
+StartLimitInterval=0
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave

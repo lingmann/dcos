@@ -44,6 +44,7 @@ Description=Mesos Master
 [Service]
 Restart=on-failure
 StartLimitInterval=0
+RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
@@ -58,6 +59,7 @@ Description=Mesos Slave
 [Service]
 Restart=on-failure
 StartLimitInterval=0
+RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave

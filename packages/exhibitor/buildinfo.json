@@ -1,0 +1,16 @@
+{
+  "name" : "exhibitor",
+  "requires": ["java"],
+  "docker": "dcos-builder",
+  "sources": {
+    "exhibitor": {
+      "kind": "git",
+      "git": "https://github.com/Netflix/exhibitor.git",
+      "branch": "v1.5.5"
+    },
+    "zookeeper": {
+      "kind": "url_extract",
+      "url": "http://www.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz"
+    }
+  }
+}

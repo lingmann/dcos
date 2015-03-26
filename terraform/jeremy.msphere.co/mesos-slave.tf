@@ -38,6 +38,9 @@ write_files:
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/var/lib/mesos/slave
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
+    content: |
+      MASTER_ELB=master0.${var.uuid}.${var.domain}
   - path: /root/.bashrc
     content: |
       export $(cat /opt/mesosphere/environment |egrep -v ^#| xargs)

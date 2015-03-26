@@ -1,0 +1,5 @@
+# Your AWS access key and secret key
+aws_access_key = ""
+aws_secret_key = ""
+# Path to the shared Mesosphere SSH private key
+aws_key_file = "~/.ssh/id_rsa.default-mesosphere"

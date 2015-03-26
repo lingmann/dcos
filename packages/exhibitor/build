@@ -47,5 +47,5 @@ cat <<- EOF > "$exhibitor_service"
   ExecStartPre=/bin/mkdir -p /var/lib/zookeeper/transactions
   ExecStartPre=/usr/bin/bash -c "echo com.netflix.exhibitor.s3.access-key-id=\$AWS_ACCESS_KEY_ID > /etc/mesosphere/exhibitor_credentials.properties"
   ExecStartPre=/usr/bin/bash -c "echo com.netflix.exhibitor.s3.access-secret-key=\$AWS_SECRET_ACCESS_KEY >> /etc/mesosphere/exhibitor_credentials.properties"
-  ExecStart=/opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port '\$EXHIBITOR_WEB_UI_PORT' --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype s3 --s3config '\${S3_BUCKET}:\$S3_PREFIX' --s3credentials /etc/mesosphere/exhibitor_credentials.properties --s3region '\$AWS_REGION' --s3backup false --hostname '\$EC2_PUBLIC_HOSTNAME'
+  ExecStart=/opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port '\$EXHIBITOR_WEB_UI_PORT' --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype s3 --s3config '\${S3_BUCKET}:\${S3_PREFIX}' --s3credentials /etc/mesosphere/exhibitor_credentials.properties --s3region '\$AWS_REGION' --s3backup false --hostname '\$EC2_PUBLIC_HOSTNAME'
 EOF

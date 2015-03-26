@@ -1,0 +1,80 @@
+#!/bin/bash
+
+libdir="$PKG_PATH/lib"
+
+mkdir -p "/build"
+
+# TODO(cmaloney): Set alternate log, config paths?
+pushd "/pkg/src/nginx"
+./configure \
+  "--prefix=$PKG_PATH" \
+  --with-ipv6 \
+  --with-file-aio \
+  --with-http_gunzip_module \
+  --with-http_gzip_static_module \
+  --with-http_spdy_module \
+  --without-mail_pop3_module \
+  --without-mail_imap_module \
+  --without-mail_smtp_module \
+  --with-cc-opt="-static -static-libgcc" \
+  --with-ld-opt="-static"
+
+make -j8
+make install
+
+popd
+
+rm -rf "$PKG_PATH/conf/nginx.conf"
+
+# TODO(cmaloney): Make config outside of nginx package?
+cat <<EOF > "$PKG_PATH/conf/nginx.conf"
+error_log stderr;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include mime.types;
+  default_type application/octet-stream;
+
+  sendfile on;
+  keepalive_timeout 65;
+  server {
+    listen 5050;
+    root /opt/mesosphere/active/dcos-ui;
+
+    # TODO(cmaloney): Make the Web UI work in a subdirectory.
+    location /mesos/ {
+        proxy_pass       http://leader.mesos:5050/;
+    }
+
+    # TODO(cmaloney): Make the Web UI work in a subdirectory.
+    location /marathon/ {
+        proxy_pass http://master.mesos:8080/;
+    }
+
+  }
+
+}
+EOF
+
+# From: https://projects.archlinux.org/svntogit/packages.git/tree/trunk/service?h=packages/nginx
+systemd_master="$PKG_PATH"/dcos.target.wants_master/nginx.service
+mkdir -p "$(dirname "$systemd_master")"
+cat <<'EOF' > "$systemd_master"
+[Unit]
+Description=A high performance web server and a reverse proxy server
+After=network.target
+
+[Service]
+Type=forking
+PIDFile=$PKG_PATH/logs/nginx.pid
+PrivateDevices=yes
+SyslogLevel=err
+
+ExecStart=$PKG_PATH/sbin/nginx
+ExecReload=/usr/bin/kill -HUP $MAINPID
+KillSignal=SIGQUIT
+KillMode=mixed
+EOF

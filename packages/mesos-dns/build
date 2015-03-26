@@ -40,7 +40,9 @@ cat <<EOF > "$service"
 [Unit]
 Description=Mesos DNS
 [Service]
-TimeoutStartSec=0
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.json -logtostderr=true -v=2

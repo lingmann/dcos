@@ -55,6 +55,7 @@ write_files:
       AWS_REGION=${var.aws_region}
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
+      ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
       S3_BUCKET=apollo-exhibitor

@@ -43,6 +43,7 @@ cat <<- EOF > "$exhibitor_service"
   EnvironmentFile=/opt/mesosphere/environment
   EnvironmentFile=/opt/mesosphere/etc/cloudenv
   EnvironmentFile=/opt/mesosphere/etc/zookeeper
+  ExecStartPre=/bin/ln -sf "$PKG_PATH/usr/zookeeper" /opt/zookeeper
   ExecStartPre=/bin/mkdir -p /var/lib/zookeeper/snapshot
   ExecStartPre=/bin/mkdir -p /var/lib/zookeeper/transactions
   ExecStartPre=/usr/bin/bash -c "echo com.netflix.exhibitor.s3.access-key-id=\$AWS_ACCESS_KEY_ID > /etc/mesosphere/exhibitor_credentials.properties"

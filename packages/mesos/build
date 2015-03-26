@@ -38,7 +38,7 @@ cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
 
 systemd_master="$PKG_PATH"/dcos.target.wants_master/mesos-master.service
 mkdir -p "$(dirname "$systemd_master")"
-cat <<'EOF' > "$systemd_master"
+cat <<EOF > "$systemd_master"
 [Unit]
 Description=Mesos Master
 [Service]
@@ -53,7 +53,7 @@ EOF
 
 systemd_slave="$PKG_PATH"/dcos.target.wants_slave/mesos-slave.service
 mkdir -p "$(dirname "$systemd_slave")"
-cat <<'EOF' > "$systemd_slave"
+cat <<EOF > "$systemd_slave"
 [Unit]
 Description=Mesos Slave
 [Service]

@@ -13,9 +13,16 @@ ln -s target/exhibitor-1.0-jar-with-dependencies.jar exhibitor.jar
 rm pom.xml
 popd
 
+# NOTE: These Exhibitor properties are used to first initialize the config in
+# an empty S3 bucket. Any subsequent invocations of Exhibitor will use the
+# config in the S3 bucket over the properties provided via --defaultconfig.
+# Therefore, we must ensure these settings are valid for all pkgpanda versions
+# of Exhibitor which run on the same cluster. This is why we do not use
+# $PKG_PATH with the zookeeper-install-directory setting... if we did it will
+# cause new instances to fail to join the cluster.
 cat <<- EOF > "$PKG_PATH"/usr/exhibitor/defaults.conf
   zookeeper-data-directory=/var/lib/zookeeper/snapshot
-  zookeeper-install-directory="$PKG_PATH"/usr/zookeeper
+  zookeeper-install-directory=/opt/mesosphere/active/exhibitor/usr/zookeeper
   zookeeper-log-directory=/var/lib/zookeeper/transactions
   log-index-directory=/var/lib/zookeeper/transactions
   cleanup-period-ms=300000
@@ -43,7 +50,6 @@ cat <<- EOF > "$exhibitor_service"
   EnvironmentFile=/opt/mesosphere/environment
   EnvironmentFile=/opt/mesosphere/etc/cloudenv
   EnvironmentFile=/opt/mesosphere/etc/zookeeper
-  ExecStartPre=/bin/ln -sf "$PKG_PATH/usr/zookeeper" /opt/zookeeper
   ExecStartPre=/bin/mkdir -p /var/lib/zookeeper/snapshot
   ExecStartPre=/bin/mkdir -p /var/lib/zookeeper/transactions
   ExecStartPre=/usr/bin/bash -c "echo com.netflix.exhibitor.s3.access-key-id=\$AWS_ACCESS_KEY_ID > /etc/mesosphere/exhibitor_credentials.properties"

@@ -41,7 +41,7 @@ http {
   sendfile on;
   keepalive_timeout 65;
   server {
-    listen 5050;
+    listen 80;
     root /opt/mesosphere/active/dcos-ui;
 
     # TODO(cmaloney): Make the Web UI work in a subdirectory.

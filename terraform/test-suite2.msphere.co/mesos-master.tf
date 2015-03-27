@@ -53,7 +53,6 @@ write_files:
       }
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master
     content: |
-      MESOS_LOG_DIR=/var/log/mesos
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=${var.mesos_master_quorum}

@@ -16,11 +16,10 @@ import os
 import os.path
 import shutil
 import sys
-from subprocess import check_call
 
 import pkgpanda
 from docopt import docopt
-from pkgpanda.util import write_json
+from pkgpanda.util import make_tar, write_json
 
 
 def make_file(name):
@@ -75,8 +74,7 @@ def main():
     write_json("active.json", pkg_ids)
 
     if arguments['tarball']:
-        check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",
-                    "-cJf", "bootstrap.tar.xz", "-C", pkgpanda_root, "."])
+        make_tar("bootstrap.tar.xz", pkgpanda_root)
         sys.exit(0)
 
     if arguments['container']:

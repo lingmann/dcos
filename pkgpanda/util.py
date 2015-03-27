@@ -1,5 +1,6 @@
 import json
 import os
+from shutil import which
 
 
 def load_json(filename):
@@ -43,3 +44,12 @@ def expect_fs(folder, contents):
                 expect_fs(os.path.join(folder, path), contents[path])
     else:
         raise ValueError("Invalid type {0} passed to expect_fs".format(type(contents)))
+
+
+def make_tar(result_filename, change_folder):
+    tar_cmd = ["tar", "--numeric-owner", "--owner=0", "--group=0"]
+    if which("pxz"):
+        tar_cmd += ["--use-compress-program=pxz", "-cf"]
+    else:
+        tar_cmd += ["-cJf"]
+    tar_cmd += [result_filename, "-C", change_folder, "."]

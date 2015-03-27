@@ -33,7 +33,7 @@ from pkgpanda import Install, PackageId, Repository, extract_tarball
 from pkgpanda.build import checkout_source, hash_checkout, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, write_json
+from pkgpanda.util import load_json, make_tar, write_json
 
 
 class DockerCmd:
@@ -343,8 +343,7 @@ def main():
 
     # Bundle the artifacts into the pkgpanda package
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
-    check_call(["tar", "--numeric-owner", "--owner=0", "--group=0",
-                "-cJf", pkg_path, "-C", "result", "."])
+    make_tar(pkg_path, "result")
     print("Package built, available at {}".format(pkg_path))
     sys.exit(0)
 

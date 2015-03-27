@@ -41,6 +41,7 @@ write_files:
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=master0.${var.uuid}.${var.domain}
+      FALLBACK_DNS=172.16.0.23
   - path: /root/.bashrc
     content: |
       export $(cat /opt/mesosphere/environment |egrep -v ^#| xargs)
@@ -113,5 +114,6 @@ coreos:
         Requires=dcos-repair.service
         After=dcos-setup.service
         Requires=dcos-setup.service
+
 CLOUD_CONFIG
 }

@@ -56,6 +56,9 @@ coreos:
     - name: etcd.service
       mask: true
       command: stop
+    - name: systemd-resolved.service
+      mask: true
+      command: stop
     - name: config-writer.service
       command: start
       content: |

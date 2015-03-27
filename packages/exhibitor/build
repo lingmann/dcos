@@ -37,6 +37,7 @@ cat <<- EOF > "$PKG_PATH"/usr/exhibitor/defaults.conf
   zoo-cfg-extra=tickTime\=2000&initLimit\=10&syncLimit\=5&quorumListenOnAllIPs\=true
   auto-manage-instances-settling-period-ms=0
   auto-manage-instances=1
+  auto-manage-instances-fixed-ensemble-size=0
 EOF
 
 exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"

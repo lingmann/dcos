@@ -45,6 +45,19 @@ write_files:
   - path: /root/.bashrc
     content: |
       export $(cat /opt/mesosphere/environment |egrep -v ^#| xargs)
+  - path: /opt/mesosphere/clusterinfo.json
+    permissions: 0644
+    owner: root
+    content: |-
+      {
+        "cluster":{
+          "name":"${var.uuid}"
+        },
+        "keys":{
+          "dd_api_key":"${var.dd_api_key}",
+          "github_deploy_key_base64":"${var.github_deploy_key_base64}"
+        }
+      }
 coreos:
   update:
     reboot-strategy: off
@@ -117,6 +130,67 @@ coreos:
         Requires=dcos-repair.service
         After=dcos-setup.service
         Requires=dcos-setup.service
-
+    - name: tmp.mount
+      mask: true
+    - name: format-tmp-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the tmp ephemeral drive
+        Before=tmp.mount
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/sh -c 'mdadm --stop /dev/md/* ; true'
+        ExecStart=/usr/sbin/mdadm --create -f -R /dev/md0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc
+        ExecStart=/usr/sbin/mkfs.ext4 /dev/md0
+        ExecStart=/bin/sh -c 'umount /tmp ; true'
+    - name: tmp.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount tmp
+        [Mount]
+        What=/dev/md0
+        Where=/tmp
+        Type=ext4
+    - name: format-docker-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the docker ephemeral drive
+        Before=var-lib-docker.mount
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/xvdd
+        ExecStart=/usr/sbin/mkfs.btrfs -f /dev/xvdd
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount ephemeral to /var/lib/docker
+        Before=docker.service
+        [Mount]
+        What=/dev/xvdd
+        Where=/var/lib/docker
+        Type=btrfs
+    - name: datadog.service
+      command: start
+      content: |
+        [Unit]
+        Description=Monitoring Service
+        [Service]
+        TimeoutStartSec=0
+        ExecStartPre=-/usr/bin/docker kill dd-agent
+        ExecStartPre=-/usr/bin/docker rm dd-agent
+        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-slave
+        ExecStart=/usr/bin/bash -c \
+        "/usr/bin/docker run --privileged --name dd-agent --net=host \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /proc/mounts:/host/proc/mounts:ro \
+        -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
+        -e API_KEY=${var.dd_api_key} \
+        mesosphere/dd-agent-mesos-slave"
 CLOUD_CONFIG
 }

@@ -3,7 +3,7 @@
   "requires": ["java","hadoop"],
   "single_source" : {
     "kind": "url_extract",
-    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/pkgpanda/hdfs-mesos-0.0.2.tgz"
+    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/pkgpanda/hdfs-mesos-0.1.0.tgz"
   },
   "environment": {
     "HDFS_MESOS_CONFIG_PATH": "/opt/mesosphere/etc/hadoop/hdfs-site.xml"

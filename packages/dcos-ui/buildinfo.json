@@ -4,6 +4,6 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-ui.git",
-    "branch" : "master"
+    "branch" : "feature/DCOS-540-production-deploy"
   }
 }

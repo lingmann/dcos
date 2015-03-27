@@ -84,7 +84,8 @@ def checkout_source(sources):
             if not os.path.exists(bare_folder):
                 check_call(["git", "clone", "--bare", "--progress", info['git'], bare_folder])
             else:
-                check_call(["git", "-C", bare_folder, "fetch", info['git'], "-t", "--progress"])
+                check_call(["git", "-C", bare_folder, "remote", "set-url", "origin", info['git']])
+                check_call(["git", "-C", bare_folder, "fetch", "origin", "-t", "+refs/heads/*:refs/heads/*"])
 
             # Clone into `src/`.
             check_call(["git", "clone", bare_folder, root])

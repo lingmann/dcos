@@ -146,13 +146,10 @@ def main():
         cmd = DockerCmd()
         cmd.volumes = {
             # TODO(cmaloney): src should be read only...
-            abspath("src"): "/pkg/src:rw",
-            # Getting the result out
-            abspath("result"): "/pkg/result:rw"
+            abspath(""): "/pkg/:rw",
         }
         cmd.container = "ubuntu:14.04"
-        cmd.run(["rm", "-rf", "/pkg/src/*", "/pkg/result/*"])
-        check_call(["rm", "-rf", "src", "result"])
+        cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
         sys.exit(0)
 
     # No command -> build package.

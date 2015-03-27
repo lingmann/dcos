@@ -13,9 +13,17 @@ resource "aws_instance" "mesos-master" {
     key_file = "${var.aws_key_file}"
   }
   block_device {
-    device_name = "/dev/sda"
+    device_name = "/dev/sdb"
+    virtual_name = "ephemeral0"
+  }
+  block_device {
+    device_name = "/dev/sdc"
+    virtual_name = "ephemeral1"
+  }
+  block_device {
+    device_name = "/dev/sdd"
     volume_type = "gp2"
-    volume_size = 16
+    volume_size = 100
     delete_on_termination = 1
   }
   user_data = <<CLOUD_CONFIG
@@ -72,6 +80,49 @@ coreos:
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   units:
+    - name: format-var-lib-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the /var/lib ephemeral drive
+        Before=var-lib.mount,dbus.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/sh -c 'mdadm --stop /dev/md/* ; true'
+        ExecStart=/usr/sbin/mdadm --create -f -R /dev/md0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc
+        ExecStart=/usr/sbin/mkfs.ext4 /dev/md0
+    - name: var-lib.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount /var/lib
+        Before=dbus.service
+        [Mount]
+        What=/dev/md0
+        Where=/var/lib
+        Type=ext4
+    - name: format-docker-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the docker ephemeral drive
+        Before=var-lib-docker.mount
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/usr/sbin/wipefs -f /dev/xvdd
+        ExecStart=/usr/sbin/mkfs.btrfs -f /dev/xvdd
+    - name: var-lib-docker.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount ephemeral to /var/lib/docker
+        Before=docker.service
+        [Mount]
+        What=/dev/xvdd
+        Where=/var/lib/docker
+        Type=btrfs
     - name: etcd.service
       mask: true
       command: stop
@@ -133,5 +184,22 @@ coreos:
         Requires=dcos-repair.service
         After=dcos-setup.service
         Requires=dcos-setup.service
+    - name: datadog.service
+      command: start
+      content: |
+        [Unit]
+        Description=Monitoring Service
+        [Service]
+        TimeoutStartSec=0
+        ExecStartPre=-/usr/bin/docker kill dd-agent
+        ExecStartPre=-/usr/bin/docker rm dd-agent
+        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-master
+        ExecStart=/usr/bin/bash -c \
+        "/usr/bin/docker run --privileged --name dd-agent --net=host \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /proc/mounts:/host/proc/mounts:ro \
+        -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
+        -e API_KEY=${var.dd_api_key} \
+        mesosphere/dd-agent-mesos-master"
 CLOUD_CONFIG
 }

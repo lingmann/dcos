@@ -95,6 +95,8 @@ all: assemble
 assemble: | build/marathon.manifest build/exhibitor.manifest build/java.manifest
 assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
+assemble: | build/dcos-ui.manifest build/nginx.manifest build/hadoop.manifest
+assemble: | build/hdfs-mesos.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -263,7 +265,7 @@ build/java.manifest: | build/docker_image
 
 .PHONY: mesos-dns
 mesos-dns: | build/mesos-dns.manifest
-build/mesos-dns.manifest: | build/mesos.manifest build/docker_image
+build/mesos-dns.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-dns
 	cp -rp packages/mesos-dns build
 	cd build/mesos-dns && $(ANNOTATE) $(MKPANDA) &> ../mesos-dns.log
@@ -287,6 +289,51 @@ build/pkgpanda.manifest: | build/python.manifest build/docker_image
 	$(MKPANDA) remove pkgpanda || true
 	$(MKPANDA) add build/pkgpanda/*.tar.xz
 	@echo 'PKGPANDA_GIT_SHA=$(PKGPANDA_GIT_SHA)' > $@
+
+.PHONY: nginx
+nginx: | build/nginx.manifest
+build/nginx.manifest: | build/docker_image
+	$(SUDO) rm -rf build/nginx
+	cp -rp packages/nginx build
+	cd build/nginx && $(ANNOTATE) $(MKPANDA) &> ../nginx.log
+	>&2 egrep '^stderr: ' build/nginx.log || true
+	$(MKPANDA) remove nginx || true
+	$(MKPANDA) add build/nginx/*.tar.xz
+	touch $@
+
+.PHONY: dcos-ui
+dcos-ui: | build/dcos-ui.manifest
+build/dcos-ui.manifest: | build/docker_image
+	$(SUDO) rm -rf build/dcos-ui
+	cp -rp packages/dcos-ui build
+	cd build/dcos-ui && $(ANNOTATE) $(MKPANDA) &> ../dcos-ui.log
+	>&2 egrep '^stderr: ' build/dcos-ui.log || true
+	$(MKPANDA) remove dcos-ui || true
+	$(MKPANDA) add build/dcos-ui/*.tar.xz
+	touch $@
+
+.PHONY: hadoop
+hadoop: | build/hadoop.manifest
+build/hadoop.manifest: | build/docker_image
+	$(SUDO) rm -rf build/hadoop
+	cp -rp packages/hadoop build
+	cd build/hadoop && $(ANNOTATE) $(MKPANDA) &> ../hadoop.log
+	>&2 egrep '^stderr: ' build/hadoop.log || true
+	$(MKPANDA) remove hadoop || true
+	$(MKPANDA) add build/hadoop/*.tar.xz
+	touch $@
+
+.PHONY: hdfs-mesos
+hdfs-mesos: | build/hdfs-mesos.manifest
+build/hdfs-mesos.manifest: | build/docker_image
+build/hdfs-mesos.manifest: | build/hadoop.manifest build/java.manifest
+	$(SUDO) rm -rf build/hdfs-mesos
+	cp -rp packages/hdfs-mesos build
+	cd build/hdfs-mesos && $(ANNOTATE) $(MKPANDA) &> ../hdfs-mesos.log
+	>&2 egrep '^stderr: ' build/hdfs-mesos.log || true
+	$(MKPANDA) remove hdfs-mesos || true
+	$(MKPANDA) add build/hdfs-mesos/*.tar.xz
+	touch $@
 
 .PHONY: clean
 clean:

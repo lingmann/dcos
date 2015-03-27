@@ -32,7 +32,7 @@ write_files:
     content: '{}'
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave
     content: |
-      MESOS_MASTER=zk://${aws_instance.mesos-master.0.private_ip}:2181/mesos
+      MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
       MESOS_LOG_DIR=/var/log/mesos
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins

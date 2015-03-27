@@ -65,6 +65,7 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
+ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
 

@@ -1,6 +1,7 @@
 import json
 import os
 from shutil import which
+from subprocess import check_call
 
 
 def load_json(filename):
@@ -53,3 +54,4 @@ def make_tar(result_filename, change_folder):
     else:
         tar_cmd += ["-cJf"]
     tar_cmd += [result_filename, "-C", change_folder, "."]
+    check_call(tar_cmd)

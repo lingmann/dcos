@@ -1,9 +1,15 @@
 {
   "name" : "dcos-ui",
   "docker": "dcos-builder",
-  "single_source" : {
-    "kind": "git",
-    "git": "git@github.com:mesosphere/dcos-ui.git",
-    "branch" : "feature/DCOS-540-production-deploy"
+  "sources" : {
+    "dcos-ui": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/dcos-ui.git",
+      "branch" : "feature/DCOS-540-production-deploy"
+      },
+      "nodejs": {
+        "kind": "url_extract",
+        "url": "http://nodejs.org/dist/v0.12.0/node-v0.12.0-linux-x64.tar.gz"
+      }
   }
 }

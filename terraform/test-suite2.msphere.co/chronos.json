@@ -1,0 +1,48 @@
+{
+  "id": "/chronos",
+  "cmd": "vm_opts=\"-Xmx1000m\" chronos run_jar --cluster_name test-suite2.msphere.co --master zk://leader.mesos:2181/mesos --zk_hosts leader.mesos:2181 --mesos_checkpoint --http_port $PORT0 --hostname $(curl http://169.254.169.254/latest/meta-data/public-hostname)",
+  "args": null,
+  "user": null,
+  "instances": 1,
+  "cpus": 1,
+  "mem": 1024,
+  "disk": 0,
+  "executor": "",
+  "constraints": [],
+  "uris": [],
+  "ports":[0],
+  "storeUrls": [],
+  "requirePorts": false,
+  "backoffSeconds": 1,
+  "backoffFactor": 1.15,
+  "maxLaunchDelaySeconds": 3600,
+  "container": {
+    "type": "DOCKER",
+    "volumes": [],
+    "docker": {
+      "image": "mesosphere/chronos:chronos-2.3.2-0.1.20150207000917.ubuntu1404-mesos-0.21.1-1.1.ubuntu1404",
+      "network": "HOST",
+      "privileged": false,
+      "parameters": []
+    },
+    "volumes": [{
+        "containerPath": "/opt/mesosphere",
+        "hostPath": "/opt/mesosphere",
+        "mode": "RO"
+    }]
+  },
+  "healthChecks": [{
+    "protocol": "HTTP",
+    "portIndex": 0,
+    "path": "/ping",
+    "gracePeriodSeconds": 5,
+    "intervalSeconds": 20,
+    "maxConsecutiveFailures": 3
+  }],
+  "dependencies": [],
+  "upgradeStrategy": {
+    "minimumHealthCapacity": 1,
+    "maximumOverCapacity": 1
+  },
+  "labels": {}
+}

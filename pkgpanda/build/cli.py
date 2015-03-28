@@ -154,7 +154,10 @@ def main():
         sys.exit(1)
 
     # No command -> build package.
+    build(buildinfo, repository)
 
+
+def build(buildinfo, repository):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 

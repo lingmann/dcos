@@ -52,20 +52,20 @@ resolvconf_service="$PKG_PATH/dcos.target.wants_slave/gen_resolvconf.service"
 mkdir -p "$(dirname "$resolvconf_service")"
 cat <<'EOF' > "$resolvconf_service"
 [Unit]
-Description=Generate resolv.conf to use mesos-dns
+Description=Update systemd-resolved for mesos-dns
 [Service]
 Type=simple
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
-ExecStart=/opt/mesosphere/bin/gen_resolvconf.py $MASTER_ELB $FALLBACK_DNS /etc/resolv.conf
+ExecStart=/opt/mesosphere/bin/gen_resolvconf.py $MASTER_ELB $FALLBACK_DNS /etc/systemd/resolved.conf.d/mesos-dns.conf
 EOF
 
 resolvconf_timer="$PKG_PATH/dcos.target.wants_slave/gen_resolvconf.timer"
 mkdir -p "$(dirname "$resolvconf_timer")"
 cat <<'EOF' > "$resolvconf_timer"
 [Unit]
-Description=Update resolv.conf every 2 minutes
+Description=Periodically update systemd-resolved for mesos-dns
 [Timer]
 OnBootSec=0min
 OnUnitActiveSec=2min
@@ -77,12 +77,18 @@ cat <<'EOF' > "$gen_resolvconf"
 #!/opt/mesosphere/bin/python
 
 import socket
+import subprocess
 import sys
 import json
 import codecs
 import urllib.request
 
 EXHIBITOR_STATUS_URL = 'http://{}:8181/exhibitor/v1/cluster/status'
+RESOLV_CONF = """\
+[Resolve]
+DNS={}
+FallbackDNS={}\
+"""
 
 if len(sys.argv) != 4:
     print('Usage: gen_resolvconf.py MASTER_ADDRESS FALLBACK_DNS RESOLV_CONF_PATH', file=sys.stderr)
@@ -91,26 +97,41 @@ status_url = EXHIBITOR_STATUS_URL.format(sys.argv[1])
 fallback_dns = sys.argv[2]
 resolvconf_path = sys.argv[3]
 
+servers = []
+
 try:
     response = urllib.request.urlopen(status_url)
+    reader = codecs.getreader("utf-8")
+    data = json.load(reader(response))
+    for node in data:
+        addr = socket.gethostbyname(node['hostname'])
+        servers.append(addr)
 except urllib.error.URLError:
-    print('Could not get exhibitor status: {}'.format(status_url), file=sys.stderr)
-    sys.exit(1)
-reader = codecs.getreader("utf-8")
-data = json.load(reader(response))
-
-servers = []
-for node in data:
-    addr = socket.gethostbyname(node['hostname'])
-    servers.append(addr)
+    print('WARNING: Could not get exhibitor status: {}'.format(status_url), file=sys.stderr)
 
 if len(servers) == 0:
-    servers.append(fallback_dns)
+    print('WARNING: No servers detected, using FALLBACK_DNS {}'.format(fallback_dns), file=sys.stderr)
 
-with open(resolvconf_path, 'w') as f:
-    for addr in servers:
-        print("nameserver {}".format(addr), file=f)
-        print("nameserver {}".format(addr))
+current_resolvconf = ""
+new_resolvconf = RESOLV_CONF.format(' '.join(sorted(servers)), fallback_dns)
+
+try:
+    with open(resolvconf_path, "r") as file:
+        current_resolvconf = file.read()
+except:
+    print('WARNING: Unable to read RESOLV_CONF_PATH: {}'.format(resolvconf_path), file=sys.stderr)
+   
+if current_resolvconf != new_resolvconf:
+    print('Updating {}'.format(resolvconf_path))
+    print(new_resolvconf)
+    with open(resolvconf_path, 'w') as f:
+        f.write(new_resolvconf)
+    # It would be nice if we could use a .path trigger... but activating
+    # an already started systemd-resolved does not refresh config state.
+    print('Restarting systemd-resolved.service')
+    subprocess.check_call(['systemctl', 'condrestart', 'systemd-resolved.service'])
+else:
+    print('No updates for {}'.format(resolvconf_path))
 
 sys.exit(0)
 EOF

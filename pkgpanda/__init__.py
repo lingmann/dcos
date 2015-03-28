@@ -276,6 +276,9 @@ class Repository:
     def package_path(self, id):
         return os.path.join(self.__path, id)
 
+    def get_ids(self, name):
+        return list(pkg_id for pkg_id in self.list() if pkg_id.name == name)
+
     def has_package(self, id):
         return id in self.list()
 

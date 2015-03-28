@@ -23,7 +23,7 @@ import sys
 import tempfile
 from itertools import chain
 from os import mkdir
-from os.path import abspath, exists
+from os.path import abspath, exists, expanduser, normpath
 from shutil import copyfile, rmtree
 from subprocess import CalledProcessError, check_call
 
@@ -73,13 +73,13 @@ def rewrite_symlinks(root, old_prefix, new_prefix):
 
 
 # package {id, name} + repo -> package id
-def get_package_id(pkg_str, repo_packages, repo_path):
+def get_package_id(repository, pkg_str):
     if PackageId.is_id(pkg_str):
         return pkg_str
     else:
-        ids = list(pkg_id for pkg_id in repo_packages if pkg_id.name == pkg_str)
+        ids = repository.get_ids()
         if len(ids) == 0:
-            print("No package with name {0} in repository {1}".format(pkg_str, repo_path))
+            print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
             sys.exit(1)
         elif len(ids) > 1:
             print(
@@ -87,7 +87,7 @@ def get_package_id(pkg_str, repo_packages, repo_path):
                 "Only one package of a name may be present when " +
                 "using a name rather than id.")
             sys.exit(1)
-        return ids[0]
+        return str(ids[0])
 
 
 def clean():
@@ -104,9 +104,7 @@ def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
 
     # Load the repository
-    repo_path = os.path.normpath(os.path.expanduser(arguments['--repository-path']))
-    repository = Repository(repo_path)
-    repo_packages = set(map(PackageId, repository.list()))
+    repository = Repository(normpath(expanduser(arguments['--repository-path'])))
 
     # Repository management commands.
     if arguments['add']:
@@ -135,9 +133,9 @@ def main():
 
     if arguments['remove']:
         for package in arguments['<name-or-id>']:
-            pkg_id = get_package_id(package, repo_packages, repo_path)
+            pkg_id = get_package_id(repository, package)
             # TODO(cmaloney): the str() here is ugly.
-            repository.remove(str(pkg_id))
+            repository.remove(pkg_id)
         sys.exit(0)
 
     # Load the package build info.
@@ -212,12 +210,11 @@ def main():
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id = get_package_id(pkg_str, repo_packages, repo_path)
-                if pkg_id in active_package_names:
+                pkg_id = get_package_id(repository, pkg_str)
+                if PackageId(pkg_id).name in active_package_names:
                     continue
 
-                # TODO(cmaloney): The str here is ugly.
-                package = repository.load(str(pkg_id))
+                package = repository.load(pkg_id)
 
                 # Mount the package into the docker container.
                 cmd.volumes[package.path] = "/opt/mesosphere/packages/{}:ro".format(package.id)
@@ -276,7 +273,7 @@ def main():
     # paths to the packages will change.
     # TODO(cmaloney): This isn't very clean, it would be much nicer to
     # just run pkgpanda inside the package.
-    rewrite_symlinks(install_dir, repo_path, "/opt/mesosphere/packages/")
+    rewrite_symlinks(install_dir, repository.path, "/opt/mesosphere/packages/")
 
     docker_name = buildinfo.get('docker', 'ubuntu:14.04')
     if 'docker' in buildinfo:

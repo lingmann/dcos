@@ -30,6 +30,20 @@ resource "aws_instance" "mesos-slave" {
 #cloud-config
 
 write_files:
+  - path: /etc/systemd/network/aws-ec2.network
+    content: |
+      [Match]
+      Name=eth0
+      [Network]
+      DHCP=v4
+      [DHCP]
+      UseMTU=true
+      UseDNS=false
+      UseDomains=false
+  - path: /etc/systemd/resolved.conf.d/mesos-dns.conf
+    content: |
+      [Resolve]
+      FallbackDNS=172.16.0.23
   - path: /etc/mesosphere/setup-flags/repository-url
     permission: 0644
     owner: root
@@ -115,10 +129,11 @@ coreos:
         What=/dev/xvdd
         Where=/var/lib/docker
         Type=btrfs
-    - name: etcd.service
-      mask: true
-      command: stop
+    - name: systemd-networkd.service
+      command: restart
     - name: systemd-resolved.service
+      command: restart
+    - name: etcd.service
       mask: true
       command: stop
     - name: config-writer.service

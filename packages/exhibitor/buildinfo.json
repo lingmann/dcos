@@ -6,7 +6,7 @@
     "exhibitor": {
       "kind": "git",
       "git": "https://github.com/Netflix/exhibitor.git",
-      "branch": "1.5.2"
+      "branch": "3b0132bd110f6b90df6eef3faeec3bfb58d2728a"
     },
     "zookeeper": {
       "kind": "url_extract",

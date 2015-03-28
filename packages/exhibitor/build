@@ -3,13 +3,16 @@ set -o errexit -o nounset -o pipefail
 
 mkdir -p "$PKG_PATH/usr"
 cp -rp "/pkg/src/zookeeper" "$PKG_PATH/usr"
+rm -rf "$PKG_PATH/usr/zookeeper/"{src,docs,contrib}
 
 exhibitor_path="$PKG_PATH"/usr/exhibitor
 mkdir -p "$exhibitor_path"
 pushd "$exhibitor_path"
 cp /pkg/src/exhibitor/exhibitor-standalone/src/main/resources/buildscripts/standalone/maven/pom.xml .
-mvn assembly:single
-ln -s target/exhibitor-1.0-jar-with-dependencies.jar exhibitor.jar
+mvn clean package
+ln -s target/exhibitor-1.5.5.jar exhibitor.jar
+# Make sure we linked to something that exists
+test -e exhibitor.jar
 rm pom.xml
 popd
 

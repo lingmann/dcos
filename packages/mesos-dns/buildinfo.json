@@ -9,7 +9,7 @@
     "mesos-dns": {
       "kind": "git",
       "git": "https://github.com/mesosphere/mesos-dns.git",
-      "branch": "zk"
+      "branch": "master"
     }
   }
 }

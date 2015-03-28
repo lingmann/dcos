@@ -157,6 +157,9 @@ def main():
 
     # No command -> build package.
 
+    # Clean out src, result so later steps can use them freely for building.
+    clean()
+
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
 

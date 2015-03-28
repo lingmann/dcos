@@ -97,12 +97,12 @@ def checkout_source(sources):
                 check_call(["git", "-C", bare_folder, "fetch", "origin", "-t", "+refs/heads/*:refs/heads/*"])
 
             # Clone into `src/`.
-            check_call(["git", "clone", bare_folder, root])
+            check_call(["git", "clone", "-q", bare_folder, root])
 
             # Checkout from the bare repo in the cache folder the specific branch
             # sha1 or tag requested.
             # info["branch"] can be a branch, tag, or commit sha
-            check_call(["git", "-C", root, "checkout", "-f", info["branch"]])
+            check_call(["git", "-C", root, "checkout", "-f", "-q", info["branch"]])
 
             # TODO(cmaloney): Support patching.
             for patcher in info.get('patches', []):

@@ -42,6 +42,10 @@ variable "aws_amis" {
   }
 }
 
+variable "exhibitor_s3_bucket" {
+  default = "apollo-exhibitor"
+}
+
 variable "master_count" {
   default = "3"
 }

@@ -79,8 +79,8 @@ write_files:
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
-      S3_BUCKET=apollo-exhibitor
-      S3_PREFIX=dcos-${var.uuid}
+      S3_BUCKET=${var.exhibitor_s3_bucket}
+      S3_PREFIX=${var.uuid}
       EXHIBITOR_WEB_UI_PORT=8181
   - path: /root/.bashrc
     content: |

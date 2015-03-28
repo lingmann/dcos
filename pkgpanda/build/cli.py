@@ -33,7 +33,7 @@ from pkgpanda import Install, PackageId, Repository, extract_tarball
 from pkgpanda.build import checkout_source, hash_checkout, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, make_tar, write_json
+from pkgpanda.util import load_json, make_tar, write_json, write_string
 
 
 class DockerCmd:
@@ -346,6 +346,7 @@ def main():
 
     # TODO(cmaloney)  build info should be copied in here but can't really
     # because of docker and crazy folder root permissions...
+    write_string("cache/last_build", str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package
     make_tar(pkg_path, "result")

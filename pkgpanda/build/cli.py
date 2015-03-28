@@ -138,15 +138,7 @@ def main():
             repository.remove(pkg_id)
         sys.exit(0)
 
-    # Load the package build info.
-    try:
-        buildinfo = load_json("buildinfo.json")
-    except FileNotFoundError:
-        print("ERROR: Unable to find `buildinfo.json` in the current directory.")
-        sys.exit(1)
-    except ValueError as ex:
-        print("ERROR:", ex)
-        sys.exit(1)
+    buildinfo = load_buildinfo()
 
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:
@@ -155,6 +147,18 @@ def main():
 
     # No command -> build package.
     build(buildinfo, repository)
+
+
+def load_buildinfo(path=os.getcwd()):
+    # Load the package build info.
+    try:
+        return load_json(os.path.join(path, "buildinfo.json"))
+    except FileNotFoundError:
+        print("ERROR: Unable to find `buildinfo.json` in `{}.".format(path))
+        sys.exit(1)
+    except ValueError as ex:
+        print("ERROR:", ex)
+        sys.exit(1)
 
 
 def build(buildinfo, repository):

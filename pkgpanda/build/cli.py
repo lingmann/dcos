@@ -163,12 +163,6 @@ def main():
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    # Only fresh builds are allowed which don't overlap existing artifacts.
-    if exists("result"):
-        print("result folder must not exist. It will be made when the package " +
-              "is built. {}".format(abspath("result")))
-        sys.exit(1)
-
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
     # TODO(cmaloney): allow a shorthand for single source packages.
     sources = None
@@ -179,6 +173,43 @@ def main():
     else:
         raise ValidationError("Must specify at least one source to build " +
                               "package from using 'sources' or 'single_source'.")
+
+    print("Fetching sources")
+    # Clone the repositories, apply patches as needed using the patch utilities
+    checkout_ids = checkout_source(sources)
+
+    # Add the sha1sum of the buildinfo.json + build file to the build ids
+    build_ids = {"sources": checkout_ids}
+    build_ids['buildinfo'] = sha1("buildinfo.json")
+    build_ids['build'] = sha1("build")
+
+    # Generate the package id (upstream sha1sum + build-number)
+    # TODO(cmaloney): the versions of everything in requires are part
+    # of the version.
+    version_base = hash_checkout(build_ids)
+
+    # TODO(cmaloney): If there is already a build / we've been told to build an id
+    # greater than last append the build id.
+    version = None
+    if "version_extra" in buildinfo:
+        version = "{0}-{1}".format(buildinfo["version_extra"], version_base)
+    else:
+        version = version_base
+
+    pkg_id = PackageId.from_parts(buildinfo['name'], version)
+
+    # If the package is already built, don't do anything.
+    pkg_path = abspath("{}.tar.xz".format(pkg_id))
+
+    if exists(pkg_path):
+        print("Package up to date. Not re-building.")
+        sys.exit(0)
+
+    # Only fresh builds are allowed which don't overlap existing artifacts.
+    if exists("result"):
+        print("result folder must not exist. It will be made when the package " +
+              "is built. {}".format(abspath("result")))
+        sys.exit(1)
 
     # Packages need directories inside the fake install root (otherwise docker
     # will try making the directories on a readonly filesystem), so build the
@@ -250,26 +281,6 @@ def main():
     # just run pkgpanda inside the package.
     rewrite_symlinks(install_dir, repo_path, "/opt/mesosphere/packages/")
 
-    print("Fetching sources")
-    # Clone the repositories, apply patches as needed using the patch utilities
-    checkout_ids = checkout_source(sources)
-
-    # Add the sha1sum of the buildinfo.json + build file to the build ids
-    build_ids = {"sources": checkout_ids}
-    build_ids['buildinfo'] = sha1("buildinfo.json")
-    build_ids['build'] = sha1("build")
-
-    # Generate the package id (upstream sha1sum + build-number)
-    version_base = hash_checkout(build_ids)
-
-    # TODO(cmaloney): If there is already a build / we've been told to build an id
-    # greater than last append the build id.
-    version = None
-    if "version_extra" in buildinfo:
-        version = "{0}-{1}".format(buildinfo["version_extra"], version_base)
-    else:
-        version = version_base
-
     docker_name = buildinfo.get('docker', 'ubuntu:14.04')
     if 'docker' in buildinfo:
         print("WARNING: Specifying docker explicitly shold be avoided.")
@@ -277,11 +288,6 @@ def main():
               "are in pkgpanda form that everything can just use pkgpanda " +
               "dependencies.")
     cmd.container = docker_name
-
-    # TODO(cmaloney): Mount and run a wrapper script that installs
-    # dependencies.
-
-    pkg_id = PackageId.from_parts(buildinfo['name'], version)
 
     print("Building package in docker")
 
@@ -345,7 +351,6 @@ def main():
     # because of docker and crazy folder root permissions...
 
     # Bundle the artifacts into the pkgpanda package
-    pkg_path = abspath("{}.tar.xz".format(pkg_id))
     make_tar(pkg_path, "result")
     print("Package built, available at {}".format(pkg_path))
     sys.exit(0)

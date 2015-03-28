@@ -148,10 +148,11 @@ def main():
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:
         clean()
-        sys.exit(1)
+        sys.exit(0)
 
     # No command -> build package.
     build(buildinfo, repository)
+    sys.exit(0)
 
 
 def load_buildinfo(path=os.getcwd()):
@@ -346,7 +347,7 @@ def build(buildinfo, repository):
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
     if exists(pkg_path):
         print("Package up to date. Not re-building.")
-        sys.exit(0)
+        return pkg_path
 
     # Copy over environment settings
     if 'environment' in buildinfo:
@@ -438,7 +439,7 @@ def build(buildinfo, repository):
     # Bundle the artifacts into the pkgpanda package
     make_tar(pkg_path, "result")
     print("Package built, available at {}".format(pkg_path))
-    sys.exit(0)
+    return pkg_path
 
 
 if __name__ == "__main__":

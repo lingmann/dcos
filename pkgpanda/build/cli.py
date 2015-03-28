@@ -186,28 +186,6 @@ def main():
     build_ids['buildinfo'] = sha1("buildinfo.json")
     build_ids['build'] = sha1("build")
 
-    # Generate the package id (upstream sha1sum + build-number)
-    # TODO(cmaloney): the versions of everything in requires are part
-    # of the version.
-    version_base = hash_checkout(build_ids)
-
-    # TODO(cmaloney): If there is already a build / we've been told to build an id
-    # greater than last append the build id.
-    version = None
-    if "version_extra" in buildinfo:
-        version = "{0}-{1}".format(buildinfo["version_extra"], version_base)
-    else:
-        version = version_base
-
-    pkg_id = PackageId.from_parts(buildinfo['name'], version)
-
-    # If the package is already built, don't do anything.
-    pkg_path = abspath("{}.tar.xz".format(pkg_id))
-
-    if exists(pkg_path):
-        print("Package up to date. Not re-building.")
-        sys.exit(0)
-
     # Only fresh builds are allowed which don't overlap existing artifacts.
     if exists("result"):
         print("result folder must not exist. It will be made when the package " +
@@ -266,6 +244,22 @@ def main():
 
         if bad_requires:
             sys.exit(1)
+
+    # Add requires to the package id, calculate the final package id.
+    build_ids['requires'] = [str(x) for x in active_packages]
+    version_base = hash_checkout(build_ids)
+    version = None
+    if "version_extra" in buildinfo:
+        version = "{0}-{1}".format(buildinfo["version_extra"], version_base)
+    else:
+        version = version_base
+    pkg_id = PackageId.from_parts(buildinfo['name'], version)
+
+    # If the package is already built, don't do anything.
+    pkg_path = abspath("{}.tar.xz".format(pkg_id))
+    if exists(pkg_path):
+        print("Package up to date. Not re-building.")
+        sys.exit(0)
 
     # Copy over environment settings
     if 'environment' in buildinfo:

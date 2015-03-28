@@ -26,12 +26,21 @@ def hash_checkout(item):
             item_hashes.append("{0}={1}".format(k, hash_checkout(d[k])))
         return hash_str(",".join(item_hashes))
 
+    def hash_list(l):
+        item_hashes = []
+        for item in sorted(l):
+            assert isinstance(item, str)
+            item_hashes.append(hash_checkout(item))
+        return hash_str(",".join(item_hashes))
+
     if isinstance(item, str) or isinstance(item, bytes):
         return hash_str(item)
     elif isinstance(item, dict):
         return hash_dict(item)
+    elif isinstance(item, list):
+        return hash_list(item)
     else:
-        raise NotImplementedError()
+        raise NotImplementedError(str(type(item)))
 
 
 def get_filename(out_dir, url_str):

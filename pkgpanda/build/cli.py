@@ -90,6 +90,16 @@ def get_package_id(pkg_str, repo_packages, repo_path):
         return ids[0]
 
 
+def clean():
+    # Run a docker container to remove src/ and result/
+    cmd = DockerCmd()
+    cmd.volumes = {
+        abspath(""): "/pkg/:rw",
+    }
+    cmd.container = "ubuntu:14.04"
+    cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
+
+
 def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
 
@@ -142,15 +152,8 @@ def main():
 
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:
-        # Run a docker container to remove src/ and result/
-        cmd = DockerCmd()
-        cmd.volumes = {
-            # TODO(cmaloney): src should be read only...
-            abspath(""): "/pkg/:rw",
-        }
-        cmd.container = "ubuntu:14.04"
-        cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
-        sys.exit(0)
+        clean()
+        sys.exit(1)
 
     # No command -> build package.
 

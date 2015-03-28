@@ -268,6 +268,10 @@ class Repository:
     def __init__(self, path):
         self.__path = os.path.abspath(path)
 
+    @property
+    def path(self):
+        return self.__path
+
     def package_path(self, id):
         return os.path.join(self.__path, id)
 

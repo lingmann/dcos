@@ -267,6 +267,7 @@ class Repository:
 
     def __init__(self, path):
         self.__path = os.path.abspath(path)
+        self.__packages = None
 
     @property
     def path(self):
@@ -276,14 +277,15 @@ class Repository:
         return os.path.join(self.__path, id)
 
     def has_package(self, id):
-        # Matches check in list() so the two functions provide consistent
-        # results.
-        return os.path.exists(self.package_path(id)) and PackageId.is_id(id)
+        return id in self.list()
 
     def list(self):
         """List the available packages in the repository.
 
         A package is a folder which contains a pkginfo.json"""
+        if self.__packages is not None:
+            return self.__packages
+
         packages = set()
         if not os.path.exists(self.__path):
             return packages
@@ -291,7 +293,8 @@ class Repository:
         for id in os.listdir(self.__path):
             if PackageId.is_id(id):
                 packages.add(id)
-        return packages
+        self.__packages = packages
+        return self.__packages
 
     # Load the given package
     def load(self, id):

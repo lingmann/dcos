@@ -11,6 +11,7 @@ Usage:
   mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
+  mkpanda tree
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -33,7 +34,7 @@ from pkgpanda import Install, PackageId, Repository, extract_tarball
 from pkgpanda.build import checkout_source, hash_checkout, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, make_tar, write_json, write_string
+from pkgpanda.util import load_json, load_string, make_tar, write_json, write_string
 
 
 class DockerCmd:
@@ -77,7 +78,7 @@ def get_package_id(repository, pkg_str):
     if PackageId.is_id(pkg_str):
         return pkg_str
     else:
-        ids = repository.get_ids()
+        ids = repository.get_ids(pkg_str)
         if len(ids) == 0:
             print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
             sys.exit(1)
@@ -138,6 +139,10 @@ def main():
             repository.remove(pkg_id)
         sys.exit(0)
 
+    if arguments['tree']:
+        build_tree(repository)
+        sys.exit(0)
+
     buildinfo = load_buildinfo()
 
     # Only clean in valid build locations (Why this is after buildinfo.json)
@@ -159,6 +164,84 @@ def load_buildinfo(path=os.getcwd()):
     except ValueError as ex:
         print("ERROR:", ex)
         sys.exit(1)
+
+
+def build_tree(repository):
+    if len(repository.list()) > 0:
+        print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
+        sys.exit(1)
+    # Treat the current directory as the base of a repository of packages.
+    # The packages are in folders, each containing a buildinfo.json, build.
+    # Load all the buildinfos, topo-sort the dependencies, then build if/when
+    # needed (Check build_ids.json vs. new pull).
+    packages = dict()
+    for name in os.listdir():
+        if os.path.isdir(name):
+            packages[name] = load_buildinfo(name)
+            if packages[name]["name"] != name:
+                print("ERROR: Package name inside buildinfo.json must match folder name.")
+                print("ERROR: {} name is {}".format(name, packages[name]["name"]))
+                sys.exit(1)
+
+    # Check the requires and figure out a feasible build order
+    # depth-first traverse the dependency tree, yielding when we reach a
+    # leaf or all the dependencies of package have been built. If we get
+    # back to a node without all it's dependencies built, error (likely
+    # circular).
+    # TODO(cmaloney): Add support for circular dependencies. They are doable
+    # long as there is a pre-built version of enough of the packages.
+
+    build_order = list()
+    visited = set()
+    built = set()
+
+    def visit(name):
+        # Visit the node for the first (and only time). Finding a node again
+        # means a cycle and should be detected at caller.
+        assert name not in visited
+        visited.add(name)
+
+        # Ensure all dependencies are built
+        for require in sorted(packages[name].get("requires", list())):
+            if require in built:
+                continue
+            if require in visited:
+                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require))
+                sys.exit(1)
+
+            # TODO(cmaloney): Add support for id requires
+            if PackageId.is_id(require):
+                raise NotImplementedError("Requires of specific ids")
+
+            if require not in packages:
+                print("ERROR: Package {0} Require {1} not buildable from tree.".format(name, require))
+                sys.exit(1)
+
+            visit(require)
+
+        build_order.append(name)
+        built.add(name)
+
+    # Since there may be multiple isolated dependency trees, iterate through
+    # all packages to find them all.
+    for name in sorted(packages.keys()):
+        if name in visited:
+            continue
+        visit(name)
+
+    try:
+        built = set()
+        for name in build_order:
+            print("Building: {}".format(name))
+            check_call(["mkpanda"], cwd=abspath(name))
+
+            # Activate the package so the things that depend on it will build right.
+            package_id = load_string(os.path.join(name, "cache/last_build"))
+            check_call(["mkpanda", "add", "{0}/{1}.tar.xz".format(name, package_id)])
+
+    finally:
+        # Always clear out the temporary repository.
+        check_call(["rm", "-rf", repository.path])
 
 
 def build(buildinfo, repository):

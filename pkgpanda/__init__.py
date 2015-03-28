@@ -277,7 +277,8 @@ class Repository:
         return os.path.join(self.__path, id)
 
     def get_ids(self, name):
-        return list(pkg_id for pkg_id in self.list() if pkg_id.name == name)
+        # TODO(cmaloney): There is a lot of excess re-parsing here...
+        return list(pkg_id for pkg_id in self.list() if PackageId(pkg_id).name == name)
 
     def has_package(self, id):
         return id in self.list()

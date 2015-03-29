@@ -305,6 +305,7 @@ def build(buildinfo, repository):
         # Final package has the same requires as the build.
         pkginfo['requires'] = buildinfo['requires']
 
+        # TODO(cmaloney): Pull generating the full set of requires a function.
         bad_requires = False
         to_check = copy.deepcopy(buildinfo['requires'])
         if type(to_check) != list:

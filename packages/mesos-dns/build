@@ -48,9 +48,7 @@ EnvironmentFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.json -logtostderr=true -v=2
 EOF
 
-for role in master slave
-do
-resolvconf_service="$PKG_PATH/dcos.target.wants_${role}/gen_resolvconf.service"
+resolvconf_service="$PKG_PATH/dcos.target.wants_slave/gen_resolvconf.service"
 mkdir -p "$(dirname "$resolvconf_service")"
 cat <<'EOF' > "$resolvconf_service"
 [Unit]
@@ -62,11 +60,8 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStart=/opt/mesosphere/bin/gen_resolvconf.py $MASTER_ELB $FALLBACK_DNS /etc/systemd/resolved.conf.d/mesos-dns.conf
 EOF
-done
 
-for role in master slave
-do
-resolvconf_timer="$PKG_PATH/dcos.target.wants_${role}/gen_resolvconf.timer"
+resolvconf_timer="$PKG_PATH/dcos.target.wants_slave/gen_resolvconf.timer"
 mkdir -p "$(dirname "$resolvconf_timer")"
 cat <<'EOF' > "$resolvconf_timer"
 [Unit]
@@ -76,7 +71,6 @@ OnBootSec=0min
 OnUnitActiveSec=2min
 Unit=gen_resolvconf.service
 EOF
-done
 
 gen_resolvconf="$PKG_PATH/bin/gen_resolvconf.py"
 cat <<'EOF' > "$gen_resolvconf"

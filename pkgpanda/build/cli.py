@@ -231,7 +231,6 @@ def build_tree(repository):
         visit(name)
 
     try:
-        built = set()
         for name in build_order:
             print("Building: {}".format(name))
             check_call(["mkpanda"], cwd=abspath(name))

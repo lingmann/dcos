@@ -47,15 +47,15 @@ variable "exhibitor_s3_bucket" {
 }
 
 variable "master_count" {
-  default = "3"
+  default = "1"
 }
 
 variable "mesos_master_quorum" {
-  default = "2"
+  default = "1"
 }
 
 variable "slave_count" {
-  default = "3"
+  default = "1"
 }
 
 # Use s3.amazonaws.com to remove cloudfront cache layer

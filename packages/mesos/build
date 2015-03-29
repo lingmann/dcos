@@ -44,7 +44,7 @@ Description=Mesos Master
 [Service]
 Restart=on-failure
 StartLimitInterval=0
-RestartSec=5
+RestartSec=15
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
@@ -93,19 +93,16 @@ except urllib.error.URLError:
 reader = codecs.getreader("utf-8")
 data = json.load(reader(response))
 
-has_leader = False
 serving = 0
+leaders = 0
 for node in data:
     if node['isLeader']:
-        has_leader = True
+        leaders += 1
     if node['description'] == 'serving':
         serving += 1
 
-if serving != cluster_size:
-    print('Expecting serving count of {}, got {}'.format(cluster_size, serving), file=sys.stderr)
-    sys.exit(1)
-if not has_leader:
-    print('No zookeeper leader yet', file=sys.stderr)
+if serving != cluster_size or leader != 1:
+    print('Expected {} servers and 1 leader, got {} servers and {} leaders'.format(cluster_size, serving, leaders), file=sys.stderr)
     sys.exit(1)
 
 sys.exit(0)

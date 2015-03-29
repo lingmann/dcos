@@ -101,7 +101,7 @@ for node in data:
     if node['description'] == 'serving':
         serving += 1
 
-if serving != cluster_size or leader != 1:
+if serving != cluster_size or leaders != 1:
     print('Expected {} servers and 1 leader, got {} servers and {} leaders'.format(cluster_size, serving, leaders), file=sys.stderr)
     sys.exit(1)
 

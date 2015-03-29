@@ -58,7 +58,7 @@ Type=simple
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
-ExecStart=/opt/mesosphere/bin/gen_resolvconf.py $MASTER_ELB $FALLBACK_DNS /etc/systemd/resolved.conf.d/mesos-dns.conf
+ExecStart=/opt/mesosphere/bin/gen_resolvconf.py "${MASTER_ELB}" "${FALLBACK_DNS}" /etc/systemd/resolved.conf.d/mesos-dns.conf
 EOF
 
 resolvconf_timer="$PKG_PATH/dcos.target.wants_slave/gen_resolvconf.timer"
@@ -92,6 +92,7 @@ FallbackDNS={}\
 
 if len(sys.argv) != 4:
     print('Usage: gen_resolvconf.py MASTER_ADDRESS FALLBACK_DNS RESOLV_CONF_PATH', file=sys.stderr)
+    print('Received: {}'.format(sys.argv), file=sys.stderr)
     sys.exit(-1)
 status_url = EXHIBITOR_STATUS_URL.format(sys.argv[1])
 fallback_dns = sys.argv[2]

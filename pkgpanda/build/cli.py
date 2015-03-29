@@ -11,7 +11,7 @@ Usage:
   mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
-  mkpanda tree
+  mkpanda tree [--mkbootstrap]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -140,7 +140,7 @@ def main():
         sys.exit(0)
 
     if arguments['tree']:
-        build_tree(repository)
+        build_tree(repository, arguments['--mkbootstrap'])
         sys.exit(0)
 
     buildinfo = load_buildinfo()
@@ -167,7 +167,7 @@ def load_buildinfo(path=os.getcwd()):
         sys.exit(1)
 
 
-def build_tree(repository):
+def build_tree(repository, mkbootstrap):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         sys.exit(1)
@@ -230,6 +230,7 @@ def build_tree(repository):
             continue
         visit(name)
 
+    built_package_paths = set()
     try:
         for name in build_order:
             print("Building: {}".format(name))
@@ -237,11 +238,23 @@ def build_tree(repository):
 
             # Activate the package so the things that depend on it will build right.
             package_id = load_string(os.path.join(name, "cache/last_build"))
-            check_call(["mkpanda", "add", "{0}/{1}.tar.xz".format(name, package_id)])
+            pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
+            check_call(["mkpanda", "add", pkg_path])
+            built_package_paths.add(pkg_path)
 
     finally:
         # Always clear out the temporary repository.
         check_call(["rm", "-rf", repository.path])
+
+    # Build the tarball if requested, along with a "active.json"
+    if mkbootstrap:
+        # TODO(cmaloney): This does a ton of excess repeated work... Make
+        # mkbootstrap be a library call, use the repository built during package
+        # building rather than making a new one.
+        print("Making bootstrap tarball")
+        cmd = ["pkgpanda-mkbootstrap", "tarball", "bootstrap_tmp"]
+        cmd += list(sorted(built_package_paths))
+        check_call(cmd)
 
 
 def build(buildinfo, repository):

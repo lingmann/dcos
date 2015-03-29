@@ -31,7 +31,7 @@ from subprocess import CalledProcessError, check_call
 import pkgpanda.build.constants
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, extract_tarball
-from pkgpanda.build import checkout_source, hash_checkout, sha1
+from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, load_string, make_tar, write_json, write_string
@@ -280,7 +280,7 @@ def build(buildinfo, repository):
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities
-    checkout_ids = checkout_source(sources)
+    checkout_ids = fetch_sources(sources)
 
     # Add the sha1sum of the buildinfo.json + build file to the build ids
     build_ids = {"sources": checkout_ids}
@@ -360,6 +360,8 @@ def build(buildinfo, repository):
     if exists(pkg_path):
         print("Package up to date. Not re-building.")
         return pkg_path
+
+    checkout_sources(sources)
 
     # Copy over environment settings
     if 'environment' in buildinfo:

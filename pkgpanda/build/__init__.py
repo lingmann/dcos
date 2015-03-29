@@ -67,10 +67,13 @@ def fetch_url(out_filename, url_str):
                 shutil.copyfileobj(response, f)
 
 
-# TODO(cmaloney): Validate sources has all expected fields...
-def checkout_source(sources):
-    ids = dict()
-    # TODO(cmaloney): Update if already exists rather than hard-failing
+# TODO(cmaloney): Restructure checkout_sources and fetch_sources so all
+# the code dealing with one particular kind of source is located
+# together rather than half in checkout_sources, half in fetch_sources.
+def checkout_sources(sources):
+    """Checkout all the sources which are assumed to have been fetched
+    already and live in the cache folder."""
+
     if os.path.exists("src"):
         raise ValidationError(
             "'src' directory already exists, did you have a previous build? " +
@@ -80,6 +83,42 @@ def checkout_source(sources):
     for src, info in sources.items():
         root = os.path.abspath("src/{0}".format(src))
         os.mkdir(root)
+
+        if info['kind'] == 'git':
+            bare_folder = os.path.abspath("cache/{0}.git".format(src))
+
+            # Clone into `src/`.
+            check_call(["git", "clone", "-q", bare_folder, root])
+
+            # Checkout from the bare repo in the cache folder the specific branch
+            # sha1 or tag requested.
+            # info["branch"] can be a branch, tag, or commit sha
+            check_call(["git", "-C", root, "checkout", "-f", "-q", info["branch"]])
+
+            # TODO(cmaloney): Support patching.
+            for patcher in info.get('patches', []):
+                raise NotImplementedError()
+        elif info['kind'] == 'url':
+            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+
+            # Copy the file(s) into src/
+            # TODO(cmaloney): Hardlink to save space?
+            filename = get_filename(root, info['url'])
+            shutil.copyfile(cache_filename, filename)
+        elif info['kind'] == 'url_extract':
+            # Extract the files into src.
+            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+            check_call(["tar", "-xzf", cache_filename, "--strip-components=1", "-C", root])
+        else:
+            raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
+
+
+# TODO(cmaloney): Validate sources has all expected fields...
+def fetch_sources(sources):
+    """Fetch sources to the source cache."""
+    ids = dict()
+    # TODO(cmaloney): Update if already exists rather than hard-failing
+    for src, info in sources.items():
 
         # Stash directory for download reuse between builds.
         cache_dir = os.path.abspath("cache")
@@ -96,19 +135,7 @@ def checkout_source(sources):
                 check_call(["git", "-C", bare_folder, "remote", "set-url", "origin", info['git']])
                 check_call(["git", "-C", bare_folder, "fetch", "origin", "-t", "+refs/heads/*:refs/heads/*"])
 
-            # Clone into `src/`.
-            check_call(["git", "clone", "-q", bare_folder, root])
-
-            # Checkout from the bare repo in the cache folder the specific branch
-            # sha1 or tag requested.
-            # info["branch"] can be a branch, tag, or commit sha
-            check_call(["git", "-C", root, "checkout", "-f", "-q", info["branch"]])
-
-            # TODO(cmaloney): Support patching.
-            for patcher in info.get('patches', []):
-                raise NotImplementedError()
-
-            commit = check_output(["git", "-C", root, "rev-parse", "HEAD"]).decode('ascii').strip()
+            commit = check_output(["git", "-C", bare_folder, "rev-parse", info["branch"]]).decode('ascii').strip()
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()
@@ -116,7 +143,7 @@ def checkout_source(sources):
             ids[src] = {
                 "commit": commit
             }
-        elif info['kind'] == 'url':
+        elif info['kind'] == 'url' or info['kind'] == 'url_extract':
             cache_filename = get_filename(os.path.abspath("cache"), info['url'])
 
             # if the file isn't downloaded yet, get it.
@@ -128,27 +155,6 @@ def checkout_source(sources):
             ids[src] = {
                 "sha1": sha1(cache_filename)
             }
-
-            # Copy the file(s) into src/
-            # TODO(cmaloney): Hardlink to save space?
-            filename = get_filename(root, info['url'])
-            shutil.copyfile(cache_filename, filename)
-        elif info['kind'] == 'url_extract':
-            # Like url but do a tarball extract afterwards
-            # TODO(cmaloney): While src can't be reused, the downloaded tarball
-            # can so long as it has the same sha1sum.
-            # TODO(cmaloney): Generalize "Stashing the grabbed copy".
-            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
-            if not os.path.exists(cache_filename):
-                fetch_url(cache_filename, info['url'])
-
-            ids[src] = {
-                "sha1": sha1(cache_filename)
-            }
-
-            # Extract the files into src.
-            check_call(["tar", "-xzf", cache_filename, "--strip-components=1", "-C", root])
-
         else:
             raise ValidationError("Currently only packages from url and git sources are supported")
 

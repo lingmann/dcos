@@ -15,15 +15,17 @@ pushd "/pkg/src/nginx"
   --with-http_spdy_module \
   --without-mail_pop3_module \
   --without-mail_imap_module \
-  --without-mail_smtp_module \
-  --with-cc-opt="-static -static-libgcc" \
-  --with-ld-opt="-static"
+  --without-mail_smtp_module
 
 make -j8
 make install
 
 popd
 
+# Copy  in needed libraries
+cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
+
+# Write the config
 rm -rf "$PKG_PATH/conf/nginx.conf"
 
 # TODO(cmaloney): Make config outside of nginx package?

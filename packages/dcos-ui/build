@@ -1,5 +1,4 @@
 #!/bin/bash
-set -o nounset -o pipefail
 
 # Download external debian because the debian one is patched in ways that break
 # stuff from npm...

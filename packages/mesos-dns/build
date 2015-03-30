@@ -6,25 +6,14 @@ mkdir -p /go/src/github.com/mesosphere
 ln -s /pkg/src/mesos-dns /go/src/github.com/mesosphere/mesos-dns
 export GOPATH=/go
 export GOROOT=/pkg/src/go/
-export PATH=$PATH:$GOROOT/bin
+export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
 
 # Get the dependencies
-go get github.com/gogo/protobuf/proto
-go get github.com/golang/glog
-go get github.com/mesos/mesos-go/detector
-go get github.com/mesos/mesos-go/mesosproto
-go get github.com/mesos/mesos-go/mesosutil
-go get github.com/mesos/mesos-go/upid
-go get github.com/miekg/dns
-go get github.com/samuel/go-zookeeper/zk
-go get github.com/stretchr/objx
-go get github.com/stretchr/testify/assert
-go get github.com/stretchr/testify/mock
-go get golang.org/x/net/context
+go get github.com/tools/godep
 
 # Build mesos-dns
 pushd /go/src/github.com/mesosphere/mesos-dns
-go build
+make build
 popd
 
 # TODO(cmaloney): PKG_PATH should always exist in the container

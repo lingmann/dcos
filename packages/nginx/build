@@ -23,6 +23,7 @@ make install
 popd
 
 # Copy  in needed libraries
+mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
 
 # Write the config

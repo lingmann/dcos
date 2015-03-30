@@ -1,12 +1,23 @@
 #!/bin/bash
 
+if [ ! -x `which jq` ] ; then
+  echo "Please install \`jq\` to continue"
+  exit 1
+fi
+
 function main {
   update_discovery_url
   apply
+  start_chronos
 }
 
 function apply {
   terraform apply
+  local status=$?
+  if [ $status -ne 0 ]; then
+    echo "error with 'terraform apply'" >&2
+    exit $status
+  fi
 }
 
 function update_discovery_url {
@@ -24,6 +35,20 @@ EOF
 
 function get_discovery_url {
   out $(curl -sS https://discovery.etcd.io/new)
+}
+
+function start_chronos {
+  # wait until endpoint is reachable
+  base_uri="http://master0.test-suite.msphere.co:8080"
+  result="nope"
+  echo -n "Waiting for Marathon..."
+  while [ "$result" != "pong" ] ; do
+    result=$(curl -s ${base_uri}/ping)
+    echo -n "."
+    sleep 3
+  done
+  echo " Done!"
+  curl -s -H "Content-Type: application/json" -X POST -d @chronos.json ${base_uri}/v2/apps
 }
 
 function msg { out "$*" >&2 ;}

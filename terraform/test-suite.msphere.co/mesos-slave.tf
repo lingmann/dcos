@@ -56,7 +56,7 @@ write_files:
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
-      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=2mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/ephemeral/mesos-slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv

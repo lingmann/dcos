@@ -1,9 +1,9 @@
 {
   "id": "/chronos",
-  "cmd": "vm_opts=\"-Xmx1000m\" chronos run_jar --cluster_name test-suite2.msphere.co --master zk://leader.mesos:2181/mesos --zk_hosts leader.mesos:2181 --mesos_checkpoint --http_port $PORT0 --hostname $(curl http://169.254.169.254/latest/meta-data/public-hostname)",
+  "cmd": "chronos run_jar --cluster_name test-suite.msphere.co --master zk://leader.mesos:2181/mesos --zk_hosts leader.mesos:2181 --mesos_checkpoint --http_port $PORT0 --hostname $(curl http://169.254.169.254/latest/meta-data/public-hostname)",
   "args": null,
   "user": null,
-  "instances": 1,
+  "instances": 2,
   "cpus": 1,
   "mem": 1024,
   "disk": 0,
@@ -16,6 +16,9 @@
   "backoffSeconds": 1,
   "backoffFactor": 1.15,
   "maxLaunchDelaySeconds": 3600,
+  "env": {
+    "vm_opts": "-Xmx1000m"
+  },
   "container": {
     "type": "DOCKER",
     "volumes": [],
@@ -26,9 +29,9 @@
       "parameters": []
     },
     "volumes": [{
-        "containerPath": "/opt/mesosphere",
-        "hostPath": "/opt/mesosphere",
-        "mode": "RO"
+      "containerPath": "/opt/mesosphere",
+      "hostPath": "/opt/mesosphere",
+      "mode": "RO"
     }]
   },
   "healthChecks": [{

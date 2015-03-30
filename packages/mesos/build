@@ -62,6 +62,7 @@ Description=Mesos Slave
 Restart=on-failure
 StartLimitInterval=0
 RestartSec=5
+KillMode=process
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave

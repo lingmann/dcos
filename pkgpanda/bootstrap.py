@@ -29,6 +29,7 @@ def make_file(name):
 
 def main():
     arguments = docopt(__doc__)
+    os.umask(0o022)
 
     root = os.path.abspath(arguments['<root>'])
 

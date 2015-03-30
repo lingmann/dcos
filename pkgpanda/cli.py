@@ -23,6 +23,7 @@ import json
 import os.path
 import sys
 from itertools import groupby
+from os import umask
 from subprocess import check_call
 from urllib.error import HTTPError, URLError
 from urllib.parse import urljoin
@@ -112,6 +113,7 @@ def setup(install, repository):
 
 def main():
     arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
+    umask(0o022)
 
     # NOTE: Changing root or repository will likely break actually running packages.
     install = Install(

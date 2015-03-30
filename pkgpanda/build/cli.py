@@ -23,7 +23,7 @@ import os.path
 import sys
 import tempfile
 from itertools import chain
-from os import mkdir
+from os import mkdir, umask
 from os.path import abspath, exists, expanduser, normpath
 from shutil import copyfile, rmtree
 from subprocess import CalledProcessError, check_call
@@ -103,6 +103,7 @@ def clean():
 
 def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
+    umask(0o022)
 
     # Load the repository
     repository = Repository(normpath(expanduser(arguments['--repository-path'])))

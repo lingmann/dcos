@@ -9,4 +9,4 @@ ConditionPathExists=!/opt/mesosphere/
 Type=oneshot
 ExecStartPre=/usr/bin/curl https://download.mesosphere.io/dcos/distribution.tar.xz -o /tmp/distribution.tar.xz
 ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
-ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere
+ExecStart=/usr/bin/tar -xf /tmp/distribution.tar.xz -C /opt/mesosphere

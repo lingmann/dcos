@@ -4,8 +4,8 @@
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",
-    "git": "git@github.com:mesosphere/mesos-private.git",
-    "branch" : "0.22_ldadd"
+    "git": "http://git-wip-us.apache.org/repos/asf/mesos.git",
+    "branch" : "0.22.0"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

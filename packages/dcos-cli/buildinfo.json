@@ -1,9 +1,9 @@
 {
-  "name" : "pkgpanda",
+  "name" : "dcos-cli",
   "requires": ["python", "python-requests"],
   "single_source": {
     "kind": "git",
-    "git": "git@github.com:mesosphere/pkgpanda.git",
+    "git": "git@github.com:mesosphere/dcos-cli.git",
     "branch": "master"
   }
 }

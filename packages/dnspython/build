@@ -8,4 +8,4 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 
 pushd /pkg/src/dnspython
 mkdir -p "$LIB_INSTALL_DIR"
-python3 ./setup.py install --prefix="$PKG_PATH"
+python3 setup.py install --root=/ --prefix=$PKG_PATH

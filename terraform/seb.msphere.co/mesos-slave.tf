@@ -98,7 +98,7 @@ coreos:
         RemainAfterExit=yes
         ExecStart=/bin/sh -c 'mdadm --stop /dev/md/* ; true'
         ExecStart=/usr/sbin/mdadm --create -f -R /dev/md0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc
-        ExecStart=/usr/sbin/mkfs.ext4 /dev/md0
+        ExecStart=/bin/bash -c '(blkid -t TYPE=ext4 | grep md0) || /usr/sbin/mkfs.ext4 /dev/md0'
     - name: ephemeral.mount
       command: start
       content: |
@@ -117,8 +117,7 @@ coreos:
         [Service]
         Type=oneshot
         RemainAfterExit=yes
-        ExecStart=/usr/sbin/wipefs -f /dev/xvdd
-        ExecStart=/usr/sbin/mkfs.btrfs -f /dev/xvdd
+        ExecStart=/bin/bash -c '(blkid -t TYPE=btrfs | grep xvdd) || /usr/sbin/wipefs -f /dev/xvdd; /usr/sbin/mkfs.btrfs -f /dev/xvdd'
     - name: var-lib-docker.mount
       command: start
       content: |

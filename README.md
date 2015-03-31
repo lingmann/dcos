@@ -3,7 +3,12 @@ One-shot CloudFormation templates for DCOS
 
 # Usage
 ### AWS Web UI
-Click the button [here](http://downloads.mesosphere.io/cloudformation/stage-launchstack.html).
+1. Go to OneLogin and click on AWS Development: https://app.onelogin.com/client/apps. This will create a temporary admin user for you in a sandboxed account so production services cannot be affected.
+
+2. Click the button [here](http://downloads.mesosphere.io/cloudformation/stage-launchstack.html).
+
+3. Follow the wizard (please report any parameters you find confusing!). Make sure to check the IAM capabilities checkbox.
+
 
 ### CLI
 ```

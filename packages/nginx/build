@@ -71,6 +71,8 @@ Description=A high performance web server and a reverse proxy server
 After=network.target
 
 [Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
 Type=forking
 PIDFile=$PKG_PATH/logs/nginx.pid
 PrivateDevices=yes

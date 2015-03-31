@@ -14,6 +14,13 @@ resource "aws_security_group" "security_group" {
     protocol = "tcp"
     cidr_blocks = ["162.245.20.130/32"]
   }
+  # Allow full access to SF office and VPN
+  ingress {
+    from_port = 0
+    to_port = 65535
+    protocol = "udp"
+    cidr_blocks = ["162.245.20.130/32"]
+  }
   ingress {
     from_port = 0
     to_port = 65535

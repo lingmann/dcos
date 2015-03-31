@@ -7,6 +7,10 @@ variable "aws_access_key" {}
 
 variable "aws_secret_key" {}
 
+variable "github_deploy_key_base64" {}
+
+variable "dd_api_key" {}
+
 variable "uuid" {
   default = "seb"
 }
@@ -38,6 +42,10 @@ variable "aws_amis" {
   }
 }
 
+variable "exhibitor_s3_bucket" {
+  default = "apollo-exhibitor"
+}
+
 variable "master_count" {
   default = "1"
 }
@@ -47,7 +55,7 @@ variable "mesos_master_quorum" {
 }
 
 variable "slave_count" {
-  default = "0"
+  default = "1"
 }
 
 # Use s3.amazonaws.com to remove cloudfront cache layer

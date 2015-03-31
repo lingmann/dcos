@@ -1,11 +1,11 @@
-resource "aws_instance" "mesos-master" {
+resource "aws_instance" "mesos-slave" {
   tags {
-    Name = "master${count.index}.${var.uuid}"
-    role = "master"
+    Name = "slave${count.index}.${var.uuid}"
+    role = "slave"
   }
   instance_type = "${var.aws_instance_type}"
   ami = "${lookup(var.aws_amis, var.aws_region)}"
-  count = "${var.master_count}"
+  count = "${var.slave_count}"
   key_name = "${var.aws_key_name}"
   security_groups = ["${aws_security_group.security_group.name}"]
   connection {
@@ -49,42 +49,36 @@ write_files:
     owner: root
     content: |
       http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/
-  - path: /etc/mesosphere/roles/master
+  - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave
     content: |
-      {
-        "zk": "zk://127.0.0.1:2181/mesos",
-        "refreshSeconds": 60,
-        "ttl": 60,
-        "domain": "mesos",
-        "port": 53,
-        "resolvers": ["172.16.0.23"],
-        "timeout": 5,
-        "listener": "0.0.0.0",
-        "email": "root.mesos-dns.mesos"
-      }
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master
-    content: |
-      MESOS_WORK_DIR=/var/lib/mesos/master
-      MESOS_ZK=zk://127.0.0.1:2181/mesos
-      MESOS_QUORUM=${var.mesos_master_quorum}
-      MESOS_CLUSTER=${var.uuid}.${var.domain}
+      MESOS_MASTER=zk://leader.mesos:2181/mesos
+      MESOS_CONTAINERIZERS=docker,mesos
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
+      MESOS_ISOLATION=cgroups/cpu,cgroups/mem
+      MESOS_WORK_DIR=/ephemeral/mesos-slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
-      AWS_REGION=${var.aws_region}
-      AWS_ACCESS_KEY_ID=${var.aws_access_key}
-      AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
-      ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
-    content: |
-      S3_BUCKET=${var.exhibitor_s3_bucket}
-      S3_PREFIX=${var.uuid}
-      EXHIBITOR_WEB_UI_PORT=8181
+      MASTER_ELB=master0.${var.uuid}.${var.domain}
+      FALLBACK_DNS=172.16.0.23
   - path: /root/.bashrc
     content: |
       export $(cat /opt/mesosphere/environment |egrep -v ^#| xargs)
+  - path: /etc/mesosphere/clusterinfo.json
+    permissions: 0644
+    owner: root
+    content: |-
+      {
+        "cluster":{
+          "name":"${var.uuid}"
+        },
+        "keys":{
+          "dd_api_key":"${var.dd_api_key}",
+          "github_deploy_key_base64":"${var.github_deploy_key_base64}"
+        }
+      }
 coreos:
   update:
     reboot-strategy: off
@@ -93,27 +87,26 @@ coreos:
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   units:
-    - name: format-var-lib-ephemeral.service
+    - name: format-ephemeral.service
       command: start
       content: |
         [Unit]
-        Description=Formats the /var/lib ephemeral drive
-        Before=var-lib.mount,dbus.service
+        Description=Formats the ephemeral drive
+        Before=ephemeral.mount
         [Service]
         Type=oneshot
         RemainAfterExit=yes
         ExecStart=/bin/sh -c 'mdadm --stop /dev/md/* ; true'
         ExecStart=/usr/sbin/mdadm --create -f -R /dev/md0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc
         ExecStart=/usr/sbin/mkfs.ext4 /dev/md0
-    - name: var-lib.mount
+    - name: ephemeral.mount
       command: start
       content: |
         [Unit]
-        Description=Mount /var/lib
-        Before=dbus.service
+        Description=Ephemeral Mount
         [Mount]
         What=/dev/md0
-        Where=/var/lib
+        Where=/ephemeral
         Type=ext4
     - name: format-docker-ephemeral.service
       command: start
@@ -136,6 +129,10 @@ coreos:
         What=/dev/xvdd
         Where=/var/lib/docker
         Type=btrfs
+    - name: systemd-networkd.service
+      command: restart
+    - name: systemd-resolved.service
+      command: restart
     - name: etcd.service
       mask: true
       command: stop
@@ -147,7 +144,7 @@ coreos:
         [Service]
         Type=oneshot
         ExecStart=/usr/bin/bash -c "echo EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
+        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
     - name: dcos-setup.service
       command: start
       content: |
@@ -157,6 +154,8 @@ coreos:
         After=dcos-download.service
         Requires=config-writer.service
         After=config-writer.service
+        Requires=ephemeral.mount
+        After=ephemeral.mount
         ConditionPathExists=/opt/mesosphere/bootstrap
         [Service]
         Type=oneshot
@@ -206,13 +205,13 @@ coreos:
         TimeoutStartSec=0
         ExecStartPre=-/usr/bin/docker kill dd-agent
         ExecStartPre=-/usr/bin/docker rm dd-agent
-        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-master
+        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-slave
         ExecStart=/usr/bin/bash -c \
         "/usr/bin/docker run --privileged --name dd-agent --net=host \
         -v /var/run/docker.sock:/var/run/docker.sock \
         -v /proc/mounts:/host/proc/mounts:ro \
         -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
         -e API_KEY=${var.dd_api_key} \
-        mesosphere/dd-agent-mesos-master"
+        mesosphere/dd-agent-mesos-slave"
 CLOUD_CONFIG
 }

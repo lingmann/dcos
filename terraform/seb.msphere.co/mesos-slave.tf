@@ -62,6 +62,8 @@ write_files:
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=master0.${var.uuid}.${var.domain}
+      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
+      # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS=172.16.0.23
   - path: /root/.bashrc
     content: |

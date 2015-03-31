@@ -77,6 +77,9 @@ write_files:
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
+      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
+      # the internal IP when doing lookups on AWS public hostnames.
+      FALLBACK_DNS=172.16.0.23
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
       S3_BUCKET=${var.exhibitor_s3_bucket}
@@ -135,6 +138,10 @@ coreos:
         What=/dev/xvdd
         Where=/var/lib/docker
         Type=btrfs
+    - name: systemd-networkd.service
+      command: restart
+    - name: systemd-resolved.service
+      command: restart
     - name: etcd.service
       mask: true
       command: stop

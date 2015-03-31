@@ -50,6 +50,18 @@ We recommend running this CloudFormation template inside a sub-account to guaran
 # Decommissioning
 Unfortunately there isn't an elegant way to decommission clusters provisioned in this manner. This is because non-empty S3 buckets cannot be deleted automatically. The solution is trivial but inconvenient and requires running a script that deletes the contents of the S3 bucket, deletes the S3 bucket, and finally deletes the umbrella CloudFormation stack. This script requires credentials for an IAM user with very high access.
 
+# Customization
+### Launching in a different region
+To launch in a different region it should be sufficient to:
+1. Change the region on the CF web UI (button near top right)
+2. Update the CoreOS AMI to correspond with the region (https://coreos.com/docs/running-coreos/cloud-providers/ec2/)
+
+### Launching in multi-master mode (HA)
+1. Update the *MasterInstanceCount* parameter (recommended odd number)
+2. Update the *MasterQuourumCount* parameter (recommended ceil(MasterInstanceCount*/2)
+
+# Known Issues
+
 # Software
 | Component | Details |
 | --- | --- |

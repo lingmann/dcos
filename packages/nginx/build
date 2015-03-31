@@ -44,7 +44,8 @@ http {
   sendfile on;
   keepalive_timeout 65;
   server {
-    listen 80;
+    listen 80 default_server;
+    server_name dcos.*;
     root /opt/mesosphere/active/dcos-ui/usr;
 
     # TODO(cmaloney): Make the Web UI work in a subdirectory.
@@ -56,9 +57,23 @@ http {
     location /marathon/ {
         proxy_pass http://master.mesos:8080/;
     }
-
   }
 
+  server {
+    listen 80;
+    server_name mesos.*;
+    location / {
+      proxy_pass http://leader.mesos:5050/;
+    }
+  }
+
+  server {
+    listen 80;
+    server_name marathon.*;
+    location / {
+      proxy_pass http://master.mesos:8080/;
+    }
+  }
 }
 EOF
 

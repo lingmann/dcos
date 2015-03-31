@@ -7,7 +7,9 @@ One-shot CloudFormation templates for DCOS
 
 2. Click the button [here](http://downloads.mesosphere.io/cloudformation/stage-launchstack.html).
 
-3. Follow the wizard (please report any parameters you find confusing!). Make sure to check the IAM capabilities checkbox.
+3. Follow the wizard (please report any parameters you find confusing!).
+4. There are two fields you must set: *Name* (name of the CloudFormation stack) and *KeyName* (name of the SSH key to use).
+4. Make sure to check the IAM capabilities checkbox.
 
 
 ### CLI

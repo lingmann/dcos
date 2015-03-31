@@ -16,6 +16,14 @@ One-shot CloudFormation templates for DCOS
 2. The DNS address field will give you the DNS name for the external load balancer in front of the Mesos masters. You can access the Mesos UI with `<DNS>:5050` and Marathon UI with `<DNS>:8080`.
 3. To SSH to individual instances of your cluster you will have to switch the to EC2 UI and filter to find the master and slaves nodes of your cluster.
 
+#### Resizing the cluster
+Currently you can change the number of slaves, but not the number of masters.
+To change the number of slaves:
+1. Go to the CloudFormation UI
+2. Select the umbrella CF stack (the name of your cluster with no suffix)
+3. Hit the *Update Stack* button
+4. Follow the wizard, changing the SlaveInstantCount parameter
+
 ### Launching with AWS CLI
 ```
 aws cloudformation create-stack --stack-name dcos --template-url=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos.json --capabilities CAPABILITY_IAM --parameters $(cat parameters) --region us-west-2

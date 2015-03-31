@@ -5,8 +5,15 @@ mkdir -p $PKG_PATH/usr
 rm -rf /pkg/src/hadoop/share/doc
 cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
 
+#create bash file for all binaries to allow directory traversal
 mkdir -p $PKG_PATH/bin
-ln -s $PKG_PATH/usr/bin/* $PKG_PATH/bin/
+cd $PKG_PATH/usr/bin
+for file in *;
+do
+	echo "#!/bin/bash" > $PKG_PATH/bin/$file
+	echo "$PKG_PATH/usr/bin/$file \"\$@\"" >> $PKG_PATH/bin/$file
+	chmod a+x $PKG_PATH/bin/$file
+done
 
 #remove HDFS site so hdfs FW can use its own
 rm $PKG_PATH/usr/etc/hadoop/hdfs-site.xml

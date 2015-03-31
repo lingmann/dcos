@@ -2,6 +2,7 @@ resource "aws_instance" "mesos-master" {
   tags {
     Name = "master${count.index}.${var.uuid}"
     role = "master"
+    cluster_uuid = "${var.uuid}"
   }
   instance_type = "${var.aws_instance_type}"
   ami = "${lookup(var.aws_amis, var.aws_region)}"

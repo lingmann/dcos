@@ -31,7 +31,7 @@ variable "aws_key_name" {
 variable "aws_key_file" {}
 
 variable "aws_instance_type" {
-  default = "m3.medium"
+  default = "m3.xlarge"
 }
 
 variable "aws_amis" {

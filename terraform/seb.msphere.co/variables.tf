@@ -60,5 +60,5 @@ variable "slave_count" {
 
 # Use s3.amazonaws.com to remove cloudfront cache layer
 variable "repo_root" {
-  default = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda"
+  default = "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/" # this url MUST end with a trailing /
 }

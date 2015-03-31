@@ -45,7 +45,7 @@ http {
   keepalive_timeout 65;
   server {
     listen 80;
-    root /opt/mesosphere/active/dcos-ui;
+    root /opt/mesosphere/active/dcos-ui/usr;
 
     # TODO(cmaloney): Make the Web UI work in a subdirectory.
     location /mesos/ {

@@ -98,7 +98,8 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : { "Ref" : "StackCreationTimeout" }
+          "Timeout" : { "Ref" : "StackCreationTimeout" },
+          "Count" : { "Ref" : "InstanceCount" }
         }
       }
     },

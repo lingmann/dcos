@@ -2,7 +2,7 @@
 
 write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
-    permission: 0644
+    permissions: 0644
     owner: root
     content: |
       http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/
@@ -98,14 +98,17 @@ coreos:
         Description=Signal CloudFormation Success
         After=dcos.target
         Requires=dcos.target
+        ConditionPathExists=!/var/lib/cfn-signal
         [Service]
+        Type=simple
         Restart=on-failure
-        Type=oneshot
-        RemainAfterExit=yes
+        StartLimitInterval=0
+        RestartSec=15s
         ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
         ExecStartPre=/bin/ping -c1 leader.mesos
-        ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
+        ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
           cfn-signal -e 0 \
           --resource ServerGroup \
           --stack { "Ref" : "AWS::StackName" } \
           --region { "Ref" : "AWS::Region" }
+        ExecStart=/usr/bin/touch /var/lib/cfn-signal

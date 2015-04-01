@@ -100,17 +100,18 @@ try:
     for node in data:
         addr = socket.gethostbyname(node['hostname'])
         servers.append(addr)
-except urllib.error.URLError:
+except:
     print('WARNING: Could not get exhibitor status: {}'.format(status_url), file=sys.stderr)
 
-if len(servers) == 0:
-    print('WARNING: No servers detected, using FALLBACK_DNS {}'.format(fallback_dns), file=sys.stderr)
-    servers.append(fallback_dns)
+# Use maximum of three servers per resolv.h MAXNS, with the known good fallback
+# dns server always present as the last in the set.
+nameservers = servers[:2]
+nameservers.append(fallback_dns)
 
 print('Updating {}'.format(resolvconf_path))
 with open(resolvconf_path, 'w') as f:
-    for server in servers:
-        line = "nameserver {}".format(server)
+    for ns in nameservers:
+        line = "nameserver {}".format(ns)
         print(line, file=sys.stderr)
         print(line, file=f)
 

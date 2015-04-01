@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import server
+from server import start
 
 if __name__ == '__main__':
-    server.start()
+    start()

@@ -15,11 +15,11 @@ def hour():
     headers = { "Access-Control-Allow-Origin": "*" }
     return Response(response=result, content_type="application/json", headers=headers)
 
-def start(urls = environ["MASTER_URLS"].split(",")):
+def start(port = int(environ.get('PORT0', '5000')), urls = environ["MASTER_URLS"].split(",")):
     global buffer
     logging.basicConfig(level="INFO")
     compress.init_app(app)
     buffer = StateBuffer(urls)
     buffer.run()
-    app.run()
+    app.run(host='0.0.0.0', port=port)
 

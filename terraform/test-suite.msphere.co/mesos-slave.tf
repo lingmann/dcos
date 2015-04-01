@@ -63,7 +63,9 @@ write_files:
         },
         "keys":{
           "dd_api_key":"${var.dd_api_key}",
-          "github_deploy_key_base64":"${var.github_deploy_key_base64}"
+          "github_deploy_key_base64":"${var.github_deploy_key_base64}",
+          "aws_access_key_id":"${var.aws_access_key_id}",
+          "aws_secret_access_key":"${var.aws_secret_access_key}"
         }
       }
 coreos:

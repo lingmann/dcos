@@ -34,6 +34,10 @@ write_files:
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
       ZOOKEEPER_CLUSTER_SIZE={ "Ref" : "InstanceCount" }
+      MASTER_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
+      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
+      # the internal IP when doing lookups on AWS public hostnames.
+      FALLBACK_DNS=10.0.0.2
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
       S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }

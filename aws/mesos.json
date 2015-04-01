@@ -51,7 +51,7 @@
     "InstanceAmi" : {
       "Description" : "CoreOS AMI to use, specific to region",
       "Type" : "String",
-      "Default" : "ami-b1b89a81"
+      "Default" : "ami-fd361fcd"
     },
     "KeyName" : {
       "Description" : "Name of SSH key to link",

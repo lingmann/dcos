@@ -50,10 +50,12 @@ write_files:
       MESOS_CLUSTER=${var.uuid}.${var.domain}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
+      MASTER_ELB=127.0.0.1
       AWS_REGION=${var.aws_region}
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
+      FALLBACK_DNS=172.16.0.23
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
       S3_BUCKET=${var.exhibitor_s3_bucket}
@@ -92,6 +94,8 @@ coreos:
         Type=ext4
     - name: etcd.service
       mask: true
+      command: stop
+    - name: systemd-resolved.service
       command: stop
     - name: config-writer.service
       command: start

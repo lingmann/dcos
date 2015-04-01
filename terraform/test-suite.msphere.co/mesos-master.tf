@@ -32,7 +32,7 @@ resource "aws_instance" "mesos-master" {
 
 write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
-    permission: 0644
+    permissions: 0644
     owner: root
     content: |
       http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/

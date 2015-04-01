@@ -37,7 +37,7 @@ write_files:
       [Resolve]
       FallbackDNS=172.16.0.23
   - path: /etc/mesosphere/setup-flags/repository-url
-    permission: 0644
+    permissions: 0644
     owner: root
     content: |
       ${var.repo_root}

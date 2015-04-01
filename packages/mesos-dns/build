@@ -28,6 +28,7 @@ mkdir -p "$(dirname "$service")"
 cat <<EOF > "$service"
 [Unit]
 Description=Mesos DNS
+After=network.target
 [Service]
 Restart=on-failure
 StartLimitInterval=0

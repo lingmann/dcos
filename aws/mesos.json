@@ -97,7 +97,7 @@
       "DependsOn" : "VpcStack",
       "Properties" : {
         "TemplateURL" : { "Ref" : "MesosMasterTemplateUrl" },
-        "TimeoutInMinutes" : "15",
+        "TimeoutInMinutes" : "30",
         "Parameters" : {
           "InstanceAmi" : { "Ref": "InstanceAmi" },
           "InstanceType" : { "Ref" : "MasterInstanceType" },
@@ -116,7 +116,7 @@
       "DependsOn" : "MesosMasterStack",
       "Properties" : {
         "TemplateURL" : { "Ref" : "MesosSlaveTemplateUrl" },
-        "TimeoutInMinutes" : "15",
+        "TimeoutInMinutes" : "30",
         "Parameters" : {
           "InstanceAmi" : { "Ref": "InstanceAmi" },
           "InstanceType" : { "Ref" : "SlaveInstanceType" },

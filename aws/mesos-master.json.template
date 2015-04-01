@@ -49,7 +49,7 @@
     "StackCreationTimeout" : {
       "Description" : "Timeout on initial stack creation",
       "Type" : "String",
-      "Default": "PT15M"
+      "Default": "PT30M"
     }
   },
 

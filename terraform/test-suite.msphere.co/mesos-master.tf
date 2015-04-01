@@ -87,7 +87,7 @@ coreos:
       content: |
         [Unit]
         Description=Formats the /var/lib ephemeral drive
-        Before=var-lib.mount,dbus.service
+        Before=var-lib.mount dbus.service
         [Service]
         Type=oneshot
         RemainAfterExit=yes

@@ -9,6 +9,10 @@ variable "aws_secret_key" {}
 
 variable "github_deploy_key_base64" {}
 
+variable "aws_access_key_id" {}
+
+variable "aws_secret_access_key" {}
+
 variable "dd_api_key" {}
 
 variable "uuid" {

@@ -5,16 +5,6 @@ mkdir -p $PKG_PATH/usr
 rm -rf /pkg/src/hadoop/share/doc
 cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
 
-#create bash file for all binaries to allow directory traversal
-mkdir -p $PKG_PATH/bin
-cd $PKG_PATH/usr/bin
-for file in *;
-do
-	echo "#!/bin/bash" > $PKG_PATH/bin/$file
-	echo "$PKG_PATH/usr/bin/$file \"\$@\"" >> $PKG_PATH/bin/$file
-	chmod a+x $PKG_PATH/bin/$file
-done
-
 #remove HDFS site so hdfs FW can use its own
 rm $PKG_PATH/usr/etc/hadoop/hdfs-site.xml
 
@@ -23,3 +13,20 @@ ln -s $PKG_PATH/usr/etc/hadoop/* $PKG_PATH/etc/hadoop/
 
 mkdir -p $PKG_PATH/lib
 ln -s $PKG_PATH/usr/lib/* $PKG_PATH/lib/
+
+#create bash file for all binaries to allow directory traversal
+mkdir -p $PKG_PATH/bin
+cd $PKG_PATH/usr/bin
+for file in *;
+do
+	echo "#!/bin/bash" > $PKG_PATH/bin/$file
+	case $file in
+		hadoop|hdfs|mapred|yarn)
+			echo "$PKG_PATH/usr/bin/$file --config /opt/mesosphere/etc/hadoop \"\$@\"" >> $PKG_PATH/bin/$file
+			;;
+		*)
+			echo "$PKG_PATH/usr/bin/$file \"\$@\"" >> $PKG_PATH/bin/$file
+			;;
+	esac
+	chmod a+x $PKG_PATH/bin/$file
+done

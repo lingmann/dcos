@@ -31,10 +31,11 @@ variable "aws_instance_type" {
 }
 
 variable "aws_amis" {
-  # CoreOS 612.1.0 on PV AMI (Beta Channel)
+  # CoreOS 633.1.0 on PV AMI (Beta Channel)
   # HVM images not supported (requires change to initial block dev config)
   default = {
-    us-east-1 = "ami-3e9cbe56"
+    us-east-1 = "ami-2e4f7946"
+    us-west-2 = "ami-fd361fcd"
   }
 }
 

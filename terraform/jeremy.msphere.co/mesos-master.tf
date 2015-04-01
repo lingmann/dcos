@@ -13,10 +13,8 @@ resource "aws_instance" "mesos-master" {
     key_file = "${var.aws_key_file}"
   }
   block_device {
-    device_name = "/dev/sda"
-    volume_type = "gp2"
-    volume_size = 16
-    delete_on_termination = 1
+    device_name = "/dev/sdb"
+    virtual_name = "ephemeral0"
   }
   user_data = <<CLOUD_CONFIG
 #cloud-config
@@ -72,6 +70,26 @@ coreos:
     addr: $private_ipv4:4001
     peer-addr: $private_ipv4:7001
   units:
+    - name: format-var-lib-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the /var/lib ephemeral drive
+        Before=var-lib.mount dbus.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/bash -c '(blkid -t TYPE=ext4 | grep xvdb) || (/usr/sbin/mkfs.ext4 -F /dev/xvdb)'
+    - name: var-lib.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount /var/lib
+        Before=dbus.service
+        [Mount]
+        What=/dev/xvdb
+        Where=/var/lib
+        Type=ext4
     - name: etcd.service
       mask: true
       command: stop

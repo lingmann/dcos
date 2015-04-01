@@ -63,6 +63,7 @@ write_files:
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
+      MASTER_ELB=master0.${var.uuid}.${var.domain}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS=172.16.0.23

@@ -53,6 +53,8 @@ coreos:
     - name: etcd.service
       mask: true
       command: stop
+    - name: systemd-resolved.service
+      command: stop
     - name: config-writer.service
       command: start
       content: |
@@ -119,10 +121,11 @@ coreos:
         After=dcos.target
         Requires=dcos.target
         [Service]
+        Restart=on-failure
         Type=oneshot
         RemainAfterExit=yes
         ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
-        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStartPre=/bin/ping -c1 leader.mesos
         ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
           cfn-signal -e 0 \
           --resource ServerGroup \

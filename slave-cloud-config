@@ -1,20 +1,6 @@
 #cloud-config
 
 write_files:
-  - path: /etc/systemd/network/aws-ec2.network
-    content: |
-      [Match]
-      Name=eth0
-      [Network]
-      DHCP=v4
-      [DHCP]
-      UseMTU=true
-      UseDNS=false
-      UseDomains=false
-  - path: /etc/systemd/resolved.conf.d/mesos-dns.conf
-    content: |
-      [Resolve]
-      FallbackDNS=10.0.0.2
   - path: /etc/mesosphere/setup-flags/repository-url
     permission: 0644
     owner: root
@@ -42,10 +28,8 @@ coreos:
   update:
     reboot-strategy: off
   units:
-    - name: systemd-networkd.service
-      command: restart
     - name: systemd-resolved.service
-      command: restart
+      command: stop
     - name: etcd.service
       mask: true
       command: stop
@@ -115,10 +99,11 @@ coreos:
         After=dcos.target
         Requires=dcos.target
         [Service]
+        Restart=on-failure
         Type=oneshot
         RemainAfterExit=yes
         ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
-        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStartPre=/bin/ping -c1 leader.mesos
         ExecStart=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
           cfn-signal -e 0 \
           --resource ServerGroup \

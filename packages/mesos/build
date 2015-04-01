@@ -88,7 +88,7 @@ cluster_size = int(sys.argv[1])
 
 try:
     response = urllib.request.urlopen(EXIHIBITOR_STATUS_URL)
-except urllib.error.URLError:
+except:
     print('Could not get exhibitor status: {}'.format(EXIHIBITOR_STATUS_URL), file=sys.stderr)
     sys.exit(1)
 reader = codecs.getreader("utf-8")

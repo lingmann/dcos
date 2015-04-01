@@ -33,6 +33,11 @@ dist:
 	echo "Build version $(PKG_VER)"
 	docker build -t mesosphere/dcos-history-service:$(PKG_VER) .
 
+.PHONY: dist
+push: dist
+	docker push mesosphere/dcos-history-service:$(PKG_VER)
+
+
 run:
 	docker run -p 5000:500 -e MASTER_URLS="http://srv2.hw.ca1.mesosphere.com:5050" mesosphere/dcos-history-service:$(PKG_VER)
 

@@ -77,16 +77,9 @@ http {
 
   # Seperate ports for when there isn't DNS pointing to the load balancer.
   server {
-    listen 81;
+    listen 1024;
     location / {
       proxy_pass http://leader.mesos:5050/;
-    }
-  }
-
-  server {
-    listen 82;
-    location / {
-      proxy_pass http://master.mesos:8080/;
     }
   }
 }

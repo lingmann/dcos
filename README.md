@@ -20,9 +20,9 @@ To create a key pair to use when SSHing to instances, navigate to the EC2 consol
 
 | Service | Address |
 | --- | --- |
-| DCOS Web UI | *ELB_DNS* |
-| Mesos Web UI | *ELB_DNS*:5050 |
-| Marathon Web UI | *ELB_DNS*:8080 |
+| DCOS Web UI | *EXTERNAL_ELB_DNS* |
+| Mesos Web UI | *EXTERNAL_ELB_DNS*:5050 |
+| Marathon Web UI | *EXTERNAL_ELB_DNS*:8080 |
 
 3. To SSH to individual instances of your cluster you will have to switch the to EC2 UI and filter to find the master and slaves nodes of your cluster.
 

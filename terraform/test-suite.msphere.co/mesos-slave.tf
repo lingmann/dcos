@@ -46,7 +46,7 @@ write_files:
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=2mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/ephemeral/mesos-slave
-      MESOS_RESOURCES=ports:[1025-65535]
+      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-65535]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=master0.${var.uuid}.${var.domain}

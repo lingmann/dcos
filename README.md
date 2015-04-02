@@ -12,7 +12,7 @@ One-shot CloudFormation templates for DCOS
 
 #### Accessing the cluster
 1. On the AWS CloudFormation UI, click on the corresponding MesosMaster stack for your cluster and select the *Output* tab. ![Image of CF UI](https://www.dropbox.com/s/ylj9z92n4zvm3ri/Screenshot%202015-03-31%2015.03.41.png?dl=1)
-2. The DNS address field will give you the DNS name for the external load balancer in front of the Mesos masters. You can access the Mesos UI with `<DNS>:5050` and Marathon UI with `<DNS>:8080`.
+2. The DNS address field will give you the DNS name for the external load balancer in front of the Mesos masters. You can access the DCOS with `<DNS>` and Mesos UI with `<DNS>:5050` and Marathon UI with `<DNS>:8080`.
 3. To SSH to individual instances of your cluster you will have to switch the to EC2 UI and filter to find the master and slaves nodes of your cluster.
 
 #### Resizing the cluster

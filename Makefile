@@ -76,7 +76,7 @@ build/dcos.manifest:
 all: tree
 
 .PHONY: tree
-tree:
+tree: | build/docker_image
 	@rm -rf packages/bootstrap_tmp dist packages/active.json packages/bootstrap.tar.xz
 	@mkdir -p dist/config
 	@cd packages && mkpanda tree --mkbootstrap

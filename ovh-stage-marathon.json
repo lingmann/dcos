@@ -1,13 +1,13 @@
 {
   "id": "/dcos/service/history",
   "instances": 1,
-  "cpus": 0.2,
-  "mem": 256,
+  "cpus": 0.5,
+  "mem": 512,
   "ports": [5000],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "mesosphere/dcos-history-service:0.0.1",
+      "image": "mesosphere/dcos-history-service:0.0.2",
       "network": "HOST"
     }
   },
@@ -17,6 +17,17 @@
   "env": {
     "MASTER_URLS": "http://srv2.hw.ca1.mesosphere.com:5050,http://srv3.hw.ca1.mesosphere.com:5050,http://srv4.hw.ca1.mesosphere.com:5050"
   },
+  "healthChecks": [
+    {
+      "gracePeriodSeconds": 180,
+      "intervalSeconds": 60,
+      "maxConsecutiveFailures": 3,
+      "path": "/ping",
+      "portIndex": 0,
+      "protocol": "HTTP",
+      "timeoutSeconds": 20
+    }
+  ],
   "upgradeStrategy": {
     "minimumHealthCapacity": 0
   }

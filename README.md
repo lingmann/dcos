@@ -4,7 +4,7 @@ One-shot CloudFormation templates for DCOS
 # Usage
 ### Launching with the AWS Web UI
 1. Go to OneLogin and click on AWS Development: https://app.onelogin.com/client/apps. This will create a temporary admin user for you in a sandboxed account so production services cannot be affected.
-1. Click the `Launch stack` [button on this page](http://downloads.mesosphere.io/cloudformation/stage-launchstack.html).
+1. Click the `Launch stack` [button on this page](https://downloads.mesosphere.io/cloudformation/stage-launchstack.html).
 1. Follow the wizard (please report any parameters you find confusing!). There are two fields you must set:
   1. *Name* - give your CloudFormation stack a recognizable name, and
   1. *KeyName* - use the existing `dcos-ea` key if you don't have one defined.

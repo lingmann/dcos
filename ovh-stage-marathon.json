@@ -7,16 +7,13 @@
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "mesosphere/dcos-history-service:0.0.3",
+      "image": "mesosphere/dcos-history-service:0.0.4",
       "network": "HOST"
     }
   },
   "uris": [
     "file:///etc/.dockercfg"
   ],
-  "env": {
-    "MASTER_URLS": "http://srv2.hw.ca1.mesosphere.com:5050,http://srv3.hw.ca1.mesosphere.com:5050,http://srv4.hw.ca1.mesosphere.com:5050"
-  },
   "healthChecks": [
     {
       "gracePeriodSeconds": 180,

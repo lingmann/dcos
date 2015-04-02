@@ -45,6 +45,10 @@
       "Description" : "Name of an existing EC2 KeyPair to enable SSH access to the instances",
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
+    "BootstrapRepoRoot" : {
+      "Description" : "Root repository for bootstrapping (must end in /)",
+      "Type" : "String"
+    },
 
     "StackCreationTimeout" : {
       "Description" : "Timeout on initial stack creation",

@@ -43,10 +43,10 @@ version_regex = "^[a-zA-Z0-9@_+:.]+$"
 # Manage starting/stopping all systemd services inside a folder.
 class Systemd:
 
-    def __init__(self, unit_dir, active, block):
+    def __init__(self, unit_directory, active, block):
         self.__active = active
         self.__block = block
-        self.__dir = unit_dir
+        self.__unit_directory = unit_directory
 
     def daemon_reload(self):
         if not self.__active:
@@ -64,11 +64,11 @@ class Systemd:
     def stop_all(self):
         if not self.__active:
             return
-        if not os.path.exists(self.__dir):
+        if not os.path.exists(self.__unit_directory):
             return
-        for name in os.listdir(self.__dir):
+        for name in os.listdir(self.__unit_directory):
             # Skip directories
-            if os.path.isdir(os.path.join(self.__dir, name)):
+            if os.path.isdir(os.path.join(self.__unit_directory, name)):
                 continue
             try:
                 cmd = ["systemctl", "stop", name]
@@ -81,6 +81,10 @@ class Systemd:
                 # yet during first activation.
                 if ex.returncode != 5:
                     raise
+
+    @property
+    def unit_directory(self):
+        return self.__unit_directory
 
 
 class PackageId:

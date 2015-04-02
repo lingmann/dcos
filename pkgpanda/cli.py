@@ -17,6 +17,8 @@ Options:
     --root=<root>               Testing only: Use an alternate root [default: /opt/mesosphere]
     --repository=<repository>   Testing only: Use an alternate local package
                                 repository directory [default: /opt/mesosphere/packages]
+    --rooted-systemd            Use $ROOT/dcos.target.wants for systemd management
+                                rather than /etc/systemd/system/dcos.target.wants
 """
 
 import json
@@ -119,6 +121,7 @@ def main():
     install = Install(
         os.path.abspath(arguments['--root']),
         os.path.abspath(arguments['--config-dir']),
+        arguments['--rooted-systemd'],
         not arguments['--no-systemd'], not arguments['--no-block-systemd'])
     repository = Repository(os.path.abspath(arguments['--repository']))
 

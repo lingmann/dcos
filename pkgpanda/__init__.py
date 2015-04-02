@@ -29,8 +29,6 @@ from pkgpanda.util import if_exists, load_json
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
 
-# TODO(cmaloney): dcos.target.wants is what systemd ends up as.
-well_known_dirs = ["bin", "etc", "lib", "dcos.target.wants"]
 reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 env_header = """# Pandapkg provided environment variables
 LD_LIBRARY_PATH={0}/lib
@@ -390,9 +388,14 @@ def symlink_tree(src, dest):
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, config_dir, manage_systemd, block_systemd):
+    def __init__(self, root, config_dir, rooted_systemd, manage_systemd, block_systemd):
+        assert type(rooted_systemd) == bool
         self.__root = os.path.abspath(root)
         self.__config_dir = os.path.abspath(config_dir) if config_dir else None
+        if rooted_systemd:
+            self.__systemd_dir = "{}/dcos.target.wants".format(root)
+        else:
+            self.__systemd_dir = "/etc/systemd/system/dcos.target.wants"
         self.__manage_systemd = manage_systemd
         self.__block_systemd = block_systemd
 
@@ -402,6 +405,8 @@ class Install:
             self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
             if self.__roles is None:
                 self.__roles = []
+
+        self.__well_known_dirs = ["bin", "etc", "lib", self.__systemd_dir]
 
     def get_active(self):
         """the active folder has symlinks to all the active packages.
@@ -437,7 +442,7 @@ class Install:
         return os.path.abspath(os.path.join(self.__root, name))
 
     def get_active_names(self):
-        return list(map(self._make_abs, well_known_dirs + ["environment", "active"]))
+        return list(map(self._make_abs, self.__well_known_dirs + ["environment", "active"]))
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
@@ -448,7 +453,7 @@ class Install:
         # Build the absolute paths for the running config, new config location,
         # and where to archive the config.
         active_names = self.get_active_names()
-        active_dirs = list(map(self._make_abs, well_known_dirs + ["active"]))
+        active_dirs = list(map(self._make_abs, self.__well_known_dirs + ["active"]))
 
         new_names = [name + ".new" for name in active_names]
         new_dirs = [name + ".new" for name in active_dirs]
@@ -483,7 +488,7 @@ class Install:
             # NOTE: Since active is at the end of the folder list it will be
             # removed by the zip. This is the desired behavior, since it will be
             # populated later.
-            for new, dir_name in zip(new_dirs, well_known_dirs):
+            for new, dir_name in zip(new_dirs, self.__well_known_dirs):
                 pkg_dir = os.path.join(package.path, dir_name)
                 assert os.path.isabs(new)
                 assert os.path.isabs(pkg_dir)
@@ -533,7 +538,7 @@ class Install:
     def swap_active(self, extension, archive=True):
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
-        systemd = Systemd(self._make_abs("dcos.target.wants"), self.__manage_systemd, self.__block_systemd)
+        systemd = Systemd(self._make_abs(self.__systemd_dir), self.__manage_systemd, self.__block_systemd)
 
         # Record the state (atomically) on the filesystem so that if there is a
         # hard/fast fail at any point the activate swap can continue.

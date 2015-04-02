@@ -17,6 +17,7 @@ def test_setup(tmpdir):
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
                 "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
@@ -43,6 +44,7 @@ def test_setup(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
+        "--rooted-systemd",
         "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode("utf-8").split())
@@ -53,6 +55,7 @@ def test_setup(tmpdir):
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
                 "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
@@ -89,6 +92,7 @@ def test_setup(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
+        "--rooted-systemd",
         "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
@@ -101,6 +105,7 @@ def test_activate(tmpdir):
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
                 "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"
@@ -111,6 +116,7 @@ def test_activate(tmpdir):
                 "mesos--0.22.0",
                 "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8",
                 "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
                 "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"]) == ""
@@ -120,6 +126,7 @@ def test_activate(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
+        "--rooted-systemd",
         "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
@@ -129,6 +136,7 @@ def test_activate(tmpdir):
                 "activate",
                 "mesos--0.22.0",
                 "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
                 "--repository={}".format(repo_path),
                 "--config-dir=resources/etc-active",
                 "--no-systemd"]) == ""
@@ -138,6 +146,7 @@ def test_activate(tmpdir):
         "pkgpanda",
         "active",
         "--root={0}/root".format(tmpdir),
+        "--rooted-systemd",
         "--repository={}".format(repo_path),
         "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())

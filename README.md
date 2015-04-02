@@ -50,6 +50,19 @@ masterELB:8181/exhibitor/v1/cluster/status
 # Security best practices
 We recommend running this CloudFormation template inside a sub-account to guarantee isolation. As part of the template, we create an IAM user with access to S3 for Exhibitor. Furthermore, decommissioning requires an IAM user with the ability to delete CloudFormation stacks, IAM users, and S3 buckets.
 
+# Quota
+AWS accounts must have sufficent remaining quota to launch the CloudFormation template. Our one-shot template consumes:
+| Resource | Quantity |
+| -- | -- |
+| VPC | 1 |
+| CloudFormation stacks | 4 |
+| ELB | 2 |
+| Auto Scaling groups | 2 |
+| EC2 Instances | 5 |
+
+To request a quota increase, navigate to the Support Center console and create a case requesting the appropriate resources. Response times are generally pretty quick.
+
+
 # Decommissioning
 Unfortunately there isn't an elegant way to decommission clusters provisioned in this manner. This is because non-empty S3 buckets cannot be deleted automatically. The solution is trivial but inconvenient and requires running a script that deletes the contents of the S3 bucket, deletes the S3 bucket, and finally deletes the umbrella CloudFormation stack. This script requires credentials for an IAM user with very high access.
 

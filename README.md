@@ -9,6 +9,10 @@ One-shot CloudFormation templates for DCOS
   1. *Name* - give your CloudFormation stack a recognizable name, and
   1. *KeyName* - use the existing `dcos-ea` key if you don't have one defined.
 1. Make sure to check the 'I agree to IAM capabilities' checkbox at the end.
+2. 
+
+#### Creating a keypair
+To create a key pair to use when SSHing to instances, navigate to the EC2 console (making sure you're in the correct region), select the `Key Pairs` element from the left-hand pane. Then hit the `Create Key Pair` button near the top-left of the middle pane.
 
 #### Accessing the cluster
 1. On the AWS CloudFormation UI, click on the corresponding MesosMaster stack for your cluster and select the *Output* tab. ![Image of CF UI](https://www.dropbox.com/s/ylj9z92n4zvm3ri/Screenshot%202015-03-31%2015.03.41.png?dl=1)

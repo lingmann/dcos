@@ -80,7 +80,8 @@ assemble: | build/marathon.manifest build/exhibitor.manifest build/java.manifest
 assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
 assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
 assemble: | build/dcos-ui.manifest build/nginx.manifest build/hadoop.manifest
-assemble: | build/hdfs-mesos.manifest
+assemble: | build/hdfs-mesos.manifest build/dcos-cli.manifest
+assemble: | build/python-requests.manifest
 	@rm -rf dist && mkdir -p dist
 	@cp build/*/*.tar.xz dist
 	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
@@ -186,6 +187,27 @@ build/python.manifest: | build/docker_image
 	$(MKPANDA) add build/python/*.tar.xz
 	@echo 'PYTHON_URL=$(PYTHON_URL)' > $@
 
+.PHONY: python-requests
+python-requests: | build/python-requests.manifest build/python.manifest
+build/python-requests.manifest: | build/docker_image
+	$(SUDO) rm -rf build/python-requests
+	cp -rp packages/python-requests build
+	cd build/python-requests && $(ANNOTATE) $(MKPANDA) &> ../python-requests.log
+	$(MKPANDA) remove python-requests || true
+	$(MKPANDA) add build/python-requests/*.tar.xz
+	touch $@
+
+.PHONY: dcos-cli
+dcos-cli: | build/dcos-cli.manifest build/python.manifest
+dcos-cli: | build/python-requests.manifest
+build/dcos-cli.manifest: | build/docker_image
+	$(SUDO) rm -rf build/dcos-cli
+	cp -rp packages/dcos-cli build
+	cd build/dcos-cli && $(ANNOTATE) $(MKPANDA) &> ../dcos-cli.log
+	$(MKPANDA) remove dcos-cli || true
+	$(MKPANDA) add build/dcos-cli/*.tar.xz
+	touch $@
+
 .PHONY: marathon
 marathon: | build/marathon.manifest
 build/marathon.manifest: | build/java.manifest build/docker_image
@@ -241,7 +263,7 @@ build/mesos-dns.manifest: | build/docker_image
 	touch $@
 
 .PHONY: pkgpanda
-pkgpanda: | build/pkgpanda.manifest
+pkgpanda: | build/pkgpanda.manifest build/python-requests.manifest
 build/pkgpanda.manifest: | build/python.manifest build/docker_image
 	$(SUDO) rm -rf build/pkgpanda
 	cp -rp packages/pkgpanda build

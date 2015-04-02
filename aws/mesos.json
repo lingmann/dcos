@@ -65,7 +65,7 @@
     "BootstrapRepoRoot" : {
       "Description" : "Root repository for bootstrapping (must end in /)",
       "Type" : "String",
-      "Default" : "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
+      "Default" : "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
     },
     "VpcTemplateUrl" : {
       "Description" : "URL of the VPC CloudFormation template on S3 (must be \"https://s3.amazonaws.com/<bucket>/<key>\")",

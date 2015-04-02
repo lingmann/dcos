@@ -73,34 +73,19 @@ build/dcos.manifest:
 	@exit 1
 
 .PHONY: all
-all: assemble
+all: tree
 
-.PHONY: assemble
-assemble: | build/marathon.manifest build/exhibitor.manifest build/java.manifest
-assemble: | build/mesos.manifest build/python.manifest build/mesos-dns.manifest
-assemble: | build/mesos-buildenv.manifest build/pkgpanda.manifest
-assemble: | build/dcos-ui.manifest build/nginx.manifest build/hadoop.manifest
-assemble: | build/hdfs-mesos.manifest build/dcos-cli.manifest
-assemble: | build/python-requests.manifest
-	@rm -rf dist && mkdir -p dist
-	@cp build/*/*.tar.xz dist
-	@# TODO: Change pkgpanda strap so our work dir is not /opt/mesosphere
-	@$(SUDO) rm -rf /opt/mesosphere
-	@cd dist && pkgpanda-mkbootstrap tarball --role=slave / *.tar.xz
+.PHONY: tree
+tree:
+	@rm -rf packages/bootstrap_tmp dist packages/active.json packages/bootstrap.tar.xz
+	@mkdir -p dist/config
+	@cd packages && mkpanda tree --mkbootstrap
+	@cp packages/bootstrap.tar.xz dist
 	@# Append dcos-config--setup (env specific config pkg) to default active.json
-	@mkdir dist/config
 	@jq '. + ["dcos-config--setup"]' \
-		dist/active.json > dist/config/active.json
-	@rm dist/active.json
-	@# Set up manifest contents
-	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
-	#@# Build bootstrap script
-	@env "SUBST_PKG_VER=$(PKG_VER)" "SUBST_PKG_REL=$(PKG_REL)" \
-		$(ENVSUBST) '$$SUBST_PKG_VER:$$SUBST_PKG_REL' \
-		< src/scripts/bootstrap.sh \
-		> dist/bootstrap.sh
+		packages/active.json > dist/config/active.json
 	@# Checksum
-	@cd dist && sha256sum *.tar.xz *.manifest *.sh > \
+	@cd dist && sha256sum *.tar.xz > \
 		dcos-$(PKG_VER)-$(PKG_REL).sha256
 
 .PHONY: publish
@@ -112,8 +97,8 @@ publish: | build/docker_image
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/ \
 		--recursive
 	@echo "Bootstrap URL's:"
-	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
-	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/bootstrap.sh"
+	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
+	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
 
 .PHONY: publish-link
 publish-link: publish | build/docker_image

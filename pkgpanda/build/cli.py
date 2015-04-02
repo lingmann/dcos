@@ -253,9 +253,11 @@ def build_tree(repository, mkbootstrap):
         # mkbootstrap be a library call, use the repository built during package
         # building rather than making a new one.
         print("Making bootstrap tarball")
+        tmpdir = tempfile.mkdtemp("pkgpanda_bootstrap")
         cmd = ["pkgpanda-mkbootstrap", "tarball", "bootstrap_tmp"]
         cmd += list(sorted(built_package_paths))
         check_call(cmd)
+        rmtree(tmpdir)
 
 
 def build(buildinfo, repository):

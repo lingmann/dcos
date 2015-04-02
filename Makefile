@@ -14,22 +14,6 @@ DOCKER_RUN   ?= $(SUDO) docker run -v $(CURDIR):/dcos \
 	-e AWS_ACCESS_KEY_ID=$(AWS_ACCESS_KEY_ID) \
 	-e AWS_SECRET_ACCESS_KEY=$(AWS_SECRET_ACCESS_KEY)
 
-ifeq ($(origin MESOS_GIT_SHA), undefined)
-MESOS_GIT_SHA := $(shell cd ext/mesos 2>/dev/null && git rev-parse HEAD)
-endif
-
-ifeq ($(origin MESOS_GIT_URL), undefined)
-MESOS_GIT_URL := $(PROJECT_ROOT)/ext/mesos
-endif
-
-ifeq ($(origin MESOS_BUILDENV_GIT_SHA), undefined)
-MESOS_BUILDENV_GIT_SHA := $(shell cd ext/mesos-buildenv 2>/dev/null && git rev-parse HEAD)
-endif
-
-ifeq ($(origin MESOS_BUILDENV_GIT_URL), undefined)
-MESOS_BUILDENV_GIT_URL := $(PROJECT_ROOT)/ext/mesos-buildenv
-endif
-
 ifeq ($(origin PKGPANDA_GIT_URL), undefined)
 PKGPANDA_GIT_URL := $(PROJECT_ROOT)/ext/pkgpanda
 endif
@@ -164,41 +148,23 @@ build/docker_image:
 	@echo "docker_image build complete"
 	@cat Dockerfile > $@
 
-ext/mesos:
-	@echo "ERROR: mesos checkout required at the desired build version"
-	@echo "Please check out at the desired build version. For example:"
-	@echo "  git clone https://git-wip-us.apache.org/repos/asf/mesos.git ext/mesos"
-	@echo "  pushd ext/mesos && git checkout 0.21.1 && popd"
-	@exit 1
-
 .PHONY: mesos
 mesos: | build/mesos.manifest
-build/mesos.manifest: | ext/mesos build/mesos-buildenv.manifest
+build/mesos.manifest: | build/mesos-buildenv.manifest
 build/mesos.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos
 	cp -rp packages/mesos build
-	@# Update package buildinfo
-	cat packages/mesos/buildinfo.json \
-		| $(JQ) --arg sha "$(MESOS_GIT_SHA)" --arg url "$(MESOS_GIT_URL)" \
-		'.single_source.branch = $$sha | .single_source.git = $$url' \
-		> build/mesos/buildinfo.json
 	cd build/mesos && $(ANNOTATE) $(MKPANDA) &> ../mesos.log
 	>&2 egrep '^stderr: ' build/mesos.log || true
 	$(MKPANDA) remove mesos || true
 	$(MKPANDA) add build/mesos/*.tar.xz
-	@echo 'MESOS_GIT_SHA=$(MESOS_GIT_SHA)' > $@
+	touch $@
 
 .PHONY: mesos-buildenv
 mesos-buildenv: | build/mesos-buildenv.manifest
 build/mesos-buildenv.manifest: | build/docker_image
 	$(SUDO) rm -rf build/mesos-buildenv
 	cp -rp packages/mesos-buildenv build
-	@# Update package buildinfo
-	cat packages/mesos-buildenv/buildinfo.json \
-		| $(JQ) --arg sha "$(MESOS_BUILDENV_GIT_SHA)" \
-		--arg url "$(MESOS_BUILDENV_GIT_URL)" \
-		'.single_source.branch = $$sha | .single_source.git = $$url' \
-		> build/mesos-buildenv/buildinfo.json
 	cd build/mesos-buildenv && $(ANNOTATE) $(MKPANDA) &> ../mesos-buildenv.log
 	$(MKPANDA) remove mesos-buildenv || true
 	$(MKPANDA) add build/mesos-buildenv/*.tar.xz

@@ -1,23 +1,25 @@
 
-from collections import deque
+import logging
 import threading
 import requests
-import logging
 import urlparse
+
+from collections import deque
+
 
 class StateBuffer():
 
-    def __init__(self, urls, bufferCount = 60, intervalSeconds = 60):
+    def __init__(self, urls, buffer_count=60, interval_seconds=60):
         """
         Create state buffer
         :param urls: the list of all master urls
-        :param bufferCount: the number of state items to buffer
-        :param intervalSeconds: the interval to fetch the state
+        :param buffer_count: the number of state items to buffer
+        :param interval_seconds: the interval to fetch the state
         :return:
         """
         self.urls = urls
-        self.intervalSeconds = intervalSeconds
-        self.entries = deque( maxlen=bufferCount )
+        self.intervalSeconds = interval_seconds
+        self.entries = deque(maxlen=buffer_count)
 
     def _find_leader_(self):
         """
@@ -27,10 +29,10 @@ class StateBuffer():
         for url in self.urls:
             try:
                 redirect = requests.get(urlparse.urljoin(url, "/master/redirect"), allow_redirects=False)
-                if redirect.status_code==307:
+                if redirect.status_code == 307:
                     return redirect.headers['Location']
             except Exception as e:
-               logging.warn("could not access %s" % url)
+                logging.warn("could not access %s since %s" % (url, e))
         return None
 
     def _fetch_state_(self):
@@ -47,7 +49,6 @@ class StateBuffer():
         except Exception as e:
             logging.warn("Could not fetch state: %s" % e)
             return "{}"
-
 
     def _update_(self):
         """

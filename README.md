@@ -68,7 +68,7 @@ To launch in a different region it should be sufficient to:
 # Software
 | Component | Details |
 | --- | --- |
-| OS | CoreOS Alpha Channel 618 |
+| OS | CoreOS Beta Channel 633.1.0 for HVM |
 | Pkgpanda | |
 | Mesos DNS | |
 | DCOS CLI | |

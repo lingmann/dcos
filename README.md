@@ -32,6 +32,21 @@ To SSH to individual instances of your cluster you will have to switch the to EC
 ssh -i <key.pem> core@<node_hostname>
 ```
 
+#### VPN access
+One easy way to set up VPN access is with the [pfSense VPN AWS appliance](https://aws.amazon.com/marketplace/pp/B00G6P8CVW/ref=srh_res_product_title?ie=UTF8&sr=0-2&qid=1385067602051).
+
+
+To launch it, simply click on "Continue" and then "Launch with EC2
+Console" and be sure to put it in the VPC and select "Assign Public IP
+address".
+
+OpenVPN comes preconfigured; you just need to download the
+configuration from the web console, linked above. If you'd like to
+learn more, here is the [user guide](http://www.netgate.com/doc/AWS-VPN-appliance/user_guide.html).
+
+This VPN appliance costs about 100 USD a month -- 50 for the
+"software" and 50 for the instance (it only runs on bigger instances).
+
 #### Resizing the cluster
 Currently you can change the number of slaves, but not the number of masters.
 To change the number of slaves:

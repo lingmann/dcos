@@ -53,7 +53,7 @@ We recommend running this CloudFormation template inside a sub-account to guaran
 # Quota
 AWS accounts must have sufficent remaining quota to launch the CloudFormation template. Our one-shot template consumes:
 | Resource | Quantity |
-| -- | -- |
+| --- | --- |
 | VPC | 1 |
 | CloudFormation stacks | 4 |
 | ELB | 2 |

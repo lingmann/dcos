@@ -1,13 +1,10 @@
 SHELL     := /bin/bash
 PKG_VER   ?= $(shell python -c "import history ; print history.__version__")
 REL_PATCH ?= $(shell date -u +'%Y%m%d%H%M%S')
-SHA       ?= $(shell git rev-parse --short HEAD)
-ITEMS      = $(REL_MAJOR) $(REL_MINOR) $(REL_PATCH) $(DIST)$(DIST_VER) $(SHA)
-PKG_REL    = $(subst $(SPACE),.,$(strip $(ITEMS)))
 
 .PHONY: help
 help:
-	@echo ""
+	@echo "setup to create a virtual environment with all dependencies"
 	@exit 0
 
 .PHONY: setup
@@ -37,8 +34,10 @@ dist:
 push: dist
 	docker push mesosphere/dcos-history-service:$(PKG_VER)
 
-
+.PHONY: run
 run:
-	docker run -p 5000:500 -e MASTER_URLS="http://srv2.hw.ca1.mesosphere.com:5050" mesosphere/dcos-history-service:$(PKG_VER)
+	docker run -p 5000:500 -e MASTER_URLS="$(MASTER_URLS)" mesosphere/dcos-history-service:$(PKG_VER)
 
-
+.PHONY: ovh
+ovh:
+	http PUT http://srv2.hw.ca1.mesosphere.com:8080/v2/apps/dcos/service/history < ovh-stage-marathon.json

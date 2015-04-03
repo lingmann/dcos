@@ -58,7 +58,6 @@ coreos:
         EnvironmentFile=/opt/mesosphere/environment
         ExecStartPre=/usr/bin/mkdir -p /etc/systemd/system/multi-user.target.wants
         ExecStartPre=/usr/bin/cp /etc/systemd/system/dcos.target /etc/systemd/system/multi-user.target.wants
-        ExecStartPre=-/usr/bin/ln -s /opt/mesosphere/dcos.target.wants /etc/systemd/system/dcos.target.wants
         ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
         ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap
     - name: dcos-download.service

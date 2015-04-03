@@ -2,7 +2,6 @@
 
 Usage:
   pkgpanda activate <id>... [options]
-  pkgpanda activate --recover
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda list [options]
@@ -35,7 +34,7 @@ from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, urllib_fetcher
 from pkgpanda.constants import version
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import if_exists, load_json, load_string
+from pkgpanda.util import if_exists, load_json, load_string, write_string
 
 
 def print_repo_list(packages):
@@ -50,7 +49,7 @@ def print_repo_list(packages):
                 print("  " + package.version)
 
 
-def setup(install, repository):
+def do_bootstrap(install, repository):
     # These files should be set by the environment which initially builds
     # the host (cloud-init).
     repository_url = if_exists(load_string, install.get_config_filename("setup-flags/repository-url"))
@@ -65,6 +64,7 @@ def setup(install, repository):
     # instead.
     setup_pkg_dir = install.get_config_filename("setup-packages")
     for pkg_id_str in os.listdir(setup_pkg_dir):
+        print("Installing setup package: {}".format(pkg_id_str))
         if not PackageId.is_id(pkg_id_str):
             print("Invalid package id in setup package: {}".format(pkg_id_str))
             sys.exit(1)
@@ -86,6 +86,7 @@ def setup(install, repository):
 
     to_activate = None
     if repository_url:
+        print("Fetching active.json from repository {}".format(repository_url))
         # TODO(cmaloney): Support sending some basic info to the machine generating
         # the active list of packages.
         active_url = urljoin(repository_url, "config/active.json")
@@ -101,16 +102,54 @@ def setup(install, repository):
             sys.exit(1)
 
         # Ensure all packages are local
+        print("Ensuring all packages in active set {} are local".format(",".join(to_activate)))
         for package in to_activate:
             repository.add(fetcher, package)
     else:
-        # Grab to_activate from the local filez
+        # Grab to_activate from the local active.json
+        print("Loading active.json from setup-flags")
         to_activate = load_json(install.get_config_filename("setup-flags/active.json"))
 
     # Should be set by loading out of fs or from the local config server.
     assert to_activate is not None
 
+    print("Activating packages")
     install.activate(repository, repository.load_packages(to_activate))
+
+
+dcos_target_contents = """[Unit]
+After=dcos-setup.service
+[Install]
+WantedBy=multi-user.target
+"""
+
+
+def setup(install, repository):
+
+    # Check for /opt/mesosphere/bootstrap. If not exists, download everything
+    # and install /etc/systemd/system/mutli-user.target/dcos.target
+    bootstrap_path = os.path.join(repository.path, "bootstrap")
+    if os.path.exists(bootstrap_path):
+        # Write, enable /etc/systemd/system/dcos.target for next boot.
+        dcos_target_dir = os.path.dirname(install.systemd_dir)
+        try:
+            os.makedirs(dcos_target_dir)
+        except FileExistsError:
+            pass
+
+        write_string(os.path.join(dcos_target_dir, "dcos.target"),
+                     dcos_target_contents)
+        if install.manage_systemd:
+            check_call(["systemctl", "enable", "dcos.target"])
+        do_bootstrap(install, repository)
+        os.remove(bootstrap_path)
+
+    # Check for /opt/mesosphere/install_progress. If found, recover the partial
+    # update.
+    if os.path.exists("/opt/mesosphere/install_progress"):
+        took_action, msg = install.recover_swap_active()
+        if not took_action:
+            print("No recovery performed: {}".format(msg))
 
 
 def main():
@@ -162,20 +201,14 @@ def main():
         sys.exit(0)
 
     if arguments['activate']:
-        if arguments['--recover']:
-            took_action, msg = install.recover_swap_active()
-            if not took_action:
-                print("No recovery performed: {}".format(msg))
-            sys.exit(0)
-        else:
-            try:
-                install.activate(repository, repository.load_packages(arguments['<id>']))
-            except ValidationError as ex:
-                print("Validation Error: {0}".format(ex))
-                sys.exit(1)
-            except PackageError as ex:
-                print("Package Error: {0}".format(ex))
-            sys.exit(0)
+        try:
+            install.activate(repository, repository.load_packages(arguments['<id>']))
+        except ValidationError as ex:
+            print("Validation Error: {0}".format(ex))
+            sys.exit(1)
+        except PackageError as ex:
+            print("Package Error: {0}".format(ex))
+        sys.exit(0)
 
     if arguments['remove']:
         # Make sure none of the packages are active

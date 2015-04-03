@@ -3,11 +3,10 @@ Description=Prep the Pkgpanda working directories for this host.
 Requires=dcos-download.service
 After=dcos-download.service
 
-ConditionPathExists=/opt/mesosphere/bootstrap
-
 [Service]
 Type=oneshot
-
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
-ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap
+ExecStart=/opt/mesosphere/bin/pkgpanda setup
+
+[Install]
+WantedBy=multi-user.target

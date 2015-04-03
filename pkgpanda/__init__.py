@@ -598,3 +598,11 @@ class Install:
         # Start all systemd services in dcos.target.wants
         systemd.daemon_reload()
         systemd.start_all()
+
+    @property
+    def manage_systemd(self):
+        return self.__manage_systemd
+
+    @property
+    def systemd_dir(self):
+        return self.__systemd_dir

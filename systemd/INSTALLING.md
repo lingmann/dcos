@@ -3,16 +3,10 @@
 Copy to `/etc/systemd/system`:
  - dcos-setup.service
  - dcos-download.service
- - dcos-repair.service
-
-Copy to `/etc/systemd/system/multi-user.target.wants/`:
- - dcos.target
-
-Symlink /etc/systemd/system/dcos.target.wants -> /opt/mesosphere/dcos.target.wants
-
 
 *NOTE*: All of this config lives outside of /opt/mesosphere for dcos-download.service to work right, as well as alll of /opt/mesosphere to be filled in by extracting the dcos distribution.
 
+Only dcos-setup.service shoudl have the action 'start' as well as 'enable: true' via cloud-config. dcos-download.service should not.
 
 ## Bootstrap configuration
 
@@ -41,6 +35,7 @@ Symlink /etc/systemd/system/dcos.target.wants -> /opt/mesosphere/dcos.target.wan
 TODO(cmaloney): Should we report status back to somewhere?
 
 # How it works
+
 
 `dcos.target` depends upon `dcos-setup.service`. `dcos-setup.service` depends on
 `dcos-download.service`

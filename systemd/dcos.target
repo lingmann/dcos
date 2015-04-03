@@ -1,5 +1,0 @@
-[Unit]
-After=dcos-repair.service
-Requires=dcos-repair.service
-After=dcos-setup.service
-Requires=dcos-setup.service

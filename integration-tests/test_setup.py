@@ -1,7 +1,7 @@
 from shutil import copytree
 from subprocess import check_call, check_output
 
-from pkgpanda.util import expect_fs
+from pkgpanda.util import expect_fs, write_string
 
 from util import run
 
@@ -9,11 +9,13 @@ from util import run
 def tmp_repository(tmpdir, repo_dir="../tests/resources/packages"):
     repo_path = tmpdir.join("repository")
     copytree(repo_dir, str(repo_path))
+    write_string(str(repo_path.join("bootstrap")), "")
     return repo_path
 
 
 def test_setup(tmpdir):
     repo_path = tmp_repository(tmpdir)
+
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
@@ -36,6 +38,7 @@ def test_setup(tmpdir):
             "lib": ["libmesos.so"],
             "etc": ["foobar", "some.json"],
             "dcos.target.wants": [],
+            "dcos.target": None,
             "environment": None,
             "environment.export": None
         })
@@ -51,7 +54,7 @@ def test_setup(tmpdir):
         ]).decode("utf-8").split())
 
     assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
-
+    write_string(str(repo_path.join("bootstrap")), "")
     # If we setup the same directory again we should get .old files.
     check_call(["pkgpanda",
                 "setup",
@@ -74,6 +77,7 @@ def test_setup(tmpdir):
                 "mesos-slave"],
             "lib": ["libmesos.so"],
             "etc": ["foobar", "some.json"],
+            "dcos.target": None,
             "dcos.target.wants": [],
             "environment": None,
             "environment.export": None,

@@ -112,6 +112,16 @@ coreos:
         Requires=dcos-repair.service
         After=dcos-setup.service
         Requires=dcos-setup.service
+    - name: link-env.service
+      command: start
+      content: |
+        [Unit]
+        After=dcos.target
+        Requires=dcos.target
+        [Service]
+        Type=oneshot
+        ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
+        ExecStart=/usr/bin/ln -s /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
     - name: cfn-signal.service
       command: start
       content: |

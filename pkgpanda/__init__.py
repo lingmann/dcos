@@ -388,8 +388,9 @@ def symlink_tree(src, dest):
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, config_dir, rooted_systemd, manage_systemd, block_systemd):
+    def __init__(self, root, config_dir, rooted_systemd, manage_systemd, block_systemd, fake_path=False):
         assert type(rooted_systemd) == bool
+        assert type(fake_path) == bool
         self.__root = os.path.abspath(root)
         self.__config_dir = os.path.abspath(config_dir) if config_dir else None
         if rooted_systemd:
@@ -407,6 +408,8 @@ class Install:
                 self.__roles = []
 
         self.__well_known_dirs = ["bin", "etc", "lib", self.__systemd_dir]
+
+        self.__fake_path = fake_path
 
     def get_active(self):
         """the active folder has symlinks to all the active packages.
@@ -480,7 +483,7 @@ class Install:
             symlink_tree(src, dest)
 
         # Set the new LD_LIBRARY_PATH, PATH.
-        env_contents = env_header.format(self.__root)
+        env_contents = env_header.format("/opt/mesosphere" if self.__fake_path else self.__root)
 
         # Add the folders, config in each package.
         for package in packages:

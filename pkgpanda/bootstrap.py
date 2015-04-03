@@ -66,7 +66,7 @@ def main():
     # Activate the packages inside the repository.
     # Do generate dcos.target.wants inside the root so that we don't
     # try messing with /etc/systemd/system.
-    install = pkgpanda.Install(pkgpanda_root, config_dir, True, False, True)
+    install = pkgpanda.Install(pkgpanda_root, config_dir, True, False, True, True)
     install.activate(repository, repository.load_packages(pkg_ids))
 
     # Remove dcos.target.wants from the install since it won't be used

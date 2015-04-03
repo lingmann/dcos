@@ -83,7 +83,7 @@ def main():
     write_json("active.json", pkg_ids)
 
     # Rewrite all the symlinks to point to /opt/mesosphere
-    rewrite_symlinks(root, root, "/opt/mesosphere/")
+    rewrite_symlinks(root, root, "/")
 
     if arguments['tarball']:
         make_tar("bootstrap.tar.xz", pkgpanda_root)

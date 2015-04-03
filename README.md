@@ -98,6 +98,9 @@ To request a quota increase, navigate to the Support Center console and create a
 # Decommissioning
 Unfortunately there isn't an elegant way to decommission clusters provisioned in this manner. This is because non-empty S3 buckets cannot be deleted automatically. The solution is trivial but inconvenient and requires running a script that deletes the contents of the S3 bucket, deletes the S3 bucket, and finally deletes the umbrella CloudFormation stack. This script requires credentials for an IAM user with very high access.
 
+### Manually deleting S3 buckets
+To delete an S3 bucket, you must first delete its contents. To do so from the AWS web UI, navigate to the S3 console, select the bucket for your cluster, select and delete all of its items (under the `Actions` drop down). Finally, you must navigate to the previous screen and delete the bucket (before it gets repopulated by Exhibitor). After the bucket has been deleted, you can simply hit `Delete Stack` on your CloudFormation stack.
+
 # Customization
 ### Launching in a different region
 To launch in a different region it should be sufficient to:

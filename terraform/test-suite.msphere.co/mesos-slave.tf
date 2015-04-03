@@ -43,9 +43,10 @@ write_files:
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
-      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=2mins
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/ephemeral/mesos-slave
+      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-65535]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=master0.${var.uuid}.${var.domain}
@@ -148,7 +149,6 @@ coreos:
         EnvironmentFile=/opt/mesosphere/environment
         ExecStartPre=/usr/bin/mkdir -p /etc/systemd/system/multi-user.target.wants
         ExecStartPre=/usr/bin/cp /etc/systemd/system/dcos.target /etc/systemd/system/multi-user.target.wants
-        ExecStartPre=-/usr/bin/ln -s /opt/mesosphere/dcos.target.wants /etc/systemd/system/dcos.target.wants
         ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
         ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap
     - name: dcos-download.service

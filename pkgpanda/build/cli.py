@@ -161,6 +161,8 @@ def build_tree(repository, mkbootstrap):
     packages = dict()
     for name in os.listdir():
         if os.path.isdir(name):
+            if not os.path.exists(os.path.join(name, "buildinfo.json")):
+                continue
             packages[name] = load_buildinfo(name)
             if packages[name]["name"] != name:
                 print("ERROR: Package name inside buildinfo.json must match folder name.")

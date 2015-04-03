@@ -1,8 +1,0 @@
-{
-  "name" : "zookeeper",
-  "requires": ["java"],
-  "single_source": {
-    "kind": "url",
-    "url": "file://build"
-  }
-}

@@ -58,6 +58,7 @@ def test_recovery_archive(tmpdir, repository):
             "bin": ["mesos", "mesos-dir"],
             "dcos.target.wants": [".gitignore"],
             "environment": None,
+            "environment.export": None,
             "environment.old": None,
             "etc": [".gitignore"],
             "lib": ["libmesos.so"]
@@ -79,6 +80,7 @@ def test_recovery_move_new(tmpdir, repository):
             "bin": ["mesos", "mesos-dir"],
             "dcos.target.wants": [".gitignore"],
             "environment": None,
+            "environment.export": None,
             "etc": [".gitignore"],
             "lib": ["libmesos.so"]
         })

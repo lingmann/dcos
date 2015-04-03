@@ -24,7 +24,7 @@ from itertools import chain
 from subprocess import CalledProcessError, check_call
 
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
-from pkgpanda.util import if_exists, load_json
+from pkgpanda.util import if_exists, load_json, write_string
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -33,6 +33,9 @@ reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 env_header = """# Pandapkg provided environment variables
 LD_LIBRARY_PATH={0}/lib
 PATH=/usr/bin:{0}/bin\n\n"""
+env_export_header = """# Pandapkg provided environment variables
+export LD_LIBRARY_PATH={0}/lib
+export PATH=/usr/bin:{0}/bin\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
@@ -445,7 +448,7 @@ class Install:
         return os.path.abspath(os.path.join(self.__root, name))
 
     def get_active_names(self):
-        return list(map(self._make_abs, self.__well_known_dirs + ["environment", "active"]))
+        return list(map(self._make_abs, self.__well_known_dirs + ["environment", "environment.export", "active"]))
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
@@ -484,6 +487,7 @@ class Install:
 
         # Set the new LD_LIBRARY_PATH, PATH.
         env_contents = env_header.format("/opt/mesosphere" if self.__fake_path else self.__root)
+        env_export_contents = env_export_header.format("/opt/mesosphere" if self.__fake_path else self.__root)
 
         # Add the folders, config in each package.
         for package in packages:
@@ -512,10 +516,19 @@ class Install:
                 env_contents += "{0}={1}\n".format(k, v)
             env_contents += "\n"
 
+            # Add to the environment.export contents
+            env_export_contents += "# package: {0}\n".format(package.id)
+            for k, v in package.environment.items():
+                env_export_contents += "export {0}={1}\n".format(k, v)
+            env_export_contents += "\n"
+
         # Write out the new environment file.
         new_env = self._make_abs("environment.new")
-        with open(new_env, "w+") as f:
-            f.write(env_contents)
+        write_string(new_env, env_contents)
+
+        # Write out the new environment.export file
+        new_env_export = self._make_abs("environment.export.new")
+        write_string(new_env_export, env_export_contents)
 
         self.swap_active(".new")
 

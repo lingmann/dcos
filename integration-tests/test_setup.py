@@ -36,7 +36,8 @@ def test_setup(tmpdir):
             "lib": ["libmesos.so"],
             "etc": ["foobar", "some.json"],
             "dcos.target.wants": [],
-            "environment": None
+            "environment": None,
+            "environment.export": None
         })
 
     # Introspection should work right
@@ -75,6 +76,7 @@ def test_setup(tmpdir):
             "etc": ["foobar", "some.json"],
             "dcos.target.wants": [],
             "environment": None,
+            "environment.export": None,
             "active.old": ["env", "mesos", "mesos-config"],
             "bin.old": [
                 "mesos",
@@ -84,7 +86,8 @@ def test_setup(tmpdir):
             "lib.old": ["libmesos.so"],
             "etc.old": ["foobar", "some.json"],
             "dcos.target.wants.old": [],
-            "environment.old": None
+            "environment.old": None,
+            "environment.export.old": None
         })
 
     # Should only pickup the packages once / one active set.

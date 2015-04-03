@@ -1,10 +1,8 @@
 #!/bin/bash
-set -o errexit -o nounset -o pipefail
-
 # Build
 mkdir -p build
 pushd build
-/pkg/src/python/configure --enable-shared --prefix="$PKG_PATH"
+/pkg/src/python/configure --enable-shared --prefix="$PKG_PATH" --enable-ipv6 --with-threads --with-computed-gotos
 # TODO(cmaloney): LDFLAGS?
 # LDFLAGS="-Wl,-rpath=/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib,--enable-new-dtags"
 make -j8
@@ -15,3 +13,6 @@ ln -s "$PKG_PATH/bin/python3" "$PKG_PATH/bin/python"
 ln -s "$PKG_PATH/bin/easy_install-3.4" "$PKG_PATH/bin/easy_install-3"
 ln -s "$PKG_PATH/bin/easy_install-3" "$PKG_PATH/bin/easy_install"
 ln -s "$PKG_PATH/bin/pip3" "$PKG_PATH/bin/pip"
+ln -s "$PKG_PATH/bin/python3-config" "$PKG_PATH/bin/python-config"
+ln -s "$PKG_PATH/bin/idle3" "$PKG_PATH/bin/idle"
+ln -s "$PKG_PATH/bin/pydoc3"  "$PKG_PATH/bin/pydoc"

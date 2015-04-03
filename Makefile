@@ -84,6 +84,8 @@ tree: | build/docker_image
 	@# Append dcos-config--setup (env specific config pkg) to default active.json
 	@jq '. + ["dcos-config--setup"]' \
 		packages/active.json > dist/config/active.json
+	@# Set up manifest contents
+	@cat build/*.manifest > dist/dcos-$(PKG_VER)-$(PKG_REL).manifest
 	@# Checksum
 	@cd dist && sha256sum *.tar.xz > \
 		dcos-$(PKG_VER)-$(PKG_REL).sha256
@@ -110,10 +112,10 @@ publish-link: publish | build/docker_image
 		/dcos/dist/bootstrap.tar.xz s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).manifest \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.manifest
+		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/dcos.manifest
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).sha256 \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/bootstrap.sha256
+		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/dcos.sha256
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/config
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \

@@ -1,5 +1,6 @@
 import json
 import os
+from itertools import chain
 from shutil import which
 from subprocess import check_call
 
@@ -60,3 +61,20 @@ def make_tar(result_filename, change_folder):
         tar_cmd += ["-cJf"]
     tar_cmd += [result_filename, "-C", change_folder, "."]
     check_call(tar_cmd)
+
+
+def rewrite_symlinks(root, old_prefix, new_prefix):
+    # Find the symlinks and rewrite them from old_prefix to new_prefix
+    # All symlinks not beginning with old_prefix are ignored because
+    # packages may contain arbitrary symlinks.
+    for root_dir, dirs, files in os.walk(root):
+        for name in chain(files, dirs):
+            full_path = os.path.join(root_dir, name)
+            if os.path.islink(full_path):
+                # Rewrite old_prefix to new_prefix if present.
+                target = os.readlink(full_path)
+                if target.startswith(old_prefix):
+                    new_target = os.path.join(new_prefix, target[len(old_prefix)+1:].lstrip('/'))
+                    # Remove the old link and write a new one.
+                    os.remove(full_path)
+                    os.symlink(new_target, full_path)

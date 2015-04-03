@@ -22,7 +22,6 @@ import copy
 import os.path
 import sys
 import tempfile
-from itertools import chain
 from os import mkdir, umask
 from os.path import abspath, exists, expanduser, normpath
 from shutil import copyfile, rmtree
@@ -34,7 +33,7 @@ from pkgpanda import Install, PackageId, Repository, extract_tarball
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, load_string, make_tar, write_json, write_string
+from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
 
 
 class DockerCmd:
@@ -54,23 +53,6 @@ class DockerCmd:
         docker.append(self.container)
         docker += cmd
         check_call(docker)
-
-
-def rewrite_symlinks(root, old_prefix, new_prefix):
-    # Find the symlinks and rewrite them from old_prefix to new_prefix
-    # All symlinks not beginning with old_prefix are ignored because
-    # packages may contain arbitrary symlinks.
-    for root_dir, dirs, files in os.walk(root):
-        for name in chain(files, dirs):
-            full_path = os.path.join(root_dir, name)
-            if os.path.islink(full_path):
-                # Rewrite old_prefix to new_prefix if present.
-                target = os.readlink(full_path)
-                if target.startswith(old_prefix):
-                    new_target = os.path.join(new_prefix, target[len(old_prefix)+1:].lstrip('/'))
-                    # Remove the old link and write a new one.
-                    os.remove(full_path)
-                    os.symlink(new_target, full_path)
 
 
 # package {id, name} + repo -> package id

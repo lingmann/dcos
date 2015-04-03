@@ -128,7 +128,7 @@ def setup(install, repository):
 
     # Check for /opt/mesosphere/bootstrap. If not exists, download everything
     # and install /etc/systemd/system/mutli-user.target/dcos.target
-    bootstrap_path = os.path.join(repository.path, "bootstrap")
+    bootstrap_path = os.path.join(install.root, "bootstrap")
     if os.path.exists(bootstrap_path):
         # Write, enable /etc/systemd/system/dcos.target for next boot.
         dcos_target_dir = os.path.dirname(install.systemd_dir)

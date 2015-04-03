@@ -606,3 +606,7 @@ class Install:
     @property
     def systemd_dir(self):
         return self.__systemd_dir
+
+    @property
+    def root(self):
+        return self.__root

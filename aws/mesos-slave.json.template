@@ -113,6 +113,7 @@
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Ref" : "InstanceAmi" },
+        "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Ref" : "InstanceType" },

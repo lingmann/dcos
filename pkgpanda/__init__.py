@@ -495,7 +495,10 @@ class Install:
             # NOTE: Since active is at the end of the folder list it will be
             # removed by the zip. This is the desired behavior, since it will be
             # populated later.
+            # Do the basename since some well known dirs are full paths (dcos.target.wants)
+            # while inside the packages they are always top level directories.
             for new, dir_name in zip(new_dirs, self.__well_known_dirs):
+                dir_name = os.path.basename(dir_name)
                 pkg_dir = os.path.join(package.path, dir_name)
                 assert os.path.isabs(new)
                 assert os.path.isabs(pkg_dir)

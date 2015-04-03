@@ -11,7 +11,7 @@ Usage:
   mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
-  mkpanda tree [--mkbootstrap]
+  mkpanda tree [--mkbootstrap [--role=<role>...]]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -123,7 +123,7 @@ def main():
         sys.exit(0)
 
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'])
+        build_tree(repository, arguments['--mkbootstrap'], arguments['--role'])
         sys.exit(0)
 
     buildinfo = load_buildinfo()
@@ -150,7 +150,7 @@ def load_buildinfo(path=os.getcwd()):
         sys.exit(1)
 
 
-def build_tree(repository, mkbootstrap):
+def build_tree(repository, mkbootstrap, mkbootstrap_roles):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         sys.exit(1)
@@ -239,6 +239,8 @@ def build_tree(repository, mkbootstrap):
         print("Making bootstrap tarball")
         tmpdir = tempfile.mkdtemp("pkgpanda_bootstrap")
         cmd = ["pkgpanda-mkbootstrap", "tarball", tmpdir]
+        for role in mkbootstrap_roles:
+            cmd += ["--role={}".format(role)]
         cmd += list(sorted(built_package_paths))
         check_call(cmd)
         rmtree(tmpdir)

@@ -19,7 +19,7 @@ import sys
 
 import pkgpanda
 from docopt import docopt
-from pkgpanda.util import make_tar, write_json
+from pkgpanda.util import make_tar, rewrite_symlinks, write_json
 
 
 def make_file(name):
@@ -81,6 +81,9 @@ def main():
 
     # Write out an active.json for the bootstrap tarball
     write_json("active.json", pkg_ids)
+
+    # Rewrite all the symlinks to point to /opt/mesosphere
+    rewrite_symlinks(root, root, "/opt/mesosphere/")
 
     if arguments['tarball']:
         make_tar("bootstrap.tar.xz", pkgpanda_root)

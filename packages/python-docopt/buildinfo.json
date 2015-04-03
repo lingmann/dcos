@@ -1,0 +1,9 @@
+{
+  "name" : "python-docopt",
+  "requires": ["python"],
+  "single_source": {
+    "kind": "git",
+    "git": "https://github.com/docopt/docopt.git",
+    "branch": "0.6.2"
+  }
+}

@@ -21,8 +21,8 @@
       "MasterQuorumCount" : { "default" : "1" },
       "SlaveInstanceCount" : { "default" : "4" },
       "MasterInstanceCount" : { "default" : "1" },
-      "SlaveInstanceType" : { "default" : "m3.medium" },
-      "MasterInstanceType" : { "default" : "m3.medium" },
+      "SlaveInstanceType" : { "default" : "m3.large" },
+      "MasterInstanceType" : { "default" : "m3.large" },
       "AdminLocation" : { "default" : "0.0.0.0/0" },
       "ClusterId" : { "default" : "mesos" }
     }

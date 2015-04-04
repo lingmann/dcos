@@ -76,8 +76,9 @@ coreos:
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service
-        command: start
-        enable: true
+      command: start
+      enable: true
+      content: |
         [Unit]
         Description=Prep the Pkgpanda working directories for this host.
         Requires=dcos-download.service

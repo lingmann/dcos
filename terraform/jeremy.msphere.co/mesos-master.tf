@@ -106,25 +106,7 @@ coreos:
         Type=oneshot
         ExecStart=/usr/bin/bash -c "echo EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
-    - name: dcos-setup.service
-      command: start
-      content: |
-        [Unit]
-        Description=Prep the Pkgpanda working directories for this host.
-        Requires=dcos-download.service
-        After=dcos-download.service
-        Requires=config-writer.service
-        After=config-writer.service
-        ConditionPathExists=/opt/mesosphere/bootstrap
-        [Service]
-        Type=oneshot
-        EnvironmentFile=/opt/mesosphere/environment
-        ExecStartPre=/usr/bin/mkdir -p /etc/systemd/system/multi-user.target.wants
-        ExecStartPre=/usr/bin/cp /etc/systemd/system/dcos.target /etc/systemd/system/multi-user.target.wants
-        ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
-        ExecStart=/usr/bin/rm /opt/mesosphere/bootstrap
     - name: dcos-download.service
-      command: start
       content: |
         [Unit]
         Description=Download the DCOS
@@ -133,26 +115,22 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl ${var.repo_root}bootstrap.tar.xz -o /tmp/distribution.tar.xz
+        ExecStartPre=/usr/bin/curl ${var.repo_root}bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
-        ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere
-    - name: dcos-repair.service
+        ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
+    - name: dcos-setup.service
       command: start
+      enable: true
       content: |
         [Unit]
-        Description=Finish a partially-completed pkgpanda upgrade swap
-        ConditionPathExists=/opt/mesosphere
-        ConditionPathExists=/opt/mesosphere/install_progress
+        Description=Prep the Pkgpanda working directories for this host.
+        Requires=dcos-download.service
+        After=dcos-download.service
         [Service]
         Type=oneshot
         EnvironmentFile=/opt/mesosphere/environment
-        ExecStart=/opt/mesosphere/bin/pkgpanda activate --recover
-    - name: dcos.target
-      content: |
-        [Unit]
-        After=dcos-repair.service
-        Requires=dcos-repair.service
-        After=dcos-setup.service
-        Requires=dcos-setup.service
+        ExecStart=/opt/mesosphere/bin/pkgpanda setup
+        [Install]
+        WantedBy=multi-user.target
 CLOUD_CONFIG
 }

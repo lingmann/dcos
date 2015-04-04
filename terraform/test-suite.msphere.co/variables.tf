@@ -63,6 +63,7 @@ variable "slave_count" {
 }
 
 # Use s3.amazonaws.com to remove cloudfront cache layer
-variable "bootstrap_url" {
-  default = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/bootstrap.tar.xz"
+# repo_root URL *must* be http (not https) and end with a trailing slash
+variable "repo_root" {
+  default = "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
 }

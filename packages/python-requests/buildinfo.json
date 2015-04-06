@@ -4,6 +4,6 @@
   "single_source": {
     "kind": "git",
     "git": "https://github.com/kennethreitz/requests",
-    "branch": "master"
+    "branch": "v2.6.0"
   }
 }

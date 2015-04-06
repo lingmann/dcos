@@ -20,5 +20,5 @@ check:
 	aws cloudformation validate-template --template-url https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-mesos.json
 
 make_template:
-	python bin/cloud_config_cf.py aws/mesos-master.json.template master-cloud-config > aws/mesos-master.json
-	python bin/cloud_config_cf.py aws/mesos-slave.json.template slave-cloud-config > aws/mesos-slave.json
+	python bin/cloud_config_cf.py --var='$$MASTER_CLOUD_CONFIG' aws/unified.json.template master-cloud-config > /tmp/mcc
+	python bin/cloud_config_cf.py --var='$$SLAVE_CLOUD_CONFIG' /tmp/mcc slave-cloud-config > aws/unified.json

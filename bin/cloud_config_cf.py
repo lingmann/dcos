@@ -1,7 +1,10 @@
 #!/usr/bin/python
 """
 Usage:
-    cloud_config_cf <cf_template> <cloud_config>
+    cloud_config_cf [--var=<var>] <cf_template> <cloud_config>
+
+Options:
+    --var=<var>         Dummy variable to substitute [default: $CLOUD_CONFIG]
 """
 
 import docopt
@@ -10,7 +13,6 @@ import re
 import sys
 
 
-TEMPLATE_VARIABLE="$CLOUD_CONFIG"
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
 
@@ -51,7 +53,7 @@ def main():
             transformed_string += transform(line)
     cloud_config_contents = "".join(transformed_string).rstrip(',\n')
 
-    sys.stdout.write(cf_contents.replace(TEMPLATE_VARIABLE, cloud_config_contents))
+    sys.stdout.write(cf_contents.replace(args['--var'], cloud_config_contents))
 
     sys.stdout.flush()
 

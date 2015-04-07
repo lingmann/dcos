@@ -5,8 +5,8 @@
   "sources": {
     "exhibitor": {
       "kind": "git",
-      "git": "https://github.com/Netflix/exhibitor.git",
-      "branch": "3b0132bd110f6b90df6eef3faeec3bfb58d2728a"
+      "git": "https://github.com/mesosphere/exhibitor.git",
+      "branch": "azure_support"
     },
     "zookeeper": {
       "kind": "url_extract",

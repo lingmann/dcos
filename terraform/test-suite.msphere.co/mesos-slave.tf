@@ -165,6 +165,7 @@ coreos:
         Description=Monitoring Service
         [Service]
         TimeoutStartSec=0
+        Restart=on-failure
         ExecStartPre=-/usr/bin/docker kill dd-agent
         ExecStartPre=-/usr/bin/docker rm dd-agent
         ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-slave

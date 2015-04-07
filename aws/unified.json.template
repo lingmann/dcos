@@ -67,20 +67,11 @@
       "Type" : "String",
       "Default" : "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
     },
-    "AvailabilityZones" : {
-      "Description" : "(Optional) If passed, only launch nodes in these AZs (e.g., 'us-east-1a,us-east-1b'). Must match the passed Subnets.",
-      "Type" : "CommaDelimitedList",
-      "Default" : ""
-    },
     "StackCreationTimeout" : {
       "Description" : "Timeout on initial stack creation",
       "Type" : "String",
       "Default": "PT30M"
     }
-  },
-
-  "Conditions" : {
-    "UseAllAvailabilityZones" : {"Fn::Equals" : [{ "Fn::Join" : ["", {"Ref" : "AvailabilityZones"} ]}, ""]}
   },
 
   "Mappings" : {
@@ -327,19 +318,13 @@
     "MasterServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
-        "AvailabilityZones" : {
-          "Fn::If" : [
-            "UseAllAvailabilityZones",
-            { "Fn::GetAZs" : "" },
-            {"Ref" : "AvailabilityZones"}
-          ]
-        },
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "MasterLaunchConfig" },
         "MinSize" : { "Ref" : "MasterInstanceCount" },
         "MaxSize" : { "Ref" : "MasterInstanceCount" },
         "DesiredCapacity" : { "Ref" : "MasterInstanceCount" },
         "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" }, { "Ref" : "InternalMasterLoadBalancer"} ],
-        "VPCZoneIdentifier" : { "Ref" : "PublicSubnet" },
+        "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
             "Key" : "role",
@@ -407,7 +392,7 @@ $MASTER_CLOUD_CONFIG
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
-        "Subnets": { "Ref": "PublicSubnet" },
+        "Subnets": [{ "Ref": "PublicSubnet" }],
         "Scheme": "internal",
         "Listeners" : [
           {
@@ -453,7 +438,7 @@ $MASTER_CLOUD_CONFIG
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
-        "Subnets": { "Ref": "PublicSubnet" },
+        "Subnets": [{ "Ref": "PublicSubnet" }],
         "Listeners" : [
           {
             "LoadBalancerPort" : "5050",
@@ -510,18 +495,12 @@ $MASTER_CLOUD_CONFIG
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
-        "AvailabilityZones" : {
-          "Fn::If" : [
-            "UseAllAvailabilityZones",
-            { "Fn::GetAZs" : "" },
-            {"Ref" : "AvailabilityZones"}
-          ]
-        },
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
         "MinSize" : { "Ref" : "SlaveInstanceCount" },
         "MaxSize" : { "Ref" : "SlaveInstanceCount" },
         "DesiredCapacity" : { "Ref" : "SlaveInstanceCount" },
-        "VPCZoneIdentifier" : { "Ref" : "PublicSubnet" },
+        "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
             "Key" : "role",

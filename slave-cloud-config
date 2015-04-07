@@ -20,7 +20,7 @@ write_files:
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
-      MASTER_ELB={ "Ref" : "InternalMasterLoadBalancer" }
+      MASTER_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
       FALLBACK_DNS=10.0.0.2
   - path: /root/.bashrc
     content: |
@@ -116,7 +116,7 @@ coreos:
         ExecStartPre=/bin/ping -c1 leader.mesos
         ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
           cfn-signal -e 0 \
-          --resource ServerGroup \
+          --resource SlaveServerGroup \
           --stack { "Ref" : "AWS::StackName" } \
           --region { "Ref" : "AWS::Region" }
         ExecStart=/usr/bin/touch /var/lib/cfn-signal

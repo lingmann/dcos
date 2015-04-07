@@ -137,7 +137,7 @@ coreos:
         ExecStartPre=/bin/ping -c1 leader.mesos
         ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \
           cfn-signal -e 0 \
-          --resource ServerGroup \
+          --resource MasterServerGroup \
           --stack { "Ref" : "AWS::StackName" } \
           --region { "Ref" : "AWS::Region" }
         ExecStart=/usr/bin/touch /var/lib/cfn-signal

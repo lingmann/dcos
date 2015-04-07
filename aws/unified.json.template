@@ -67,10 +67,6 @@
       "Type" : "String",
       "Default" : "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
     },
-    "QuorumSize" : {
-      "Description" : "Mesos quorum size",
-      "Type" : "Number"
-    },
     "AvailabilityZones" : {
       "Description" : "(Optional) If passed, only launch nodes in these AZs (e.g., 'us-east-1a,us-east-1b'). Must match the passed Subnets.",
       "Type" : "CommaDelimitedList",
@@ -457,7 +453,7 @@ $MASTER_CLOUD_CONFIG
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
         "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
-        "Subnets": { "Ref": "Subnets" },
+        "Subnets": { "Ref": "PublicSubnet" },
         "Listeners" : [
           {
             "LoadBalancerPort" : "5050",
@@ -567,7 +563,6 @@ $SLAVE_CLOUD_CONFIG
 
     "MasterToSlaveIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Condition" : "GrantNetworkAcl",
       "Properties" : {
         "GroupId" : { "Ref" : "SlaveSecurityGroup" },
         "IpProtocol" : "tcp",
@@ -578,7 +573,6 @@ $SLAVE_CLOUD_CONFIG
     },
     "SlaveToMasterIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Condition" : "GrantNetworkAcl",
       "Properties" : {
         "GroupId" : { "Ref" : "MasterSecurityGroup" },
         "IpProtocol" : "tcp",
@@ -589,7 +583,6 @@ $SLAVE_CLOUD_CONFIG
     },
     "SlaveToMasterDNSUDPIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Condition" : "GrantNetworkAcl",
       "Properties" : {
         "GroupId" : { "Ref" : "MasterSecurityGroup" },
         "IpProtocol" : "udp",
@@ -600,7 +593,6 @@ $SLAVE_CLOUD_CONFIG
     },
     "SlaveToMasterDNSTCPIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Condition" : "GrantNetworkAcl",
       "Properties" : {
         "GroupId" : { "Ref" : "MasterSecurityGroup" },
         "IpProtocol" : "tcp",
@@ -611,7 +603,6 @@ $SLAVE_CLOUD_CONFIG
     },
     "SlaveToMasterLBIngress" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Condition" : "GrantNetworkAcl",
       "Properties" : {
         "GroupId" : { "Ref" : "LbSecurityGroup" },
         "IpProtocol" : "tcp",

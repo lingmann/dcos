@@ -26,7 +26,7 @@ write_files:
       MESOS_LOG_DIR=/var/log/mesos
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
-      MESOS_QUORUM={ "Ref" : "QuorumSize" }
+      MESOS_QUORUM={ "Ref" : "MasterQuorumCount" }
       MESOS_CLUSTER={ "Ref" : "AWS::StackName" }
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |

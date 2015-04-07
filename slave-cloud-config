@@ -20,7 +20,7 @@ write_files:
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
-      MASTER_ELB={ "Ref" : "MesosMasterInternalELB" }
+      MASTER_ELB={ "Ref" : "InternalMasterLoadBalancer" }
       FALLBACK_DNS=10.0.0.2
   - path: /root/.bashrc
     content: |

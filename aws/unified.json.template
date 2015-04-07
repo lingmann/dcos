@@ -590,5 +590,30 @@ $SLAVE_CLOUD_CONFIG
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
       }
     }
+  },
+
+  "Outputs" : {
+    "DnsAddress" : {
+      "Description" : "Mesos Master",
+      "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
+    },
+    "MesosMasterInternalELB" : {
+      "Description" : "Internal load balancer to find Mesos master.",
+      "Value" : { "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ]}
+    },
+    "MesosMasterSecurityGroup" : {
+      "Value" : { "Ref" : "MasterSecurityGroup" }
+    },
+    "MesosMasterLBSecurityGroup" : {
+      "Value" : { "Ref" : "LbSecurityGroup" }
+    },
+    "MesosMasterConnectString" : {
+      "Value": { "Fn::Join" : [ "", [
+          "zk://",
+          {"Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ]},
+          ":2181",
+          "/mesos"
+      ]]}
+    }
   }
 }

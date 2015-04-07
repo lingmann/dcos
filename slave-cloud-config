@@ -5,7 +5,7 @@ write_files:
     permissions: 0644
     owner: root
     content: |
-      { "Ref" : "BootstrapRepoRoot" }
+      { "Fn::FindInMap" : [ "Parameters", "BootstrapRepoRoot", "default" ] }
   - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -72,7 +72,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl { "Ref": "BootstrapRepoRoot" }bootstrap.tar.xz -o /tmp/distribution.tar.xz
+        ExecStartPre=/usr/bin/curl { "Fn::FindInMap" : [ "Parameters", "BootstrapRepoRoot", "default" ] }bootstrap.tar.xz -o /tmp/distribution.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

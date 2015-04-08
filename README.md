@@ -3,10 +3,22 @@ One-shot CloudFormation templates for DCOS
 
 # Usage
 ### Launching with the AWS Web UI
-1. Go to OneLogin and click on AWS Development: https://app.onelogin.com/client/apps. This will create a temporary admin user for you in a sandboxed account so production services cannot be affected.
+* Go to OneLogin and click on AWS Development: https://app.onelogin.com/client/apps. This will create a temporary admin user for you in a sandboxed account so production services cannot be affected.
 1. Click this button:
-[![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json)
-1. Alternatively, if you want to set your own parameters:
+
+| Region | Link|
+| --- | --- |
+| eu-central-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=eu-central-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| ap-northeast-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-northeast-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| sa-east-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=sa-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| ap-southeast-2 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| ap-southeast-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=ap-southeast-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| us-east-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-east-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| us-west-2 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| us-west-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+| eu-west-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
+
+* Alternatively, if you want to set your own parameters:
 [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos.json)
 1. Follow the wizard (please report any parameters you find confusing!). There are two fields you must set:
   1. *Name* - give your CloudFormation stack a recognizable name, and

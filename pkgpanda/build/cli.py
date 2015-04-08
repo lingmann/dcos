@@ -227,7 +227,7 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
             # Activate the package so the things that depend on it will build right.
             package_id = load_string(os.path.join(name, "cache/last_build"))
             pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
-            check_call(["mkpanda", "add", pkg_path])
+            add(repository, pkg_path)
             built_package_paths.add(pkg_path)
 
     finally:

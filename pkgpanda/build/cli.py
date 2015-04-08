@@ -25,7 +25,7 @@ import tempfile
 from os import mkdir, umask
 from os.path import abspath, exists, expanduser, normpath
 from shutil import copyfile, rmtree
-from subprocess import CalledProcessError, check_call
+from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
 from docopt import docopt
@@ -276,8 +276,24 @@ def build(buildinfo, repository):
 
     # Add the sha1sum of the buildinfo.json + build file to the build ids
     build_ids = {"sources": checkout_ids}
-    build_ids['buildinfo'] = sha1("buildinfo.json")
     build_ids['build'] = sha1("build")
+
+    # Figure out the docker name.
+    docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
+    if 'docker' in buildinfo:
+        print("WARNING: Specifying docker explicitly shold be avoided.")
+        print("This option will be removed once enough of the dependencies " +
+              "are in pkgpanda form that everything can just use pkgpanda " +
+              "dependencies.")
+    cmd.container = docker_name
+
+    # Add the id of the docker build environment to the build_ids.
+    docker_id = check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
+    build_ids['docker'] = docker_id
+
+    # TODO(cmaloney): The environment variables should be generated during build
+    # not live in buildinfo.json.
+    build_ids['environment'] = buildinfo.get('environment', {})
 
     # Only fresh builds are allowed which don't overlap existing artifacts.
     if exists("result"):
@@ -372,14 +388,6 @@ def build(buildinfo, repository):
     # TODO(cmaloney): This isn't very clean, it would be much nicer to
     # just run pkgpanda inside the package.
     rewrite_symlinks(install_dir, repository.path, "/opt/mesosphere/packages/")
-
-    docker_name = buildinfo.get('docker', 'ubuntu:14.04')
-    if 'docker' in buildinfo:
-        print("WARNING: Specifying docker explicitly shold be avoided.")
-        print("This option will be removed once enough of the dependencies " +
-              "are in pkgpanda form that everything can just use pkgpanda " +
-              "dependencies.")
-    cmd.container = docker_name
 
     print("Building package in docker")
 

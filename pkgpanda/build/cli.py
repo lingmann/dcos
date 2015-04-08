@@ -129,6 +129,11 @@ def main():
         build_tree(repository, arguments['--mkbootstrap'], arguments['--role'])
         sys.exit(0)
 
+    # Check for the 'build' file to verify this is a valid package directory.
+    if not exists("build"):
+        print("Not a valid package folder. No 'build' file.")
+        sys.exit(1)
+
     buildinfo = load_buildinfo()
 
     if 'name' in buildinfo:

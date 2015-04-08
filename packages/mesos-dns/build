@@ -13,7 +13,7 @@ go get github.com/tools/godep
 
 # Build mesos-dns
 pushd /go/src/github.com/mesosphere/mesos-dns
-make build
+make restoredeps build
 popd
 
 # TODO(cmaloney): PKG_PATH should always exist in the container

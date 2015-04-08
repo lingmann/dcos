@@ -139,9 +139,11 @@ def setup(install, repository):
 
         write_string(os.path.join(dcos_target_dir, "dcos.target"),
                      dcos_target_contents)
+        do_bootstrap(install, repository)
+        # Enable dcos.target only after we have populated it to prevent starting
+        # up stuff inside of it before we activate the new set of packages.
         if install.manage_systemd:
             check_call(["systemctl", "enable", "dcos.target"])
-        do_bootstrap(install, repository)
         os.remove(bootstrap_path)
 
     # Check for /opt/mesosphere/install_progress. If found, recover the partial

@@ -22,8 +22,8 @@ import copy
 import os.path
 import sys
 import tempfile
-from os import mkdir, umask
-from os.path import abspath, exists, expanduser, normpath
+from os import getcwd, mkdir, umask
+from os.path import abspath, basename, exists, expanduser, normpath
 from shutil import copyfile, rmtree
 from subprocess import CalledProcessError, check_call, check_output
 
@@ -131,13 +131,20 @@ def main():
 
     buildinfo = load_buildinfo()
 
+    if 'name' in buildinfo:
+        print("ERROR: Can't put 'name' in buildinfo anymore.")
+        sys.exit(1)
+
+    # Package name is the folder name.
+    name = basename(getcwd())
+
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:
         clean()
         sys.exit(0)
 
     # No command -> build package.
-    build(buildinfo, repository)
+    build(buildinfo, repository, name)
     sys.exit(0)
 
 
@@ -249,7 +256,7 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
         rmtree(tmpdir)
 
 
-def build(buildinfo, repository):
+def build(buildinfo, repository, name):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 
@@ -265,7 +272,7 @@ def build(buildinfo, repository):
     if "sources" in buildinfo:
         sources = buildinfo['sources']
     elif "single_source" in buildinfo:
-        sources = {buildinfo['name']: buildinfo['single_source']}
+        sources = {name: buildinfo['single_source']}
     else:
         raise ValidationError("Must specify at least one source to build " +
                               "package from using 'sources' or 'single_source'.")
@@ -362,7 +369,7 @@ def build(buildinfo, repository):
         version = "{0}-{1}".format(buildinfo["version_extra"], version_base)
     else:
         version = version_base
-    pkg_id = PackageId.from_parts(buildinfo['name'], version)
+    pkg_id = PackageId.from_parts(name, version)
 
     # If the package is already built, don't do anything.
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
@@ -421,7 +428,7 @@ def build(buildinfo, repository):
         })
     cmd.environment = {
         "PKG_VERSION": version,
-        "PKG_NAME": buildinfo['name'],
+        "PKG_NAME": name,
         "PKG_ID": pkg_id,
         "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id)
     }

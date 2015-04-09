@@ -47,9 +47,9 @@ PKG_REL := $(shell sed -rn 's/^DCOS_PKG_REL=(.*)/\1/p' build/dcos.manifest)
 
 .PHONY: set-version
 set-version:
+	@if [[ -f build/dcos.manifest ]]; then echo "ERROR: Please remove build/dcos.manifest before running set-version"; exit 1; fi
 	@echo "Setting PKG_VER and PKG_REL in build/dcos.manifest"
 	@mkdir -p build
-	@rm -f build/dcos.manifest
 	@if [[ "$(PKG_VER)" == "" ]]; then echo "DCOS_PKG_VER=0.1.0" >> build/dcos.manifest; else echo "DCOS_PKG_VER=$(PKG_VER)" >> build/dcos.manifest; fi
 	@if [[ "$(PKG_REL)" == "" ]]; then echo "DCOS_PKG_REL=0.1.$$(date -u +'%Y%m%d%H%M%S')" >> build/dcos.manifest; else echo "DCOS_PKG_REL=$(PKG_REL)" >> build/dcos.manifest; fi
 	@cat build/dcos.manifest

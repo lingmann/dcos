@@ -6,12 +6,12 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options]
+  mkpanda [options] [--override-buildinfo=<buildinfo>]
   mkpanda add <package-tarball> [options]
   mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
-  mkpanda tree [--mkbootstrap [--role=<role>...]]
+  mkpanda tree [--mkbootstrap [--role=<role>...]] [<name>]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -126,7 +126,12 @@ def main():
         sys.exit(0)
 
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'], arguments['--role'])
+        build_tree(
+            repository,
+            arguments['--mkbootstrap'],
+            arguments['<name>'],
+            arguments['--role']
+            )
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -143,7 +148,7 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    build(repository, name)
+    build(repository, name, arguments['--override-buildinfo'])
     sys.exit(0)
 
 
@@ -159,10 +164,7 @@ def load_buildinfo(path=os.getcwd()):
         sys.exit(1)
 
 
-def build_tree(repository, mkbootstrap, mkbootstrap_roles):
-    if len(repository.list()) > 0:
-        print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
-        sys.exit(1)
+def find_packages_fs():
     # Treat the current directory as the base of a repository of packages.
     # The packages are in folders, each containing a buildinfo.json, build.
     # Load all the buildinfos, topo-sort the dependencies, then build if/when
@@ -172,7 +174,46 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
         if os.path.isdir(name):
             if not os.path.exists(os.path.join(name, "build")):
                 continue
-            packages[name] = load_buildinfo(name)
+            buildinfo = load_buildinfo(name)
+            packages[name] = {
+                'requires': buildinfo.get('requires', list())
+            }
+    return packages
+
+
+def read_packages(treeinfo_path):
+    # Open the treeinfo, read out the packages that will make up the tree.
+    # For each of those packages, load the requires out of the buildinfo.json in
+    # folder if one exists.
+    packages = load_json(treeinfo_path)
+
+    for name in packages.keys():
+        if packages[name] is None:
+            packages[name] = dict()
+        elif type(packages[name]) == dict:
+            if len(packages[name].keys()) > 1:
+                print("Package {} has can only have the key 'sources' ".format(name) +
+                      "or 'single_source' in a treeinfo. Has fields {}".format(",".join(packages[name].keys())))
+                sys.exit(1)
+        else:
+            print("A package may either be given 'null' or a dictionary containing one of sources, source.")
+            sys.exit(1)
+
+        packages[name]['requires'] = load_buildinfo(name).get('requires', list())
+    return packages
+
+
+def build_tree(repository, mkbootstrap, name, mkbootstrap_roles):
+    if len(repository.list()) > 0:
+        print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
+        sys.exit(1)
+
+    # If a name was given, use name.treeinfo.json as the repository to use. If
+    # no name is given, search for packages in the current folder.
+    if name:
+        packages = read_packages("{}.treeinfo.json".format(name))
+    else:
+        packages = find_packages_fs()
 
     # Check the requires and figure out a feasible build order
     # depth-first traverse the dependency tree, yielding when we reach a
@@ -251,7 +292,18 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
         rmtree(tmpdir)
 
 
-def build(repository, name):
+def expand_single_source_alias(pkg_name, buildinfo):
+    if "sources" in buildinfo:
+        return buildinfo["sources"]
+    elif "single_source" in buildinfo:
+        return {pkg_name: buildinfo["single_source"]}
+    else:
+        raise ValidationError("Must specify at least one source to build " +
+                              "package from using 'sources' or 'single_source'." +
+                              "May be specified in buildinfo.json or passed in.")
+
+
+def build(repository, name, override_buildinfo):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 
@@ -268,18 +320,41 @@ def build(repository, name):
         sys.exit(1)
 
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
-    # TODO(cmaloney): allow a shorthand for single source packages.
+
+    # Convert single_source -> sources
     sources = None
-    if "sources" in buildinfo:
-        sources = buildinfo['sources']
-    elif "single_source" in buildinfo:
-        sources = {name: buildinfo['single_source']}
+    if override_buildinfo:
+        # Only sources may be overriden (single_source or sources)
+        if len(override_buildinfo.keys()) > 1:
+            print("ERROR: Override buildinfo may only contain single_source/sources.")
+            print("Current keys: {}".format(" ".join(override_buildinfo.keys())))
+            sys.exit(1)
+
+        try:
+            sources = expand_single_source_alias(name, buildinfo)
+        except ValidationError as ex:
+            print("ERROR: Invalid override buildinfo:", ex.what)
+            sys.ext(1)
+
+    try:
+        pkg_sources = expand_single_source_alias(name, buildinfo)
+    except ValidationError as ex:
+        print("ERROR: Invalid buildinfo.json for package: ", ex.what)
+        sys.exit(1)
+
+    # If an override buildinfo is given, make sure it overrides the package
+    # buildinfo sources. If no override is given, use the package buildinfo
+    # sources.
+    if sources and sources.keys() != pkg_sources.keys():
+        print("ERROR: Override buildinfo must provide the same sources as original package buildinfo")
+        print("Package  buildinfo sources: {}".format(",".join(pkg_sources.keys())))
+        print("Override buildinfo sources: {}".format(",".join(sources.keys())))
+        sys.exit(1)
     else:
-        raise ValidationError("Must specify at least one source to build " +
-                              "package from using 'sources' or 'single_source'.")
+        sources = pkg_sources
 
     print("Fetching sources")
-    # Clone the repositories, apply patches as needed using the patch utilities
+    # Clone the repositories, apply patches as needed using the patch utilities.
     checkout_ids = fetch_sources(sources)
 
     # Add the sha1sum of the buildinfo.json + build file to the build ids
@@ -426,7 +501,7 @@ def build(repository, name):
         # Getting the result out
         abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"
-        })
+    })
     cmd.environment = {
         "PKG_VERSION": version,
         "PKG_NAME": name,

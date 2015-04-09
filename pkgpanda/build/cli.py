@@ -152,8 +152,8 @@ def load_buildinfo(path=os.getcwd()):
     try:
         return load_json(os.path.join(path, "buildinfo.json"))
     except FileNotFoundError:
-        print("ERROR: Unable to find `buildinfo.json` in `{}.".format(path))
-        sys.exit(1)
+        # All fields in buildinfo are optional.
+        return {}
     except ValueError as ex:
         print("ERROR:", ex)
         sys.exit(1)

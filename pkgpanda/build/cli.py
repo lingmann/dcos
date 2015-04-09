@@ -134,12 +134,6 @@ def main():
         print("Not a valid package folder. No 'build' file.")
         sys.exit(1)
 
-    buildinfo = load_buildinfo()
-
-    if 'name' in buildinfo:
-        print("ERROR: Can't put 'name' in buildinfo anymore.")
-        sys.exit(1)
-
     # Package name is the folder name.
     name = basename(getcwd())
 
@@ -149,7 +143,7 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    build(buildinfo, repository, name)
+    build(repository, name)
     sys.exit(0)
 
 
@@ -176,13 +170,9 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
     packages = dict()
     for name in os.listdir():
         if os.path.isdir(name):
-            if not os.path.exists(os.path.join(name, "buildinfo.json")):
+            if not os.path.exists(os.path.join(name, "build")):
                 continue
             packages[name] = load_buildinfo(name)
-            if packages[name]["name"] != name:
-                print("ERROR: Package name inside buildinfo.json must match folder name.")
-                print("ERROR: {} name is {}".format(name, packages[name]["name"]))
-                sys.exit(1)
 
     # Check the requires and figure out a feasible build order
     # depth-first traverse the dependency tree, yielding when we reach a
@@ -261,7 +251,7 @@ def build_tree(repository, mkbootstrap, mkbootstrap_roles):
         rmtree(tmpdir)
 
 
-def build(buildinfo, repository, name):
+def build(repository, name):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 
@@ -270,6 +260,12 @@ def build(buildinfo, repository, name):
 
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
+
+    buildinfo = load_buildinfo()
+
+    if 'name' in buildinfo:
+        print("ERROR: Can't put 'name' in buildinfo anymore.")
+        sys.exit(1)
 
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
     # TODO(cmaloney): allow a shorthand for single source packages.

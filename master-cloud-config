@@ -12,7 +12,7 @@ write_files:
     content: |
       {
         "zk": "zk://127.0.0.1:2181/mesos",
-        "refreshSeconds": 60,
+        "refreshSeconds": 30,
         "ttl": 60,
         "domain": "mesos",
         "port": 53,

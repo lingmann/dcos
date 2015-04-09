@@ -84,35 +84,28 @@ tree: | build/docker_image
 
 .PHONY: publish
 publish: | build/docker_image
+	@echo "Publishing to:"
+	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
+	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
 		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/ \
 		--recursive
-	@echo "Bootstrap URL's:"
-	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
-	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PKG_VER)-$(PKG_REL)/"
 
 .PHONY: publish-link
 publish-link: publish | build/docker_image
 	@if [[ "$(PUBLISH_LINK)" == "" ]]; then echo "PUBLISH_LINK is unset"; exit 1; fi
+	@echo "Publishing to:"
+	@echo "  Cloudfront: https://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/"
+	@echo "  Direct: https://s3.amazonaws.com/downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/"
 	@# Use docker image as a convenient way to run AWS CLI tools
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
 		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
 	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/bootstrap.tar.xz s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).manifest \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/dcos.manifest
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/dcos-$(PKG_VER)-$(PKG_REL).sha256 \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/dcos.sha256
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 mb \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/config
-	@$(DOCKER_RUN) $(DOCKER_IMAGE) aws s3 cp \
-		/dcos/dist/config/active.json \
-		s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/config/active.json
+		/dcos/dist/ s3://downloads.mesosphere.io/dcos/$(PUBLISH_LINK)/ \
+		--recursive
 
 debug: | build/docker_image
 	$(DOCKER_RUN) \

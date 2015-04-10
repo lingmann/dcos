@@ -30,7 +30,7 @@ from subprocess import CalledProcessError, check_call, check_output
 import pkgpanda.build.constants
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, extract_tarball
-from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
+from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, make_bootstrap_tarball, sha1
 from pkgpanda.cli import print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
@@ -131,7 +131,7 @@ def main():
             arguments['--mkbootstrap'],
             arguments['<name>'],
             arguments['--role']
-            )
+        )
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -203,15 +203,15 @@ def read_packages(treeinfo_path):
     return packages
 
 
-def build_tree(repository, mkbootstrap, name, mkbootstrap_roles):
+def build_tree(repository, mkbootstrap, tree_name, mkbootstrap_roles):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         sys.exit(1)
 
     # If a name was given, use name.treeinfo.json as the repository to use. If
     # no name is given, search for packages in the current folder.
-    if name:
-        packages = read_packages("{}.treeinfo.json".format(name))
+    if tree_name:
+        packages = read_packages("{}.treeinfo.json".format(tree_name))
     else:
         packages = find_packages_fs()
 
@@ -283,13 +283,10 @@ def build_tree(repository, mkbootstrap, name, mkbootstrap_roles):
         # mkbootstrap be a library call, use the repository built during package
         # building rather than making a new one.
         print("Making bootstrap tarball")
-        tmpdir = tempfile.mkdtemp("pkgpanda_bootstrap")
-        cmd = ["pkgpanda-mkbootstrap", "tarball", tmpdir]
-        for role in mkbootstrap_roles:
-            cmd += ["--role={}".format(role)]
-        cmd += list(sorted(built_package_paths))
-        check_call(cmd)
-        rmtree(tmpdir)
+        make_bootstrap_tarball(
+            tree_name,
+            list(sorted(built_package_paths)),
+            mkbootstrap_roles)
 
 
 def expand_single_source_alias(pkg_name, buildinfo):

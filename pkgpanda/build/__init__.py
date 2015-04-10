@@ -1,8 +1,12 @@
 import binascii
 import hashlib
 import os.path
+import pkgpanda
 import shutil
+import sys
+import tempfile
 import urllib.request
+from pkgpanda.util import make_file, make_tar, rewrite_symlinks, write_json
 from subprocess import check_call, check_output
 from urllib.parse import urlparse
 
@@ -159,3 +163,74 @@ def fetch_sources(sources):
             raise ValidationError("Currently only packages from url and git sources are supported")
 
     return ids
+
+
+# If work_dir is None, makes a temp folder in the current directory, deletes after.
+# NOTE: NOT A LIBRARY FUNCTION. ASSUMES CLI.
+def make_bootstrap_tarball(output_name, packages, roles, work_dir=None):
+    work_dir_set = work_dir is not None
+    if work_dir is None:
+        work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
+
+    if len(output_name):
+        output_name = output_name + '.'
+    else:
+        # Just for type safety
+        output_name = ''
+
+    def make_abs(path):
+        return os.path.join(work_dir, path)
+
+    pkgpanda_root = make_abs("opt/mesosphere")
+    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
+
+    # Fetch all the packages to the root
+    pkg_ids = list()
+    for pkg_path in packages:
+        # Get the package id from the given package path
+        filename = os.path.basename(pkg_path)
+        if not filename.endswith(".tar.xz"):
+            print("ERROR: Packages must be packaged / end with .tar.xz")
+            sys.exit(1)
+        pkg_id = filename[:-len(".tar.xz")]
+        pkg_ids.append(pkg_id)
+
+        # TODO(camloney): Allow grabbing packages via http.
+        def local_fetcher(id, target):
+            shutil.unpack_archive(pkg_path, target, "gztar")
+        repository.add(local_fetcher, pkg_id)
+
+    # Mark the appropriate roles.
+    config_dir = make_abs("etc/mesosphere/roles/")
+    if os.path.exists(config_dir):
+        shutil.rmtree(config_dir)
+    os.makedirs(config_dir)
+    for role in roles:
+        make_file(os.path.join(config_dir, role))
+
+    # Activate the packages inside the repository.
+    # Do generate dcos.target.wants inside the root so that we don't
+    # try messing with /etc/systemd/system.
+    install = pkgpanda.Install(pkgpanda_root, config_dir, True, False, True, True)
+    install.activate(repository, repository.load_packages(pkg_ids))
+
+    # Remove dcos.target.wants from the install since it won't be used
+    # on final install systems. Machines should run a `pkgpanda setup`
+    # to activate / start all the systemd services for that specific
+    # machine.
+    shutil.rmtree(make_abs("opt/mesosphere/dcos.target.wants"))
+
+    # Mark the tarball as a bootstrap tarball/filesystem so that
+    # dcos-setup.service will fire.
+    make_file(make_abs("opt/mesosphere/bootstrap"))
+
+    # Write out an active.json for the bootstrap tarball
+    write_json("{}.active.json".format(output_name), pkg_ids)
+
+    # Rewrite all the symlinks to point to /opt/mesosphere
+    rewrite_symlinks(work_dir, work_dir, "/")
+
+    make_tar("{}bootstrap.tar.xz".format(output_name), pkgpanda_root)
+
+    if not work_dir_set:
+        shutil.rmtree(work_dir)

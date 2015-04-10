@@ -21,7 +21,6 @@ setup(
         'console_scripts': [
             'pkgpanda=pkgpanda.cli:main',
             'mkpanda=pkgpanda.build.cli:main',
-            'pkgpanda-mkbootstrap=pkgpanda.bootstrap:main'
         ],
     },
     package_data={

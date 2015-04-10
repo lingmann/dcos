@@ -13,6 +13,11 @@ def load_json(filename):
         raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
 
 
+def make_file(name):
+    with open(name, 'a'):
+        pass
+
+
 def write_json(filename, data):
     with open(filename, "w+") as f:
         return json.dump(data, f)

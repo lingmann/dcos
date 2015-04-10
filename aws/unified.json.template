@@ -23,14 +23,14 @@
       "Description" : "EC2 instance type",
       "Type" : "String",
       "Default" : "m3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
       "ConstraintDescription" : "must be a valid EC2 instance type."
     },
     "SlaveInstanceType" : {
       "Description" : "EC2 instance type",
       "Type" : "String",
       "Default" : "m3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge"],
+      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
       "ConstraintDescription" : "must be a valid EC2 instance type."
     },
     "MasterInstanceCount" : {
@@ -78,6 +78,17 @@
     "SubnetConfig" : {
       "VPC"     : { "CIDR" : "10.0.0.0/16" },
       "Public"  : { "CIDR" : "10.0.0.0/24" }
+    },
+    "RegionToAmi" : {
+      "eu-central-1" : { "beta": "ami-cc88b5d1" },
+      "ap-northeast-1" : { "beta" : "ami-72639e72" },
+      "sa-east-1" : { "beta" : "ami-37f9432a" },
+      "ap-southeast-2" : { "beta" : "ami-7fd1a245" },
+      "ap-southeast-1" : { "beta" : "ami-304a7962" },
+      "us-east-1" : { "beta" : "ami-2e4f7946" },
+      "us-west-2" : { "beta" : "ami-fd361fcd" },
+      "us-west-1" : { "beta" : "ami-8b10f0cf" },
+      "eu-west-1" : { "beta" : "ami-af108ad8" }
     }
   },
 
@@ -344,7 +355,7 @@
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
-        "ImageId" : { "Ref" : "InstanceAmi" },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "beta" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
@@ -521,7 +532,7 @@ $MASTER_CLOUD_CONFIG
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
-        "ImageId" : { "Ref" : "InstanceAmi" },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "beta" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",

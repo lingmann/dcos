@@ -225,7 +225,7 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
     make_file(make_abs("opt/mesosphere/bootstrap"))
 
     # Write out an active.json for the bootstrap tarball
-    write_json("{}.active.json".format(output_name), pkg_ids)
+    write_json("{}active.json".format(output_name), pkg_ids)
 
     # Rewrite all the symlinks to point to /opt/mesosphere
     rewrite_symlinks(work_dir, work_dir, "/")

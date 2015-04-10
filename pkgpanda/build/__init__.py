@@ -167,7 +167,7 @@ def fetch_sources(sources):
 
 # If work_dir is None, makes a temp folder in the current directory, deletes after.
 # NOTE: NOT A LIBRARY FUNCTION. ASSUMES CLI.
-def make_bootstrap_tarball(output_name, packages, roles, work_dir=None):
+def make_bootstrap_tarball(output_name, packages, work_dir=None):
     work_dir_set = work_dir is not None
     if work_dir is None:
         work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')

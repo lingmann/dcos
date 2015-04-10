@@ -11,7 +11,7 @@ Usage:
   mkpanda clean
   mkpanda list [options]
   mkpanda remove <name-or-id>... [options]
-  mkpanda tree [--mkbootstrap [--role=<role>...]] [<name>]
+  mkpanda tree [--mkbootstrap] [<name>]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -126,12 +126,7 @@ def main():
         sys.exit(0)
 
     if arguments['tree']:
-        build_tree(
-            repository,
-            arguments['--mkbootstrap'],
-            arguments['<name>'],
-            arguments['--role']
-        )
+        build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -203,7 +198,7 @@ def read_packages(treeinfo_path):
     return packages
 
 
-def build_tree(repository, mkbootstrap, tree_name, mkbootstrap_roles):
+def build_tree(repository, mkbootstrap, tree_name):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         sys.exit(1)
@@ -279,14 +274,11 @@ def build_tree(repository, mkbootstrap, tree_name, mkbootstrap_roles):
 
     # Build the tarball if requested, along with a "active.json"
     if mkbootstrap:
-        # TODO(cmaloney): This does a ton of excess repeated work... Make
-        # mkbootstrap be a library call, use the repository built during package
-        # building rather than making a new one.
+        # TODO(cmaloney): This does a ton of excess repeated work...
+        # use the repository built during package building instead of
+        # building a new one for the package tarball (just mv it).
         print("Making bootstrap tarball")
-        make_bootstrap_tarball(
-            tree_name,
-            list(sorted(built_package_paths)),
-            mkbootstrap_roles)
+        make_bootstrap_tarball(tree_name, list(sorted(built_package_paths)))
 
 
 def expand_single_source_alias(pkg_name, buildinfo):

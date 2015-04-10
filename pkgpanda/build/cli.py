@@ -170,24 +170,26 @@ def find_packages_fs():
             if not os.path.exists(os.path.join(name, "build")):
                 continue
             buildinfo = load_buildinfo(name)
-            packages[name] = {
-                'requires': buildinfo.get('requires', list())
-            }
+            packages[name] = {'requires': buildinfo.get('requires', list())}
     return packages
 
 
-def read_packages(treeinfo_path):
-    # Open the treeinfo, read out the packages that will make up the tree.
-    # For each of those packages, load the requires out of the buildinfo.json in
-    # folder if one exists.
-    packages = load_json(treeinfo_path)
+def read_packages(name):
+    treeinfo = load_treeinfo(name)
+
+    if 'packages' not in treeinfo:
+        print(treeinfo)
+        print("ERROR: No 'packages' found in treeinfo stack.")
+        sys.exit(1)
+
+    packages = treeinfo['packages']
 
     for name in packages.keys():
         if packages[name] is None:
             packages[name] = dict()
         elif type(packages[name]) == dict:
             if len(packages[name].keys()) > 1:
-                print("Package {} has can only have the key 'sources' ".format(name) +
+                print("ERROR: Package {} has can only have the key 'sources' ".format(name) +
                       "or 'single_source' in a treeinfo. Has fields {}".format(",".join(packages[name].keys())))
                 sys.exit(1)
         else:
@@ -198,6 +200,41 @@ def read_packages(treeinfo_path):
     return packages
 
 
+def load_treeinfo(name, working_on=set()):
+    # Open the treeinfo, read out the packages that will make up the tree.
+    # For each of those packages, load the requires out of the buildinfo.json in
+    # folder if one exists.
+    working_on.add(name)
+
+    treeinfo = load_json('{}.treeinfo.json'.format(name))
+    if 'packages' not in treeinfo:
+        treeinfo['packages'] = dict()
+
+    def merge_treeinfo_packages(parent_name):
+        if parent_name in working_on:
+            # The parent instance will add all the things, so just skip it.
+            return
+
+        parent_info = load_treeinfo(parent_name, working_on)
+
+        for name, sources in parent_info['packages'].items():
+            if name in treeinfo['packages']:
+                continue
+            treeinfo['packages'][name] = sources
+
+    if 'from' in treeinfo:
+        from_trees = treeinfo['from']
+
+        if type(from_trees) is str:
+            merge_treeinfo_packages(from_trees)
+        elif type(from_trees) is list:
+            for tree in from_trees:
+                merge_treeinfo_packages(parent_name)
+
+    print(treeinfo)
+    return treeinfo
+
+
 def build_tree(repository, mkbootstrap, tree_name):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
@@ -206,7 +243,7 @@ def build_tree(repository, mkbootstrap, tree_name):
     # If a name was given, use name.treeinfo.json as the repository to use. If
     # no name is given, search for packages in the current folder.
     if tree_name:
-        packages = read_packages("{}.treeinfo.json".format(tree_name))
+        packages = read_packages(tree_name)
     else:
         packages = find_packages_fs()
 
@@ -260,7 +297,24 @@ def build_tree(repository, mkbootstrap, tree_name):
     try:
         for name in build_order:
             print("Building: {}".format(name))
-            check_call(["mkpanda"], cwd=abspath(name))
+            build_cmd = ["mkpanda"]
+            override_buildinfo = None
+            if 'single_source' in packages[name] or 'sources' in packages[name]:
+                # Get the sources
+                sources = expand_single_source_alias(name, packages[name])
+
+                # Write to an override buildinfo file, providing the options to the build.
+                fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name),suffix='.override.buildinfo.json')
+                os.close(fd) # TODO(cmaloney): Should really write to the fd...
+                write_json(override_buildinfo, {"sources": sources})
+                build_cmd += ['--override-buildinfo', override_buildinfo]
+
+            # Run the build
+            check_call(build_cmd, cwd=abspath(name))
+
+            # Clean up temporary files
+            if override_buildinfo:
+                os.remove(override_buildinfo)
 
             # Activate the package so the things that depend on it will build right.
             package_id = load_string(os.path.join(name, "cache/last_build"))
@@ -292,7 +346,7 @@ def expand_single_source_alias(pkg_name, buildinfo):
                               "May be specified in buildinfo.json or passed in.")
 
 
-def build(repository, name, override_buildinfo):
+def build(repository, name, override_buildinfo_file):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 
@@ -309,6 +363,9 @@ def build(repository, name, override_buildinfo):
         sys.exit(1)
 
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
+    override_buildinfo = None
+    if override_buildinfo_file:
+        override_buildinfo = load_json(override_buildinfo_file)
 
     # Convert single_source -> sources
     sources = None
@@ -320,7 +377,7 @@ def build(repository, name, override_buildinfo):
             sys.exit(1)
 
         try:
-            sources = expand_single_source_alias(name, buildinfo)
+            sources = expand_single_source_alias(name, override_buildinfo)
         except ValidationError as ex:
             print("ERROR: Invalid override buildinfo:", ex.what)
             sys.ext(1)
@@ -334,11 +391,13 @@ def build(repository, name, override_buildinfo):
     # If an override buildinfo is given, make sure it overrides the package
     # buildinfo sources. If no override is given, use the package buildinfo
     # sources.
-    if sources and sources.keys() != pkg_sources.keys():
-        print("ERROR: Override buildinfo must provide the same sources as original package buildinfo")
-        print("Package  buildinfo sources: {}".format(",".join(pkg_sources.keys())))
-        print("Override buildinfo sources: {}".format(",".join(sources.keys())))
-        sys.exit(1)
+    if sources:
+        if sources.keys() != pkg_sources.keys():
+            print("ERROR: Override buildinfo must provide the same sources as original package buildinfo")
+            print("Package  buildinfo sources: {}".format(",".join(pkg_sources.keys())))
+            print("Override buildinfo sources: {}".format(",".join(sources.keys())))
+            sys.exit(1)
+        print("Package sources overrridden as requested")
     else:
         sources = pkg_sources
 

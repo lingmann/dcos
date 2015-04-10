@@ -19,7 +19,7 @@ One-shot CloudFormation templates for DCOS
 | eu-west-1 | [![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-simple-unified.json) |
 
 * Alternatively, if you want to set your own parameters:
-[![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos.json)
+[![Launch stack button](https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png)](https://console.aws.amazon.com/cloudformation/home?region=us-west-2#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/ea-unified.json)
 1. Follow the wizard (please report any parameters you find confusing!). There are two fields you must set:
   1. *Name* - give your CloudFormation stack a recognizable name, and
   1. *KeyName* - use the existing `dcos-ea` key if you don't have one defined.

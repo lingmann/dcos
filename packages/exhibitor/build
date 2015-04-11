@@ -81,33 +81,6 @@ test -e exhibitor.jar
 rm pom.xml
 popd
 
-# NOTE: These Exhibitor properties are used to first initialize the config in
-# an empty S3 bucket. Any subsequent invocations of Exhibitor will use the
-# config in the S3 bucket over the properties provided via --defaultconfig.
-# Therefore, we must ensure these settings are valid for all pkgpanda versions
-# of Exhibitor which run on the same cluster. This is why we do not use
-# $PKG_PATH with the zookeeper-install-directory setting... if we did it will
-# cause new instances to fail to join the cluster.
-cat <<- EOF > "$PKG_PATH"/usr/exhibitor/defaults.conf
-  zookeeper-data-directory=/var/lib/zookeeper/snapshot
-  zookeeper-install-directory=/opt/mesosphere/active/exhibitor/usr/zookeeper
-  zookeeper-log-directory=/var/lib/zookeeper/transactions
-  log-index-directory=/var/lib/zookeeper/transactions
-  cleanup-period-ms=300000
-  check-ms=30000
-  backup-period-ms=600000
-  client-port=2181
-  cleanup-max-files=20
-  backup-max-store-ms=21600000
-  connect-port=2888
-  observer-threshold=0
-  election-port=3888
-  zoo-cfg-extra=tickTime\=2000&initLimit\=10&syncLimit\=5&quorumListenOnAllIPs\=true
-  auto-manage-instances-settling-period-ms=0
-  auto-manage-instances=1
-  auto-manage-instances-fixed-ensemble-size=0
-EOF
-
 exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"
 mkdir -p $(dirname "$exhibitor_service")
 cat <<- EOF > "$exhibitor_service"
@@ -118,25 +91,56 @@ cat <<- EOF > "$exhibitor_service"
   EnvironmentFile=/etc/environment
   EnvironmentFile=/opt/mesosphere/environment
   EnvironmentFile=/opt/mesosphere/etc/cloudenv
-  EnvironmentFile=/opt/mesosphere/etc/zookeeper
+  EnvironmentFile=/opt/mesosphere/etc/exhibitor
   # run in new mount namespace to create custom resolv.conf
   ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
 EOF
 
 exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.sh"
-cat <<EOF > "$exhibitor_start_wrapper"
+cat <<EOFWrapperScript > "$exhibitor_start_wrapper"
 #!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+#: \${ZOOKEEPER_CLUSTER_SIZE:?"ERROR: ZOOKEEPER_CLUSTER_SIZE must be set"}
+#: \${FALLBACK_DNS:?"ERROR: FALLBACK_DNS must be set"}
+#: \${EXHIBITOR_HOSTNAME:?"ERROR: EXHIBITOR_HOSTNAME must be set"}
+#: \${EXHIBITOR_WEB_UI_PORT:?"ERROR: EXHIBITOR_WEB_UI_PORT must be set"}
+
+exhibitor_defaults=/etc/mesosphere/exhibitor_defaults.conf
+exhibitor_properties=/etc/mesosphere/exhibitor_credentials.properties
 
 /bin/mkdir -p /var/lib/zookeeper/snapshot
 /bin/mkdir -p /var/lib/zookeeper/transactions
-cat <<EOInnerHereDoc > /etc/mesosphere/exhibitor_credentials.properties
-com.netflix.exhibitor.s3.access-key-id=\$AWS_ACCESS_KEY_ID
-com.netflix.exhibitor.s3.access-secret-key=\$AWS_SECRET_ACCESS_KEY
-com.netflix.exhibitor.azure.account-name=\$AZURE_ACCOUNT_NAME
-com.netflix.exhibitor.azure.account-key=\$AZURE_ACCOUNT_KEY
-EOInnerHereDoc
 
-/usr/bin/sed -i "s#auto-manage-instances-fixed-ensemble-size=.*#auto-manage-instances-fixed-ensemble-size=\$ZOOKEEPER_CLUSTER_SIZE#" /opt/mesosphere/active/exhibitor/usr/exhibitor/defaults.conf
+cat <<EOFProperties > \$exhibitor_properties
+com.netflix.exhibitor.s3.access-key-id=\${AWS_ACCESS_KEY_ID:-}
+com.netflix.exhibitor.s3.access-secret-key=\${AWS_SECRET_ACCESS_KEY:-}
+com.netflix.exhibitor.azure.account-name=\${AZURE_ACCOUNT_NAME:-}
+com.netflix.exhibitor.azure.account-key=\${AZURE_ACCOUNT_KEY:-}
+EOFProperties
+
+cat <<EOFDefaults > \$exhibitor_defaults
+# These Exhibitor properties are used to first initialize the config stored in
+# an empty shared storage location. Any subsequent invocations of Exhibitor will
+# ignore these properties and use the config found in shared storage.
+zookeeper-data-directory=/var/lib/zookeeper/snapshot
+zookeeper-install-directory=/opt/mesosphere/active/exhibitor/usr/zookeeper
+zookeeper-log-directory=/var/lib/zookeeper/transactions
+log-index-directory=/var/lib/zookeeper/transactions
+cleanup-period-ms=300000
+check-ms=30000
+backup-period-ms=600000
+client-port=2181
+cleanup-max-files=20
+backup-max-store-ms=21600000
+connect-port=2888
+observer-threshold=0
+election-port=3888
+zoo-cfg-extra=tickTime\=2000&initLimit\=10&syncLimit\=5&quorumListenOnAllIPs\=true
+auto-manage-instances-settling-period-ms=0
+auto-manage-instances=1
+auto-manage-instances-fixed-ensemble-size=\$ZOOKEEPER_CLUSTER_SIZE
+EOFDefaults
 
 echo "nameserver \$FALLBACK_DNS" > /etc/resolv.conf.exhibitor
 # do not propagate mounts to the previous namespaces
@@ -144,8 +148,35 @@ mount --make-rprivate /
 # "overwrite" resolv.conf for exhibitor and all its children
 mount --bind /etc/resolv.conf.exhibitor /etc/resolv.conf
 
-#exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port \$EXHIBITOR_WEB_UI_PORT --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype s3 --s3config "\$S3_BUCKET:\$S3_PREFIX" --s3credentials /etc/mesosphere/exhibitor_credentials.properties --s3region \$AWS_REGION --s3backup false --hostname \$EC2_PUBLIC_HOSTNAME
+if [[ -n "\${AWS_ACCESS_KEY_ID:-}" && \\
+      -n "\${AWS_SECRET_ACCESS_KEY:-}" && \\
+      -n "\${AWS_S3_BUCKET:-}" && \\
+      -n "\${AWS_S3_PREFIX:-}" && \\
+      -n "\${AWS_REGION:-}" ]]
+then
+  echo "Starting Exhibitor for AWS"
+  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
+    --port \$EXHIBITOR_WEB_UI_PORT \\
+    --defaultconfig \$exhibitor_defaults \\
+    --configtype s3 --s3config "\$S3_BUCKET:\$S3_PREFIX" \\
+    --s3credentials \$exhibitor_properties \\
+    --s3region \$AWS_REGION --s3backup false --hostname \$EXHIBITOR_HOSTNAME
+elif [[ -n "\${AZURE_ACCOUNT_NAME:-}" && \\
+        -n "\${AZURE_ACCOUNT_KEY:-}" && \\
+        -n "\${AZURE_PREFIX:-}" && \\
+        -n "\${AZURE_CONTAINER:-}" ]]
+then
+  echo "Starting Exhibitor for Azure"
+  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
+    --port \$EXHIBITOR_WEB_UI_PORT \\
+    --defaultconfig \$exhibitor_defaults \\
+    --configtype=azure --azureconfig="\$AZURE_CONTAINER:\$AZURE_PREFIX" \\
+    --azurecredentials \$exhibitor_properties \\
+    --hostname \$EXHIBITOR_HOSTNAME
+else
+  echo "ERROR: Missing one or more required environment variables"
+  exit 1
+fi
 
-exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port \$EXHIBITOR_WEB_UI_PORT --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype=azure --azureconfig="apollo-exhibitor:\$AZURE_PREFIX" --azurecredentials=/etc/mesosphere/exhibitor_credentials.properties
-EOF
+EOFWrapperScript
 chmod +x "$exhibitor_start_wrapper"

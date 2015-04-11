@@ -114,7 +114,7 @@ cat <<- EOF > "$exhibitor_service"
   [Unit]
   Description=Exhibitor Zookeeper Supervisor
   [Service]
-  Restart=on-failure
+  Restart=always
   EnvironmentFile=/etc/environment
   EnvironmentFile=/opt/mesosphere/environment
   EnvironmentFile=/opt/mesosphere/etc/cloudenv

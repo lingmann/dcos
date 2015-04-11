@@ -42,7 +42,7 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=Mesos Master
 [Service]
-Restart=on-failure
+Restart=always
 StartLimitInterval=0
 RestartSec=15
 EnvironmentFile=/etc/environment
@@ -59,7 +59,7 @@ cat <<EOF > "$systemd_slave"
 [Unit]
 Description=Mesos Slave
 [Service]
-Restart=on-failure
+Restart=always
 StartLimitInterval=0
 RestartSec=5
 KillMode=process

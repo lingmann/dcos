@@ -45,11 +45,11 @@ http {
   keepalive_timeout 65;
 
   upstream mesos {
-    server leader.mesos:5050 resolve;
+    server leader.mesos:5050;
   }
 
   upstream marathon {
-    server master.mesos:8080 resolve;
+    server master.mesos:8080;
   }
 
   server {

@@ -359,8 +359,10 @@ def build(repository, name, override_buildinfo_file):
     buildinfo = load_buildinfo()
 
     if 'name' in buildinfo:
-        print("ERROR: Can't put 'name' in buildinfo anymore.")
-        sys.exit(1)
+        print("WARNING: 'name' in buildinfo is deprecated.")
+        if buildinfo['name'] != name:
+            print("ERROR: buildinfo name '{0}' needs to match folder name '{1}'".format(buildinfo['name'], name))
+            sys.exit(1)
 
     # TODO(cmaloney): one buildinfo -> multiple packages builds.
     override_buildinfo = None

@@ -172,7 +172,7 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
     if work_dir is None:
         work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
 
-    if len(output_name):
+    if output_name and len(output_name):
         output_name = output_name + '.'
     else:
         # Just for type safety

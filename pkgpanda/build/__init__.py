@@ -200,14 +200,6 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
             shutil.unpack_archive(pkg_path, target, "gztar")
         repository.add(local_fetcher, pkg_id)
 
-    # Mark the appropriate roles.
-    config_dir = make_abs("etc/mesosphere/roles/")
-    if os.path.exists(config_dir):
-        shutil.rmtree(config_dir)
-    os.makedirs(config_dir)
-    for role in roles:
-        make_file(os.path.join(config_dir, role))
-
     # Activate the packages inside the repository.
     # Do generate dcos.target.wants inside the root so that we don't
     # try messing with /etc/systemd/system.

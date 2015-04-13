@@ -229,7 +229,7 @@ def load_treeinfo(name, working_on=set()):
             merge_treeinfo_packages(from_trees)
         elif type(from_trees) is list:
             for tree in from_trees:
-                merge_treeinfo_packages(parent_name)
+                merge_treeinfo_packages(tree)
 
     print(treeinfo)
     return treeinfo
@@ -304,8 +304,8 @@ def build_tree(repository, mkbootstrap, tree_name):
                 sources = expand_single_source_alias(name, packages[name])
 
                 # Write to an override buildinfo file, providing the options to the build.
-                fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name),suffix='.override.buildinfo.json')
-                os.close(fd) # TODO(cmaloney): Should really write to the fd...
+                fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
+                os.close(fd)  # TODO(cmaloney): Should really write to the fd...
                 write_json(override_buildinfo, {"sources": sources})
                 build_cmd += ['--override-buildinfo', override_buildinfo]
 

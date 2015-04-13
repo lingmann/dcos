@@ -1,16 +1,16 @@
 import binascii
 import hashlib
 import os.path
-import pkgpanda
 import shutil
 import sys
 import tempfile
 import urllib.request
-from pkgpanda.util import make_file, make_tar, rewrite_symlinks, write_json
 from subprocess import check_call, check_output
 from urllib.parse import urlparse
 
+import pkgpanda
 from pkgpanda.exceptions import ValidationError
+from pkgpanda.util import make_file, make_tar, rewrite_symlinks, write_json
 
 
 def sha1(filename):

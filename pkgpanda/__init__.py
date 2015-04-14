@@ -58,7 +58,9 @@ class Systemd:
         if not self.__active:
             return
         cmd = ["systemctl", "start", "dcos.target"]
-        if not self.__block:
+        if self.__block:
+            print("Waiting for dcos.target to come up")
+        else:
             cmd.append("--no-block")
         check_call(cmd)
 

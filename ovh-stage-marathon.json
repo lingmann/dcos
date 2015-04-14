@@ -1,13 +1,13 @@
 {
-  "id": "/dcos/service/history",
+  "id": "/history",
   "instances": 1,
   "cpus": 0.5,
-  "mem": 512,
-  "ports": [5055],
+  "mem": 256,
+  "ports": [15055],
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "mesosphere/dcos-history-service:0.0.4",
+      "image": "mesosphere/dcos-history-service:0.0.6",
       "network": "HOST"
     }
   },
@@ -27,5 +27,8 @@
   ],
   "upgradeStrategy": {
     "minimumHealthCapacity": 0
+  },
+  "env": {
+    "MASTER_URLS": "http://leader.mesos:5050"
   }
 }

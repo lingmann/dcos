@@ -28,7 +28,7 @@ def home():
     return redirect(url_for('hour'))
 
 
-def start(port=int(environ.get('PORT0', '5055')), urls=environ.get('MASTER_URLS', 'http://master.mesos:5050').split(",")):
+def start(port=int(environ.get('PORT', '5055')), urls=environ.get('MASTER_URLS', 'http://leader.mesos:5050').split(",")):
     global state_buffer
     logging.basicConfig(level="INFO")
     compress.init_app(app)

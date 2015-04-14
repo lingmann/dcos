@@ -6,9 +6,6 @@ aws.templates.stage:
 	s3cmd sync aws/unified.json s3://downloads.mesosphere.io/cloudformation/dcos/unified.json
 	s3cmd sync aws/simple-unified.json s3://downloads.mesosphere.io/cloudformation/dcos/simple-unified.json
 
-aws.launch.stack:
-	s3cmd sync aws/launchstack.html s3://downloads.mesosphere.io/cloudformation/stage-launchstack.html
-
 check:
 	aws cloudformation validate-template --template-url https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/unified.json
 	aws cloudformation validate-template --template-url https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/simple-unified.json

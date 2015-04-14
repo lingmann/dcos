@@ -1,4 +1,4 @@
-FROM ubuntu:14.04.1
+FROM ubuntu:14.04.2
 MAINTAINER support+docker@mesosphere.io
 
 RUN apt-get -qq update && apt-get -y install \

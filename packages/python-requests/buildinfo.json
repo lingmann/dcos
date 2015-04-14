@@ -1,5 +1,4 @@
 {
-  "name" : "python-requests",
   "requires": ["python"],
   "single_source": {
     "kind": "git",

@@ -1,5 +1,4 @@
 {
-  "name" : "exhibitor",
   "requires": ["java"],
   "docker": "dcos-builder",
   "sources": {

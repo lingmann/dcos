@@ -1,5 +1,4 @@
 {
-  "name" : "mesos-modules-private",
   "requires": ["mesos-buildenv", "mesos"],
   "docker": "dcos-builder",
   "single_source" : {

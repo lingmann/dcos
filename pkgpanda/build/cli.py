@@ -231,7 +231,6 @@ def load_treeinfo(name, working_on=set()):
             for tree in from_trees:
                 merge_treeinfo_packages(tree)
 
-    print(treeinfo)
     return treeinfo
 
 

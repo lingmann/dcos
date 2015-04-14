@@ -15,3 +15,5 @@ make_template:
 	python bin/cloud_config_cf.py --var='$$SLAVE_CLOUD_CONFIG' /tmp/mcc simple-slave-cloud-config > aws/simple-unified.json
 	python bin/cloud_config_cf.py --var='$$MASTER_CLOUD_CONFIG' aws/unified.json.template master-cloud-config > /tmp/mcc
 	python bin/cloud_config_cf.py --var='$$SLAVE_CLOUD_CONFIG' /tmp/mcc slave-cloud-config > aws/unified.json
+
+all: make_template aws.templates.stage check

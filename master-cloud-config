@@ -33,7 +33,7 @@ write_files:
       AWS_REGION={ "Ref" : "AWS::Region" }
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
-      ZOOKEEPER_CLUSTER_SIZE={ "Ref" : "MasterInstanceCount" ] }
+      ZOOKEEPER_CLUSTER_SIZE={ "Ref" : "MasterInstanceCount" }
       MASTER_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
@@ -93,7 +93,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl { "Ref" : "BootstrapRepoRoot" ] }bootstrap.tar.xz -o /tmp/distribution.tar.xz
+        ExecStartPre=/usr/bin/curl { "Ref" : "BootstrapRepoRoot" }bootstrap.tar.xz -o /tmp/distribution.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -axf /tmp/distribution.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

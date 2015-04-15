@@ -1,6 +1,6 @@
 SHELL=/bin/bash
 
-.PHONY: aws.templates.stage
+.PHONY: aws.templates.stage check make_template all
 
 aws.templates.stage:
 	s3cmd sync unified.json s3://downloads.mesosphere.io/cloudformation/dcos/unified.json

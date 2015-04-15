@@ -127,7 +127,6 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(SUDO) rm -rf ext/*
 	$(SUDO) docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################

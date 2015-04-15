@@ -49,7 +49,7 @@ write_files:
 
 coreos:
   update:
-    reboot-strategy: off
+    reboot-strategy: "off"
   units:
     - name: systemd-resolved.service
       mask: true

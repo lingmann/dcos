@@ -1,0 +1,95 @@
+#cloud-config
+
+write_files:
+  - path: /etc/resolv.conf
+    content: 'nameserver 168.63.129.16'
+  - path: /etc/mesosphere/setup-flags/repository-url
+    permissions: 0644
+    owner: root
+    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/branches/azure/'
+  - path: /etc/mesosphere/roles/master
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
+    content: '{}'
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json
+    content: |
+      {
+        "zk": "zk://127.0.0.1:2181/mesos",
+        "refreshSeconds": 60,
+        "ttl": 60,
+        "domain": "mesos",
+        "port": 53,
+        "resolvers": ["168.63.129.16"],
+        "timeout": 5,
+        "listener": "0.0.0.0",
+        "email": "root.mesos-dns.mesos"
+      }
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master
+    content: |
+      MESOS_LOG_DIR=/var/log/mesos
+      MESOS_WORK_DIR=/var/lib/mesos/master
+      MESOS_ZK=zk://127.0.0.1:2181/mesos
+      MESOS_QUORUM=1
+      MESOS_CLUSTER=msphere.cloudapp.net
+      MESOS_HOSTNAME=$private_ipv4
+      MESOS_IP=$private_ipv4
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
+    content: |
+      MASTER_ELB=127.0.0.1
+      ZOOKEEPER_CLUSTER_SIZE=1
+      FALLBACK_DNS=168.63.129.16
+      MARATHON_HOSTNAME=$private_ipv4
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
+    content: |
+      AZURE_CONTAINER=apollo-exhibitor
+      AZURE_PREFIX=msphere
+      AZURE_ACCOUNT_NAME=mikebzk
+      AZURE_ACCOUNT_KEY=Ov+Ihcjk92ktkkX894K/9Fp1coxiDDEwff1xrcNpjDizNMX9i6yTdRbaqEWrzAlegoh7tLOJ+4HTi2+j1CFWFg==
+      EXHIBITOR_WEB_UI_PORT=8181
+      EXHIBITOR_HOSTNAME=$private_ipv4
+
+coreos:
+  update:
+    reboot-strategy: off
+  units:
+    - name: systemd-resolved.service
+      mask: true
+      command: stop
+    - name: etcd.service
+      mask: true
+      command: stop
+    - name: config-writer.service
+      command: start
+      content: |
+        [Unit]
+        Description=Write out dynamic config values
+        [Service]
+        Type=oneshot
+        EnvironmentFile=/etc/environment
+        # Marathon depends on `hostname` resolution working
+        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) > /etc/hosts"
+    - name: dcos-download.service
+      content: |
+        [Unit]
+        Description=Download the DCOS
+        After=network-online.target
+        Wants=network-online.target
+        ConditionPathExists=!/opt/mesosphere/
+        [Service]
+        Type=oneshot
+        ExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/branches/azure/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
+        ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
+    - name: dcos-setup.service
+      command: start
+      enable: true
+      content: |
+        [Unit]
+        Description=Prep the Pkgpanda working directories for this host.
+        Requires=dcos-download.service
+        After=dcos-download.service
+        [Service]
+        Type=oneshot
+        EnvironmentFile=/opt/mesosphere/environment
+        ExecStart=/opt/mesosphere/bin/pkgpanda setup
+        [Install]
+        WantedBy=multi-user.target

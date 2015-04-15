@@ -40,10 +40,10 @@ write_files:
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS=10.0.0.2
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
-      S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
-      S3_PREFIX={ "Ref" : "AWS::StackName" }
+      AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
+      AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
       EXHIBITOR_WEB_UI_PORT=8181
   - path: /root/.bashrc
     content: |
@@ -84,7 +84,7 @@ coreos:
         Description=Write out dynamic config values
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/bash -c "echo EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+        ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
     - name: dcos-download.service
       content: |

@@ -311,9 +311,7 @@
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceType", "default" ] },
-        "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
-$MASTER_CLOUD_CONFIG
-        ]]
+        "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [{{ master_cloud_config }}]]
         }
         }
       }
@@ -487,9 +485,7 @@ $MASTER_CLOUD_CONFIG
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceType", "default" ] },
-        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-$SLAVE_CLOUD_CONFIG
-        ]]}}
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [{{ slave_cloud_config }}]]}}
       }
     },
 

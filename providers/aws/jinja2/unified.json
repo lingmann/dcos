@@ -362,7 +362,7 @@
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Ref" : "MasterInstanceType" },
         "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
-$MASTER_CLOUD_CONFIG
+          {{ master_cloud_config }}
         ]]
         }
         }
@@ -538,7 +538,7 @@ $MASTER_CLOUD_CONFIG
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Ref" : "SlaveInstanceType" },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-$SLAVE_CLOUD_CONFIG
+          {{ slave_cloud_config }}
         ]]}}
       }
     },

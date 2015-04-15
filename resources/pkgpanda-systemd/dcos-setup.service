@@ -1,0 +1,12 @@
+[Unit]
+Description=Prep the Pkgpanda working directories for this host.
+Requires=dcos-download.service
+After=dcos-download.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/mesosphere/environment
+ExecStart=/opt/mesosphere/bin/pkgpanda setup
+
+[Install]
+WantedBy=multi-user.target

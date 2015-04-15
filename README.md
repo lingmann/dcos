@@ -61,13 +61,12 @@ This VPN appliance costs about 100 USD a month -- 50 for the
 Currently you can change the number of slaves, but not the number of masters.
 To change the number of slaves:
 1. Go to the CloudFormation UI
-2. Select the umbrella CF stack (the name of your cluster with no suffix)
-3. Hit the *Update Stack* button
-4. Follow the wizard, changing the SlaveInstantCount parameter
+1. Hit the *Update Stack* button
+1. Follow the wizard, changing the SlaveInstantCount parameter
 
 ### Launching with AWS CLI
 ```
-aws cloudformation create-stack --stack-name dcos --template-url=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos.json --capabilities CAPABILITY_IAM --parameters $(cat parameters) --region us-west-2
+aws cloudformation create-stack --stack-name dcos --template-url=https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/unified.json --capabilities CAPABILITY_IAM --parameters $(cat parameters) --region us-west-2
 ```
 
 # Networking
@@ -97,7 +96,7 @@ AWS accounts must have sufficent remaining quota to launch the CloudFormation te
 | Resource | Quantity |
 | --- | --- |
 | VPC | 1 |
-| CloudFormation stacks | 4 |
+| CloudFormation stacks | 1 |
 | ELB | 2 |
 | Auto Scaling groups | 2 |
 | EC2 Instances | 5 |
@@ -114,19 +113,10 @@ To delete an S3 bucket, you must first delete its contents. To do so from the AW
 # Customization
 ### Launching in a different region
 To launch in a different region it should be sufficient to:
-1. Change the region on the CF web UI (button near top right)
-2. Update the CoreOS AMI to correspond with the region (https://coreos.com/docs/running-coreos/cloud-providers/ec2/)
+1. Click the link corresponding to the region you want to launch in
 
 ### Launching in multi-master mode (HA)
 1. Update the *MasterInstanceCount* parameter (recommended odd number)
 2. Update the *MasterQuourumCount* parameter (recommended ceil(MasterInstanceCount*/2)
 
 # Known Issues
-
-# Software
-| Component | Details |
-| --- | --- |
-| OS | CoreOS Beta Channel 633.1.0 for HVM |
-| Pkgpanda | |
-| Mesos DNS | |
-| DCOS CLI | |

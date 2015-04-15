@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 
+# Requirements:
+# pip install pyyaml
+
 import re
 import sys
 import json

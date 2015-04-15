@@ -20,10 +20,10 @@ function globals {
 # Create Azure DCOS stack
 # $1: stack UUID e.g. jeremy-msphere
 function create {
-  azure service create --location="$location" "$1"
-  azure network vnet create --address-space=10.0.0.0 --cidr=8 \
-    --subnet-name=mesos-cluster --subnet-start-ip=10.0.0.0 --subnet-cidr=11 \
-    --location="$location" "$1"
+  #azure service create --location="$location" "$1"
+  #azure network vnet create --address-space=10.0.0.0 --cidr=8 \
+  #  --subnet-name=mesos-cluster --subnet-start-ip=10.0.0.0 --subnet-cidr=11 \
+  #  --location="$location" "$1"
   #azure service internal-load-balancer add --serviceName="$1" \
   #  --internalLBName=exhibitor --subnet-name=mesos-cluster \
   #  --static-virtualnetwork-ipaddress=10.0.0.4

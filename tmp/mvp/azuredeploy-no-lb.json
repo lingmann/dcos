@@ -5,29 +5,29 @@
         "location": {
             "type": "String",
             "defaultValue": "West US",
-            "metadata": { 
-                 "Description": "Location of resources" 
-            } 
+            "metadata": {
+                 "Description": "Location of resources"
+            }
         },
         "newStorageAccountName": {
             "type": "string",
-            "metadata": { 
+            "metadata": {
                  "Description": "Name of the of the storage account for VM OS Disk"
-            } 
+            }
         },
         "vmNamePrefix": {
             "type": "string",
-            "defaultValue": "coreos",
-            "metadata": { 
+            "defaultValue": "msphere",
+            "metadata": {
                  "Description": "Prefix for the names of the VMs"
-            } 
+            }
         },
         "virtualNetworkName": {
             "type": "string",
             "defaultValue": "myVNET",
-            "metadata": { 
+            "metadata": {
                  "Description": "Name of the VNET hosting the VMs"
-            } 
+            }
         },
         "loadBalancerName": {
             "type": "string",
@@ -36,38 +36,50 @@
         "vmSourceImageName": {
             "type": "string",
             "defaultValue": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Stable-607.0.0",
-            "metadata": { 
+            "metadata": {
                  "Description": "Name of the CoreOS image"
-            } 
+            }
         },
         "vmSize": {
             "type": "string",
             "defaultValue": "Standard_A1",
-            "metadata": { 
+            "metadata": {
                  "Description": "Instance size for the VMs"
-            } 
+            }
         },
         "adminUserName": {
             "type": "string",
-            "metadata": { 
+            "metadata": {
                  "Description": "Username to login to the VMs"
-            } 
+            }
+        },
+        "uuid": {
+            "type": "string",
+            "metadata": {
+                 "Description": "Globally unique cluster id in the Azure namespace"
+            }
+        },
+        "azureAccountName": {
+            "type": "string",
+            "metadata": {
+                 "Description": "Azure account name used by Exhibitor to persist Zookeeper state"
+            }
+        },
+        "azureAccountKey": {
+            "type": "string",
+            "metadata": {
+                 "Description": "Azure account key used by Exhibitor to persist Zookeeper state"
+            }
         },
         "sshKeyData": {
             "type": "string",
-            "metadata": { 
+            "metadata": {
                  "Description": "Public key for SSH authentication"
-            } 
-        },
-        "customData": {
-            "type": "string",
-            "metadata": { 
-                 "Description": "Base64-encoded cloud-config.yaml file to deploy and start Fleet"
-            } 
+            }
         }
     },
     "variables": {
-        "numberOfNodes": 3,
+        "numberOfNodes": 4,
         "addressPrefix": "10.0.0.0/16",
         "subnet1Name": "Subnet-1",
         "subnet1Prefix": "10.0.0.0/24",
@@ -164,7 +176,7 @@
         {
             "apiVersion": "2014-12-01-preview",
             "type": "Microsoft.Compute/availabilitySets",
-            "name": "masters",
+            "name": "mesos",
             "location": "[parameters('location')]",
             "properties": {
             }
@@ -185,7 +197,7 @@
             "apiVersion": "2014-12-01-preview",
             "properties": {
                 "availabilitySet": {
-                    "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
+                    "id": "[resourceId('Microsoft.Compute/availabilitySets', 'mesos')]"
                 },
                 "hardwareProfile": {
                     "vmSize": "[parameters('vmSize')]"

@@ -34,7 +34,7 @@ def transform(line):
     return "%s, %s, %s, %s,\n" % (transformed_before, transformed_ref, transformed_after, '"\\n"')
 
 
-env = Environment(loader=FileSystemLoader('jinja2'))
+env = Environment(loader=FileSystemLoader('templates'))
 cloud_config_template = env.get_template("cloud-config.yaml")
 launch_template = env.get_template('launch_buttons.md')
 
@@ -92,8 +92,8 @@ if __name__ == '__main__':
     default_repo_url = base_url + name
 
     default_bootstrap_root = sys.argv[1]
-    output_template('unified.json', False, default_repo_url)
-    output_template('simple-unified.json', True, default_repo_url)
+    output_template('cloudformation.json', False, default_repo_url)
+    output_template('simple.cloudformation.json', True, default_repo_url)
     output_string('launch_buttons.md', launch_template.render({
         'regions': [
             'eu-central-1',

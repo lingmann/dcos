@@ -60,7 +60,6 @@ def main():
         'https://downloads.mesosphere.com/dcos/',
         "testing/{}".format(name)
         ], cwd='providers/aws')
-    """
     # Upload to s3 bucket
     if not arguments['--skip-package-upload']:
         upload_packages(name)
@@ -68,9 +67,8 @@ def main():
         upload_s3(name, 'packages/bootstrap.tar.xz', 'bootstrap.tar.xz')
         upload_s3(name, 'packages/active.json', 'config/active.json')
     # Upload CloudFormation
-    upload_s3(name, 'providers/aws/unified.json', 'cloudformation.json')
-    upload_s3(name, 'providers/aws/simple-unified.json', 'simple.cloudformation.json')
-    """
+    upload_s3(name, 'providers/aws/cloudformation.json', 'cloudformation.json')
+    upload_s3(name, 'providers/aws/simple.cloudformation.json', 'simple.cloudformation.json')
     with open('aws.html', 'w+') as f:
         f.write(requests.post(
             "https://api.github.com/markdown/raw",

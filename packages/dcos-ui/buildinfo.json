@@ -1,5 +1,4 @@
 {
-  "name" : "dcos-ui",
   "docker": "dcos-builder",
   "sources" : {
     "dcos-ui": {

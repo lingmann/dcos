@@ -1,5 +1,4 @@
 {
-  "name" : "pkgpanda",
   "requires": ["python", "python-requests"],
   "single_source": {
     "kind": "git",

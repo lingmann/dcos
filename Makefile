@@ -115,7 +115,7 @@ debug: | build/docker_image
 .PHONY: docker_image
 docker_image: | build/docker_image
 build/docker_image:
-	$(ANNOTATE) $(SUDO) docker build -t "$(DOCKER_IMAGE)" . \
+	$(ANNOTATE) $(SUDO) docker build -t "$(DOCKER_IMAGE)" - < Dockerfile \
 		&> build/docker_image.log
 	>&2 egrep '^stderr: ' build/docker_image.log || true
 	@echo "docker_image build complete"
@@ -127,7 +127,6 @@ clean:
 
 .PHONY: distclean
 distclean: clean
-	$(SUDO) rm -rf ext/*
 	$(SUDO) docker rmi -f $(DOCKER_IMAGE) 2>/dev/null || true
 
 ###############################################################################

@@ -1,5 +1,4 @@
 {
-  "name" : "dnspython",
   "requires": ["python"],
   "single_source": {
     "kind": "git",

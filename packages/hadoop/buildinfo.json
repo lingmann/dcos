@@ -1,5 +1,4 @@
 {
-  "name" : "hadoop",
   "version" : "2.5.0",
   "single_source" : {
     "kind": "url_extract",

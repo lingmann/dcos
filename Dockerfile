@@ -1,4 +1,4 @@
-FROM ubuntu:14.04.1
+FROM ubuntu:14.04.2
 MAINTAINER support+docker@mesosphere.io
 
 RUN apt-get -qq update && apt-get -y install \
@@ -25,11 +25,6 @@ RUN apt-get -qq update && apt-get -y install \
   libsvn-dev \
   ruby \
   curl \
-  wget
+  wget \
+  scala
 RUN pip install awscli
-RUN cd /tmp && \
-  curl -sSL http://nixos.org/releases/patchelf/patchelf-0.8/patchelf-0.8.tar.gz | tar xzf - && \
-  cd /tmp/patchelf* && \
-  ./configure && \
-  make install
-WORKDIR /dcos

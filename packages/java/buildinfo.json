@@ -1,5 +1,4 @@
 {
-  "name" : "java",
   "single_source" : {
     "kind": "url_extract",
     "url": "https://s3.amazonaws.com/downloads.mesosphere.io/java/jdk-7u75-linux-x64.tar.gz"

@@ -1,5 +1,4 @@
 {
-  "name" : "hdfs-mesos",
   "requires": ["java","hadoop"],
   "single_source" : {
     "kind": "url_extract",

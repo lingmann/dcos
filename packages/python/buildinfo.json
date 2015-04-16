@@ -1,5 +1,4 @@
 {
-  "name" : "python",
   "docker": "dcos-builder",
   "environment": {
     "PYTHONPATH": "/opt/mesosphere/lib/python3.4/site-packages"

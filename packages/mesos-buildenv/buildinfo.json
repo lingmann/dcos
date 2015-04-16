@@ -1,5 +1,4 @@
 {
-  "name": "mesos-buildenv",
   "docker": "dcos-builder",
   "single_source": {
     "kind": "git",

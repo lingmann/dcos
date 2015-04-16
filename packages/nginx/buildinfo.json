@@ -1,5 +1,4 @@
 {
-  "name" : "nginx",
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "url_extract",

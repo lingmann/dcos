@@ -53,7 +53,7 @@ cat <<- EOF > "$exhibitor_service"
   EnvironmentFile=/etc/environment
   EnvironmentFile=/opt/mesosphere/environment
   EnvironmentFile=/opt/mesosphere/etc/cloudenv
-  EnvironmentFile=/opt/mesosphere/etc/zookeeper
+  EnvironmentFile=/opt/mesosphere/etc/exhibitor
   # run in new mount namespace to create custom resolv.conf
   ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
 EOF

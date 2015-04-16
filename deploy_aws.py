@@ -30,12 +30,12 @@ s3 = boto3.resource('s3')
 bucket = s3.Bucket('downloads.mesosphere.io')
 
 
-def upload_s3(name, path, dest_path=None):
+def upload_s3(name, path, dest_path=None, args={}):
     with open(path, 'rb') as data:
         print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
         if not dest_path:
             dest_path = path
-        bucket.Object('dcos/testing/{name}/{path}'.format(name=name, path=dest_path)).put(Body=data)
+        return bucket.Object('dcos/testing/{name}/{path}'.format(name=name, path=dest_path)).put(Body=data, **args)
 
 
 def upload_packages(name):
@@ -75,9 +75,7 @@ def main():
             headers={'Content-type': 'text/plain'},
             data=open('providers/aws/launch_buttons.md')
             ).text)
-    """
-    upload_s3(name, 'aws.html')
-    """
+    upload_s3(name, 'aws.html', args={'ContentType': 'text/html'})
 
 if __name__ == '__main__':
     main()

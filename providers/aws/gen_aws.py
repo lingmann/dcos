@@ -22,7 +22,7 @@ def transform(line):
     m = AWS_REF_REGEX.search(line)
     # no splitting necessary
     if not m:
-        return "%s,\n" % (json.dumps(line))
+        return "%s,\n" % (json.dumps(line + '\n'))
 
     before = m.group('before')
     ref = m.group('ref')
@@ -41,7 +41,7 @@ launch_template = env.get_template('launch_buttons.md')
 
 def render_cloudconfig(roles, simple):
     def make_aws_param(name):
-        if simple:
+        if not simple:
             return '{ "Ref" : "' + name + '" }'
         return '{ "Fn::FindInMap" : [ "Parameters", "' + name + '", "default" ] }'
 
@@ -96,14 +96,15 @@ if __name__ == '__main__':
     output_template('simple.cloudformation.json', True, default_repo_url)
     output_string('launch_buttons.md', launch_template.render({
         'regions': [
+            'us-west-1',
+            'us-west-2',
+            'us-east-1',
+            'sa-east-1',
+            'eu-west-1',
             'eu-central-1',
             'ap-northeast-1',
-            'sa-east-1',
-            'ap-southeast-2',
             'ap-southeast-1',
-            'us-east-1',
-            'us-west-2',
-            'us-west-1',
-            'eu-west-1'],
+            'ap-southeast-2'
+            ],
         'name': name
         }))

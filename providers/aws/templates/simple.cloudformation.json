@@ -26,7 +26,7 @@
       "MesosSlaveTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-slave.json" },
       "MesosMasterTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-master.json" },
       "VpcTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-vpc.json" },
-      "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" } ,
+      "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" },
       "DockerCredentials" : { "default" : "{}" },
       "MasterQuorumCount" : { "default" : "1" },
       "SlaveInstanceCount" : { "default" : "4" },

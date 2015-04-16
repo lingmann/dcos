@@ -36,6 +36,7 @@ def transform(line):
 
 env = Environment(loader=FileSystemLoader('jinja2'))
 cloud_config_template = env.get_template("cloud-config.yaml")
+launch_template = env.get_template('launch_buttons.md')
 
 
 def render_cloudconfig(roles, simple):
@@ -65,17 +66,44 @@ def render_cloudformation(template, simple, default_repo_url):
         })
 
 
+def output_string(filename, data):
+    with open(filename, 'w+') as f:
+        f.write(data)
+
+
 def output_template(name, simple, default_repo_url):
-    with open(name, 'w+') as f:
-        f.write(render_cloudformation(env.get_template(name), simple, default_repo_url))
+    output_string(name, render_cloudformation(env.get_template(name), simple, default_repo_url))
 
 if __name__ == '__main__':
-    if len(sys.argv) < 2:
-        print("USAGE: gen_aws <bootstrap_url>")
+    if len(sys.argv) != 3:
+        print("USAGE: gen_aws <base_url> <name>")
         sys.exit(1)
 
-    default_repo_url = sys.argv[1]
+    base_url = sys.argv[1]
+    name = sys.argv[2]
+
+    # base_url must end in '/'
+    assert base_url[-1] == '/'
+
+    # Name shouldn't start or end with '/'
+    assert name[0] != '/'
+    assert name[-1] != '/'
+
+    default_repo_url = base_url + name
 
     default_bootstrap_root = sys.argv[1]
     output_template('unified.json', False, default_repo_url)
     output_template('simple-unified.json', True, default_repo_url)
+    output_string('launch_buttons.md', launch_template.render({
+        'regions': [
+            'eu-central-1',
+            'ap-northeast-1',
+            'sa-east-1',
+            'ap-southeast-2',
+            'ap-southeast-1',
+            'us-east-1',
+            'us-west-2',
+            'us-west-1',
+            'eu-west-1'],
+        'name': name
+        }))

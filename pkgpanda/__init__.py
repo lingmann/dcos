@@ -24,7 +24,7 @@ from itertools import chain
 from subprocess import CalledProcessError, check_call
 
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
-from pkgpanda.util import if_exists, load_json, write_string
+from pkgpanda.util import extract_tarball, if_exists, load_json, write_string
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -222,23 +222,6 @@ def validate_compatible(packages, roles):
     #       - Including the roles subfolders.
     #  - There is a base set of required package names (pkgpanda, mesos, config)
     #  - The config is for this specific type of host (master, slave)?
-
-
-def extract_tarball(path, target):
-    """Extract the tarball into target.
-
-    If there are any errors, delete the folder being extracted to.
-    """
-    # TODO(cmaloney): Validate extraction will pass before unpacking as much as possible.
-    # TODO(cmaloney): Unpack into a temporary directory then move into place to
-    # prevent partial extraction from ever laying around on the filesystem.
-    try:
-        assert os.path.exists(path)
-        shutil.unpack_archive(path, target, "gztar")
-    except:
-        # If there are errors, we can't really cope since we are already in an error state.
-        shutil.rmtree(target, ignore_errors=True)
-        raise
 
 
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.

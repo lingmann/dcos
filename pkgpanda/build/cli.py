@@ -29,9 +29,9 @@ from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
 from docopt import docopt
-from pkgpanda import Install, PackageId, Repository, extract_tarball
+from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, make_bootstrap_tarball, sha1
-from pkgpanda.cli import print_repo_list
+from pkgpanda.cli import add_to_repository, print_repo_list
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
 
@@ -83,25 +83,6 @@ def clean():
     cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
 
 
-def add(repository, path):
-    # Extract Package Id (Filename must be path/{pkg-id}.tar.xz).
-    name = os.path.basename(path)
-
-    if not name.endswith('.tar.xz'):
-        print("ERROR: Can only add package tarballs which have names " +
-              "like {pkg-id}.tar.xz")
-
-    pkg_id = name[:-len('.tar.xz')]
-
-    # Validate the package id
-    PackageId(pkg_id)
-
-    def fetch(_, target):
-        extract_tarball(path, target)
-
-    repository.add(fetch, pkg_id)
-
-
 def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
     umask(0o022)
@@ -111,7 +92,7 @@ def main():
 
     # Repository management commands.
     if arguments['add']:
-        add(repository, arguments['<package-tarball>'])
+        add_to_repository(repository, arguments['<package-tarball>'])
         sys.exit(0)
 
     if arguments['list']:
@@ -318,7 +299,7 @@ def build_tree(repository, mkbootstrap, tree_name):
             # Activate the package so the things that depend on it will build right.
             package_id = load_string(os.path.join(name, "cache/last_build"))
             pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
-            add(repository, pkg_path)
+            add_to_repository(repository, pkg_path)
             built_package_paths.add(pkg_path)
 
     finally:

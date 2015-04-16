@@ -4,6 +4,7 @@ Usage:
   pkgpanda activate <id>... [options]
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
+  pkgpanda add <package-tarball>
   pkgpanda list [options]
   pkgpanda remove <id>... [options]
   pkgpanda setup [options]
@@ -34,7 +35,26 @@ from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, urllib_fetcher
 from pkgpanda.constants import version
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import if_exists, load_json, load_string, write_string
+from pkgpanda.util import extract_tarball, if_exists, load_json, load_string, write_string
+
+
+def add_to_repository(repository, path):
+    # Extract Package Id (Filename must be path/{pkg-id}.tar.xz).
+    name = os.path.basename(path)
+
+    if not name.endswith('.tar.xz'):
+        print("ERROR: Can only add package tarballs which have names " +
+              "like {pkg-id}.tar.xz")
+
+    pkg_id = name[:-len('.tar.xz')]
+
+    # Validate the package id
+    PackageId(pkg_id)
+
+    def fetch(_, target):
+        extract_tarball(path, target)
+
+    repository.add(fetch, pkg_id)
 
 
 def print_repo_list(packages):
@@ -181,6 +201,10 @@ def main():
     if arguments['active']:
         for pkg in sorted(install.get_active()):
             print(pkg)
+        sys.exit(0)
+
+    if arguments['add']:
+        add_to_repository(repository, arguments['<package-tarball>'])
         sys.exit(0)
 
     if arguments['fetch']:

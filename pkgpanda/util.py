@@ -1,8 +1,25 @@
 import json
 import os
 from itertools import chain
-from shutil import which
+from shutil import rmtree, unpack_archive, which
 from subprocess import check_call
+
+
+def extract_tarball(path, target):
+    """Extract the tarball into target.
+
+    If there are any errors, delete the folder being extracted to.
+    """
+    # TODO(cmaloney): Validate extraction will pass before unpacking as much as possible.
+    # TODO(cmaloney): Unpack into a temporary directory then move into place to
+    # prevent partial extraction from ever laying around on the filesystem.
+    try:
+        assert os.path.exists(path)
+        unpack_archive(path, target, "gztar")
+    except:
+        # If there are errors, we can't really cope since we are already in an error state.
+        rmtree(target, ignore_errors=True)
+        raise
 
 
 def load_json(filename):

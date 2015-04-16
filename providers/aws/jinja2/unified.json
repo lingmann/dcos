@@ -65,7 +65,7 @@
     "BootstrapRepoRoot" : {
       "Description" : "Root repository for bootstrapping (must end in /)",
       "Type" : "String",
-      "Default" : "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/eap1/"
+      "Default" : "{{ default_repo_url }}"
     },
     "StackCreationTimeout" : {
       "Description" : "Timeout on initial stack creation",

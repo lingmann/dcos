@@ -460,6 +460,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                     pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
                     pkg_requires = pkg_buildinfo.get('requires', list())
                     pkg_path = repository.package_path(pkg_id_str)
+
+                    if PackageId(pkg_id_str).name in active_package_names:
+                        continue
                 else:
 
                     package = repository.load(pkg_id_str)
@@ -467,10 +470,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                     pkg_id = package.id
                     pkg_requires = package.requires
                     pkg_path = package.path
+                    if PackageId(pkg_id_str).name in active_package_names:
+                        continue
                     active_packages.append(package)
-
-                if PackageId(pkg_id_str).name in active_package_names:
-                    continue
 
                 # Mount the package into the docker container.
                 cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id_str)

@@ -47,7 +47,7 @@ def write_string(filename, data):
 
 def load_string(filename):
     with open(filename) as f:
-        return f.read()
+        return f.read().strip()
 
 
 def if_exists(fn, *args, **kwargs):

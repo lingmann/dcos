@@ -28,7 +28,6 @@ from itertools import groupby
 from os import umask
 from subprocess import check_call
 from urllib.error import HTTPError, URLError
-from urllib.parse import urljoin
 from urllib.request import urlopen
 
 from docopt import docopt
@@ -109,7 +108,7 @@ def do_bootstrap(install, repository):
         print("Fetching active.json from repository {}".format(repository_url))
         # TODO(cmaloney): Support sending some basic info to the machine generating
         # the active list of packages.
-        active_url = urljoin(repository_url, "config/active.json")
+        active_url = repository_url + "/config/active.json"
         try:
             req = urlopen(active_url)
             to_activate = json.loads(req.read().decode('utf-8'))

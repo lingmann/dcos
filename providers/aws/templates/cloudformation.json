@@ -48,19 +48,9 @@
       "Type" : "Number",
       "Default" : "1"
     },
-    "InstanceAmi" : {
-      "Description" : "CoreOS AMI to use, specific to region",
-      "Type" : "String",
-      "Default" : "ami-fd361fcd"
-    },
     "KeyName" : {
       "Description" : "Name of SSH key to link",
       "Type" : "AWS::EC2::KeyPair::KeyName"
-    },
-    "DockerCredentials" : {
-      "Description" : "JSON string to be saved as .dockercfg",
-      "Type" : "String",
-      "Default" : "{}"
     },
     "BootstrapRepoRoot" : {
       "Description" : "Root repository for bootstrapping (must end in /)",

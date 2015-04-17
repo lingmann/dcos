@@ -1,4 +1,4 @@
-# AWS CloudFormation
+# {{ name }} AWS CloudFormation
 
 * [Go to OneLogin and click on AWS Development](https://app.onelogin.com/client/apps)
 * Click one of the buttons below. Simple has less parameters, Normal lets you tweak things.

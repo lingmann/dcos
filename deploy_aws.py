@@ -57,7 +57,7 @@ def main():
     # Build aws cloudformation
     check_call([
         './gen_aws.py',
-        'https://downloads.mesosphere.io/dcos/',
+        'http://downloads.mesosphere.io/dcos/',
         "testing/{}".format(name)
         ], cwd='providers/aws')
     # Upload to s3 bucket

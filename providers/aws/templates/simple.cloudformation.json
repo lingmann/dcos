@@ -23,9 +23,6 @@
       "eu-west-1" : { "beta" : "ami-af108ad8" }
     },
     "Parameters" : {
-      "MesosSlaveTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-slave.json" },
-      "MesosMasterTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-master.json" },
-      "VpcTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-vpc.json" },
       "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" },
       "DockerCredentials" : { "default" : "{}" },
       "MasterQuorumCount" : { "default" : "1" },
@@ -34,7 +31,6 @@
       "SlaveInstanceType" : { "default" : "r3.large" },
       "MasterInstanceType" : { "default" : "r3.large" },
       "AdminLocation" : { "default" : "0.0.0.0/0" },
-      "ClusterId" : { "default" : "mesos" },
       "StackCreationTimeout" : { "default" : "PT30M" }
     },
     "SubnetConfig" : {

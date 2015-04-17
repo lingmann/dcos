@@ -29,10 +29,10 @@
       "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" },
       "DockerCredentials" : { "default" : "{}" },
       "MasterQuorumCount" : { "default" : "1" },
-      "SlaveInstanceCount" : { "default" : "4" },
+      "SlaveInstanceCount" : { "default" : "5" },
       "MasterInstanceCount" : { "default" : "1" },
-      "SlaveInstanceType" : { "default" : "m3.large" },
-      "MasterInstanceType" : { "default" : "m3.large" },
+      "SlaveInstanceType" : { "default" : "r3.large" },
+      "MasterInstanceType" : { "default" : "r3.large" },
       "AdminLocation" : { "default" : "0.0.0.0/0" },
       "ClusterId" : { "default" : "mesos" },
       "StackCreationTimeout" : { "default" : "PT30M" }

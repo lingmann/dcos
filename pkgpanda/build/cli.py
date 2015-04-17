@@ -280,7 +280,7 @@ def build_tree(repository, mkbootstrap, tree_name):
     try:
         for name in build_order:
             print("Building: {}".format(name))
-            build_cmd = ["mkpanda", "--no-deps"]
+            build_cmd = ["mkpanda"]
             override_buildinfo = None
             if 'single_source' in packages[name] or 'sources' in packages[name]:
                 # Get the sources
@@ -299,10 +299,10 @@ def build_tree(repository, mkbootstrap, tree_name):
             if override_buildinfo:
                 os.remove(override_buildinfo)
 
-            # Activate the package so the things that depend on it will build right.
+            # Add the package to the set of built packages.
+            # Don't auto-add since 'mkpanda' will add as needed.
             package_id = load_string(os.path.join(name, "cache/last_build"))
             pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
-            add_to_repository(repository, pkg_path)
             built_package_paths.add(pkg_path)
 
     finally:

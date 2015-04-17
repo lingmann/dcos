@@ -46,16 +46,16 @@ EOF
 exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"
 mkdir -p $(dirname "$exhibitor_service")
 cat <<- EOF > "$exhibitor_service"
-  [Unit]
-  Description=Exhibitor Zookeeper Supervisor
-  [Service]
-  Restart=always
-  EnvironmentFile=/etc/environment
-  EnvironmentFile=/opt/mesosphere/environment
-  EnvironmentFile=/opt/mesosphere/etc/cloudenv
-  EnvironmentFile=/opt/mesosphere/etc/exhibitor
-  # run in new mount namespace to create custom resolv.conf
-  ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
+[Unit]
+Description=Exhibitor Zookeeper Supervisor
+[Service]
+Restart=always
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/cloudenv
+EnvironmentFile=/opt/mesosphere/etc/exhibitor
+# run in new mount namespace to create custom resolv.conf
+ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
 EOF
 
 exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.sh"
@@ -74,6 +74,6 @@ mount --make-rprivate /
 # "overwrite" resolv.conf for exhibitor and all its children
 mount --bind /etc/resolv.conf.exhibitor /etc/resolv.conf
 
-exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port \$EXHIBITOR_WEB_UI_PORT --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype s3 --s3config "\$S3_BUCKET:\$S3_PREFIX" --s3credentials /etc/mesosphere/exhibitor_credentials.properties --s3region \$AWS_REGION --s3backup false --hostname \$EC2_PUBLIC_HOSTNAME
+exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" --port \$EXHIBITOR_WEB_UI_PORT --defaultconfig "$PKG_PATH/usr/exhibitor/defaults.conf" --configtype s3 --s3config "\$AWS_S3_BUCKET:\$AWS_S3_PREFIX" --s3credentials /etc/mesosphere/exhibitor_credentials.properties --s3region \$AWS_REGION --s3backup false --hostname \$EXHIBITOR_HOSTNAME
 EOF
 chmod +x "$exhibitor_start_wrapper"

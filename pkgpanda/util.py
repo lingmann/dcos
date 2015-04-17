@@ -15,7 +15,7 @@ def extract_tarball(path, target):
     # prevent partial extraction from ever laying around on the filesystem.
     try:
         assert os.path.exists(path)
-        check_call(['mkdir', '-p', path])
+        check_call(['mkdir', '-p', target])
         check_call(['tar', '-xf', path, '-C', target])
     except:
         # If there are errors, we can't really cope since we are already in an error state.

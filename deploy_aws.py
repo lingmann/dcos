@@ -30,7 +30,10 @@ s3 = boto3.resource('s3')
 bucket = s3.Bucket('downloads.mesosphere.io')
 
 
-def upload_s3(name, path, dest_path=None, args={}):
+def upload_s3(name, path, dest_path=None, args={}, no_cache=False):
+    if no_cache:
+        args['CacheControl'] = 'no-cache'
+
     with open(path, 'rb') as data:
         print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
         if not dest_path:
@@ -57,25 +60,25 @@ def main():
     # Build aws cloudformation
     check_call([
         './gen_aws.py',
-        'http://downloads.mesosphere.io/dcos/',
+        'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/',
         "testing/{}".format(name)
         ], cwd='providers/aws')
     # Upload to s3 bucket
     if not arguments['--skip-package-upload']:
         upload_packages(name)
         # Upload bootstrap
-        upload_s3(name, 'packages/bootstrap.tar.xz', 'bootstrap.tar.xz')
-        upload_s3(name, 'packages/active.json', 'config/active.json')
+        upload_s3(name, 'packages/bootstrap.tar.xz', 'bootstrap.tar.xz', no_cache=True)
+        upload_s3(name, 'packages/active.json', 'config/active.json', no_cache=True)
     # Upload CloudFormation
-    upload_s3(name, 'providers/aws/cloudformation.json', 'cloudformation.json')
-    upload_s3(name, 'providers/aws/simple.cloudformation.json', 'simple.cloudformation.json')
+    upload_s3(name, 'providers/aws/cloudformation.json', 'cloudformation.json', no_cache=True)
+    upload_s3(name, 'providers/aws/simple.cloudformation.json', 'simple.cloudformation.json', no_cache=True)
     with open('aws.html', 'w+') as f:
         f.write(requests.post(
             "https://api.github.com/markdown/raw",
             headers={'Content-type': 'text/plain'},
             data=open('providers/aws/launch_buttons.md')
             ).text)
-    upload_s3(name, 'aws.html', args={'ContentType': 'text/html'})
+    upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
 if __name__ == '__main__':
     main()

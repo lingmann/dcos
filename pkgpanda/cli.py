@@ -81,6 +81,7 @@ def do_bootstrap(install, repository):
     # Copy host/cluster-specific packages from setup-packages folder into
     # the repository. Do not overwrite or merge existing packages, hard fail
     # instead.
+    setup_packages_to_activate = []
     setup_pkg_dir = install.get_config_filename("setup-packages")
     for pkg_id_str in os.listdir(setup_pkg_dir):
         print("Installing setup package: {}".format(pkg_id_str))
@@ -102,6 +103,7 @@ def do_bootstrap(install, repository):
             check_call(["cp", "-rp", src_pkg_path, target])
 
         repository.add(copy_fetcher, pkg_id_str)
+        setup_packages_to_activate.append(pkg_id_str)
 
     to_activate = None
     if repository_url:
@@ -131,6 +133,8 @@ def do_bootstrap(install, repository):
 
     # Should be set by loading out of fs or from the local config server.
     assert to_activate is not None
+
+    to_activate = list(set(to_activate + setup_packages_to_activate))
 
     print("Activating packages")
     install.activate(repository, repository.load_packages(to_activate))

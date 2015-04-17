@@ -439,12 +439,12 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id = get_package_id(repository, pkg_str, no_auto_deps)
+                pkg_id_str = get_package_id(repository, pkg_str, no_auto_deps)
 
                 pkg_name = None
                 pkg_requires = None
 
-                if pkg_id is None:
+                if pkg_id_str is None:
                     if PackageId.is_id(pkg_str):
                         # Package names only ATM.
                         raise NotImplementedError()
@@ -455,27 +455,27 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                         print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
                         sys.exit(1)
                     pkg_name = pkg_str
-                    pkg_id = load_string(last_build)
-                    auto_deps.add(pkg_id)
+                    pkg_id_str = load_string(last_build)
+                    auto_deps.add(pkg_id_str)
                     pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
                     pkg_requires = pkg_buildinfo.get('requires', list())
-                    pkg_path = repository.package_path(pkg_id)
+                    pkg_path = repository.package_path(pkg_id_str)
                 else:
 
-                    package = repository.load(pkg_id)
+                    package = repository.load(pkg_id_str)
                     pkg_name = package.name
                     pkg_id = package.id
                     pkg_requires = package.requires
                     pkg_path = package.path
                     active_packages.append(package)
 
-                if PackageId(pkg_id).name in active_package_names:
+                if PackageId(pkg_id_str).name in active_package_names:
                     continue
 
                 # Mount the package into the docker container.
-                cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id)
+                cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id_str)
 
-                os.makedirs(os.path.join(install_dir, "packages/{}".format(pkg_id)))
+                os.makedirs(os.path.join(install_dir, "packages/{}".format(pkg_id_str)))
 
                 # Mark the package as active so we don't check it again and
                 # infinite loop on cycles.

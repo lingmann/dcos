@@ -424,6 +424,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     active_packages = list()
     active_package_names = set()
+    auto_deps = set()
     # Verify all requires are in the repository.
     if 'requires' in buildinfo:
         # Final package has the same requires as the build.
@@ -440,6 +441,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
             try:
                 pkg_id = get_package_id(repository, pkg_str, no_auto_deps)
 
+                pkg_name = None
+                pkg_requires = None
+
                 if pkg_id is None:
                     if PackageId.is_id(pkg_str):
                         # Package names only ATM.
@@ -450,36 +454,39 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                     if not os.path.exists(last_build):
                         print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
                         sys.exit(1)
+                    pkg_name = pkg_str
                     pkg_id = load_string(last_build)
-                    print("Auto-adding dependency to repository: {}".format(pkg_id))
-                    check_call(['mkpanda', 'add', '../{0}/{1}.tar.xz'.format(pkg_str, pkg_id)])
+                    auto_deps.add(pkg_id)
+                    pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
+                    pkg_requires = pkg_buildinfo.get('requires', list())
+                    pkg_path = repository.package_path(pkg_id)
+                else:
+
+                    package = repository.load(pkg_id)
+                    pkg_name = package.name
+                    pkg_id = package.id
+                    pkg_requires = package.requires
+                    pkg_path = package.path
+                    active_packages.append(package)
 
                 if PackageId(pkg_id).name in active_package_names:
                     continue
 
-                # If the package isn't in the repository already, and
-                # no_auto_deps is False (We can automatically install
-                # dependencies), then try to 'mkpanda' and
-                # 'mkpanda add' the dependency.
-
-                package = repository.load(pkg_id)
-
                 # Mount the package into the docker container.
-                cmd.volumes[package.path] = "/opt/mesosphere/packages/{}:ro".format(package.id)
+                cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id)
 
-                os.makedirs(os.path.join(install_dir, "packages/{}".format(package.id)))
+                os.makedirs(os.path.join(install_dir, "packages/{}".format(pkg_id)))
 
                 # Mark the package as active so we don't check it again and
                 # infinite loop on cycles.
-                active_packages.append(package)
-                active_package_names.add(package.name)
+                active_package_names.add(pkg_name)
 
                 # Add the dependencies of the package to the set which will be
                 # activated.
                 # TODO(cmaloney): All these 'transitive' dependencies shouldn't
                 # be available to the package being built, only what depends on
                 # them directly.
-                to_check += package.requires
+                to_check += pkg_requires
             except ValidationError as ex:
                 print("ERROR validating package needed as dependency {0}: {1}".format(pkg_str, ex))
                 bad_requires = True
@@ -505,6 +512,15 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     if exists(pkg_path):
         print("Package up to date. Not re-building.")
         return pkg_path
+
+    # 'mkpanda add' all implicit dependencies since we actually need to build.
+    for dep in auto_deps:
+        print("Auto-adding dependency: {}".format(dep))
+        # NOTE: Not using the name pkg_id because that overrides the outer one.
+        id_obj = PackageId(dep)
+        add_to_repository(repository, '../{0}/{1}.tar.xz'.format(id_obj.name, dep))
+        package = repository.load(dep)
+        active_packages.append(package)
 
     checkout_sources(sources)
 

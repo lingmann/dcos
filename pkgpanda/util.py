@@ -1,7 +1,7 @@
 import json
 import os
 from itertools import chain
-from shutil import rmtree, unpack_archive, which
+from shutil import rmtree, which
 from subprocess import check_call
 
 
@@ -15,7 +15,8 @@ def extract_tarball(path, target):
     # prevent partial extraction from ever laying around on the filesystem.
     try:
         assert os.path.exists(path)
-        unpack_archive(path, target, "gztar")
+        check_call(['mkdir', '-p', path])
+        check_call(['tar', '-xf', path, '-C', target])
     except:
         # If there are errors, we can't really cope since we are already in an error state.
         rmtree(target, ignore_errors=True)

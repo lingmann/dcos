@@ -55,6 +55,9 @@ write_files:
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
+      AZURE_PREFIX=${var.azure_prefix}
+      AZURE_ACCOUNT_NAME=${var.azure_account_name}
+      AZURE_ACCOUNT_KEY=${var.azure_account_key}
       FALLBACK_DNS=172.16.0.23
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |

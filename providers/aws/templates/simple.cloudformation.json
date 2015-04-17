@@ -5,80 +5,12 @@
 
   "Parameters" : {
 
-    "ClusterId" : {
-      "Description" : "Mesos cluster ID",
-      "Type" : "String",
-      "Default" : "mesos"
-    },
-    "AdminLocation" : {
-      "Description" : "The IP range to whitelist for admin access.",
-      "Type" : "String",
-      "MinLength" : "9",
-      "MaxLength" : "18",
-      "Default" : "0.0.0.0/0",
-      "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
-      "ConstraintDescription" : "must be a valid CIDR."
-    },
-    "MasterInstanceType" : {
-      "Description" : "EC2 instance type",
-      "Type" : "String",
-      "Default" : "r3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    },
-    "SlaveInstanceType" : {
-      "Description" : "EC2 instance type",
-      "Type" : "String",
-      "Default" : "r3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    },
-    "MasterInstanceCount" : {
-      "Description" : "Number of master nodes to launch",
-      "Type" : "Number",
-      "Default" : "1"
-    },
-    "SlaveInstanceCount" : {
-      "Description" : "Number of master nodes to launch",
-      "Type" : "Number",
-      "Default" : "5"
-    },
-    "MasterQuorumCount" : {
-      "Description" : "Number of masters needed for Mesos replicated log registry quorum (should be ceiling(<MasterInstanceCount>/2))",
-      "Type" : "Number",
-      "Default" : "1"
-    },
-    "InstanceAmi" : {
-      "Description" : "CoreOS AMI to use, specific to region",
-      "Type" : "String",
-      "Default" : "ami-fd361fcd"
-    },
     "KeyName" : {
       "Description" : "Name of SSH key to link",
       "Type" : "AWS::EC2::KeyPair::KeyName"
-    },
-    "DockerCredentials" : {
-      "Description" : "JSON string to be saved as .dockercfg",
-      "Type" : "String",
-      "Default" : "{}"
-    },
-    "BootstrapRepoRoot" : {
-      "Description" : "Root repository for bootstrapping (must end in /)",
-      "Type" : "String",
-      "Default" : "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/eap1/"
-    },
-    "StackCreationTimeout" : {
-      "Description" : "Timeout on initial stack creation",
-      "Type" : "String",
-      "Default": "PT30M"
     }
   },
-
   "Mappings" : {
-    "SubnetConfig" : {
-      "VPC"     : { "CIDR" : "10.0.0.0/16" },
-      "Public"  : { "CIDR" : "10.0.0.0/24" }
-    },
     "RegionToAmi" : {
       "eu-central-1" : { "beta": "ami-cc88b5d1" },
       "ap-northeast-1" : { "beta" : "ami-72639e72" },
@@ -89,9 +21,27 @@
       "us-west-2" : { "beta" : "ami-fd361fcd" },
       "us-west-1" : { "beta" : "ami-8b10f0cf" },
       "eu-west-1" : { "beta" : "ami-af108ad8" }
+    },
+    "Parameters" : {
+      "MesosSlaveTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-slave.json" },
+      "MesosMasterTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-mesos-master.json" },
+      "VpcTemplateUrl" : { "default" : "https://s3.amazonaws.com/downloads.mesosphere.io/cloudformation/dcos/stage-vpc.json" },
+      "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" },
+      "DockerCredentials" : { "default" : "{}" },
+      "MasterQuorumCount" : { "default" : "1" },
+      "SlaveInstanceCount" : { "default" : "5" },
+      "MasterInstanceCount" : { "default" : "1" },
+      "SlaveInstanceType" : { "default" : "r3.large" },
+      "MasterInstanceType" : { "default" : "r3.large" },
+      "AdminLocation" : { "default" : "0.0.0.0/0" },
+      "ClusterId" : { "default" : "mesos" },
+      "StackCreationTimeout" : { "default" : "PT30M" }
+    },
+    "SubnetConfig" : {
+      "VPC"     : { "CIDR" : "10.0.0.0/16" },
+      "Public"  : { "CIDR" : "10.0.0.0/24" }
     }
   },
-
   "Resources" : {
     "Vpc" : {
       "Type" : "AWS::EC2::VPC",
@@ -219,7 +169,7 @@
           "IpProtocol" : "-1",
           "FromPort" : "0",
           "ToPort" : "65535",
-          "CidrIp" : { "Ref" : "AdminLocation" }
+          "CidrIp" : { "Fn::FindInMap" : [ "Parameters", "AdminLocation", "default" ] }
         } ]
       }
     },
@@ -331,9 +281,9 @@
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "MasterLaunchConfig" },
-        "MinSize" : { "Ref" : "MasterInstanceCount" },
-        "MaxSize" : { "Ref" : "MasterInstanceCount" },
-        "DesiredCapacity" : { "Ref" : "MasterInstanceCount" },
+        "MinSize" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceCount", "default" ] },
+        "MaxSize" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceCount", "default" ] },
+        "DesiredCapacity" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceCount", "default" ] },
         "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" }, { "Ref" : "InternalMasterLoadBalancer"} ],
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
@@ -346,8 +296,8 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : { "Ref" : "StackCreationTimeout" },
-          "Count" : { "Ref" : "MasterInstanceCount"}
+          "Timeout" : { "Fn::FindInMap" : [ "Parameters", "StackCreationTimeout", "default" ] },
+          "Count" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceCount", "default" ] }
         }
       }
     },
@@ -360,10 +310,8 @@
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : { "Ref" : "MasterInstanceType" },
-        "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
-          {{ master_cloud_config }}
-        ]]
+        "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceType", "default" ] },
+        "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [{{ master_cloud_config }}]]
         }
         }
       }
@@ -508,9 +456,9 @@
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
-        "MinSize" : { "Ref" : "SlaveInstanceCount" },
-        "MaxSize" : { "Ref" : "SlaveInstanceCount" },
-        "DesiredCapacity" : { "Ref" : "SlaveInstanceCount" },
+        "MinSize" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceCount", "default" ] },
+        "MaxSize" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceCount", "default" ] },
+        "DesiredCapacity" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceCount", "default" ] },
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
@@ -522,8 +470,8 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : { "Ref" : "StackCreationTimeout" },
-          "Count" : { "Ref" : "SlaveInstanceCount" }
+          "Timeout" : { "Fn::FindInMap" : [ "Parameters", "StackCreationTimeout", "default" ] },
+          "Count" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceCount", "default" ] }
         }
       }
     },
@@ -536,10 +484,8 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : { "Ref" : "SlaveInstanceType" },
-        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          {{ slave_cloud_config }}
-        ]]}}
+        "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceType", "default" ] },
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [{{ slave_cloud_config }}]]}}
       }
     },
 

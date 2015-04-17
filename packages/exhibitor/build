@@ -84,16 +84,16 @@ popd
 exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"
 mkdir -p $(dirname "$exhibitor_service")
 cat <<- EOF > "$exhibitor_service"
-  [Unit]
-  Description=Exhibitor Zookeeper Supervisor
-  [Service]
-  Restart=always
-  EnvironmentFile=/etc/environment
-  EnvironmentFile=/opt/mesosphere/environment
-  EnvironmentFile=/opt/mesosphere/etc/cloudenv
-  EnvironmentFile=/opt/mesosphere/etc/exhibitor
-  # run in new mount namespace to create custom resolv.conf
-  ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
+[Unit]
+Description=Exhibitor Zookeeper Supervisor
+[Service]
+Restart=always
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/cloudenv
+EnvironmentFile=/opt/mesosphere/etc/exhibitor
+# run in new mount namespace to create custom resolv.conf
+ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
 EOF
 
 exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.sh"

@@ -6,7 +6,7 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--override-buildinfo=<buildinfo>]
+  mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps]
   mkpanda add <package-tarball> [options]
   mkpanda clean
   mkpanda list [options]
@@ -56,14 +56,17 @@ class DockerCmd:
 
 
 # package {id, name} + repo -> package id
-def get_package_id(repository, pkg_str):
+def get_package_id(repository, pkg_str, error_if_not_exist=True):
     if PackageId.is_id(pkg_str):
         return pkg_str
     else:
         ids = repository.get_ids(pkg_str)
         if len(ids) == 0:
-            print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
-            sys.exit(1)
+            if error_if_not_exist:
+                print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
+                sys.exit(1)
+            else:
+                return None
         elif len(ids) > 1:
             print(
                 "Multiple packages for name {} in repository ".format(pkg_str) +
@@ -124,7 +127,7 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    build(repository, name, arguments['--override-buildinfo'])
+    build(repository, name, arguments['--override-buildinfo'], arguments['--no-deps'])
     sys.exit(0)
 
 
@@ -277,7 +280,7 @@ def build_tree(repository, mkbootstrap, tree_name):
     try:
         for name in build_order:
             print("Building: {}".format(name))
-            build_cmd = ["mkpanda"]
+            build_cmd = ["mkpanda", "--no-deps"]
             override_buildinfo = None
             if 'single_source' in packages[name] or 'sources' in packages[name]:
                 # Get the sources
@@ -326,7 +329,7 @@ def expand_single_source_alias(pkg_name, buildinfo):
                               "May be specified in buildinfo.json or passed in.")
 
 
-def build(repository, name, override_buildinfo_file):
+def build(repository, name, override_buildinfo_file, no_auto_deps):
     # Clean out src, result so later steps can use them freely for building.
     clean()
 
@@ -435,9 +438,29 @@ def build(repository, name, override_buildinfo_file):
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id = get_package_id(repository, pkg_str)
+                pkg_id = get_package_id(repository, pkg_str, no_auto_deps)
+
+                if pkg_id is None:
+                    if PackageId.is_id(pkg_str):
+                        # Package names only ATM.
+                        raise NotImplementedError()
+
+                    # Try and add the package automatically
+                    last_build = '../{}/cache/last_build'.format(pkg_str)
+                    if not os.path.exists(last_build):
+                        print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
+                        sys.exit(1)
+                    pkg_id = load_string(last_build)
+                    print("Auto-adding dependency to repository: {}".format(pkg_id))
+                    check_call(['mkpanda', 'add', '../{0}/{1}.tar.xz'.format(pkg_str, pkg_id)])
+
                 if PackageId(pkg_id).name in active_package_names:
                     continue
+
+                # If the package isn't in the repository already, and
+                # no_auto_deps is False (We can automatically install
+                # dependencies), then try to 'mkpanda' and
+                # 'mkpanda add' the dependency.
 
                 package = repository.load(pkg_id)
 

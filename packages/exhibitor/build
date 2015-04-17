@@ -158,7 +158,7 @@ then
   exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
     --port \$EXHIBITOR_WEB_UI_PORT \\
     --defaultconfig \$exhibitor_defaults \\
-    --configtype s3 --s3config "\$S3_BUCKET:\$S3_PREFIX" \\
+    --configtype s3 --s3config "\$AWS_S3_BUCKET:\$AWS_S3_PREFIX" \\
     --s3credentials \$exhibitor_properties \\
     --s3region \$AWS_REGION --s3backup false --hostname \$EXHIBITOR_HOSTNAME
 elif [[ -n "\${AZURE_ACCOUNT_NAME:-}" && \\

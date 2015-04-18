@@ -39,7 +39,7 @@ cloud_config_template = env.get_template("cloud-config.yaml")
 launch_template = env.get_template('launch_buttons.md')
 
 
-def render_cloudconfig(roles, simple):
+def render_cloudconfig(roles, simple, report_name):
     def make_aws_param(name):
         if not simple:
             return '{ "Ref" : "' + name + '" }'
@@ -50,7 +50,8 @@ def render_cloudconfig(roles, simple):
         'bootstrap_url': make_aws_param('BootstrapRepoRoot'),
         'roles': roles,
         'master_quorum': make_aws_param('MasterQuorumCount'),
-        'master_count': make_aws_param('MasterInstanceCount')})
+        'master_count': make_aws_param('MasterInstanceCount'),
+        'report_name': report_name})
 
 
 def render_cloudformation(template, simple, default_repo_url):
@@ -61,8 +62,8 @@ def render_cloudformation(template, simple, default_repo_url):
 
     return template.render({
         'default_repo_url': default_repo_url,
-        'master_cloud_config': transform_lines(render_cloudconfig(['master'], simple)),
-        'slave_cloud_config': transform_lines(render_cloudconfig(['slave'], simple))
+        'master_cloud_config': transform_lines(render_cloudconfig(['master'], simple, 'MasterServerGroup')),
+        'slave_cloud_config': transform_lines(render_cloudconfig(['slave'], simple, 'SlaveServerGroup'))
         })
 
 

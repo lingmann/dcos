@@ -80,5 +80,8 @@ def main():
             ).text)
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
+    print("Ready to launch a cluster:")
+    print("http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/{}/aws.html".format(name))
+
 if __name__ == '__main__':
     main()

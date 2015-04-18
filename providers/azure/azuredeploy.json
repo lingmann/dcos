@@ -125,6 +125,20 @@
     },
     {
       "apiVersion": "2014-12-01-preview",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "slaves",
+      "location": "[parameters('region')]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2014-12-01-preview",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "masters",
+      "location": "[parameters('region')]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2014-12-01-preview",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[parameters('virtualNetworkName')]",
       "location": "[parameters('region')]",
@@ -217,9 +231,13 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'slaveNodeNic', copyindex())]",
-        "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
+        "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'slaves')]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'slaves')]"
+        },
         "hardwareProfile": {
           "vmSize": "[parameters('vmSizeSlaveNodes')]"
         },
@@ -295,9 +313,13 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]",
         "[concat('Microsoft.Storage/storageAccounts/', parameters('storageAccountName'))]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
+        },
         "hardwareProfile": {
           "vmSize": "[parameters('vmSizeMasterNodes')]"
         },

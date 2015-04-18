@@ -1,7 +1,8 @@
 ## Quick Start
 
 - Update all instances of `REPLACEME` in `azuredeploy-parameters.json` with a
-  globally unique UUID in the Azure namespace. Something like `msphere-jtl`
+  globally unique UUID in the Azure namespace (must be between 3-24 characters
+  and use numbers and lower-case letters only). Something like `mspherejtl`
   would likely work (msphere + your initials).
 
 - Stack must be created in the "West US" region

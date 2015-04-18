@@ -49,21 +49,6 @@ class Systemd:
         self.__block = block
         self.__unit_directory = unit_directory
 
-    def daemon_reload(self):
-        if not self.__active:
-            return
-        check_call(["systemctl", "daemon-reload"])
-
-    def start_all(self):
-        if not self.__active:
-            return
-        cmd = ["systemctl", "start", "dcos.target"]
-        if self.__block:
-            print("Waiting for dcos.target to come up")
-        else:
-            cmd.append("--no-block")
-        check_call(cmd)
-
     def stop_all(self):
         if not self.__active:
             return
@@ -580,10 +565,6 @@ class Install:
 
         # All done with what we need to redo if host restarts.
         os.remove(state_filename)
-
-        # Start all systemd services in dcos.target.wants
-        systemd.daemon_reload()
-        systemd.start_all()
 
     @property
     def manage_systemd(self):

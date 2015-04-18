@@ -140,9 +140,7 @@ def do_bootstrap(install, repository):
     install.activate(repository, repository.load_packages(to_activate))
 
 
-dcos_target_contents = """[Unit]
-After=dcos-setup.service
-[Install]
+dcos_target_contents = """[Install]
 WantedBy=multi-user.target
 """
 
@@ -166,7 +164,9 @@ def setup(install, repository):
         # Enable dcos.target only after we have populated it to prevent starting
         # up stuff inside of it before we activate the new set of packages.
         if install.manage_systemd:
+            check_call(["systemctl", "daemon-reload"])
             check_call(["systemctl", "enable", "dcos.target"])
+            check_call(["systemctl", "start", "dcos.target", "--no-block"])
         os.remove(bootstrap_path)
 
     # Check for /opt/mesosphere/install_progress. If found, recover the partial
@@ -232,6 +232,12 @@ def main():
     if arguments['activate']:
         try:
             install.activate(repository, repository.load_packages(arguments['<id>']))
+            if not arguments['--no-systemd']:
+                no_block = ["--no-block"] if arguments['--no-block-systemd'] else []
+                check_call(["systemctl", "daemon-reload"])
+                check_call(["systemctl", "enable", "dcos.target"])
+                check_call(["systemctl", "start", "dcos.target"] + no_block)
+
         except ValidationError as ex:
             print("Validation Error: {0}".format(ex))
             sys.exit(1)

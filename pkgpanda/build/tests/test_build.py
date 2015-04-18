@@ -7,6 +7,7 @@ def package(resource_dir, name, tmpdir):
     copytree(resource_dir, str(pkg_dir))
     with pkg_dir.as_cwd():
         check_call(["mkpanda"])
+        check_call(["mkpanda", "clean"])
 
 
 def test_build(tmpdir):

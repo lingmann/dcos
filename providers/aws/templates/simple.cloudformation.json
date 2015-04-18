@@ -12,15 +12,33 @@
   },
   "Mappings" : {
     "RegionToAmi" : {
-      "eu-central-1" : { "beta": "ami-cc88b5d1" },
-      "ap-northeast-1" : { "beta" : "ami-72639e72" },
-      "sa-east-1" : { "beta" : "ami-37f9432a" },
-      "ap-southeast-2" : { "beta" : "ami-7fd1a245" },
-      "ap-southeast-1" : { "beta" : "ami-304a7962" },
-      "us-east-1" : { "beta" : "ami-2e4f7946" },
-      "us-west-2" : { "beta" : "ami-fd361fcd" },
-      "us-west-1" : { "beta" : "ami-8b10f0cf" },
-      "eu-west-1" : { "beta" : "ami-af108ad8" }
+      "ap-northeast-1": {
+        "stable": "ami-9cb9439c"
+      },
+      "ap-southeast-1": {
+        "stable": "ami-a0cefcf2"
+      },
+      "ap-southeast-2": {
+        "stable": "ami-cb3845f1"
+      },
+      "eu-central-1": {
+        "stable": "ami-92003c8f"
+      },
+      "eu-west-1": {
+        "stable": "ami-21422356"
+      },
+      "sa-east-1": {
+        "stable": "ami-99e66384"
+      },
+      "us-east-1": {
+        "stable": "ami-d2033bba"
+      },
+      "us-west-1": {
+        "stable": "ami-43f91b07"
+      },
+      "us-west-2": {
+        "stable": "ami-37280207"
+      }
     },
     "Parameters" : {
       "BootstrapRepoRoot" : { "default" : "{{ default_repo_url }}" },
@@ -301,7 +319,7 @@
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
-        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "beta" ] },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
@@ -476,7 +494,7 @@
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
-        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "beta" ] },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",

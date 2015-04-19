@@ -140,6 +140,27 @@ def test_activate(tmpdir):
         ]).decode('utf-8').split())
     assert active == set(["mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
+    # Swap out one package
+    assert run(["pkgpanda",
+                "swap",
+                "mesos-config--justmesos",
+                "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
+                "--repository={}".format(repo_path),
+                "--config-dir=resources/etc-active",
+                "--no-systemd"]) == ""
+
+    # Check introspection to active is working right.
+    active = set(check_output([
+        "pkgpanda",
+        "active",
+        "--root={0}/root".format(tmpdir),
+        "--rooted-systemd",
+        "--repository={}".format(repo_path),
+        "--config-dir=resources/etc-active"
+        ]).decode('utf-8').split())
+    assert active == set(["mesos--0.22.0", "mesos-config--justmesos"])
+
     assert run(["pkgpanda",
                 "activate",
                 "mesos--0.22.0",

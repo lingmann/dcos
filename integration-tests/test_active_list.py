@@ -3,12 +3,22 @@ from shutil import copytree
 from util import run
 
 
-list_output = """mesos--0.22.0
-mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+list_output = """mesos:
+  0.22.0
+  0.23.0
+mesos-config:
+  ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+  justmesos
 """
 
 active_output = """mesos--0.22.0
 mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+"""
+
+list_remove_output = """mesos--0.23.0
+mesos-config:
+  ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8
+  justmesos
 """
 
 
@@ -30,8 +40,6 @@ def test_remove(tmpdir):
         "--repository={}".format(repo_dir),
         "--root=../tests/resources/install_empty"])
 
-    packages = set(run(["pkgpanda", "list", "--repository={}".format(repo_dir)]).split())
-    assert packages == set(["mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
-
+    assert run(["pkgpanda", "list", "--repository={}".format(repo_dir)]) == list_remove_output
     # TODO(cmaloney): Test removing a non-existant package.
     # TODO(cmaloney): Test removing an active package.

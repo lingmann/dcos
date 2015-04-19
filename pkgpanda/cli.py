@@ -2,6 +2,7 @@
 
 Usage:
   pkgpanda activate <id>... [options]
+  pkgpanda swap <package-id> [options]
   pkgpanda active [options]
   pkgpanda fetch --repository-url=<url> <id>... [options]
   pkgpanda add <package-tarball>
@@ -177,6 +178,23 @@ def setup(install, repository):
             print("No recovery performed: {}".format(msg))
 
 
+def do_activate(install, repository, ids, no_systemd, noblock_systemd):
+    assert type(ids) == list
+    try:
+        install.activate(repository, repository.load_packages(ids))
+        if not no_systemd:
+            no_block = ["--no-block"] if noblock_systemd else []
+            check_call(["systemctl", "daemon-reload"])
+            check_call(["systemctl", "enable", "dcos.target"])
+            check_call(["systemctl", "start", "dcos.target"] + no_block)
+
+    except ValidationError as ex:
+        print("Validation Error: {0}".format(ex))
+        sys.exit(1)
+    except PackageError as ex:
+        print("Package Error: {0}".format(ex))
+
+
 def main():
     arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
     umask(0o022)
@@ -230,19 +248,26 @@ def main():
         sys.exit(0)
 
     if arguments['activate']:
-        try:
-            install.activate(repository, repository.load_packages(arguments['<id>']))
-            if not arguments['--no-systemd']:
-                no_block = ["--no-block"] if arguments['--no-block-systemd'] else []
-                check_call(["systemctl", "daemon-reload"])
-                check_call(["systemctl", "enable", "dcos.target"])
-                check_call(["systemctl", "start", "dcos.target"] + no_block)
+        do_activate(install, repository, arguments['<id>'], arguments['--no-systemd'], arguments['--no-block-systemd'])
+        sys.exit(0)
 
-        except ValidationError as ex:
-            print("Validation Error: {0}".format(ex))
-            sys.exit(1)
-        except PackageError as ex:
-            print("Package Error: {0}".format(ex))
+    if arguments['swap']:
+        active = install.get_active()
+        # TODO(cmaloney): I guarantee there is a better way to write this and
+        # I've written the same logic before...
+        packages_by_name = dict()
+        for id_str in active:
+            pkg_id = PackageId(id_str)
+            packages_by_name[pkg_id.name] = pkg_id
+
+        new_id = PackageId(arguments['<package-id>'])
+        if new_id.name not in packages_by_name:
+            print("ERROR: No package with name {} currently active to swap with.".format(new_id.name))
+
+        packages_by_name[new_id.name] = new_id
+        new_active = list(map(str, packages_by_name.values()))
+        # Activate with the new package name
+        do_activate(install, repository, new_active, arguments['--no-systemd'], arguments['--no-block-systemd'])
         sys.exit(0)
 
     if arguments['remove']:

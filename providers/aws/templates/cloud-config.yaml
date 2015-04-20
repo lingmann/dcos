@@ -39,6 +39,7 @@ write_files:
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
+      MESOS_SLAVE_SUBSYSTEMS=cpu,memory
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       AWS_REGION={ "Ref" : "AWS::Region" }

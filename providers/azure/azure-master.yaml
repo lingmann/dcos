@@ -51,6 +51,16 @@ coreos:
   update:
     reboot-strategy: "off"
   units:
+    - name: var-lib.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount /var/lib
+        Before=dbus.service
+        [Mount]
+        What=/dev/sdb1
+        Where=/var/lib
+        Type=ext4
     - name: systemd-resolved.service
       mask: true
       command: stop

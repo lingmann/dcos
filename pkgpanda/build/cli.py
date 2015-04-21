@@ -1,4 +1,3 @@
-
 """Panda package builder
 
 Reads a buildinfo file, uses it to assemble the sources and determine the
@@ -24,7 +23,7 @@ import sys
 import tempfile
 from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists, expanduser, normpath
-from shutil import copyfile, rmtree
+from shutil import rmtree
 from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
@@ -329,6 +328,12 @@ def expand_single_source_alias(pkg_name, buildinfo):
                               "May be specified in buildinfo.json or passed in.")
 
 
+def assert_no_duplicate_keys(lhs, rhs):
+    if len(lhs.keys() & rhs.keys()) != 0:
+        print("ASSERTION FAILED: Duplicate keys between {} and {}".format(lhs, rhs))
+        assert len(lhs.keys() & rhs.keys()) == 0
+
+
 def build(repository, name, override_buildinfo_file, no_auto_deps):
     # Clean out src, result so later steps can use them freely for building.
     clean()
@@ -386,9 +391,23 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     else:
         sources = pkg_sources
 
+    # Save the final sources back into buildinfo so it gets written into
+    # buildinfo.json. This also means buildinfo.json is always expanded form.
+    buildinfo['sources'] = sources
+
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities.
     checkout_ids = fetch_sources(sources)
+
+    for src_name, checkout_id in checkout_ids.items():
+        # NOTE: single_source buildinfo was expanded above so the src_name is
+        # always correct here.
+
+        # Make sure we never accidentally overwrite something which might be
+        # important. Fields should match if specified (And that should be
+        # tested at some point). For now disallowing identical saves hassle.
+        assert_no_duplicate_keys(checkout_id, buildinfo['sources'][src_name])
+        buildinfo['sources'][src_name].update(checkout_id)
 
     # Add the sha1sum of the buildinfo.json + build file to the build ids
     build_ids = {"sources": checkout_ids}
@@ -509,6 +528,11 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
         version = version_base
     pkg_id = PackageId.from_parts(name, version)
 
+    # Save the build_ids. Useful for verify exactly what went into the
+    # package build hash.
+    buildinfo['build_ids'] = build_ids
+    buildinfo['package_version'] = version
+
     # If the package is already built, don't do anything.
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
     if exists(pkg_path):
@@ -548,13 +572,11 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     # TODO(cmaloney): Run as a specific non-root user, make it possible
     # for non-root to cleanup afterwards.
     # Run the build, prepping the environment as necessary.
-    write_json("src/build_ids.json", checkout_ids)
-
     mkdir("result")
 
     # Copy the build info to the resulting tarball
-    copyfile("src/build_ids.json", "result/build_ids.json")
-    copyfile("buildinfo.json", "result/buildinfo.json")
+    write_json("src/buildinfo.full.json", buildinfo)
+    write_json("result/buildinfo.full.json", buildinfo)
 
     write_json("result/pkginfo.json", pkginfo)
 

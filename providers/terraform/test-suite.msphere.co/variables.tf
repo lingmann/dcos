@@ -63,7 +63,7 @@ variable "slave_count" {
 }
 
 # Use s3.amazonaws.com to remove cloudfront cache layer
-# repo_root URL *must* be http (not https) and end with a trailing slash
+# repo_root URL *must* be http (not https)
 variable "repo_root" {
-  default = "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/"
+  default = "http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc8"
 }

@@ -35,7 +35,7 @@ write_files:
     permissions: 0644
     owner: root
     content: |
-      http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/
+      ${var.repo_root}
   - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -43,10 +43,12 @@ write_files:
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
+      MESOS_LOG_DIR=/var/log/mesos
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/ephemeral/mesos-slave
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-65535]
+      MESOS_SLAVE_SUBSYSTEMS=cpu,memory
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=master0.${var.uuid}.${var.domain}
@@ -130,7 +132,6 @@ coreos:
         Description=Write out dynamic config values
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/bash -c "echo EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
     - name: dcos-download.service
       content: |
@@ -141,7 +142,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl ${var.repo_root}bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/curl ${var.repo_root}/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

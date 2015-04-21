@@ -35,7 +35,7 @@ write_files:
     permissions: 0644
     owner: root
     content: |
-      http://s3.amazonaws.com/downloads.mesosphere.io/dcos/pkgpanda/
+      ${var.repo_root}
   - path: /etc/mesosphere/roles/master
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -54,6 +54,7 @@ write_files:
       }
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master
     content: |
+      MESOS_LOG_DIR=/var/log/mesos
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=${var.mesos_master_quorum}
@@ -68,8 +69,8 @@ write_files:
       FALLBACK_DNS=172.16.0.23
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
     content: |
-      S3_BUCKET=${var.exhibitor_s3_bucket}
-      S3_PREFIX=${var.uuid}
+      AWS_S3_BUCKET=${var.exhibitor_s3_bucket}
+      AWS_S3_PREFIX=${var.uuid}
       EXHIBITOR_WEB_UI_PORT=8181
   - path: /root/.bashrc
     content: |
@@ -136,7 +137,8 @@ coreos:
         Description=Write out dynamic config values
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/bash -c "echo EC2_PUBLIC_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+        ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+        ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
     - name: dcos-download.service
       content: |
@@ -147,7 +149,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl ${var.repo_root}bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/curl ${var.repo_root}/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

@@ -23,7 +23,6 @@ import sys
 import tempfile
 from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists, expanduser, normpath
-from shutil import rmtree
 from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
@@ -619,7 +618,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     # Clean up the temporary install dir used for dependencies.
     # TODO(cmaloney): Move to an RAII wrapper.
-    rmtree(install_dir)
+    check_call(['rm', '-rf', install_dir])
 
     print("Building package tarball")
 

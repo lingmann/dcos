@@ -143,7 +143,8 @@ coreos:
         Type=oneshot
         Before=dcos.target
         ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
-        ExecStart=/usr/bin/ln -s /opt/mesosphere/environment.export /etc/profile.d/dcos.sh    - name: dcos-download.service
+        ExecStart=/usr/bin/ln -s /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
+    - name: dcos-download.service
       content: |
         [Unit]
         Description=Download the DCOS

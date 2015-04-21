@@ -1,10 +1,5 @@
 #!/bin/bash
 
-# Download external debian because the debian one is patched in ways that break
-# stuff from npm...
-export PATH=$PATH:/pkg/src/nodejs/bin
-
-
 cd "/pkg/src/dcos-ui"
 npm install
 npm install -g broccoli-cli

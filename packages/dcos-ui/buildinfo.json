@@ -1,14 +1,10 @@
 {
-  "docker": "dcos-builder",
+  "docker": "node:0.10",
   "sources" : {
     "dcos-ui": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-ui.git",
       "branch" : "feature/DCOS-540-production-deploy"
-      },
-      "nodejs": {
-        "kind": "url_extract",
-        "url": "http://nodejs.org/dist/v0.10.38/node-v0.10.38-linux-x64.tar.gz"
       }
   }
 }

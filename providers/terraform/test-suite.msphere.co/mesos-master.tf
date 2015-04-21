@@ -61,13 +61,16 @@ write_files:
       MESOS_CLUSTER=${var.uuid}.${var.domain}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
+      MASTER_ELB=127.0.0.1
       AWS_REGION=${var.aws_region}
       AWS_ACCESS_KEY_ID=${var.aws_access_key}
       AWS_SECRET_ACCESS_KEY=${var.aws_secret_key}
       ZOOKEEPER_CLUSTER_SIZE=${var.master_count}
-      MASTER_ELB=127.0.0.1
+      AZURE_PREFIX=${var.azure_prefix}
+      AZURE_ACCOUNT_NAME=${var.azure_account_name}
+      AZURE_ACCOUNT_KEY=${var.azure_account_key}
       FALLBACK_DNS=172.16.0.23
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/zookeeper
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
       AWS_S3_BUCKET=${var.exhibitor_s3_bucket}
       AWS_S3_PREFIX=${var.uuid}
@@ -140,6 +143,15 @@ coreos:
         ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
         ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
+        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
+    - name: link-env.service
+      command: start
+      content: |
+        [Service]
+        Type=oneshot
+        Before=dcos.target
+        ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
+        ExecStart=/usr/bin/ln -s /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
     - name: dcos-download.service
       content: |
         [Unit]

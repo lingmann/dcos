@@ -50,6 +50,10 @@ variable "exhibitor_s3_bucket" {
   default = "apollo-exhibitor"
 }
 
+variable "azure_prefix" { default = "" }
+variable "azure_account_name" { default = "" }
+variable "azure_account_key" { default = "" }
+
 variable "master_count" {
   default = "1"
 }

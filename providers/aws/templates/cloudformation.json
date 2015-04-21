@@ -53,7 +53,7 @@
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "BootstrapRepoRoot" : {
-      "Description" : "Root repository for bootstrapping (must end in /)",
+      "Description" : "Root repository for bootstrapping (must not end in /)",
       "Type" : "String",
       "Default" : "{{ default_repo_url }}"
     },

@@ -24,7 +24,7 @@ from itertools import chain
 from subprocess import CalledProcessError, check_call
 
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
-from pkgpanda.util import extract_tarball, if_exists, load_json, write_string
+from pkgpanda.util import extract_tarball, if_exists, load_json, write_json, write_string
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -419,7 +419,9 @@ class Install:
         return os.path.abspath(os.path.join(self.__root, name))
 
     def get_active_names(self):
-        return list(map(self._make_abs, self.__well_known_dirs + ["environment", "environment.export", "active"]))
+        return list(map(
+            self._make_abs,
+            self.__well_known_dirs + ["environment", "environment.export", "active", "active.buildinfo.full.json"]))
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
@@ -460,6 +462,8 @@ class Install:
         env_contents = env_header.format("/opt/mesosphere" if self.__fake_path else self.__root)
         env_export_contents = env_export_header.format("/opt/mesosphere" if self.__fake_path else self.__root)
 
+        active_buildinfo_full = {}
+
         # Add the folders, config in each package.
         for package in packages:
             # Package folders
@@ -496,6 +500,9 @@ class Install:
                 env_export_contents += "export {0}={1}\n".format(k, v)
             env_export_contents += "\n"
 
+            # Add to the buildinfo
+            active_buildinfo_full[package.name] = load_json(os.path.join(package.path, "buildinfo.full.json"))
+
         # Write out the new environment file.
         new_env = self._make_abs("environment.new")
         write_string(new_env, env_contents)
@@ -503,6 +510,10 @@ class Install:
         # Write out the new environment.export file
         new_env_export = self._make_abs("environment.export.new")
         write_string(new_env_export, env_export_contents)
+
+        # Write out the buildinfo of every active package
+        new_buildinfo_meta = self._make_abs("active.buildinfo.full.json.new")
+        write_json(new_buildinfo_meta, active_buildinfo_full)
 
         self.swap_active(".new")
 
@@ -529,6 +540,12 @@ class Install:
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
         systemd = Systemd(self._make_abs(self.__systemd_dir), self.__manage_systemd, self.__block_systemd)
+
+        # Ensure all the new active files exist
+        for active in active_names:
+            if not os.path.exists(active + extension):
+                raise ValueError(
+                    "Unable to swap active packages. Needed file {} doesn't exist.".format(active + extension))
 
         # Record the state (atomically) on the filesystem so that if there is a
         # hard/fast fail at any point the activate swap can continue.

@@ -30,6 +30,7 @@ def test_setup(tmpdir):
         "{0}/root".format(tmpdir),
         {
             "active": ["env", "mesos", "mesos-config"],
+            "active.buildinfo.full.json": None,
             "bin": [
                 "mesos",
                 "mesos-dir",
@@ -70,6 +71,8 @@ def test_setup(tmpdir):
         "{0}/root".format(tmpdir),
         {
             "active": ["env", "mesos", "mesos-config"],
+            "active.buildinfo.full.json.old": None,
+            "active.buildinfo.full.json": None,
             "bin": [
                 "mesos",
                 "mesos-dir",

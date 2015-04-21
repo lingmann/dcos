@@ -54,6 +54,7 @@ def test_recovery_archive(tmpdir, repository):
         str(tmpdir.join("install")),
         {
             "active": ["mesos"],
+            "active.buildinfo.full.json": None,
             "active.old": ["mesos"],
             "bin": ["mesos", "mesos-dir"],
             "dcos.target.wants": [".gitignore"],
@@ -77,6 +78,7 @@ def test_recovery_move_new(tmpdir, repository):
         str(tmpdir.join("install")),
         {
             "active": ["mesos"],
+            "active.buildinfo.full.json": None,
             "bin": ["mesos", "mesos-dir"],
             "dcos.target.wants": [".gitignore"],
             "environment": None,

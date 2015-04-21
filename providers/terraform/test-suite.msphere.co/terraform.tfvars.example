@@ -1,5 +1,26 @@
-# Your AWS access key and secret key
+# Your AWS access key and secret key.
 aws_access_key = ""
 aws_secret_key = ""
-# Path to the shared Mesosphere SSH private key
-aws_key_file = "~/.ssh/id_rsa.default-mesosphere"
+
+# This is the special shared AWS access key/secret for rebooting instances
+# (chaos). Available from OneLogin secure notes.
+aws_access_key_id = ""
+aws_secret_access_key = ""
+
+# Path to the shared Mesosphere SSH private key. Available from OneLogin secure
+# notes.
+aws_key_file = "~/.ssh/id_rsa.pub"
+
+# A unique name for your cluster.
+uuid = "my-special-snowflake"
+
+# Datadog API key. Available directly from DD.
+dd_api_key = ""
+
+# Github deploy key, base64 encoded (try https://www.base64encode.org/). Available from OneLogin secure notes.
+github_deploy_key_base64 = ""
+
+slave_count = 3
+master_count = 3
+mesos_master_quorum = 2
+aws_instance_type = "m3.xlarge"

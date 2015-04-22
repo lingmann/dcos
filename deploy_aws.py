@@ -12,27 +12,12 @@ Deploy steps:
     - CloudFormation template + landing page
 """
 
-import boto3
 from docopt import docopt
 from pkgpanda import PackageId
 from pkgpanda.util import load_json
 from subprocess import check_call
 
-from util import render_markdown
-
-s3 = boto3.resource('s3')
-bucket = s3.Bucket('downloads.mesosphere.io')
-
-
-def upload_s3(name, path, dest_path=None, args={}, no_cache=False):
-    if no_cache:
-        args['CacheControl'] = 'no-cache'
-
-    with open(path, 'rb') as data:
-        print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
-        if not dest_path:
-            dest_path = path
-        return bucket.Object('dcos/testing/{name}/{path}'.format(name=name, path=dest_path)).put(Body=data, **args)
+from util import render_markdown, upload_s3
 
 
 def upload_packages(name):
@@ -45,7 +30,7 @@ def upload_packages(name):
 def main():
     arguments = docopt(__doc__)
 
-    name = arguments['<name>']
+    name = "testing/{}".format(arguments['<name>'])
 
     if not arguments['--skip-mkpanda']:
         # Build all the packages
@@ -55,7 +40,7 @@ def main():
     check_call([
         './gen_aws.py',
         'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/',
-        "testing/{}".format(name)
+        name
         ], cwd='providers/aws')
     # Upload to s3 bucket
     if not arguments['--skip-package-upload']:
@@ -71,7 +56,7 @@ def main():
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
     print("Ready to launch a cluster:")
-    print("http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/{}/aws.html".format(name))
+    print("http://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/aws.html".format(name))
 
 if __name__ == '__main__':
     main()

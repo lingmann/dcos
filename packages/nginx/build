@@ -66,6 +66,11 @@ http {
     location /marathon/ {
         proxy_pass http://marathon/;
     }
+
+    location /pkgpanda/active.buildinfo.full.json {
+      add_header Cache-Control "no-cache";
+      alias /opt/mesosphere/active.buildinfo.full.json;
+    }
   }
 
   server {

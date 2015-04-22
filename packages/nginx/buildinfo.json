@@ -2,6 +2,6 @@
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "url_extract",
-    "url": "http://nginx.org/download/nginx-1.7.11.tar.gz"
+    "url": "http://nginx.org/download/nginx-1.8.0.tar.gz"
   }
 }

@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 """
-
 Usage:
   deploy_aws <name> [--skip-mkpanda] [--skip-package-upload]
 
@@ -11,20 +10,15 @@ Deploy steps:
     - active.json
     - bootstrap.tar.xz
     - CloudFormation template + landing page
-2) Push individual packages to custom directory
-3) Push active.json to custom directory
-4) Push bootstrap.tar.xz
-2) Push individual packages up
-3) Push active.json up
-4) Push bootstrap.tar.xz up
 """
 
 import boto3
-import requests
 from docopt import docopt
 from pkgpanda import PackageId
 from pkgpanda.util import load_json
 from subprocess import check_call
+
+from util import render_markdown
 
 s3 = boto3.resource('s3')
 bucket = s3.Bucket('downloads.mesosphere.io')
@@ -73,11 +67,7 @@ def main():
     upload_s3(name, 'providers/aws/cloudformation.json', 'cloudformation.json', no_cache=True)
     upload_s3(name, 'providers/aws/simple.cloudformation.json', 'simple.cloudformation.json', no_cache=True)
     with open('aws.html', 'w+') as f:
-        f.write(requests.post(
-            "https://api.github.com/markdown/raw",
-            headers={'Content-type': 'text/plain'},
-            data=open('providers/aws/launch_buttons.md')
-            ).text)
+        f.write(render_markdown('providers/aws/launch_buttons.md'))
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
     print("Ready to launch a cluster:")

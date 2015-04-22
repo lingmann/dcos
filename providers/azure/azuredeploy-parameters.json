@@ -1,9 +1,9 @@
 {
   "uuid": {
-    "value": "REPLACEME"
+    "value": "_NAME_"
   },
   "storageAccountName": {
-    "value": "REPLACEME"
+    "value": "_NAME_"
   },
   "azureAccountName": {
     "value": "testmesos100"
@@ -18,13 +18,13 @@
     "value": 1
   },
   "numberOfSlaves": {
-    "value": 3
+    "value": _NODES_
   },
   "region": {
     "value": "West US"
   },
   "virtualNetworkName": {
-    "value": "REPLACEME"
+    "value": "_NAME_"
   },
   "vmSizeMasterNodes": {
     "value": "Standard_A2"

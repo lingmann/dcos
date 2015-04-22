@@ -1,9 +1,8 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import json
 import os
 import requests
 import subprocess
-import sys
 import unittest
 
 from DCOSCluster import DCOSCluster
@@ -32,10 +31,18 @@ class DCOSTestCase(unittest.TestCase):
 
     @classmethod
     def install_cli(cls, hostname):
-        subprocess.call(['pyvenv', 'test-venv'])
-        subprocess.call(['curl', '-o', 'test-venv/install-dcos-cli-ea2.sh', DCOS_CLI_URI])
-        subprocess.call(['bash', 'test-venv/install-dcos-cli-ea2.sh', 'test-venv', hostname])
-        subprocess.call(['test-venv/bin/dcos', 'config', 'show'])
+        venv = 'test-venv'
+        subprocess.call(['pyvenv', venv])
+        subprocess.call(['curl', '-o', '%s/install-dcos-cli-ea2.sh' % (venv), DCOS_CLI_URI])
+        subprocess.call(['bash', '%s/install-dcos-cli-ea2.sh' % (venv), venv, hostname])
+        subprocess.call(['%s/bin/dcos' % (venv), 'config', 'show'])
+
+        cls.dcos_cli_root = venv
+
+    def dcos_cli(self, commands=[]):
+        return subprocess.Popen(["%s/bin/dcos" % (self.dcos_cli_root)] + commands,
+                stderr=subprocess.PIPE,
+                stdout=subprocess.PIPE).communicate()
 
     def assertTaskWebPortsUp(self, app):
         # app must begin with trailing '/'
@@ -54,24 +61,20 @@ class DCOSTestCase(unittest.TestCase):
                 self.assertNotEqual(r.status_code, 500)
 
     def assertPackageInstalled(self, package_name):
-        stdout, stderr = subprocess.Popen(
-            ['dcos', 'package', 'list-installed'],
-            stdout=subprocess.PIPE).communicate()
+        stdout, stderr = self.dcos_cli(['package', 'list-installed'])
         self.assertIsNotNone(stdout)
 
-        output = json.loads(stdout)
+        output = json.loads(stdout.decode())
 
         package_list = [x for x in output if (x.get('appId')) == package_name]
 
         self.assertEquals(1, len(package_list))
 
     def assertStatusRunning(self, app):
-        stdout, stderr = subprocess.Popen([
-            'dcos', 'marathon', 'app', 'show', app],
-            stdout=subprocess.PIPE).communicate()
+        stdout, stderr = self.dcos_cli(['marathon', 'app', 'show', app])
 
         self.assertIsNotNone(stdout)
-        j = json.loads(stdout)
+        j = json.loads(stdout.decode())
 
         self.assertGreater(j.get('tasksHealthy'), 0)
         self.assertGreater(j.get('tasksRunning'), 0)
@@ -100,14 +103,13 @@ class DCOSTestCase(unittest.TestCase):
 
     def testSparkInstall(self):
         app = '/spark'
-        subprocess.call(['dcos', 'package', 'install', 'spark'])
+        self.dcos_cli(['package', 'install', 'spark'])
 
         self.assertPackageInstalled(app)
         self.assertStatusRunning(app)
 
         # submit spark job
-        stdout, stderr = subprocess.Popen(['dcos', 'spark', 'run', '--submit-args=-Dspark.mesos.coarse=true --driver-cores 1 --driver-memory 1024M --class org.apache.spark.examples.SparkPi http://downloads.mesosphere.com.s3.amazonaws.com/assets/spark/spark-examples_2.10-1.4.0-SNAPSHOT.jar 30'],
-                stdout=subprocess.PIPE).communicate()
+        stdout, stderr = self.dcos_cli(['spark', 'run', '--submit-args=-Dspark.mesos.coarse=true --driver-cores 1 --driver-memory 1024M --class org.apache.spark.examples.SparkPi http://downloads.mesosphere.com.s3.amazonaws.com/assets/spark/spark-examples_2.10-1.4.0-SNAPSHOT.jar 30'])
 
         # assert something more here
         self.assertIsNotNone(stdout)
@@ -116,7 +118,7 @@ class DCOSTestCase(unittest.TestCase):
 
     def testCassandraInstall(self):
         app = '/cassandra/dcos'
-        subprocess.call(['dcos', 'package', 'install', 'cassandra'])
+        self.dcos_cli(['package', 'install', 'cassandra'])
 
         self.assertPackageInstalled(app)
         self.assertStatusRunning(app)
@@ -124,7 +126,7 @@ class DCOSTestCase(unittest.TestCase):
 
     def testChronosInstall(self):
         app = '/chronos'
-        subprocess.call(['dcos', 'package', 'install', 'chronos'])
+        self.dcos_cli(['package', 'install', 'chronos'])
 
         self.assertPackageInstalled(app)
         self.assertStatusRunning(app)

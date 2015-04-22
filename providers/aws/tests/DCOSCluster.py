@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 import json
 import uuid
 
@@ -18,7 +18,7 @@ class DCOSCluster(object):
         self.template = json.dumps(
             json.load(open('simple.cloudformation.json')))
 
-        self.params = list(params.get('params').iteritems())
+        self.params = list(params.get('params').items())
 
         self._cf_connection = self._create_connection()
 

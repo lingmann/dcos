@@ -3,6 +3,6 @@
 cd "/pkg/src/dcos-ui"
 npm install
 npm install -g broccoli-cli
-echo "module.exports = {};" > ./src/js/utils/Config.dev.js
+echo "module.exports = {};" > ./src/js/config/Config.dev.js
 npm run dist
 cp -r dist/ "$PKG_PATH"/usr

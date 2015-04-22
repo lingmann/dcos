@@ -501,7 +501,12 @@ class Install:
             env_export_contents += "\n"
 
             # Add to the buildinfo
-            active_buildinfo_full[package.name] = load_json(os.path.join(package.path, "buildinfo.full.json"))
+            try:
+                active_buildinfo_full[package.name] = load_json(os.path.join(package.path, "buildinfo.full.json"))
+            except FileNotFoundError:
+                # TODO(cmaloney): These only come from setup-packages. Should update
+                # setup-packages to add a buildinfo.full for those packages
+                active_buildinfo_full[package.name] = None
 
         # Write out the new environment file.
         new_env = self._make_abs("environment.new")

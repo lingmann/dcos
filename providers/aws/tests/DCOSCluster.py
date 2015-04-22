@@ -39,6 +39,7 @@ class DCOSCluster(object):
                 self.id,
                 template_body=self.template,
                 parameters=self.params,
+                on_failure='DO_NOTHING',
                 capabilities=['CAPABILITY_IAM'])
 
     def delete(self):

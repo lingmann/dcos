@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+"""
+USAGE: run <dcos_name> [<cluster_name>]
+"""
+import docopt
 import json
 import os
 import requests
@@ -139,4 +143,7 @@ class DCOSTestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main(verbosity=2)
+    args = docopt.docopt(__doc__, version=0.1)
+    os.environ['DCOS_STACK_NAME'] = args['<cluster_name>']
+    suite = unittest.TestLoader().loadTestsFromTestCase(DCOSTestCase)
+    unittest.TextTestRunner(verbosity=2).run(suite)

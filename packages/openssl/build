@@ -1,0 +1,18 @@
+#!/bin/bash
+
+mkdir -p "/build"
+
+# TODO(cmaloney): Fix the rpath
+pushd "/pkg/src/openssl"
+./Configure "--prefix=$PKG_PATH" \
+  --openssldir=/etc/ssl \
+  shared \
+  zlib \
+  no-krb5 \
+  linux-x86_64 \
+  -Wa,--noexecstack \
+  -O2 -DFORTIFY_SOURCE=2
+
+make depend
+make
+make install

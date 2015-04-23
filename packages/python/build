@@ -2,9 +2,12 @@
 # Build
 mkdir -p build
 pushd build
+
+export CFLAGS=-I/opt/mesosphere/include
+export LDFLAGS="-L/opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib"
+export CXXFLAGS=-I/opt/mesosphere/include
+
 /pkg/src/python/configure --enable-shared --prefix="$PKG_PATH" --enable-ipv6 --with-threads --with-computed-gotos
-# TODO(cmaloney): LDFLAGS?
-# LDFLAGS="-Wl,-rpath=/opt/mesosphere/dcos/${PKG_VER}-${PKG_REL}/lib,--enable-new-dtags"
 make -j8
 make install
 

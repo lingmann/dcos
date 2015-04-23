@@ -42,7 +42,7 @@ write_files:
     content: |
       AZURE_CONTAINER=apollo-exhibitor
       AZURE_PREFIX=parameters('uuid')
-      AZURE_ACCOUNT_NAME=parameters('azureAccountName')
+      AZURE_ACCOUNT_NAME=parameters('storageAccountName')
       AZURE_ACCOUNT_KEY=parameters('azureAccountKey')
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4

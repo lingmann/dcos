@@ -5,12 +5,6 @@
   "storageAccountName": {
     "value": "_NAME_"
   },
-  "azureAccountName": {
-    "value": "testmesos100"
-  },
-  "azureAccountKey": {
-    "value": "7wFxovuFaTOfZxtmZgb+gngo/bSg7E+bFp4yrF3KbNuEwsB4UBdoesb7YmcQuFMIC6LSkrds3oYAp96WbxQS+w=="
-  },
   "adminUsername": {
     "value": "core"
   },

@@ -17,9 +17,9 @@ if len(sys.argv) != 2:
 with open(sys.argv[1]) as f:
     config = yaml.load(f)
 
-j = json.dumps(config)
+j = json.dumps(config, sort_keys=True)
 
-print("[concat('#cloud-config\\n\\n', ", end='')
+print("[base64(concat('#cloud-config\\n\\n', ", end='')
 
 prevend = 0
 for m in re.finditer('(?P<parameter>parameters\(\'[a-zA-Z0-9-]+\'\))', j):
@@ -30,4 +30,4 @@ for m in re.finditer('(?P<parameter>parameters\(\'[a-zA-Z0-9-]+\'\))', j):
 
     prevend = m.end()
 
-print("'{}')]".format(j[prevend:].replace('\\', '\\\\').replace('"', '\\"')), end='')
+print("'{}'))]".format(j[prevend:].replace('\\', '\\\\').replace('"', '\\"')), end='')

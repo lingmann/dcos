@@ -63,13 +63,17 @@ def main():
     write_string('prod.aws.html', render_markdown_data(aws_landing))
 
     # Download, edit cloudformation templates
-    fetch_from_s3('simple.cloudformation.json', 'prod.simple.cloudformation.json.in')
+    def update_for_prod(cf_template_name):
+        local_done_name = 'prod.' + cf_template_name
+        local_in_name = local_done_name + '.in'
+        fetch_from_s3(cf_template_name, local_in_name)
+        cloudformation = load_json(local_in_name)
+        cloudformation['Mappings']['Parameters']['BootstrapRepoRoot']['default'] = \
+            'http://downloads.mesosphere.io/dcos/{}'.format(name)
+        write_json(local_done_name, cloudformation)
 
-    cloudformation = load_json('prod.simple.cloudformation.json.in')
-    cloudformation['Mappings']['Parameters']['BootstrapRepoRoot']['default'] = \
-        'http://downloads.mesosphere.io/dcos/{}'.format(name)
-
-    write_json('prod.simple.cloudformation.json', cloudformation)
+    update_for_prod('single-master.cloudformation.json')
+    update_for_prod('multi-master.cloudformation.json')
 
     print("Deploying individual packages")
 
@@ -103,8 +107,14 @@ def main():
     # Upload cloudformation template, new landing page
     upload_s3(
         name,
-        'prod.simple.cloudformation.json',
-        'simple.cloudformation.json',
+        'prod.single-master.cloudformation.json',
+        'single-master.cloudformation.json',
+        args={'ContentType': 'text/json'},
+        no_cache=True)
+    upload_s3(
+        name,
+        'prod.multi-master.cloudformation.json',
+        'multi-master.cloudformation.json',
         args={'ContentType': 'text/json'},
         no_cache=True)
     upload_s3(

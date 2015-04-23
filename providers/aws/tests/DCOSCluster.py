@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import json
 import uuid
 
 from boto import cloudformation
@@ -10,13 +9,12 @@ from boto.exception import BotoServerError
 
 
 class DCOSCluster(object):
-    def __init__(self, region, aws_access_key_id, aws_secret_key, **params):
+    def __init__(self, region, aws_access_key_id, aws_secret_key, template_url, **params):
         self.region = region
         self.id = params.get('stack_name') or self._generate_stack_id
         self.aws_access_key_id = aws_access_key_id
         self.aws_secret_key = aws_secret_key
-        self.template = json.dumps(
-            json.load(open('simple.cloudformation.json')))
+        self.template_url = template_url
 
         self.params = list(params.get('params').items())
 
@@ -37,9 +35,9 @@ class DCOSCluster(object):
     def create(self):
         self._cf_connection.create_stack(
                 self.id,
-                template_body=self.template,
+                template_url=self.template_url,
                 parameters=self.params,
-                on_failure='DO_NOTHING',
+                disable_rollback=True,
                 capabilities=['CAPABILITY_IAM'])
 
     def delete(self):

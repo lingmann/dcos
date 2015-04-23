@@ -9,6 +9,7 @@ import requests
 import subprocess
 import unittest
 
+from boto.exception import BotoServerError
 from DCOSCluster import DCOSCluster
 
 
@@ -23,15 +24,29 @@ class DCOSTestCase(unittest.TestCase):
         aws_secret_key = os.getenv('AWS_SECRET_KEY')
 
         stack_name = os.getenv('DCOS_STACK_NAME')
+        dcos_version = os.getenv('DCOS_VERSION')
         dcos = DCOSCluster(region=region,
                            aws_access_key_id=aws_access_key_id,
                            aws_secret_key=aws_secret_key,
                            stack_name=stack_name,
-                           params={}
-                           )
+                           template_url=self.get_template_url(dcos_version),
+                           params={'KeyName': 'default'})
         self.dcos = dcos
 
+        try:
+            self.dcos.create()
+        except BotoServerError as e:
+            if 'AlreadyExistsException' in e.body:
+                print(e.body)
+            else:
+                raise e
+
         self.install_cli(self.dcos.dns_name)
+
+    @classmethod
+    def get_template_url(self, dcos_name):
+        return "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/%s/single-master.cloudformation.json" %(dcos_name)
+
 
     @classmethod
     def install_cli(cls, hostname):
@@ -144,6 +159,8 @@ class DCOSTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     args = docopt.docopt(__doc__, version=0.1)
+    # work on naming here
     os.environ['DCOS_STACK_NAME'] = args['<cluster_name>']
+    os.environ['DCOS_VERSION'] = args['<dcos_name>']
     suite = unittest.TestLoader().loadTestsFromTestCase(DCOSTestCase)
     unittest.TextTestRunner(verbosity=2).run(suite)

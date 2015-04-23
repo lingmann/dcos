@@ -98,7 +98,7 @@ if __name__ == '__main__':
     output_template('single-master.cloudformation.json', True, default_repo_url)
     cf_multimaster = load_json('single-master.cloudformation.json')
     cf_multimaster['Mappings']['Parameters']['MasterQuorumCount']['default'] = 2
-    cf_multimaster['Mappings']['Parameters']['MasterInstanceCount']['default'] = 3    
+    cf_multimaster['Mappings']['Parameters']['MasterInstanceCount']['default'] = 3
     write_json('multi-master.cloudformation.json', cf_multimaster)
     output_string('launch_buttons.md', launch_template.render({
         'regions': [

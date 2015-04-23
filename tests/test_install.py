@@ -62,6 +62,7 @@ def test_recovery_archive(tmpdir, repository):
             "environment.export": None,
             "environment.old": None,
             "etc": [".gitignore"],
+            "include": [".gitignore"],
             "lib": ["libmesos.so"]
         })
 
@@ -84,5 +85,6 @@ def test_recovery_move_new(tmpdir, repository):
             "environment": None,
             "environment.export": None,
             "etc": [".gitignore"],
+            "include": [".gitignore"],
             "lib": ["libmesos.so"]
         })

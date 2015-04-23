@@ -38,6 +38,7 @@ def test_setup(tmpdir):
                 "mesos-slave"],
             "lib": ["libmesos.so"],
             "etc": ["foobar", "some.json"],
+            "include": [],
             "dcos.target.wants": [],
             "dcos.target": None,
             "environment": None,
@@ -80,6 +81,7 @@ def test_setup(tmpdir):
                 "mesos-slave"],
             "lib": ["libmesos.so"],
             "etc": ["foobar", "some.json"],
+            "include": [],
             "dcos.target": None,
             "dcos.target.wants": [],
             "environment": None,
@@ -92,6 +94,7 @@ def test_setup(tmpdir):
                 "mesos-slave"],
             "lib.old": ["libmesos.so"],
             "etc.old": ["foobar", "some.json"],
+            "include.old": [],
             "dcos.target.wants.old": [],
             "environment.old": None,
             "environment.export.old": None

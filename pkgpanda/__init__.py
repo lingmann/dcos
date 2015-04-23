@@ -381,7 +381,7 @@ class Install:
             if self.__roles is None:
                 self.__roles = []
 
-        self.__well_known_dirs = ["bin", "etc", "lib", self.__systemd_dir]
+        self.__well_known_dirs = ["bin", "etc", "include", "lib", self.__systemd_dir]
 
         self.__fake_path = fake_path
 

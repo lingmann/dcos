@@ -411,6 +411,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     # Add the sha1sum of the buildinfo.json + build file to the build ids
     build_ids = {"sources": checkout_ids}
     build_ids['build'] = sha1("build")
+    build_ids['pkgpanda_version'] = pkgpanda.build.constants.version
 
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')

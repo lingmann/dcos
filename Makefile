@@ -1,5 +1,5 @@
 SHELL     := /bin/bash
-PKG_VER   ?= $(shell python -c "import history ; print history.__version__")
+PKG_VER   ?= $(shell python -c "import history ; print(history.__version__)")
 REL_PATCH ?= $(shell date -u +'%Y%m%d%H%M%S')
 
 .PHONY: help
@@ -9,7 +9,7 @@ help:
 
 .PHONY: setup
 setup:
-	virtualenv env; \
+	pyvenv env; \
 	source env/bin/activate; \
 	pip install requests psutil; \
 	python setup.py develop

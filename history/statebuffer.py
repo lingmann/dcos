@@ -1,8 +1,7 @@
 
 import logging
 import threading
-import requests
-from urllib.parse import urljoin
+from urllib.request import urljoin, urlopen
 
 from collections import deque
 
@@ -28,11 +27,9 @@ class StateBuffer():
         """
         for url in self.urls:
             try:
-                redirect = requests.get(urljoin(url, "/master/redirect"), allow_redirects=False)
-                if redirect.status_code == 307:
-                    return redirect.headers['Location']
+                return urlopen(urljoin(url, "/master/redirect")).url
             except Exception as e:
-                logging.warn("could not access %s since %s" % (url, e))
+                logging.warning("could not access %s since %s" % (url, e))
         return None
 
     def _fetch_state_(self):
@@ -43,11 +40,12 @@ class StateBuffer():
         try:
             url = self._find_leader_()
             logging.info("Get state from leading master %s" % url)
-            resp = requests.get(urljoin(url, "/state.json"), stream=False)
-            resp.raise_for_status()
-            return resp.text
+            resp = urlopen(urljoin(url, "/state.json"))
+            if (resp.code != 200):
+                raise Exception("Could not read from %s" % url)
+            return resp.readall().decode()
         except Exception as e:
-            logging.warn("Could not fetch state: %s" % e)
+            logging.warning("Could not fetch state: %s" % e)
             return "{}"
 
     def _update_(self):

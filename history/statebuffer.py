@@ -2,7 +2,7 @@
 import logging
 import threading
 import requests
-import urlparse
+from urllib.parse import urljoin
 
 from collections import deque
 
@@ -28,7 +28,7 @@ class StateBuffer():
         """
         for url in self.urls:
             try:
-                redirect = requests.get(urlparse.urljoin(url, "/master/redirect"), allow_redirects=False)
+                redirect = requests.get(urljoin(url, "/master/redirect"), allow_redirects=False)
                 if redirect.status_code == 307:
                     return redirect.headers['Location']
             except Exception as e:
@@ -43,7 +43,7 @@ class StateBuffer():
         try:
             url = self._find_leader_()
             logging.info("Get state from leading master %s" % url)
-            resp = requests.get(urlparse.urljoin(url, "/state.json"), stream=False)
+            resp = requests.get(urljoin(url, "/state.json"), stream=False)
             resp.raise_for_status()
             return resp.text
         except Exception as e:

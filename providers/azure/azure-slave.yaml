@@ -6,7 +6,7 @@ write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root
-    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc9'
+    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc10'
   - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -65,7 +65,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc9/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc10/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

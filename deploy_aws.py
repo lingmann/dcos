@@ -50,7 +50,12 @@ def main():
         upload_s3(name, 'packages/active.json', 'config/active.json', no_cache=True)
     # Upload CloudFormation
     upload_s3(name, 'providers/aws/cloudformation.json', 'cloudformation.json', no_cache=True)
-    upload_s3(name, 'providers/aws/simple.cloudformation.json', 'simple.cloudformation.json', no_cache=True)
+    upload_s3(
+        name,
+        'providers/aws/single-master.cloudformation.json',
+        'single-master.cloudformation.json',
+        no_cache=True)
+    upload_s3(name, 'providers/aws/multi-master.cloudformation.json', 'multi-master.cloudformation.json', no_cache=True)
     with open('aws.html', 'w+') as f:
         f.write(render_markdown('providers/aws/launch_buttons.md'))
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)

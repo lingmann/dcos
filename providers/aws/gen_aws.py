@@ -10,6 +10,7 @@ import re
 import sys
 
 from jinja2 import Environment, FileSystemLoader
+from pkgpanda.util import load_json, write_json
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
@@ -94,7 +95,11 @@ if __name__ == '__main__':
 
     default_bootstrap_root = sys.argv[1]
     output_template('cloudformation.json', False, default_repo_url)
-    output_template('simple.cloudformation.json', True, default_repo_url)
+    output_template('single-master.cloudformation.json', True, default_repo_url)
+    cf_multimaster = load_json('single-master.cloudformation.json')
+    cf_multimaster['Mappings']['Parameters']['MasterQuorumCount']['default'] = 2
+    cf_multimaster['Mappings']['Parameters']['MasterInstanceCount']['default'] = 3    
+    write_json('multi-master.cloudformation.json', cf_multimaster)
     output_string('launch_buttons.md', launch_template.render({
         'regions': [
             'us-west-1',

@@ -146,6 +146,14 @@ WantedBy=multi-user.target
 """
 
 
+def start_dcos_target(no_systemd, noblock_systemd):
+    if not no_systemd:
+        no_block = ["--no-block"] if noblock_systemd else []
+        check_call(["systemctl", "daemon-reload"])
+        check_call(["systemctl", "enable", "dcos.target", '--no-reload'])
+        check_call(["systemctl", "start", "dcos.target"] + no_block)
+
+
 def setup(install, repository):
 
     # Check for /opt/mesosphere/bootstrap. If not exists, download everything
@@ -165,9 +173,7 @@ def setup(install, repository):
         # Enable dcos.target only after we have populated it to prevent starting
         # up stuff inside of it before we activate the new set of packages.
         if install.manage_systemd:
-            check_call(["systemctl", "daemon-reload"])
-            check_call(["systemctl", "enable", "dcos.target"])
-            check_call(["systemctl", "start", "dcos.target", "--no-block"])
+            start_dcos_target(False, ['--no-block'])
         os.remove(bootstrap_path)
 
     # Check for /opt/mesosphere/install_progress. If found, recover the partial
@@ -182,11 +188,7 @@ def do_activate(install, repository, ids, no_systemd, noblock_systemd):
     assert type(ids) == list
     try:
         install.activate(repository, repository.load_packages(ids))
-        if not no_systemd:
-            no_block = ["--no-block"] if noblock_systemd else []
-            check_call(["systemctl", "daemon-reload"])
-            check_call(["systemctl", "enable", "dcos.target"])
-            check_call(["systemctl", "start", "dcos.target"] + no_block)
+        start_dcos_target(no_systemd, noblock_systemd)
 
     except ValidationError as ex:
         print("Validation Error: {0}".format(ex))

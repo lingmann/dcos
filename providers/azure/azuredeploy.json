@@ -161,22 +161,6 @@
       }
     },
     {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "name": "[concat('slavePublicIP', copyindex())]",
-      "copy": {
-        "name": "ipLoop",
-        "count": "[parameters('numberOfSlaves')]"
-      },
-      "location": "[parameters('region')]",
-      "apiVersion": "2014-12-01-preview",
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic",
-        "dnsSettings": {
-          "domainNameLabel": "[concat('slave', copyindex(), '-', parameters('uuid'))]"
-        }
-      }
-    },
-    {
       "apiVersion": "2014-12-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat('slaveNodeNic', copyindex())]",
@@ -186,8 +170,7 @@
         "count": "[parameters('numberOfSlaves')]"
       },
       "dependsOn": [
-        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
-        "[concat('Microsoft.Network/publicIPAddresses/', 'slavePublicIP', copyindex())]"
+        "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -195,9 +178,6 @@
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat('slavePublicIP', copyindex()))]"
-              },
               "subnet": {
                 "id": "[variables('subnet1Ref')]"
               }

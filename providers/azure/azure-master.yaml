@@ -6,7 +6,7 @@ write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root
-    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc10'
+    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon'
   - path: /etc/mesosphere/roles/master
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -28,7 +28,7 @@ write_files:
       MESOS_LOG_DIR=/var/log/mesos
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
-      MESOS_QUORUM=[[[parameters('numberOfMasters')]]]
+      MESOS_QUORUM=[[[variables('mesosQuorum')]]]
       MESOS_CLUSTER=[[[parameters('uuid')]]]
       MESOS_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
       MESOS_IP=$private_ipv4
@@ -86,7 +86,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/eap2-rc10/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

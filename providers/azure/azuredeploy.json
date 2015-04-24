@@ -321,5 +321,13 @@
         }
       }
     }
-  ]
+  ],
+  "outputs":
+  {
+      "masterURL":
+      {
+          "value": "[concat('master0-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
+          "type": "string"
+      }
+  }
 }

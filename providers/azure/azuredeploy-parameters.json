@@ -5,9 +5,6 @@
   "storageAccountName": {
     "value": "_NAME_"
   },
-  "adminUsername": {
-    "value": "core"
-  },
   "numberOfMasters": {
     "value": 3
   },

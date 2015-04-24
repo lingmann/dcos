@@ -9,7 +9,7 @@
     "value": "core"
   },
   "numberOfMasters": {
-    "value": 1
+    "value": 3
   },
   "numberOfSlaves": {
     "value": _NODES_

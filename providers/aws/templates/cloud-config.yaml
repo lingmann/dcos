@@ -55,9 +55,6 @@ write_files:
       AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
       AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
       EXHIBITOR_WEB_UI_PORT=8181
-  - path: /root/.bashrc
-    content: |
-      export $(cat /opt/mesosphere/environment |egrep -v ^#| xargs)
 coreos:
   update:
     reboot-strategy: off

@@ -324,9 +324,19 @@
   ],
   "outputs":
   {
-      "masterURL":
+      "masterURL0":
       {
           "value": "[concat('master0-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
+          "type": "string"
+      },
+      "masterURL1":
+      {
+          "value": "[concat('master1-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
+          "type": "string"
+      },
+      "masterURL2":
+      {
+          "value": "[concat('master2-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
           "type": "string"
       }
   }

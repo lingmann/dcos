@@ -21,13 +21,14 @@ j = json.dumps(config, sort_keys=True)
 
 print("[base64(concat('#cloud-config\\n\\n', ", end='')
 
+def json_escape(str):
+    return str.replace('\\', '\\\\').replace('"', '\\"')
+
 prevend = 0
-for m in re.finditer('(?P<parameter>parameters\(\'[a-zA-Z0-9-]+\'\))', j):
-    before = j[prevend:m.start()].replace('\\', '\\\\').replace('"', '\\"')
-    param = j[m.start():m.end()]
-
+for m in re.finditer('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]', j):
+    before = json_escape(m.group('pre'))
+    param = m.group('inject')
     print("'{}', {},".format(before, param), end='')
-
     prevend = m.end()
 
-print("'{}'))]".format(j[prevend:].replace('\\', '\\\\').replace('"', '\\"')), end='')
+print("'{}'))]".format(json_escape(j[prevend:])), end='')

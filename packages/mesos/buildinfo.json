@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "http://git-wip-us.apache.org/repos/asf/mesos.git",
-    "branch" : "0.22.1-rc4"
+    "branch" : "0.22.1-rc5"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

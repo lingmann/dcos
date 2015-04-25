@@ -177,18 +177,6 @@
         } ]
       }
     },
-
-
-
-
-
-
-
-
-
-
-
-
     "ExhibitorS3Bucket" : {
       "Type" : "AWS::S3::Bucket"
     },
@@ -444,19 +432,6 @@
         }
       }
     },
-
-
-
-
-
-
-
-
-
-
-
-
-
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {

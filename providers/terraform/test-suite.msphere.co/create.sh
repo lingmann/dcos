@@ -9,6 +9,7 @@ function main {
   update_discovery_url
   apply
   start_chronos
+  start_chronos_sync
 }
 
 function apply {
@@ -50,6 +51,22 @@ function start_chronos {
   echo " Done!"
   curl -s -H "Content-Type: application/json" -X POST -d @chronos.json ${base_uri}/v2/apps
 }
+
+
+function start_chronos_sync {
+  # wait until endpoint is reachable
+  result="nope"
+  echo -n "Waiting for Chronos..."
+  while [ "$result" != "pong" ] ; do
+    chronos_uri=`curl http://master0.test-suite.msphere.co:8080/v2/apps/chronos | jq -r '"http://" + .app.tasks[0].host + ":" + (.app.tasks[0].ports[0] | tostring)'`
+    result=$(curl -s ${chronos_uri}/ping)
+    echo -n "."
+    sleep 3
+  done
+  echo " Done!"
+  curl -s -H "Content-Type: application/json" -X POST -d @chronos-sync.json ${chronos_uri}/scheduler/iso8601
+}
+
 
 function msg { out "$*" >&2 ;}
 function err { local x=$? ; msg "$*" ; return $(( $x == 0 ? 1 : $x )) ;}

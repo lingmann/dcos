@@ -40,7 +40,7 @@
   "BootstrapRepoRoot" : {
     "Description" : "Root repository for bootstrapping (must not end in /)",
     "Type" : "String",
-    "Default" : "{{ default_repo_url }}"
+    "Default" : ""
   },
   "StackCreationTimeout" : {
     "Description" : "Timeout on initial stack creation",

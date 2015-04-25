@@ -68,7 +68,6 @@ def render_cloudformation(template, simple, default_repo_url):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     template_str = template.render({
-        'default_repo_url': default_repo_url,
         'master_cloud_config': transform_lines(render_cloudconfig(['master'], simple, 'MasterServerGroup')),
         'slave_cloud_config': transform_lines(render_cloudconfig(['slave'], simple, 'SlaveServerGroup')),
         'start_param': start_param_simple if simple else start_param_full,
@@ -76,6 +75,8 @@ def render_cloudformation(template, simple, default_repo_url):
         })
 
     template_json = json.loads(template_str)
+
+    params['BootstrapRepoRoot']['Default'] = default_repo_url
 
     for param, info in params.items():
         if simple:

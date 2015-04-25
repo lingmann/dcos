@@ -4,63 +4,9 @@
   "Description" : "Launches a Mesos cluster",
 
   "Parameters" : {
-
-    "ClusterId" : {
-      "Description" : "Mesos cluster ID",
-      "Type" : "String",
-      "Default" : "mesos"
-    },
-    "AdminLocation" : {
-      "Description" : "The IP range to whitelist for admin access.",
-      "Type" : "String",
-      "MinLength" : "9",
-      "MaxLength" : "18",
-      "Default" : "0.0.0.0/0",
-      "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
-      "ConstraintDescription" : "must be a valid CIDR."
-    },
-    "MasterInstanceType" : {
-      "Description" : "EC2 instance type",
-      "Type" : "String",
-      "Default" : "r3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    },
-    "SlaveInstanceType" : {
-      "Description" : "EC2 instance type",
-      "Type" : "String",
-      "Default" : "r3.large",
-      "AllowedValues" : [ "t1.micro","t2.micro","t2.small","t2.medium","m1.small","m1.medium","m1.large","m1.xlarge","m2.xlarge","m2.2xlarge","m2.4xlarge","m3.medium","m3.large","m3.xlarge","m3.2xlarge","c1.medium","c1.xlarge","cc1.4xlarge","cc2.8xlarge","cg1.4xlarge","r3.large","r3.xlarge","r3.2xlarge","r3.4xlarge","r3.8xlarge"],
-      "ConstraintDescription" : "must be a valid EC2 instance type."
-    },
-    "MasterInstanceCount" : {
-      "Description" : "Number of master nodes to launch",
-      "Type" : "Number",
-      "Default" : "1"
-    },
-    "SlaveInstanceCount" : {
-      "Description" : "Number of master nodes to launch",
-      "Type" : "Number",
-      "Default" : "5"
-    },
-    "MasterQuorumCount" : {
-      "Description" : "Number of masters needed for Mesos replicated log registry quorum (should be ceiling(<MasterInstanceCount>/2))",
-      "Type" : "Number",
-      "Default" : "1"
-    },
     "KeyName" : {
       "Description" : "Name of SSH key to link",
       "Type" : "AWS::EC2::KeyPair::KeyName"
-    },
-    "BootstrapRepoRoot" : {
-      "Description" : "Root repository for bootstrapping (must not end in /)",
-      "Type" : "String",
-      "Default" : "{{ default_repo_url }}"
-    },
-    "StackCreationTimeout" : {
-      "Description" : "Timeout on initial stack creation",
-      "Type" : "String",
-      "Default": "PT30M"
     }
   },
 
@@ -227,7 +173,7 @@
           "IpProtocol" : "-1",
           "FromPort" : "0",
           "ToPort" : "65535",
-          "CidrIp" : { "Ref" : "AdminLocation" }
+          "CidrIp" : {{ start_param }}AdminLocation{{ end_param }}
         } ]
       }
     },
@@ -339,9 +285,9 @@
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "MasterLaunchConfig" },
-        "MinSize" : { "Ref" : "MasterInstanceCount" },
-        "MaxSize" : { "Ref" : "MasterInstanceCount" },
-        "DesiredCapacity" : { "Ref" : "MasterInstanceCount" },
+        "MinSize" : {{ start_param }}MasterInstanceCount{{ end_param }},
+        "MaxSize" : {{ start_param }}MasterInstanceCount{{ end_param }},
+        "DesiredCapacity" : {{ start_param }}MasterInstanceCount{{ end_param }},
         "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" }, { "Ref" : "InternalMasterLoadBalancer"} ],
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
@@ -354,8 +300,8 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : { "Ref" : "StackCreationTimeout" },
-          "Count" : { "Ref" : "MasterInstanceCount"}
+          "Timeout" : {{ start_param}}StackCreationTimeout{{ end_param }},
+          "Count" : {{ start_param }}MasterInstanceCount{{ end_param }}
         }
       }
     },
@@ -368,7 +314,7 @@
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : { "Ref" : "MasterInstanceType" },
+        "InstanceType" : {{ start_param }}MasterInstanceType{{ end_param}},
         "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
           {{ master_cloud_config }}
         ]]
@@ -516,9 +462,9 @@
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
-        "MinSize" : { "Ref" : "SlaveInstanceCount" },
-        "MaxSize" : { "Ref" : "SlaveInstanceCount" },
-        "DesiredCapacity" : { "Ref" : "SlaveInstanceCount" },
+        "MinSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
+        "MaxSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
+        "DesiredCapacity" : {{ start_param }}SlaveInstanceCount{{ end_param }},
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
@@ -530,8 +476,8 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : { "Ref" : "StackCreationTimeout" },
-          "Count" : { "Ref" : "SlaveInstanceCount" }
+          "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
+          "Count" : {{ start_param }}SlaveInstanceCount{{ end_param }}
         }
       }
     },
@@ -544,7 +490,7 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : { "Ref" : "SlaveInstanceType" },
+        "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ slave_cloud_config }}
         ]]}}

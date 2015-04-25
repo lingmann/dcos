@@ -14,6 +14,11 @@ from pkgpanda.util import load_json, write_json
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
+start_param_simple = '{ "Fn::FindInMap" : [ "Parameters", "'
+end_param_simple = '", "default" ] }'
+start_param_full = '{ "Ref" : "'
+end_param_full = '" }'
+
 
 def escape_cloud_config(content_str):
     return json.dumps(content_str)
@@ -38,13 +43,14 @@ def transform(line):
 env = Environment(loader=FileSystemLoader('templates'))
 cloud_config_template = env.get_template("cloud-config.yaml")
 launch_template = env.get_template('launch_buttons.md')
+params = load_json("cf_param_info.json")
 
 
 def render_cloudconfig(roles, simple, report_name):
     def make_aws_param(name):
-        if not simple:
-            return '{ "Ref" : "' + name + '" }'
-        return '{ "Fn::FindInMap" : [ "Parameters", "' + name + '", "default" ] }'
+        if simple:
+            return start_param_simple + name + end_param_simple
+        return start_param_full + name + end_param_full
 
     assert type(roles) == list
     return cloud_config_template.render({
@@ -61,11 +67,25 @@ def render_cloudformation(template, simple, default_repo_url):
     def transform_lines(text):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
-    return template.render({
+    template_str = template.render({
         'default_repo_url': default_repo_url,
         'master_cloud_config': transform_lines(render_cloudconfig(['master'], simple, 'MasterServerGroup')),
-        'slave_cloud_config': transform_lines(render_cloudconfig(['slave'], simple, 'SlaveServerGroup'))
+        'slave_cloud_config': transform_lines(render_cloudconfig(['slave'], simple, 'SlaveServerGroup')),
+        'start_param': start_param_simple if simple else start_param_full,
+        'end_param': end_param_simple if simple else end_param_full
         })
+
+    template_json = json.loads(template_str)
+
+    for param, info in params.items():
+        if simple:
+            if 'Parameters' not in template_json['Mappings']:
+                template_json['Mappings']['Parameters'] = {}
+            template_json['Mappings']['Parameters'][param] = {'default': info['Default']}
+        else:
+            template_json['Parameters'][param] = info
+
+    return json.dumps(template_json)
 
 
 def output_string(filename, data):
@@ -74,7 +94,7 @@ def output_string(filename, data):
 
 
 def output_template(name, simple, default_repo_url):
-    output_string(name, render_cloudformation(env.get_template(name), simple, default_repo_url))
+    output_string(name, render_cloudformation(env.get_template("cloudformation.json"), simple, default_repo_url))
 
 if __name__ == '__main__':
     if len(sys.argv) != 3:

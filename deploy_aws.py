@@ -60,6 +60,16 @@ def main():
         f.write(render_markdown('providers/aws/launch_buttons.md'))
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
+    print("Performing basic tests")
+    for template in ['single-master.', 'multi-master.', '']:
+        check_call([
+            'aws',
+            'cloudformation',
+            'validate-template',
+            '--template-url',
+            'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/'
+                + name + '/' + template + 'cloudformation.json'])
+
     print("Ready to launch a cluster:")
     print("http://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/aws.html".format(name))
 

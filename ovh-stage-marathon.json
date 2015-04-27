@@ -7,7 +7,7 @@
   "container": {
     "type": "DOCKER",
     "docker": {
-      "image": "mesosphere/dcos-history-service:0.0.7",
+      "image": "mesosphere/dcos-history-service:0.0.8",
       "network": "HOST"
     }
   },

@@ -19,7 +19,6 @@ config = {
     ]
   },
   'install_requires': [
-    "requests",
     "Flask>=0.10.1",
     "flask-compress"
   ]

@@ -1,2 +1,2 @@
 __author__ = 'mesosphere'
-__version__ = "0.0.6"
+__version__ = "0.0.8"

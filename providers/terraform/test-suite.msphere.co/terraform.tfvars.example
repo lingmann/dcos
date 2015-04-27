@@ -20,7 +20,7 @@ dd_api_key = ""
 # Github deploy key, base64 encoded (try https://www.base64encode.org/). Available from OneLogin secure notes.
 github_deploy_key_base64 = ""
 
-slave_count = 3
+slave_count = 8
 master_count = 3
 mesos_master_quorum = 2
-aws_instance_type = "m3.xlarge"
+aws_instance_type = "m3.2xlarge"

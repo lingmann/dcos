@@ -5,7 +5,7 @@
     "dcos-history-service": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-history-service.git",
-      "branch": "python-3.4"
+      "branch": "master"
     },
     "Flask": {
       "kind": "url_extract",

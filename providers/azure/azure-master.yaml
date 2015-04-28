@@ -29,23 +29,23 @@ write_files:
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=[[[variables('mesosQuorum')]]]
-      MESOS_CLUSTER=[[[parameters('uuid')]]]
-      MESOS_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
+      MESOS_CLUSTER=[[[parameters('uniqueName')]]]
+      MESOS_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uniqueName'), '.eastasia.cloudapp.azure.com')]]]
       MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=127.0.0.1
       ZOOKEEPER_CLUSTER_SIZE=[[[variables('numberOfMasters')]]]
       FALLBACK_DNS=168.63.129.16
-      MARATHON_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
+      MARATHON_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uniqueName'), '.eastasia.cloudapp.azure.com')]]]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
       AZURE_CONTAINER=apollo-exhibitor
-      AZURE_PREFIX=[[[parameters('uuid')]]]
+      AZURE_PREFIX=[[[parameters('uniqueName')]]]
       AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
       AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
       EXHIBITOR_WEB_UI_PORT=8181
-      EXHIBITOR_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
+      EXHIBITOR_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uniqueName'), '.eastasia.cloudapp.azure.com')]]]
 
 coreos:
   update:
@@ -76,7 +76,7 @@ coreos:
         Type=oneshot
         EnvironmentFile=/etc/environment
         # Marathon depends on `hostname` resolution working
-        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) [[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]] > /etc/hosts"
+        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) [[[concat('master', copyIndex(), '-', parameters('uniqueName'), '.eastasia.cloudapp.azure.com')]]] > /etc/hosts"
     - name: dcos-download.service
       content: |
         [Unit]

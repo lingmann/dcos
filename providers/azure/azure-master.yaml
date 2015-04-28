@@ -45,7 +45,7 @@ write_files:
       AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
       AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
       EXHIBITOR_WEB_UI_PORT=8181
-      EXHIBITOR_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
+      EXHIBITOR_HOSTNAME=$private_ipv4
 
 coreos:
   update:

@@ -40,25 +40,11 @@
         "Description": "Size of the Slave nodes"
       }
     },
-    "addressPrefix": {
-      "type": "string",
-      "defaultValue": "10.0.0.0/16",
-      "metadata": {
-        "Description": "Address space for the VNET"
-      }
-    },
     "subnet1Name": {
       "type": "string",
       "defaultValue": "Data",
       "metadata": {
         "Description": "Subnet name for the VNET that resources will be provisionined in to"
-      }
-    },
-    "subnet1Prefix": {
-      "type": "string",
-      "defaultValue": "10.0.0.0/24",
-      "metadata": {
-        "Description": "Address space for the subnet"
       }
     },
     "sshKeyData": {
@@ -84,7 +70,9 @@
     "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
     "mesosQuorum": "1",
     "numberOfMasters": "1",
-    "numberOfSlaves": "5"
+    "numberOfSlaves": "5",
+    "subnet1Prefix": "10.0.0.0/24",
+    "addressPrefix": "10.0.0.0/16"
   },
   "resources": [
     {
@@ -111,14 +99,14 @@
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
-            "[parameters('addressPrefix')]"
+            "[variables('addressPrefix')]"
           ]
         },
         "subnets": [
           {
             "name": "[parameters('subnet1Name')]",
             "properties": {
-              "addressPrefix": "[parameters('subnet1Prefix')]"
+              "addressPrefix": "[variables('subnet1Prefix')]"
             }
           }
         ]

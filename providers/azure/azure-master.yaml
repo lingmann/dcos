@@ -42,8 +42,8 @@ write_files:
     content: |
       AZURE_CONTAINER=apollo-exhibitor
       AZURE_PREFIX=[[[parameters('uuid')]]]
-      AZURE_ACCOUNT_NAME=[[[parameters('storageAccountName')]]]
-      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2014-12-01-preview').key1]]]
+      AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
+      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
 

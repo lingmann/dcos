@@ -19,13 +19,6 @@
         "Description": "Virtual Network"
       }
     },
-    "subnet1Name": {
-      "type": "string",
-      "defaultValue": "Data",
-      "metadata": {
-        "Description": "Subnet name for the VNET that resources will be provisionined in to"
-      }
-    },
     "sshKeyData": {
       "type": "string",
       "metadata": {
@@ -43,8 +36,9 @@
     "adminUsername": "core",
     "vmStorageAccountContainerName": "vhd",
     "vmSourceImageName": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Beta-633.1.0",
+    "subnet1Name": "Data",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',parameters('virtualNetworkName'))]",
-    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',parameters('subnet1Name'))]",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
     "sourceImageName": "[concat('/', subscription().subscriptionId,'/services/images/',variables('vmSourceImageName'))]",
     "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
     "mesosQuorum": "1",
@@ -85,7 +79,7 @@
         },
         "subnets": [
           {
-            "name": "[parameters('subnet1Name')]",
+            "name": "[variables('subnet1Name')]",
             "properties": {
               "addressPrefix": "[variables('subnet1Prefix')]"
             }

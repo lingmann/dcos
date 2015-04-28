@@ -3,7 +3,8 @@ aws_access_key = ""
 aws_secret_key = ""
 
 # This is the special shared AWS access key/secret for rebooting instances
-# (chaos). Available from OneLogin secure notes.
+# (chaos). Available from OneLogin secure notes:
+# https://mesosphere.onelogin.com/notes/14061.
 aws_access_key_id = ""
 aws_secret_access_key = ""
 

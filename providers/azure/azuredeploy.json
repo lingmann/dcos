@@ -24,7 +24,7 @@
     "vmSourceImageName": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Beta-633.1.0",
     "subnet1Name": "Data",
     "storageAccountName": "[concat(parameters('uniqueName'), 'dcosstorage')]",
-    "virtualNetworkName": "[concat(parameters('uniqueName'), 'dcosvnet')",
+    "virtualNetworkName": "[concat(parameters('uniqueName'), 'dcosvnet')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
     "sourceImageName": "[concat('/', subscription().subscriptionId,'/services/images/',variables('vmSourceImageName'))]",

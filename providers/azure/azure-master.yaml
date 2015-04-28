@@ -35,7 +35,7 @@ write_files:
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       MASTER_ELB=127.0.0.1
-      ZOOKEEPER_CLUSTER_SIZE=[[[parameters('numberOfMasters')]]]
+      ZOOKEEPER_CLUSTER_SIZE=[[[variables('numberOfMasters')]]]
       FALLBACK_DNS=168.63.129.16
       MARATHON_HOSTNAME=[[[concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]]]
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor

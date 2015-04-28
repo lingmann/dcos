@@ -5,12 +5,6 @@
   "storageAccountName": {
     "value": "_NAME_"
   },
-  "numberOfMasters": {
-    "value": 3
-  },
-  "numberOfSlaves": {
-    "value": _NODES_
-  },
   "region": {
     "value": "East Asia"
   },

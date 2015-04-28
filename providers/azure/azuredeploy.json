@@ -40,20 +40,6 @@
         "Description": "Size of the Slave nodes"
       }
     },
-    "numberOfMasters": {
-      "type": "int",
-      "defaultValue": 3,
-      "metadata": {
-        "Description": "Number of Master nodes"
-      }
-    },
-    "numberOfSlaves": {
-      "type": "int",
-      "defaultValue": 1,
-      "metadata": {
-        "Description": "Number of Slave nodes"
-      }
-    },
     "addressPrefix": {
       "type": "string",
       "defaultValue": "10.0.0.0/16",
@@ -96,7 +82,9 @@
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',parameters('subnet1Name'))]",
     "sourceImageName": "[concat('/', subscription().subscriptionId,'/services/images/',variables('vmSourceImageName'))]",
     "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
-    "mesosQuorum": "2"
+    "mesosQuorum": "1",
+    "numberOfMasters": "1",
+    "numberOfSlaves": "5"
   },
   "resources": [
     {
@@ -141,7 +129,7 @@
       "name": "[concat('masterPublicIP', copyindex())]",
       "copy": {
         "name": "ipLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "location": "[parameters('region')]",
       "apiVersion": "2014-12-01-preview",
@@ -159,7 +147,7 @@
       "location": "[parameters('region')]",
       "copy": {
         "name": "slaveNodesNicLoop",
-        "count": "[parameters('numberOfSlaves')]"
+        "count": "[variables('numberOfSlaves')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]"
@@ -185,7 +173,7 @@
       "location": "[parameters('region')]",
       "copy": {
         "name": "slaveVmLoop",
-        "count": "[parameters('numberOfSlaves')]"
+        "count": "[variables('numberOfSlaves')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'slaveNodeNic', copyindex())]",
@@ -233,7 +221,7 @@
       "location": "[parameters('region')]",
       "copy": {
         "name": "masterNicLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
@@ -263,7 +251,7 @@
       "location": "[parameters('region')]",
       "copy": {
         "name": "masterVmLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
@@ -280,7 +268,7 @@
         "osProfile": {
           "computername": "[concat('master', copyIndex())]",
           "adminUsername": "[variables('adminUsername')]",
-          "customData": "[base64(concat('#cloud-config\n\n', '{\"coreos\": {\"units\": [{\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Mount /var/lib\\nBefore=dbus.service\\n[Mount]\\nWhat=/dev/sdb1\\nWhere=/var/lib\\nType=ext4\\n\", \"name\": \"var-lib.mount\"}, {\"command\": \"stop\", \"mask\": true, \"name\": \"systemd-resolved.service\"}, {\"command\": \"stop\", \"mask\": true, \"name\": \"etcd.service\"}, {\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Write out dynamic config values\\n[Service]\\nType=oneshot\\nEnvironmentFile=/etc/environment\\n# Marathon depends on `hostname` resolution working\\nExecStart=/usr/bin/bash -c \\\"echo ${COREOS_PRIVATE_IPV4} $(hostname) ', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),' > /etc/hosts\\\"\\n\", \"name\": \"config-writer.service\"}, {\"content\": \"[Unit]\\nDescription=Download the DCOS\\nAfter=network-online.target\\nWants=network-online.target\\nConditionPathExists=!/opt/mesosphere/\\n[Service]\\nType=oneshot\\nExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz\\nExecStartPre=/usr/bin/mkdir -p /opt/mesosphere\\nExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere\\n\", \"name\": \"dcos-download.service\"}, {\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Prep the Pkgpanda working directories for this host.\\nRequires=dcos-download.service\\nAfter=dcos-download.service\\n[Service]\\nType=oneshot\\nEnvironmentFile=/opt/mesosphere/environment\\nExecStart=/opt/mesosphere/bin/pkgpanda setup\\n[Install]\\nWantedBy=multi-user.target\\n\", \"enable\": true, \"name\": \"dcos-setup.service\"}], \"update\": {\"reboot-strategy\": \"off\"}}, \"write_files\": [{\"content\": \"nameserver 168.63.129.16\", \"path\": \"/etc/resolv.conf\"}, {\"content\": \"http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon\", \"owner\": \"root\", \"path\": \"/etc/mesosphere/setup-flags/repository-url\", \"permissions\": 420}, {\"path\": \"/etc/mesosphere/roles/master\"}, {\"content\": \"{}\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json\"}, {\"content\": \"{\\n  \\\"zk\\\": \\\"zk://127.0.0.1:2181/mesos\\\",\\n  \\\"refreshSeconds\\\": 60,\\n  \\\"ttl\\\": 60,\\n  \\\"domain\\\": \\\"mesos\\\",\\n  \\\"port\\\": 53,\\n  \\\"resolvers\\\": [\\\"168.63.129.16\\\"],\\n  \\\"timeout\\\": 5,\\n  \\\"listener\\\": \\\"0.0.0.0\\\",\\n  \\\"email\\\": \\\"root.mesos-dns.mesos\\\"\\n}\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json\"}, {\"content\": \"MESOS_LOG_DIR=/var/log/mesos\\nMESOS_WORK_DIR=/var/lib/mesos/master\\nMESOS_ZK=zk://127.0.0.1:2181/mesos\\nMESOS_QUORUM=', variables('mesosQuorum'),'\\nMESOS_CLUSTER=', parameters('uuid'),'\\nMESOS_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\nMESOS_IP=$private_ipv4\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master\"}, {\"content\": \"MASTER_ELB=127.0.0.1\\nZOOKEEPER_CLUSTER_SIZE=', parameters('numberOfMasters'),'\\nFALLBACK_DNS=168.63.129.16\\nMARATHON_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv\"}, {\"content\": \"AZURE_CONTAINER=apollo-exhibitor\\nAZURE_PREFIX=', parameters('uuid'),'\\nAZURE_ACCOUNT_NAME=', parameters('storageAccountName'),'\\nAZURE_ACCOUNT_KEY=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2014-12-01-preview').key1,'\\nEXHIBITOR_WEB_UI_PORT=8181\\nEXHIBITOR_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor\"}]}'))]",
+          "customData": "[base64(concat('#cloud-config\n\n', '{\"coreos\": {\"units\": [{\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Mount /var/lib\\nBefore=dbus.service\\n[Mount]\\nWhat=/dev/sdb1\\nWhere=/var/lib\\nType=ext4\\n\", \"name\": \"var-lib.mount\"}, {\"command\": \"stop\", \"mask\": true, \"name\": \"systemd-resolved.service\"}, {\"command\": \"stop\", \"mask\": true, \"name\": \"etcd.service\"}, {\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Write out dynamic config values\\n[Service]\\nType=oneshot\\nEnvironmentFile=/etc/environment\\n# Marathon depends on `hostname` resolution working\\nExecStart=/usr/bin/bash -c \\\"echo ${COREOS_PRIVATE_IPV4} $(hostname) ', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),' > /etc/hosts\\\"\\n\", \"name\": \"config-writer.service\"}, {\"content\": \"[Unit]\\nDescription=Download the DCOS\\nAfter=network-online.target\\nWants=network-online.target\\nConditionPathExists=!/opt/mesosphere/\\n[Service]\\nType=oneshot\\nExecStartPre=/usr/bin/curl http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz\\nExecStartPre=/usr/bin/mkdir -p /opt/mesosphere\\nExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere\\n\", \"name\": \"dcos-download.service\"}, {\"command\": \"start\", \"content\": \"[Unit]\\nDescription=Prep the Pkgpanda working directories for this host.\\nRequires=dcos-download.service\\nAfter=dcos-download.service\\n[Service]\\nType=oneshot\\nEnvironmentFile=/opt/mesosphere/environment\\nExecStart=/opt/mesosphere/bin/pkgpanda setup\\n[Install]\\nWantedBy=multi-user.target\\n\", \"enable\": true, \"name\": \"dcos-setup.service\"}], \"update\": {\"reboot-strategy\": \"off\"}}, \"write_files\": [{\"content\": \"nameserver 168.63.129.16\", \"path\": \"/etc/resolv.conf\"}, {\"content\": \"http://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/thomas-marathon\", \"owner\": \"root\", \"path\": \"/etc/mesosphere/setup-flags/repository-url\", \"permissions\": 420}, {\"path\": \"/etc/mesosphere/roles/master\"}, {\"content\": \"{}\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json\"}, {\"content\": \"{\\n  \\\"zk\\\": \\\"zk://127.0.0.1:2181/mesos\\\",\\n  \\\"refreshSeconds\\\": 60,\\n  \\\"ttl\\\": 60,\\n  \\\"domain\\\": \\\"mesos\\\",\\n  \\\"port\\\": 53,\\n  \\\"resolvers\\\": [\\\"168.63.129.16\\\"],\\n  \\\"timeout\\\": 5,\\n  \\\"listener\\\": \\\"0.0.0.0\\\",\\n  \\\"email\\\": \\\"root.mesos-dns.mesos\\\"\\n}\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json\"}, {\"content\": \"MESOS_LOG_DIR=/var/log/mesos\\nMESOS_WORK_DIR=/var/lib/mesos/master\\nMESOS_ZK=zk://127.0.0.1:2181/mesos\\nMESOS_QUORUM=', variables('mesosQuorum'),'\\nMESOS_CLUSTER=', parameters('uuid'),'\\nMESOS_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\nMESOS_IP=$private_ipv4\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master\"}, {\"content\": \"MASTER_ELB=127.0.0.1\\nZOOKEEPER_CLUSTER_SIZE=', variables('numberOfMasters'),'\\nFALLBACK_DNS=168.63.129.16\\nMARATHON_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv\"}, {\"content\": \"AZURE_CONTAINER=apollo-exhibitor\\nAZURE_PREFIX=', parameters('uuid'),'\\nAZURE_ACCOUNT_NAME=', parameters('storageAccountName'),'\\nAZURE_ACCOUNT_KEY=', listKeys(resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')), '2014-12-01-preview').key1,'\\nEXHIBITOR_WEB_UI_PORT=8181\\nEXHIBITOR_HOSTNAME=', concat('master', copyIndex(), '-', parameters('uuid'), '.eastasia.cloudapp.azure.com'),'\\n\", \"path\": \"/etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor\"}]}'))]",
           "linuxConfiguration": {
             "disablePasswordAuthentication": "true",
             "ssh": {
@@ -314,16 +302,6 @@
       "masterURL0":
       {
           "value": "[concat('master0-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
-          "type": "string"
-      },
-      "masterURL1":
-      {
-          "value": "[concat('master1-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
-          "type": "string"
-      },
-      "masterURL2":
-      {
-          "value": "[concat('master2-', parameters('uuid'), '.eastasia.cloudapp.azure.com')]",
           "type": "string"
       }
   }

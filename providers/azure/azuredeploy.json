@@ -19,20 +19,6 @@
         "Description": "Virtual Network"
       }
     },
-    "vmSizeMasterNodes": {
-      "type": "string",
-      "defaultValue": "Standard_A3",
-      "metadata": {
-        "Description": "Size of the Master nodes"
-      }
-    },
-    "vmSizeSlaveNodes": {
-      "type": "string",
-      "defaultValue": "Standard_A3",
-      "metadata": {
-        "Description": "Size of the Slave nodes"
-      }
-    },
     "subnet1Name": {
       "type": "string",
       "defaultValue": "Data",
@@ -66,7 +52,8 @@
     "numberOfSlaves": "5",
     "subnet1Prefix": "10.0.0.0/24",
     "addressPrefix": "10.0.0.0/16",
-    "region": "East Asia"
+    "region": "East Asia",
+    "vmSize": "Standard_A5"
   },
   "resources": [
     {
@@ -163,7 +150,7 @@
       ],
       "properties": {
         "hardwareProfile": {
-          "vmSize": "[parameters('vmSizeSlaveNodes')]"
+          "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
           "computername": "[concat('slave', copyIndex())]",
@@ -245,7 +232,7 @@
           "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
         },
         "hardwareProfile": {
-          "vmSize": "[parameters('vmSizeMasterNodes')]"
+          "vmSize": "[variables('vmSize')]"
         },
         "osProfile": {
           "computername": "[concat('master', copyIndex())]",

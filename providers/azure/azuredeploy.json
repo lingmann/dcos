@@ -11,6 +11,12 @@
         "Description": "Public key for SSH authentication"
       }
     },
+    "authorizedSubnet": {
+      "type": "string",
+      "metadata": {
+        "Description": "Subnet allowed to talk to masters"
+      }
+    },
     "uniqueName": {
       "type": "string",
       "metadata": {
@@ -25,6 +31,7 @@
     "subnet1Name": "Data",
     "storageAccountName": "[concat(parameters('uniqueName'), 'dcosstorage')]",
     "virtualNetworkName": "[concat(parameters('uniqueName'), 'dcosvnet')]",
+    "networkSecurityGroupName": "[concat(parameters('uniqueName'), 'dcosnsg')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
     "sourceImageName": "[concat('/', subscription().subscriptionId,'/services/images/',variables('vmSourceImageName'))]",
@@ -54,11 +61,40 @@
       "location": "[variables('region')]",
       "properties": {}
     },
+
+  {
+        "apiVersion": "2015-05-01-preview",
+        "type": "Microsoft.Network/networkSecurityGroups",
+        "name": "[variables('networkSecurityGroupName')]",
+        "location": "[variables('region')]",
+
+        "properties": {
+            "securityRules": [{
+                "name": "Allow_Subnet",
+                "properties": {
+                    "description": "Allow Subnet",
+                    "protocol": "*",
+                    "sourcePortRange": "*",
+                    "destinationPortRange": "*",
+                    "sourceAddressPrefix": "[parameters('authorizedSubnet')]",
+                    "destinationAddressPrefix": "*",
+                    "access": "Allow",
+                    "priority": 100,
+                    "direction": "Inbound"
+                }
+            }]
+        }
+    },
+
+
     {
       "apiVersion": "2014-12-01-preview",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[variables('region')]",
+      "dependsOn": [
+          "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -69,7 +105,10 @@
           {
             "name": "[variables('subnet1Name')]",
             "properties": {
-              "addressPrefix": "[variables('subnet1Prefix')]"
+              "addressPrefix": "[variables('subnet1Prefix')]",
+              "networkSecurityGroup" : {
+                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
             }
           }
         ]

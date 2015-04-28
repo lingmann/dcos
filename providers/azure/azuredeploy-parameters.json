@@ -5,9 +5,6 @@
   "storageAccountName": {
     "value": "_NAME_"
   },
-  "region": {
-    "value": "East Asia"
-  },
   "virtualNetworkName": {
     "value": "_NAME_"
   },

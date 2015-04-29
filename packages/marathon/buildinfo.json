@@ -1,7 +1,7 @@
 {
   "requires": ["java"],
   "single_source": {
-    "kind": "url",
-    "url": "http://downloads.mesosphere.io/misc/marathon-special-branch-for-thomas.jar"
+    "kind": "url_extract",
+    "url": "http://downloads.mesosphere.io/marathon/v0.8.2-RC1/marathon-0.8.2-RC1.tgz"
   }
 }

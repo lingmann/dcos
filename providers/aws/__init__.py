@@ -92,7 +92,7 @@ def render_buttons(name):
 class Parameters(CloudConfigParameters):
 
     def __init__(self, simple, roles):
-        self._simple = True
+        self._simple = simple
         self.roles = roles
         self._testcluster_volume = False
 
@@ -169,6 +169,7 @@ class Parameters(CloudConfigParameters):
         What=/dev/md0
         Where=/ephemeral
         Type=ext4"""
+        return result
 
     @property
     def config_writer(self):

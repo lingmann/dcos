@@ -76,7 +76,7 @@ coreos:
         Type=oneshot
         EnvironmentFile=/etc/environment
         # Marathon depends on `hostname` resolution working
-        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) [[[concat('master', copyIndex(), '-', variables('uniqueName'), '.eastasia.cloudapp.azure.com')]]] > /etc/hosts"
+        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) [[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]] > /etc/hosts"
     - name: dcos-download.service
       content: |
         [Unit]

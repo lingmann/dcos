@@ -69,7 +69,7 @@ def main():
         fetch_from_s3(cf_template_name, local_in_name)
         cloudformation = load_json(local_in_name)
         cloudformation['Mappings']['Parameters']['BootstrapRepoRoot']['default'] = \
-            'http://downloads.mesosphere.io/dcos/{}'.format(name)
+            'https://downloads.mesosphere.io/dcos/{}'.format(name)
         write_json(local_done_name, cloudformation)
 
     update_for_prod('single-master.cloudformation.json')

@@ -39,7 +39,7 @@ def main():
     # Build aws cloudformation
     check_call([
         './gen.py',
-        'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/',
+        'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/',
         name
         ], cwd='providers')
     # Upload to s3 bucket
@@ -62,6 +62,7 @@ def main():
 
     print("Performing basic tests")
     for template in ['single-master.', 'multi-master.', '']:
+        print("Checking template {}cloudformation.json".format(template))
         check_call([
             'aws',
             'cloudformation',

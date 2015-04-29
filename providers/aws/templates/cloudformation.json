@@ -7,6 +7,11 @@
     "KeyName" : {
       "Description" : "Name of SSH key to link",
       "Type" : "AWS::EC2::KeyPair::KeyName"
+    },
+    "AcceptEULA": {
+      "Description" : "Please read and agree to our EULA: https://docs.mesosphere.com/community-edition-eula/",
+      "Type" : "String",
+      "AllowedValues": ["Yes"]
     }
   },
 

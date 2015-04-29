@@ -19,7 +19,8 @@
     },
     "region": {
         "type": "string",
-        "defaultValue": "West US"
+        "defaultValue": "West US",
+        "allowedValues": ["East US", "West US", "West Europe", "East Asia", "Southeast Asia"]
     }
   },
   "variables": {

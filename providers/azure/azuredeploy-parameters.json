@@ -1,7 +1,4 @@
 {
-  "uniqueName": {
-    "value": "_NAME_"
-  },
   "authorizedSubnet": {
     "value": "162.245.20.130/32"
   },

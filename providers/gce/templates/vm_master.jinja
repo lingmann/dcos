@@ -1,0 +1,35 @@
+# Mesos Master Jinja Template
+# Created M. Massenzio, 2015-04-27
+
+{% set masters = properties["masters"] + 1 %}
+{% set zone =  properties["zone"] %}
+{% set base_name = properties["base_name"] %}
+{% set machine_type = properties["machine"]%}
+
+resources:
+{% for i in range(1, masters) %}
+    {% set name = "%s-master-%d" % (base_name, i) %}
+    - name: {{ name }}
+      type: compute.v1.instance
+      properties:
+        zone: {{ properties["zone"] }}
+        machineType: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ zone }}/machineTypes/{{ machine_type }}
+        disks:
+        - deviceName: boot
+          type: PERSISTENT
+          diskType: pd-standard
+          diskSizeGb: {{properties["disk_size"]}}
+          boot: true
+          autoDelete: true
+          initializeParams:
+            sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
+        metadata:
+          items:
+          - key: sshKeys
+            value: {{properties["ssh_key"]}}
+        networkInterfaces:
+        - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+          accessConfigs:
+          - name: External NAT
+            type: ONE_TO_ONE_NAT
+{% endfor %}

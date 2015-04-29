@@ -1,0 +1,35 @@
+# Mesos Slave Jinja Template
+# Created M. Massenzio, 2015-04-27
+
+{% set base_slave_name = properties["base_name"] + '-slave' %}
+{% set machine_type = properties["machine"]%}
+
+resources:
+    - name: {{base_slave_name}}-template
+      type: compute.v1.instanceTemplate
+      properties:
+        properties:
+          machineType: {{machine_type}}
+          disks:
+          - deviceName: boot
+            type: PERSISTENT
+            diskType: pd-standard
+            diskSizeGb: {{properties["disk_size"]}}
+            boot: true
+            autoDelete: true
+            initializeParams:
+              sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
+          networkInterfaces:
+          - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+          metadata:
+                items:
+                    - key: sshKeys
+                      value: {{properties["ssh_key"]}}
+
+    - name: {{base_slave_name}}
+      type: replicapool.v1beta2.instanceGroupManager
+      properties:
+        zone: {{ properties ["zone"] }}
+        size: {{ properties["nodes"] }}
+        baseInstanceName: {{base_slave_name}}
+        instanceTemplate: $(ref.{{base_slave_name}}-template.selfLink)

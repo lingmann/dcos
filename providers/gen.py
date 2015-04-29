@@ -1,58 +1,98 @@
 #!/usr/bin/env python3
 """Generate provider-specific templates, data.
 Usage:
-gen.py [aws] <base_url> <name>
+gen.py [aws|testcluster] <base_url> <name>
 
 """
 import json
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pkgpanda.util import write_json, write_string
+from string import Template
 
 import aws
-import aws.cc_chunks
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = Environment(loader=FileSystemLoader('templates'), undefined=StrictUndefined)
 cc_template = env.get_template('cloud-config.yaml')
 
 
-def render_cloudconfig(roles, master_quorum, master_count, bootstrap_url, provider_cc):
-    assert type(roles) == list
+def render_cloudconfig(paramters):
     return cc_template.render({
-        'bootstrap_url': bootstrap_url,
-        'roles': roles,
-        'master_quorum': master_quorum,
-        'extra_files': provider_cc.extra_files(master_count),
-        'stack_name': provider_cc.stack_name,
-        'early_units': provider_cc.early_units,
-        'config_writer': provider_cc.config_writer,
-        'late_units': provider_cc.late_units(roles)
+        'bootstrap_url': paramters.GetParameter('bootstrap_url'),
+        'roles': paramters.roles,
+        'master_quorum': paramters.GetParameter('master_quorum'),
+        'extra_files': paramters.extra_files,
+        'stack_name': paramters.GetParameter('stack_name'),
+        'early_units': paramters.early_units,
+        'config_writer': paramters.config_writer,
+        'late_units': paramters.late_units
         })
+
+
+def add_testcluster(parameters):
+    parameters.AddTestclusterEphemeralVolume()
+    # NOTE: Using python Template instead of .format to escape
+    # escaping hell.
+    parameters.extra_files_extra += Template("""  - path: /etc/mesosphere/clusterinfo.json
+    permissions: 0644
+    owner: root
+    content: |-
+      {
+        "cluster":{
+          "name":"$name"
+        },
+        "keys":{
+          "dd_api_key":"$dd_api_key",
+          "github_deploy_key_base64":"$github_deploy_key_base64"
+        }
+      }""").substitute(
+        name=parameters.GetParameter('stack_name'),
+        dd_api_key=parameters.GetParameter('dd_api_key'),
+        github_deploy_key_base64=parameters.GetParameter('github_deploy_key_base64')
+      )
+
+    parameters.late_units_extra = """    - name: datadog.service
+      command: start
+      content: |
+        [Unit]
+        Description=Monitoring Service
+        [Service]
+        TimeoutStartSec=0
+        Restart=on-failure
+        ExecStartPre=-/usr/bin/docker kill dd-agent
+        ExecStartPre=-/usr/bin/docker rm dd-agent
+        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-slave
+        ExecStart=/usr/bin/bash -c \
+        "/usr/bin/docker run --privileged --name dd-agent --net=host \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v /proc/mounts:/host/proc/mounts:ro \
+        -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
+        -e API_KEY={0} \
+        mesosphere/dd-agent-mesos-slave" """.format(parameters.GetParameter('dd_api_key'))
 
 
 # TODO(cmaloney): Minimize amount of code in this function. All
 # providers should be as simple as possible.
 def gen_aws(name, bootstrap_url):
 
-    def aws_cloudconfig(roles, simple):
-        return render_cloudconfig(
-                roles,
-                aws.render_parameter(simple, 'MasterQuorumCount'),
-                aws.render_parameter(simple, 'MasterInstanceCount'),
-                aws.render_parameter(simple, 'BootstrapRepoRoot'),
-                aws.cc_chunks)
+    def aws_cloudformation(simple, testcluster=False):
+        def get_params(roles):
+            parameters = aws.Parameters(simple, roles)
+            if testcluster:
+                add_testcluster(parameters)
+            return parameters
 
-    def aws_cloudformation(simple):
         return aws.render_cloudformation(
             simple,
-            aws_cloudconfig(['master'], simple),
-            aws_cloudconfig(['slave'], simple),
+            render_cloudconfig(get_params(['master'])),
+            render_cloudconfig(get_params(['slave'])),
             bootstrap_url
             )
 
     # Parameterized / custom template.
     write_string('cloudformation.json', aws_cloudformation(False))
+    write_string('testcluster.cloudformation.json', aws_cloudformation(False, True))
 
     # Simple template.
     single_master_cf = aws_cloudformation(True)

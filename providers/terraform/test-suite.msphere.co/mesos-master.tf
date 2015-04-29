@@ -161,7 +161,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl ${var.repo_root}/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/curl --retry 100 ${var.repo_root}/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

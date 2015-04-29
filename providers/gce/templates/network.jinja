@@ -1,0 +1,34 @@
+# Mesos Master Jinja Template
+# Created M. Massenzio, 2015-04-27
+
+{% set base_name = properties["base_name"] %}
+{% set zone =  properties["zone"] %}
+{% set network_pool = properties["network_pool"] %}
+{% set admin_range = properties["admin_range"] %}
+
+resources:
+    - type: compute.v1.network
+      name: {{base_name}}-network
+      properties:
+        IPv4Range: {{network_pool}}
+
+    - type: compute.v1.firewall
+      name: admin-access
+      properties:
+        allowed:
+          - IPProtocol: TCP
+            ports: [1-65535]
+        sourceRanges: [ {{admin_range}} ]
+        network: $(ref.{{base_name}}-network.selfLink)
+
+    - type: compute.v1.firewall
+      name: default-allow-internal
+      properties:
+        allowed:
+          - IPProtocol: TCP
+            ports: [1-65535]
+          - IPProtocol: UDP
+            ports: [1-65535]
+          - IPProtocol: ICMP
+        sourceRanges: [ 10.255.0.0/16 ]
+        network: $(ref.{{base_name}}-network.selfLink)

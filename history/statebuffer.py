@@ -42,7 +42,7 @@ class StateBuffer():
             # "day": Schedule(ceil(60 * 60 / fetchFrequencySeconds), 24)  # per hour for one day
         }
         self.timestamp = datetime.now()
-        self.latest = None
+        self.last = None
 
     def _find_leader_(self):
         """
@@ -77,7 +77,7 @@ class StateBuffer():
         Update all schedules with current state.json
         :param current: the current state to populate buffers.
         """
-        self.latest = current
+        self.last = current
         for schedule in self.schedules.values():
             schedule.update(current)
 

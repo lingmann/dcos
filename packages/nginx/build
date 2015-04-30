@@ -4,18 +4,15 @@ libdir="$PKG_PATH/lib"
 ssl_path="$PKG_PATH/etc/ssl"
 
 mkdir -p "/build"
-CFLAGS="-L/opt/mesosphere/lib -I/opt/mesosphere/include"
-LDFLAGS="-Wl,-rpath=/opt/mesosphere/lib -L/opt/mesosphere/lib"
 
-
-export CFLAGS=-I/opt/mesosphere/include
-export LDFLAGS="-L/opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib"
 export CXXFLAGS=-I/opt/mesosphere/include
 
 # TODO(cmaloney): Set alternate log, config paths?
 pushd "/pkg/src/nginx"
 ./configure \
   "--prefix=$PKG_PATH" \
+  --with-cc-opt="-I /opt/mesosphere/include" \
+  --with-ld-opt="-L /opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib" \
   --with-ipv6 \
   --with-file-aio \
   --with-http_gunzip_module \
@@ -23,7 +20,8 @@ pushd "/pkg/src/nginx"
   --with-http_spdy_module \
   --without-mail_pop3_module \
   --without-mail_imap_module \
-  --without-mail_smtp_module
+  --without-mail_smtp_module \
+  --with-http_ssl_module
 
 make -j8
 make install

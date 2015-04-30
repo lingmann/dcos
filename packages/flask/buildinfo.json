@@ -1,0 +1,30 @@
+{
+  "requires": ["python", "python-requests"],
+  "docker": "dcos-builder",
+  "sources": {
+    "Flask": {
+      "kind": "url_extract",
+      "url": "https://github.com/mitsuhiko/flask/archive/0.10.1.tar.gz"
+    },
+    "flask-compress": {
+      "kind": "url_extract",
+      "url": "https://github.com/wichitacode/flask-compress/archive/v1.2.0.tar.gz"
+    },
+    "Jinja2": {
+      "kind": "url_extract",
+      "url": "https://github.com/mitsuhiko/jinja2/archive/2.7.3.tar.gz"
+    },
+    "itsdangerous": {
+      "kind": "url_extract",
+      "url": "https://github.com/mitsuhiko/itsdangerous/archive/0.24.tar.gz"
+    },
+    "Werkzeug": {
+      "kind": "url_extract",
+      "url": "https://github.com/mitsuhiko/werkzeug/archive/0.10.4.tar.gz"
+    },
+    "markupsafe": {
+      "kind": "url_extract",
+      "url": "https://github.com/mitsuhiko/markupsafe/archive/0.23.tar.gz"
+    }
+  }
+}

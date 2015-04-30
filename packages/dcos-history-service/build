@@ -6,13 +6,6 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 
 mkdir -p "$LIB_INSTALL_DIR"
 
-# Build all the packages. We'd use pip to install them but that fails badly.
-for package in Flask flask-compress Jinja2 itsdangerous markupsafe Werkzeug; do
-  pushd "/pkg/src/$package"
-  python3 setup.py install --root=/ --prefix=$PKG_PATH
-  popd
-done
-
 # Build the history service
 pushd /pkg/src/dcos-history-service
 python3 setup.py install --root=/ --prefix=$PKG_PATH

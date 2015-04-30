@@ -121,8 +121,8 @@ http {
   server {
     listen 80 default_server;
     listen 443 ssl default_server;
-    ssl_certificate ${ssl_path}/snakeoil.crt
-    ssl_certificate_key ${ssl_path}/snakeoil.key
+    ssl_certificate ${ssl_path}/snakeoil.crt;
+    ssl_certificate_key ${ssl_path}/snakeoil.key;
     server_name dcos.*;
     root /opt/mesosphere/active/dcos-ui/usr;
 

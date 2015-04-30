@@ -93,7 +93,6 @@ gAJ7hOZs3V6PwtyBRaz3C/3mKfZZbB3QZ8mtyjvBoQ3j92nCNNZnIz8P2MDVgZEt
 XcfRkU5vMMC1/Ia+Uu7LdEG2NYya4sf0MMWuaD9En3NweDg3Qti0IYI=
 -----END RSA PRIVATE KEY-----
 EOF
-chmod 600 "${ssl_path}/snakeoil.key"
 
 # TODO(cmaloney): Make config outside of nginx package?
 cat <<EOF > "$PKG_PATH/conf/nginx.conf"
@@ -187,7 +186,7 @@ Type=forking
 PIDFile=$PKG_PATH/logs/nginx.pid
 PrivateDevices=yes
 SyslogLevel=err
-
+ExecPreStart=chmod 600 "${ssl_path}/snakeoil.key"
 ExecStart=$PKG_PATH/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT

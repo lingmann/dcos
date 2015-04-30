@@ -26,5 +26,6 @@ RUN apt-get -qq update && apt-get -y install \
   ruby \
   curl \
   wget \
-  scala
+  scala \
+  xz-utils
 RUN pip install awscli

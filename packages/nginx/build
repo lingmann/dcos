@@ -117,6 +117,10 @@ http {
     server master.mesos:8080;
   }
 
+  upstream dcos_history_service {
+    server master.mesos:15055;
+  }
+
   server {
     listen 80 default_server;
     listen 443 ssl default_server;
@@ -139,23 +143,12 @@ http {
       add_header Cache-Control "no-cache";
       alias /opt/mesosphere/active.buildinfo.full.json;
     }
-  }
 
-  server {
-    listen 80;
-    server_name mesos.*;
-    location / {
-      proxy_pass http://mesos/;
+    location /dcos-history-service/ {
+      proxy_pass http://dcos_history_service/;
     }
   }
 
-  server {
-    listen 80;
-    server_name marathon.*;
-    location / {
-      proxy_pass http://marathon/;
-    }
-  }
 
   # Seperate ports for when there isn't DNS pointing to the load balancer.
   server {

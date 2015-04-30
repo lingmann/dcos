@@ -125,7 +125,7 @@ class Parameters(CloudConfigParameters):
       AWS_S3_BUCKET={{ "Ref" : "ExhibitorS3Bucket" }}
       AWS_S3_PREFIX={{ "Ref" : "AWS::StackName" }}
       EXHIBITOR_WEB_UI_PORT=8181
-""".format(master_count=render_parameter(self._simple, 'MasterQuorumCount'))
+""".format(master_count=render_parameter(self._simple, 'MasterInstanceCount'))
 
     @property
     def stack_name(self):

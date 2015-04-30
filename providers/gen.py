@@ -76,6 +76,8 @@ def add_testcluster(parameters):
 # providers should be as simple as possible.
 def gen_aws(name, bootstrap_url):
 
+    # TODO(cmaloney): That we talk about 'testcluster' here is wrong.
+    # We should just talk about 'extra parameters'.
     def aws_cloudformation(simple, testcluster=False):
         def get_params(roles):
             parameters = aws.Parameters(simple, roles)
@@ -87,7 +89,8 @@ def gen_aws(name, bootstrap_url):
             simple,
             render_cloudconfig(get_params(['master'])),
             render_cloudconfig(get_params(['slave'])),
-            bootstrap_url
+            bootstrap_url,
+            testcluster
             )
 
     # Parameterized / custom template.

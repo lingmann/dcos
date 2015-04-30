@@ -56,12 +56,13 @@ def main():
         'single-master.cloudformation.json',
         no_cache=True)
     upload_s3(name, 'providers/multi-master.cloudformation.json', 'multi-master.cloudformation.json', no_cache=True)
+    upload_s3(name, 'providers/testcluster.cloudformation.json', 'testcluster.cloudformation.json', no_cache=True)
     with open('aws.html', 'w+') as f:
         f.write(render_markdown('providers/aws.md'))
     upload_s3(name, 'aws.html', args={'ContentType': 'text/html'}, no_cache=True)
 
     print("Performing basic tests")
-    for template in ['single-master.', 'multi-master.', '']:
+    for template in ['single-master.', 'multi-master.', '', 'testcluster.']:
         print("Checking template {}cloudformation.json".format(template))
         check_call([
             'aws',

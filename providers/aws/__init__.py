@@ -1,6 +1,7 @@
 import json
 import re
 
+from copy import copy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pkgpanda.util import load_json, write_string
 from cloud_config_parameters import CloudConfigParameters
@@ -16,6 +17,7 @@ end_param_full = '" }'
 env = Environment(loader=FileSystemLoader('aws/templates'), undefined=StrictUndefined)
 launch_template = env.get_template('launch_buttons.md')
 params = load_json("aws/cf_param_info.json")
+testcluster_params = load_json("aws/testcluster_param_info.json")
 cloudformation_template = env.get_template("cloudformation.json")
 
 
@@ -41,7 +43,7 @@ def render_parameter(simple, name):
     return start_param_full + name + end_param_full
 
 
-def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstrap_url):
+def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstrap_url, testcluster):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -61,7 +63,12 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstr
 
     params['BootstrapRepoRoot']['Default'] = bootstrap_url
 
-    for param, info in params.items():
+    local_params = copy(params)
+
+    if testcluster:
+        local_params.update(testcluster_params)
+
+    for param, info in local_params.items():
         if simple:
             if 'Parameters' not in template_json['Mappings']:
                 template_json['Mappings']['Parameters'] = {}

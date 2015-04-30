@@ -378,6 +378,12 @@
             "InstanceProtocol" : "HTTP"
           },
           {
+            "LoadBalancerPort" : "443",
+            "Protocol" : "TCP",
+            "InstancePort" : "443",
+            "InstanceProtocol" : "TCP"
+          },
+          {
             "LoadBalancerPort" : "8080",
             "Protocol" : "HTTP",
             "InstancePort" : "8080",
@@ -421,6 +427,12 @@
             "Protocol" : "HTTP",
             "InstancePort" : "80",
             "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "443",
+            "Protocol" : "TCP",
+            "InstancePort" : "443",
+            "InstanceProtocol" : "TCP"
           },
           {
             "LoadBalancerPort" : "8080",

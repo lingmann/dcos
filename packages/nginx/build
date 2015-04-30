@@ -1,6 +1,7 @@
 #!/bin/bash
 
 libdir="$PKG_PATH/lib"
+ssl_path="$PKG_PATH/etc/ssl"
 
 mkdir -p "/build"
 CFLAGS="-L/opt/mesosphere/lib -I/opt/mesosphere/include"
@@ -36,79 +37,8 @@ cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
 # Write the config
 rm -rf "$PKG_PATH/conf/nginx.conf"
 
-# TODO(cmaloney): Make config outside of nginx package?
-cat <<EOF > "$PKG_PATH/conf/nginx.conf"
-error_log stderr;
-
-events {
-  worker_connections 1024;
-}
-
-http {
-  include mime.types;
-  default_type application/octet-stream;
-
-  sendfile on;
-  keepalive_timeout 65;
-
-  upstream mesos {
-    server leader.mesos:5050;
-  }
-
-  upstream marathon {
-    server master.mesos:8080;
-  }
-
-  server {
-    listen 80 default_server;
-    server_name dcos.*;
-    root /opt/mesosphere/active/dcos-ui/usr;
-
-    # TODO(cmaloney): Make the Web UI work in a subdirectory.
-    location /mesos/ {
-        proxy_pass http://mesos/;
-    }
-
-    # TODO(cmaloney): Make the Web UI work in a subdirectory.
-    location /marathon/ {
-        proxy_pass http://marathon/;
-    }
-
-    location /pkgpanda/active.buildinfo.full.json {
-      add_header Cache-Control "no-cache";
-      alias /opt/mesosphere/active.buildinfo.full.json;
-    }
-  }
-
-  server {
-    listen 80;
-    server_name mesos.*;
-    location / {
-      proxy_pass http://mesos/;
-    }
-  }
-
-  server {
-    listen 80;
-    server_name marathon.*;
-    location / {
-      proxy_pass http://marathon/;
-    }
-  }
-
-  # Seperate ports for when there isn't DNS pointing to the load balancer.
-  server {
-    listen 1024;
-    location / {
-      proxy_pass http://mesos/;
-    }
-  }
-}
-EOF
-
 # THIS IS NOT A SECURE CERTIFICATE !!!!
 # To be replaced by proper cert generation for each cluster
-ssl_path="$PKG_PATH"/etc/ssl
 mkdir -p "$ssl_path"
 cat <<EOF > "${ssl_path}/snakeoil.crt"
 -----BEGIN CERTIFICATE-----
@@ -166,6 +96,79 @@ XcfRkU5vMMC1/Ia+Uu7LdEG2NYya4sf0MMWuaD9En3NweDg3Qti0IYI=
 -----END RSA PRIVATE KEY-----
 EOF
 chmod 600 "${ssl_path}/snakeoil.key"
+
+# TODO(cmaloney): Make config outside of nginx package?
+cat <<EOF > "$PKG_PATH/conf/nginx.conf"
+error_log stderr;
+
+events {
+  worker_connections 1024;
+}
+
+http {
+  include mime.types;
+  default_type application/octet-stream;
+
+  sendfile on;
+  keepalive_timeout 65;
+
+  upstream mesos {
+    server leader.mesos:5050;
+  }
+
+  upstream marathon {
+    server master.mesos:8080;
+  }
+
+  server {
+    listen 80 default_server;
+    listen 443 ssl default_server;
+    ssl_certificate ${ssl_path}/snakeoil.crt
+    ssl_certificate_key ${ssl_path}/snakeoil.key
+    server_name dcos.*;
+    root /opt/mesosphere/active/dcos-ui/usr;
+
+    # TODO(cmaloney): Make the Web UI work in a subdirectory.
+    location /mesos/ {
+        proxy_pass http://mesos/;
+    }
+
+    # TODO(cmaloney): Make the Web UI work in a subdirectory.
+    location /marathon/ {
+        proxy_pass http://marathon/;
+    }
+
+    location /pkgpanda/active.buildinfo.full.json {
+      add_header Cache-Control "no-cache";
+      alias /opt/mesosphere/active.buildinfo.full.json;
+    }
+  }
+
+  server {
+    listen 80;
+    server_name mesos.*;
+    location / {
+      proxy_pass http://mesos/;
+    }
+  }
+
+  server {
+    listen 80;
+    server_name marathon.*;
+    location / {
+      proxy_pass http://marathon/;
+    }
+  }
+
+  # Seperate ports for when there isn't DNS pointing to the load balancer.
+  server {
+    listen 1024;
+    location / {
+      proxy_pass http://mesos/;
+    }
+  }
+}
+EOF
 
 # From: https://projects.archlinux.org/svntogit/packages.git/tree/trunk/service?h=packages/nginx
 systemd_master="$PKG_PATH"/dcos.target.wants_master/nginx.service

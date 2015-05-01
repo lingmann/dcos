@@ -1,0 +1,23 @@
+{
+  "requires": ["python", "python-requests"],
+  "docker": "dcos-builder",
+  "sources": {
+    "boto": {
+      "kind": "git",
+      "git": "https://github.com/boto/boto",
+      "branch": "develop"
+    },
+    "rsa": {
+      "kind": "url_extract",
+      "url": "https://pypi.python.org/packages/source/r/rsa/rsa-3.1.4.tar.gz"
+    },
+    "pyasn1": {
+      "kind": "url_extract",
+      "url": "https://pypi.python.org/packages/source/p/pyasn1/pyasn1-0.1.7.tar.gz"
+    },
+    "simplejson": {
+      "kind": "url_extract",
+      "url": "https://github.com/simplejson/simplejson/archive/v3.6.5.tar.gz"
+    }
+  }
+}

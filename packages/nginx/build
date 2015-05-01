@@ -121,6 +121,10 @@ http {
     server master.mesos:15055;
   }
 
+  upstream artemis {
+    server master.mesos:9889;
+  }
+
   server {
     listen 80 default_server;
     listen 443 ssl default_server;
@@ -146,6 +150,10 @@ http {
 
     location /dcos-history-service/ {
       proxy_pass http://dcos_history_service/;
+    }
+
+    location /artemis/ {
+      proxy_pass http://artemis/;
     }
   }
 

@@ -1,0 +1,11 @@
+{
+  "requires": ["boto", "flask", "python", "python-requests"],
+  "docker": "dcos-builder",
+  "sources": {
+    "artemis": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/artemis.git",
+      "branch": "dcos"
+    }
+  }
+}

@@ -30,7 +30,7 @@ class DCOSTestCase(unittest.TestCase):
                            aws_secret_key=aws_secret_key,
                            stack_name=stack_name,
                            template_url=self.get_template_url(dcos_version),
-                           params={'KeyName': 'default'})
+                           params={'KeyName': 'default', 'AcceptEULA': 'Yes'})
         self.dcos = dcos
 
         try:

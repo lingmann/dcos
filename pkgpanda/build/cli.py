@@ -125,7 +125,9 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    build(repository, name, arguments['--override-buildinfo'], arguments['--no-deps'])
+    pkg_path = build(repository, name, arguments['--override-buildinfo'], arguments['--no-deps'])
+    print("Package available at: {}".format(pkg_path))
+
     sys.exit(0)
 
 
@@ -219,6 +221,8 @@ def load_treeinfo(name, working_on=set()):
 def build_tree(repository, mkbootstrap, tree_name):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
+        print("Repository path: {}".format(repository.path))
+        print("Often the correct fix is to `rm -rf` the repository")
         sys.exit(1)
 
     # If a name was given, use name.treeinfo.json as the repository to use. If
@@ -629,7 +633,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     # Bundle the artifacts into the pkgpanda package
     make_tar(pkg_path, "result")
-    print("Package built, available at {}".format(pkg_path))
+    print("Package built.")
     return pkg_path
 
 

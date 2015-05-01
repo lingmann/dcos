@@ -183,7 +183,8 @@
       }
     },
     "ExhibitorS3Bucket" : {
-      "Type" : "AWS::S3::Bucket"
+      "Type" : "AWS::S3::Bucket",
+      "DeletionPolicy" : "Retain"
     },
     "MasterRole": {
       "Type": "AWS::IAM::Role",

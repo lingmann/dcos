@@ -3,8 +3,8 @@
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",
-    "git": "https://github.com/mesosphere/mesos",
-    "branch" : "summary-endpoint"
+    "git": "http://git-wip-us.apache.org/repos/asf/mesos.git",
+    "branch" : "0.22.1-rc6"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

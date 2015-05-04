@@ -8,6 +8,7 @@ from urllib.request import urljoin, urlopen
 
 
 class Schedule():
+
     def __init__(self, goal, buffer_size):
         """
         Schedule holds the frequency and buffer size
@@ -64,7 +65,7 @@ class StateBuffer():
         try:
             url = self._find_leader_()
             logging.info("Get state from leading master %s" % url)
-            resp = urlopen(urljoin(url, "/state.json"))
+            resp = urlopen(urljoin(url, "/state-summary"))
             if (resp.code != 200):
                 raise Exception("Could not read from %s" % url)
             return resp.readall().decode()

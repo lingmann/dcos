@@ -1,0 +1,8 @@
+#!/bin/bash
+# Build
+mkdir -p build
+pushd build
+
+cd /pkg/src/traceroute
+make
+make DESTDIR=$PKG_PATH install

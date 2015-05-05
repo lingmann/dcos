@@ -7,6 +7,9 @@ mkdir -p "$PKG_PATH/usr"
 cp -rp "/pkg/src/zookeeper" "$PKG_PATH/usr"
 rm -rf "$PKG_PATH/usr/zookeeper/"{src,docs,contrib}
 
+mkdir -p "$PKG_PATH/bin"
+ln -s "$PKG_PATH/usr/zookeeper/bin/zkCli.sh" "$PKG_PATH/bin/zkCli.sh"
+
 # Exhibitor
 
 # Generate the build artifacts and store in the local cache, to be used later

@@ -1,0 +1,9 @@
+#!/bin/bash
+# Build
+mkdir -p build
+pushd build
+
+cd /pkg/src/haveged
+./configure LDFLAGS=-static --prefix="$PKG_PATH"
+make
+make install

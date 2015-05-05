@@ -1,0 +1,10 @@
+#!/bin/bash
+# Build
+mkdir -p build
+pushd build
+
+cd /pkg/src/logrotate
+./autogen.sh
+./configure --prefix="$PKG_PATH"
+make
+make install

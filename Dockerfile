@@ -27,5 +27,6 @@ RUN apt-get -qq update && apt-get -y install \
   curl \
   wget \
   scala \
-  xz-utils
+  xz-utils \
+  libpopt-dev
 RUN pip install awscli

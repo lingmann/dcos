@@ -18,7 +18,8 @@
   "Mappings" : {
     "SubnetConfig" : {
       "VPC"     : { "CIDR" : "10.0.0.0/16" },
-      "Public"  : { "CIDR" : "10.0.0.0/24" }
+      "Public"  : { "CIDR" : "10.0.0.0/24" },
+      "Private" : { "CIDR" : "10.0.1.0/24" }
     },
     "RegionToAmi" : {
       "ap-northeast-1": {
@@ -48,6 +49,35 @@
       "us-west-2": {
         "stable": "ami-37280207"
       }
+    },
+    "NATAmi" : {
+      "ap-northeast-1": {
+        "default": "ami-9cb9439c"
+      },
+      "ap-southeast-1": {
+        "default": "ami-a0cefcf2"
+      },
+      "ap-southeast-2": {
+        "default": "ami-cb3845f1"
+      },
+      "eu-central-1": {
+        "default": "ami-92003c8f"
+      },
+      "eu-west-1": {
+        "default": "ami-21422356"
+      },
+      "sa-east-1": {
+        "default": "ami-99e66384"
+      },
+      "us-east-1": {
+        "default": "ami-d2033bba"
+      },
+      "us-west-1": {
+        "default": "ami-43f91b07"
+      },
+      "us-west-2": {
+        "default": "ami-bb69128b"
+      }
     }
   },
 
@@ -73,6 +103,18 @@
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
+        ]
+      }
+    },
+
+    "PrivateSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "Vpc" },
+        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Private", "CIDR" ]},
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
+          { "Key" : "Network", "Value" : "Private" }
         ]
       }
     },
@@ -166,6 +208,54 @@
       "Properties" : {
         "SubnetId" : { "Ref" : "PublicSubnet" },
         "NetworkAclId" : { "Ref" : "PublicNetworkAcl" }
+      }
+    },
+
+    "PrivateRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "Vpc" },
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
+          { "Key" : "Network", "Value" : "Public" }
+        ]
+      }
+    },
+
+    "PrivateRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "PrivateRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "NATInstance" }
+      }
+    },
+
+    "PrivateSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "PrivateSubnet" },
+        "RouteTableId" : { "Ref" : "PrivateRouteTable" }
+      }
+    },
+
+    "NATInstance" : {
+      "Type" : "AWS::EC2::Instance",
+      "DependsOn" : "GatewayToInternet",
+      "Properties" : {
+        "SourceDestCheck" : "false",
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Fn::FindInMap" : [ "NATAmi", { "Ref" : "AWS::Region" }, "default" ] },
+        "InstanceType" : "m3.medium",
+        "NetworkInterfaces" : [ 
+          {
+            "SubnetId" : { "Ref" : "PublicSubnet" },
+            "AssociatePublicIpAddress" : "true",
+            "DeviceIndex" : "0",
+            "GroupSet" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+            "DeleteOnTermination" : "true"
+          }
+        ]
       }
     },
 
@@ -453,12 +543,12 @@
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
-        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PrivateSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
         "MinSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
         "MaxSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
         "DesiredCapacity" : {{ start_param }}SlaveInstanceCount{{ end_param }},
-        "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
+        "VPCZoneIdentifier" : [{ "Ref" : "PrivateSubnet" }],
         "Tags" : [
           {
             "Key" : "role",
@@ -482,10 +572,50 @@
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
-        "AssociatePublicIpAddress" : "true",
+        "AssociatePublicIpAddress" : "false",
         "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ slave_cloud_config }}
+        ]]}}
+      }
+    },
+
+    "PublicSlaveServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
+        "LaunchConfigurationName" : { "Ref" : "PublicSlaveLaunchConfig" },
+        "MinSize" : {{ start_param }}PublicSlaveInstanceCount{{ end_param }},
+        "MaxSize" : {{ start_param }}PublicSlaveInstanceCount{{ end_param }},
+        "DesiredCapacity" : {{ start_param }}PublicSlaveInstanceCount{{ end_param }},
+        "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
+        "Tags" : [
+          {
+            "Key" : "role",
+            "Value" : "mesos-slave",
+            "PropagateAtLaunch" : "true"
+          }
+        ]
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
+          "Count" : {{ start_param }}PublicSlaveInstanceCount{{ end_param }}
+        }
+      }
+    },
+
+    "PublicSlaveLaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
+        "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
+        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "AssociatePublicIpAddress" : "true",
+        "InstanceType" : {{ start_param }}PublicSlaveInstanceType{{ end_param }},
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          {{ public_slave_cloud_config }}
         ]]}}
       }
     },

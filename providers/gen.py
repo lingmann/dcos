@@ -89,6 +89,7 @@ def gen_aws(name, bootstrap_url):
             simple,
             render_cloudconfig(get_params(['master'])),
             render_cloudconfig(get_params(['slave'])),
+            render_cloudconfig(get_params(['public_slave'])),
             bootstrap_url,
             testcluster
             )

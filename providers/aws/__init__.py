@@ -43,7 +43,7 @@ def render_parameter(simple, name):
     return start_param_full + name + end_param_full
 
 
-def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstrap_url, testcluster):
+def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_slave_cloudconfig, bootstrap_url, testcluster):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -53,6 +53,7 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstr
     template_str = cloudformation_template.render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
+        'public_slave_cloud_config': transform_lines(public_slave_cloudconfig),
         'start_param': start_param_simple if simple else start_param_full,
         'end_param': end_param_simple if simple else end_param_full
     })
@@ -195,6 +196,12 @@ class Parameters(CloudConfigParameters):
 
     @property
     def late_units_base(self):
+        if 'master' in self.roles:
+            report_name = 'MasterServerGroup'
+        elif 'slave' in self.roles:
+            report_name = 'SlaveServerGroup'
+        else:
+            report_name = 'PublicSlaveServerGroup'
         return """    - name: cfn-signal.service
       command: start
       content: |
@@ -216,7 +223,7 @@ class Parameters(CloudConfigParameters):
           --stack {{ "Ref": "AWS::StackName" }} \\
           --region {{ "Ref" : "AWS::Region" }}
         ExecStart=/usr/bin/touch /var/lib/cfn-signal
-""".format(report_name='MasterServerGroup' if 'master' in self.roles else 'SlaveServerGroup')
+""".format(report_name=report_name)
 
     def GetParameter(self, name):
         if name == 'stack_name':

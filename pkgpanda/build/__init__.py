@@ -112,7 +112,7 @@ def checkout_sources(sources):
         elif info['kind'] == 'url_extract':
             # Extract the files into src.
             cache_filename = get_filename(os.path.abspath("cache"), info['url'])
-            check_call(["tar", "-xzf", cache_filename, "--strip-components=1", "-C", root])
+            check_call(["tar", "-xf", cache_filename, "--strip-components=1", "-C", root])
         else:
             raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
 

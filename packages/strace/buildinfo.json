@@ -1,0 +1,7 @@
+{
+  "docker": "dcos-builder",
+  "single_source": {
+    "kind": "url_extract",
+    "url": "http://downloads.sourceforge.net/strace/strace-4.10.tar.xz"
+  }
+}

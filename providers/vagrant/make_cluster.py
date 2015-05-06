@@ -2,13 +2,16 @@
 """Make a vagrant DCOS cluster
 
 Usage:
-  make_cluster <name>
+  make_cluster [ --copy ] <name>
+
+Options:
+  --copy    Copy files instead of symlinking
 
 """
 
 import jinja2
 import os
-from shutil import copyfile
+import shutil
 from docopt import docopt
 from subprocess import check_call
 
@@ -29,8 +32,11 @@ if __name__ == '__main__':
     check_call(['mkdir', cluster_name])
 
     # Copy files in
-    copyfile('{}/Vagrantfile'.format(os.getcwd()), '{}/Vagrantfile'.format(cluster_name))
-    copyfile('{}/config.rb'.format(os.getcwd()), '{}/config.rb'.format(cluster_name))
+    copy = os.symlink
+    if arguments['--copy']:
+        copy = shutil.copyfile
+    copy('{}/Vagrantfile'.format(os.getcwd()), '{}/Vagrantfile'.format(cluster_name))
+    copy('{}/config.rb'.format(os.getcwd()), '{}/config.rb'.format(cluster_name))
 
     with open('{}/user-data'.format(cluster_name), 'w') as f:
         f.write(userdata)

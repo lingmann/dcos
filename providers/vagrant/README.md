@@ -18,7 +18,7 @@ cd providers/vagrant
 ```
 
 ## Running it
-`cd dcos-testgit pu && vagrant up`
+`cd dcos-test && vagrant up`
 
 The ui when it eventually comes up (Takes a while), will be at http://localhost:5080
 

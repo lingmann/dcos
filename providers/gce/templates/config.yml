@@ -2,28 +2,31 @@
 #
 # Created M. Massenzio, 2015-04-27
 
-imports: ["vm_master.jinja", "vm_slave.jinja", "network.jinja"]
+imports: ["vm_master.jinja", "vm_slave.jinja", "network.jinja", "cloud-config.yaml"]
 
 resources:
 - name: master-cluster
   type: vm_master.jinja
   properties:
     base_name: test
-    masters: 3
+    masters: 1
+    master_quorum: 1
     disk_size: 10G
     zone: us-central1-a
     machine: f1-micro
+    bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
     ssh_key: test_ssh_key
 
 - name: slaves-cluster
   type: vm_slave.jinja
   properties:
     base_name: test
-    nodes: 3
+    nodes: 1
     machine: f1-micro
     disk_size: 15G
     zone: us-central1-a
     ssh_key: test_ssh_key
+    bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
 
 - name: subnet
   type: network.jinja
@@ -31,4 +34,4 @@ resources:
     base_name: test
     zone: us-central1-a
     network_pool: 10.10.0.0/16
-    admin_range: 10.1.0.0/16
+    admin_range: 0.0.0.0/0

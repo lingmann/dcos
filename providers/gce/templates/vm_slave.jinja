@@ -29,7 +29,8 @@ resources:
             - key: sshKeys
               value: {{properties["ssh_key"]}}
             - key: user-data
-              value: |  {{cc.GenerateCloudConfig( bootstrap_url, "slave", "",  base_name ) }}
+              value: |
+                {{cc.GenerateCloudConfig( bootstrap_url, "slave", "",  base_name ) }}
     - name: {{base_slave_name}}
       type: replicapool.v1beta2.instanceGroupManager
       properties:

@@ -2,8 +2,15 @@
 
 Getting the vagrant DCOS, making a vagrant box named dcos-test
 
+
+Requirements: Python 3
+ - OSX get with `brew install python`
+
+
+Python requirements: `jinja`, `docopt`
+
+Installing with pip:
 ```
-brew install python
 pip3 install jinja2
 pip3 install docopt
 cd providers/vagrant
@@ -11,7 +18,7 @@ cd providers/vagrant
 ```
 
 ## Running it
-`cd dcos-test && vagrant up`
+`cd dcos-testgit pu && vagrant up`
 
 The ui when it eventually comes up (Takes a while), will be at http://localhost:5080
 

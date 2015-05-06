@@ -27,6 +27,9 @@ if __name__ == '__main__':
 
     # Get aws access, secret key
     def get_aws_param(name):
+        param = os.getenv(name.upper())
+        if param:
+            return param
         return check_output(['aws', 'configure', 'get', name]).decode('utf-8').strip()
 
     aws_secret_key_id = get_aws_param('aws_access_key_id')

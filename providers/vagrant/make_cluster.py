@@ -8,10 +8,9 @@ Usage:
 
 import jinja2
 import os
-import uuid
 from shutil import copyfile
 from docopt import docopt
-from subprocess import check_call, check_output
+from subprocess import check_call
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.getcwd()),
@@ -22,25 +21,8 @@ if __name__ == '__main__':
     arguments = docopt(__doc__)
     cluster_name = arguments['<name>']
 
-    # Generate a pseudo-random s3 bucket name
-    aws_s3_prefix = '/dcos-vagrant/{}/{}'.format(cluster_name, uuid.uuid1())
-
-    # Get aws access, secret key
-    def get_aws_param(name):
-        param = os.getenv(name.upper())
-        if param:
-            return param
-        return check_output(['aws', 'configure', 'get', name]).decode('utf-8').strip()
-
-    aws_secret_key_id = get_aws_param('aws_access_key_id')
-    aws_secret_access_key = get_aws_param('aws_secret_access_key')
-    # Prompt for AWS access, secret key
-
     userdata = userdata_template.render({
         'cluster_name': cluster_name,
-        'aws_s3_prefix': aws_s3_prefix,
-        'aws_secret_key_id': aws_secret_key_id,
-        'aws_secret_access_key': aws_secret_access_key
         })
 
     # Make folder for the cluster-specific files

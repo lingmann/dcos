@@ -52,11 +52,7 @@ write_files:
       MARATHON_HOSTNAME=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
-      AWS_S3_PREFIX={{ aws_s3_prefix }}
-      AWS_S3_BUCKET=apollo-exhibitor
-      AWS_REGION=us-east-1
-      AWS_ACCESS_KEY_ID={{ aws_secret_key_id }}
-      AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
+      EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4
 

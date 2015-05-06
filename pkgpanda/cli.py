@@ -77,6 +77,9 @@ def do_bootstrap(install, repository):
     # If there is 1+ master, grab the active config from a master. If the
     # config can't be grabbed from any of them, fail.
     def fetcher(id, target):
+        if repository_url is None:
+            print("ERROR: Non-local package {} but no repository url given.".format(repository_url))
+            sys.exit(1)
         return urllib_fetcher(repository_url, id, target)
 
     # Copy host/cluster-specific packages from setup-packages folder into
@@ -106,13 +109,17 @@ def do_bootstrap(install, repository):
         repository.add(copy_fetcher, pkg_id_str)
         setup_packages_to_activate.append(pkg_id_str)
 
+    # If active.json is set on the host, use that as the set of packages to
+    # activate. Otherwise use one from the bootstrap url.
     to_activate = None
-    if repository_url:
-        print("Fetching active.json from repository {}".format(repository_url))
-        # TODO(cmaloney): Support sending some basic info to the machine generating
-        # the active list of packages.
-        active_url = repository_url + "/config/active.json"
+    active_path = install.get_config_filename("setup-flags/active.json")
+    if os.path.exists(active_path):
+        print("active.json loaded from filesystem")
+        to_activate = load_json(active_path)
+    elif repository_url:
+        print("active.json loaded from repository {}".format(repository_url))
         try:
+            active_url = repository_url + "/config/active.json"
             req = urlopen(active_url)
             to_activate = json.loads(req.read().decode('utf-8'))
         except HTTPError as ex:
@@ -122,18 +129,17 @@ def do_bootstrap(install, repository):
         except ValueError as ex:
             print("Unable to decode as JSON: {0}".format(active_url))
             sys.exit(1)
-
-        # Ensure all packages are local
-        print("Ensuring all packages in active set {} are local".format(",".join(to_activate)))
-        for package in to_activate:
-            repository.add(fetcher, package)
     else:
-        # Grab to_activate from the local active.json
-        print("Loading active.json from setup-flags")
-        to_activate = load_json(install.get_config_filename("setup-flags/active.json"))
+        print("ERROR: No active.json available to load. Either one needs to " +
+              "be set in setup-flags/active.json or set " +
+              "setup-flags/bootstrap-url and active.json will be fetched from" +
+              " the given url.")
+        sys.exit(1)
 
-    # Should be set by loading out of fs or from the local config server.
-    assert to_activate is not None
+    # Ensure all packages are local
+    print("Ensuring all packages in active set {} are local".format(",".join(to_activate)))
+    for package in to_activate:
+        repository.add(fetcher, package)
 
     to_activate = list(set(to_activate + setup_packages_to_activate))
 

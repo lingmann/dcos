@@ -9,11 +9,13 @@ Usage:
 import jinja2
 import os
 import uuid
+from shutil import copyfile
 from docopt import docopt
 from subprocess import check_call, check_output
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
-env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.getcwd()), undefined=jinja2.StrictUndefined)
+env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.getcwd()),
+                         undefined=jinja2.StrictUndefined)
 userdata_template = env.get_template('user-data.jinja')
 
 if __name__ == '__main__':
@@ -42,12 +44,12 @@ if __name__ == '__main__':
     check_call(['mkdir', cluster_name])
 
     # Copy files in
-    check_call(['ln', '-s', '{}/Vagrantfile'.format(os.getcwd()), '{}/Vagrantfile'.format(cluster_name)])
-    check_call(['ln', '-s', '{}/config.rb'.format(os.getcwd()), '{}/config.rb'.format(cluster_name)])
+    copyfile('{}/Vagrantfile'.format(os.getcwd()), '{}/Vagrantfile'.format(cluster_name))
+    copyfile('{}/config.rb'.format(os.getcwd()), '{}/config.rb'.format(cluster_name))
 
     with open('{}/user-data'.format(cluster_name), 'w') as f:
         f.write(userdata)
 
     print("Vagrant cluster ready to launch.")
     print("Launch with:")
-    print("$cd {}; vagrant up".format(cluster_name))
+    print("$ cd {}; vagrant up".format(cluster_name))

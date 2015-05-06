@@ -2,11 +2,10 @@
 """Make a vagrant DCOS cluster
 
 Usage:
-  make_cluster [ --copy ] <name>
+  make_cluster [ --copy ] <release_name> <name>
 
 Options:
   --copy    Copy files instead of symlinking
-
 """
 
 import jinja2
@@ -22,10 +21,12 @@ userdata_template = env.get_template('user-data.jinja')
 
 if __name__ == '__main__':
     arguments = docopt(__doc__)
-    cluster_name = arguments['<name>']
+    cluster_name = arguments['<cluster_name>']
+    release_name = arguments['<release_name>']
 
     userdata = userdata_template.render({
         'cluster_name': cluster_name,
+        'release_name': release_name
         })
 
     # Make folder for the cluster-specific files

@@ -112,5 +112,4 @@
                           [Install]
                           WantedBy=multi-user.target
                   {{ late_units }}
-
 {%- endmacro %}

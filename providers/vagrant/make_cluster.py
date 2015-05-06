@@ -39,7 +39,7 @@ if __name__ == '__main__':
         })
 
     # Make folder for the cluster-specific files
-    check_call(['mkdir', '-p', cluster_name])
+    check_call(['mkdir', cluster_name])
 
     # Copy files in
     check_call(['ln', '-s', '{}/Vagrantfile'.format(os.getcwd()), '{}/Vagrantfile'.format(cluster_name)])

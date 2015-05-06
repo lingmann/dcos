@@ -30,7 +30,7 @@ write_files:
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=1
-      MESOS_CLUSTER=__REPLACE_ME__
+      MESOS_CLUSTER={{ cluster_name }}
       MESOS_HOSTNAME=$private_ipv4
       MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave
@@ -52,11 +52,11 @@ write_files:
       MARATHON_HOSTNAME=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
-      AWS_S3_PREFIX=__REPLACE_ME__
+      AWS_S3_PREFIX={{ aws_s3_prefix }}
       AWS_S3_BUCKET=apollo-exhibitor
       AWS_REGION=us-east-1
-      AWS_ACCESS_KEY_ID=__REPLACE_ME__
-      AWS_SECRET_ACCESS_KEY=__REPLACE_ME__
+      AWS_ACCESS_KEY_ID={{ aws_secret_key_id }}
+      AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4
 

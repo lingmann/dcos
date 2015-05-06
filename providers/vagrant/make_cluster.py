@@ -2,7 +2,7 @@
 """Make a vagrant DCOS cluster
 
 Usage:
-  make_cluster [ --copy ] <release_name> <name>
+  make_cluster [ --copy ] <release_name> <cluster_name>
 
 Options:
   --copy    Copy files instead of symlinking

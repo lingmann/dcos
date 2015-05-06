@@ -420,7 +420,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
     if 'docker' in buildinfo:
-        print("WARNING: Specifying docker explicitly shold be avoided.")
+        print("WARNING: Specifying docker explicitly should be avoided.")
         print("This option will be removed once enough of the dependencies " +
               "are in pkgpanda form that everything can just use pkgpanda " +
               "dependencies.")

@@ -70,6 +70,23 @@ ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
 
+systemd_slave_public="$PKG_PATH"/dcos.target.wants_slave_public/mesos-slave-public.service
+mkdir -p "$(dirname "$systemd_slave_public")"
+cat <<EOF > "$systemd_slave_public"
+[Unit]
+Description=Mesos Slave Public
+[Service]
+Restart=always
+StartLimitInterval=0
+RestartSec=5
+KillMode=process
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
+ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStart=$PKG_PATH/sbin/mesos-slave
+EOF
+
 exhibitor_wait="$PKG_PATH/bin/exhibitor_wait.py"
 cat <<'EOF' > "$exhibitor_wait"
 #!/opt/mesosphere/bin/python

@@ -40,6 +40,18 @@ write_files:
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
+  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave-public
+    content: |
+      MESOS_MASTER=zk://leader.mesos:2181/mesos
+      MESOS_CONTAINERIZERS=docker,mesos
+      MESOS_LOG_DIR=/var/log/mesos
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
+      MESOS_ISOLATION=cgroups/cpu,cgroups/mem
+      MESOS_WORK_DIR=/var/lib/mesos/slave
+      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
+      MESOS_SLAVE_SUBSYSTEMS=cpu,memory
+      MESOS_DEFAULT_ROLE=slave_public
+      MESOS_ATTRIBUTES=slave_public
 {{ extra_files }}
 coreos:
   update:

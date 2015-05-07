@@ -192,9 +192,8 @@ def fetch_sources(sources):
                     print("WARNING: Current ref doesn't match the ref origin. "
                           "Package ref should probably be updated to pick up "
                           "new changes to the code:" +
-                          " Current: {}, Origin: {}".format(
-                                commit,
-                                origin_commit))
+                          " Current: {}, Origin: {}".format(commit,
+                                                            origin_commit))
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()

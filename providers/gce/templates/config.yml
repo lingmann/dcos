@@ -13,7 +13,7 @@ resources:
     master_quorum: 1
     disk_size: 10G
     zone: us-central1-a
-    machine: f1-micro
+    machine: n1-standard-1
     bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
     ssh_key: test_ssh_key
 
@@ -22,7 +22,7 @@ resources:
   properties:
     base_name: test
     nodes: 1
-    machine: f1-micro
+    machine: n1-standard-1
     disk_size: 15G
     zone: us-central1-a
     ssh_key: test_ssh_key

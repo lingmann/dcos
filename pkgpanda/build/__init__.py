@@ -170,12 +170,27 @@ def fetch_sources(sources):
                 ref = info['branch']
                 print("WARNING: Use of 'branch' field is deprecated. Please replace with 'ref'.")
 
-            commit = check_output([
-                "git",
-                "--git-dir",
-                bare_folder,
-                "rev-parse",
-                ref]).decode('ascii').strip()
+            def get_sha1(git_ref):
+                return check_output([
+                    "git",
+                    "--git-dir",
+                    bare_folder,
+                    "rev-parse",
+                    git_ref]).decode('ascii').strip()
+
+            commit = get_sha1(ref)
+
+            # Warn if the ref_origin is set and gives a different sha1 than the
+            # current ref.
+            if 'ref_origin' in info:
+                origin_commit = get_sha1(info['ref_origin'])
+                if origin_commit != commit:
+                    print("WARNING: Current ref doesn't match the ref origin. "
+                          "Package ref should probably be updated to pick up "
+                          "new changes to the code:" +
+                          " Current: {}, Origin: {}".format(
+                                commit,
+                                origin_commit))
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()

@@ -415,6 +415,7 @@
           { "IpProtocol" : "tcp", "FromPort" : "5050", "ToPort" : "5050", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "80", "ToPort" : "80", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "8080", "ToPort" : "8080", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
+          { "IpProtocol" : "tcp", "FromPort" : "8081", "ToPort" : "8081", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "8181", "ToPort" : "8181", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} },
           { "IpProtocol" : "tcp", "FromPort" : "2181", "ToPort" : "2181", "SourceSecurityGroupId" : { "Ref" : "LbSecurityGroup"} }
         ]
@@ -479,6 +480,12 @@
             "Protocol" : "HTTP",
             "InstancePort" : "8080",
             "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "8081",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8081",
+            "InstanceProtocol" : "HTTP"
           }],
         "HealthCheck" : {
           "Target" : "HTTP:5050/health",
@@ -529,6 +536,12 @@
             "LoadBalancerPort" : "8080",
             "Protocol" : "HTTP",
             "InstancePort" : "8080",
+            "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "8081",
+            "Protocol" : "HTTP",
+            "InstancePort" : "8081",
             "InstanceProtocol" : "HTTP"
           }],
         "HealthCheck" : {

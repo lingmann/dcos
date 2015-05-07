@@ -5,7 +5,8 @@
     "artemis": {
       "kind": "git",
       "git": "git@github.com:mesosphere/artemis.git",
-      "ref": "dcos"
+      "ref": "95b762ec2e5455a4a76a95a6d47a0f151cfca7f1",
+      "ref_origin": "dcos"
     }
   }
 }

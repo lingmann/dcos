@@ -541,6 +541,11 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
     if exists(pkg_path):
         print("Package up to date. Not re-building.")
+
+        # TODO(cmaloney): Updating / filling last_build should be moved out of
+        # the build function.
+        write_string("cache/last_build", str(pkg_id))
+
         return pkg_path
 
     # 'mkpanda add' all implicit dependencies since we actually need to build.
@@ -627,8 +632,6 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     print("Building package tarball")
 
-    # TODO(cmaloney)  build info should be copied in here but can't really
-    # because of docker and crazy folder root permissions...
     write_string("cache/last_build", str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package

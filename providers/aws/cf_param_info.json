@@ -35,12 +35,12 @@
     "Default" : "1"
   },
   "SlaveInstanceCount" : {
-    "Description" : "Number of master nodes to launch",
+    "Description" : "Number of slave nodes to launch",
     "Type" : "Number",
     "Default" : "5"
   },
   "PublicSlaveInstanceCount" : {
-    "Description" : "Number of master nodes to launch",
+    "Description" : "Number of public slave nodes to launch",
     "Type" : "Number",
     "Default" : "5"
   },

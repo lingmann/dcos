@@ -23,7 +23,7 @@ def ping():
 
 @app.route('/history/last')
 def last():
-    return _response_(state_buffer.latest)
+    return _response_(state_buffer.last)
 
 
 @app.route('/history/minute')
@@ -42,7 +42,16 @@ def _buffer_response_(name):
 
 
 def _response_(content):
-    headers = {"Access-Control-Allow-Origin": "*"}
+    headers = {
+        "Access-Control-Allow-Credentials": "true",
+        "Access-Control-Allow-Headers": "accept, accept-charset, accept-encoding, " +
+                                        "accept-language, authorization, content-length, " +
+                                        "content-type, host, origin, proxy-connection, " +
+                                        "referer, user-agent, x-requested-with",
+        "Access-Control-Allow-Methods": "HEAD, GET, PUT, POST, PATCH, DELETE",
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Max-Age": "86400"
+    }
     return Response(response=content, content_type="application/json", headers=headers)
 
 

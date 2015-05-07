@@ -30,6 +30,7 @@ write_files:
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM={{ master_quorum }}
       MESOS_CLUSTER={{ stack_name }}
+      MESOS_ROLES=public
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos

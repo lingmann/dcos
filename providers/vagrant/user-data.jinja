@@ -31,6 +31,7 @@ write_files:
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=1
       MESOS_CLUSTER={{ cluster_name }}
+      MESOS_ROLES=public
       MESOS_HOSTNAME=$private_ipv4
       MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave

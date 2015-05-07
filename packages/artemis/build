@@ -6,7 +6,7 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 
 mkdir -p "$LIB_INSTALL_DIR"
 
-# Build the history service
+# Build the artemis service
 pushd /pkg/src/artemis
 python3 setup.py install --root=/ --prefix=$PKG_PATH
 
@@ -22,5 +22,6 @@ Restart=on-failure
 StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
 ExecStart=/opt/mesosphere/bin/artemis
 EOF

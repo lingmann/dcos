@@ -13,7 +13,10 @@ state_buffer = None
 
 @app.route('/')
 def home():
-    return redirect(url_for('hour'))
+    return _response_("history/last - to get the last fetched state\n"+
+                      "history/minute - to get the state array of the last minute\n"+
+                      "history/hour - to get the state array of the last hour\n"+
+                      "ping - to get a pong\n" )
 
 
 @app.route('/ping')

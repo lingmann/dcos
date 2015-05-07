@@ -5,7 +5,8 @@
     "dcos-history-service": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-history-service.git",
-      "branch": "master"
+      "ref": "5364a9bca4f8e624542ad796b9986a4bab002cb4",
+      "ref_origin": "master"
     }
   }
 }

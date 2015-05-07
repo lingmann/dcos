@@ -72,4 +72,4 @@ $vm_cpus = 4
 #$shared_folders = {'./configdrive' => '/media/configdrive'}
 
 # Enable port forwarding from guest(s) to host machine, syntax is: { 80 => 8080 }, auto correction is enabled by default.
-#$forwarded_ports = {}
+$forwarded_ports = { 80 => 5080, 443 => 5443, 8181 => 58181 }

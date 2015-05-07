@@ -6,7 +6,7 @@ write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root
-    content: 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess'
+    content: 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ release_name }}'
   - path: /etc/mesosphere/roles/master
   - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
@@ -53,11 +53,7 @@ write_files:
       MARATHON_HOSTNAME=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
-      AWS_S3_PREFIX={{ aws_s3_prefix }}
-      AWS_S3_BUCKET=apollo-exhibitor
-      AWS_REGION=us-east-1
-      AWS_ACCESS_KEY_ID={{ aws_secret_key_id }}
-      AWS_SECRET_ACCESS_KEY={{ aws_secret_access_key }}
+      EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4
 
@@ -100,7 +96,7 @@ coreos:
         ConditionPathExists=!/opt/mesosphere/
         [Service]
         Type=oneshot
-        ExecStartPre=/usr/bin/curl --retry 100 https://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess/bootstrap.tar.xz -o /tmp/bootstrap.tar.xz
+        ExecStartPre=/usr/bin/bash -c 'until wget --progress=dot -e dotbytes=10M --continue http://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ release_name }}/bootstrap.tar.xz -O /tmp/bootstrap.tar.xz; do echo "failed to download"; sleep 5; done'
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

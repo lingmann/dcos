@@ -5,7 +5,8 @@
     "boto": {
       "kind": "git",
       "git": "https://github.com/boto/boto",
-      "branch": "develop"
+      "ref": "6983c008fe7b9fa840bae23cdbfa06ad7fb8cd3e",
+      "ref_origin": "develop"
     },
     "rsa": {
       "kind": "url_extract",

@@ -97,7 +97,15 @@ def checkout_sources(sources):
             # Checkout from the bare repo in the cache folder the specific branch
             # sha1 or tag requested.
             # info["branch"] can be a branch, tag, or commit sha
-            check_call(["git", "--git-dir", root + "/.git", "--work-tree", root, "checkout", "-f", "-q", info["branch"]])
+            check_call([
+                "git",
+                "--git-dir",
+                root + "/.git",
+                "--work-tree",
+                root, "checkout",
+                "-f",
+                "-q",
+                info["branch"]])
 
             # TODO(cmaloney): Support patching.
             for patcher in info.get('patches', []):
@@ -136,10 +144,29 @@ def fetch_sources(sources):
             if not os.path.exists(bare_folder):
                 check_call(["git", "clone", "--bare", "--progress", info['git'], bare_folder])
             else:
-                check_call(["git", "--git-dir", bare_folder, "remote", "set-url", "origin", info['git']])
-                check_call(["git", "--git-dir", bare_folder, "fetch", "origin", "-t", "+refs/heads/*:refs/heads/*"])
+                check_call([
+                    "git",
+                    "--git-dir",
+                    bare_folder,
+                    "remote",
+                    "set-url",
+                    "origin",
+                    info['git']])
+                check_call([
+                    "git",
+                    "--git-dir",
+                    bare_folder,
+                    "fetch",
+                    "origin",
+                    "-t",
+                    "+refs/heads/*:refs/heads/*"])
 
-            commit = check_output(["git", "--git-dir", bare_folder, "rev-parse", info["branch"]]).decode('ascii').strip()
+            commit = check_output([
+                "git",
+                "--git-dir",
+                bare_folder,
+                "rev-parse",
+                info["branch"]]).decode('ascii').strip()
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()

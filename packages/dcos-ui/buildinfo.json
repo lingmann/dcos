@@ -4,7 +4,7 @@
     "dcos-ui": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-ui.git",
-      "branch" : "feature/DCOS-540-production-deploy"
+      "ref" : "feature/DCOS-540-production-deploy"
       }
   }
 }

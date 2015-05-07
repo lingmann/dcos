@@ -3,6 +3,6 @@
   "single_source": {
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-buildenv.git",
-    "branch": "master"
+    "ref": "master"
   }
 }

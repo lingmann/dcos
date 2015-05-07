@@ -5,7 +5,7 @@
     "exhibitor": {
       "kind": "git",
       "git": "https://github.com/mesosphere/exhibitor.git",
-      "branch": "azure_support"
+      "ref": "azure_support"
     },
     "zookeeper": {
       "kind": "url_extract",

@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "https://github.com/mesosphere/mesos",
-    "branch" : "summary-endpoint"
+    "ref" : "summary-endpoint"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

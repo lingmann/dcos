@@ -183,7 +183,11 @@ def fetch_sources(sources):
             # Warn if the ref_origin is set and gives a different sha1 than the
             # current ref.
             if 'ref_origin' in info:
-                origin_commit = get_sha1(info['ref_origin'])
+                origin_commit = None
+                try:
+                    origin_commit = get_sha1(info['ref_origin'])
+                except Exception as ex:
+                    print("WARNING: Unable to find sha1 of ref_origin:", ex)
                 if origin_commit != commit:
                     print("WARNING: Current ref doesn't match the ref origin. "
                           "Package ref should probably be updated to pick up "

@@ -97,6 +97,10 @@ def checkout_sources(sources):
             # Checkout from the bare repo in the cache folder the specific branch
             # sha1 or tag requested.
             # info["branch"] can be a branch, tag, or commit sha
+            ref = info.get('ref', None)
+            if ref is None:
+                ref = info['branch']
+
             check_call([
                 "git",
                 "--git-dir",
@@ -105,7 +109,7 @@ def checkout_sources(sources):
                 root, "checkout",
                 "-f",
                 "-q",
-                info["branch"]])
+                ref])
 
             # TODO(cmaloney): Support patching.
             for patcher in info.get('patches', []):
@@ -161,12 +165,17 @@ def fetch_sources(sources):
                     "-t",
                     "+refs/heads/*:refs/heads/*"])
 
+            ref = info.get('ref', None)
+            if ref is None:
+                ref = info['branch']
+                print("WARNING: Use of 'branch' field is deprecated. Please replace with 'ref'.")
+
             commit = check_output([
                 "git",
                 "--git-dir",
                 bare_folder,
                 "rev-parse",
-                info["branch"]]).decode('ascii').strip()
+                ref]).decode('ascii').strip()
 
             for patcher in info.get('patches', []):
                 raise NotImplementedError()

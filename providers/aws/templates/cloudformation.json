@@ -571,7 +571,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
-        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "false",
         "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
@@ -611,7 +611,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
-        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : {{ start_param }}PublicSlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [

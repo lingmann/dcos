@@ -52,31 +52,31 @@
     },
     "NATAmi" : {
       "ap-northeast-1": {
-        "default": "ami-9cb9439c"
+          "default": "ami-55c29e54"
       },
       "ap-southeast-1": {
-        "default": "ami-a0cefcf2"
+          "default": "ami-b082dae2"
       },
       "ap-southeast-2": {
-        "default": "ami-cb3845f1"
+          "default": "ami-996402a3"
       },
       "eu-central-1": {
-        "default": "ami-92003c8f"
+          "default": "ami-204c7a3d"
       },
       "eu-west-1": {
-        "default": "ami-21422356"
+          "default": "ami-3760b040"
       },
       "sa-east-1": {
-        "default": "ami-99e66384"
+          "default": "ami-b972dba4"
       },
       "us-east-1": {
-        "default": "ami-d2033bba"
+          "default": "ami-4c9e4b24"
       },
       "us-west-1": {
-        "default": "ami-43f91b07"
+          "default": "ami-2b2b296e"
       },
       "us-west-2": {
-        "default": "ami-bb69128b"
+          "default": "ami-bb69128b"
       }
     }
   },

@@ -34,4 +34,5 @@ resources:
             ports: [1-65535]
           - IPProtocol: ICMP
         sourceRanges: [ {{network_pool}} ]
+        sourceRanges: [ 10.255.0.0/16 ]
         network: $(ref.{{name}}.selfLink)

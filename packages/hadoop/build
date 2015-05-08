@@ -5,8 +5,9 @@ mkdir -p $PKG_PATH/usr
 rm -rf /pkg/src/hadoop/share/doc
 cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
 
-#remove HDFS site so hdfs FW can use its own
+#remove HDFS and CORE site so hdfs FW can use its own
 rm $PKG_PATH/usr/etc/hadoop/hdfs-site.xml
+rm $PKG_PATH/usr/etc/hadoop/core-site.xml
 
 mkdir -p $PKG_PATH/etc/hadoop
 ln -s $PKG_PATH/usr/etc/hadoop/* $PKG_PATH/etc/hadoop/

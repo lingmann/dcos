@@ -19,7 +19,7 @@ pip3 install docopt
 
 ## Vagrant Provider
 
-`./gen.py testing/continuous cody --copy`
+`./gen.py vagrant testing/continuous cody --copy`
 
 Will create a new single-node DCOS cluster named 'cody' based on the
 `testing/continuous` release which is continually updated by teamcity based on 

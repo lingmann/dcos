@@ -235,3 +235,5 @@ class Parameters(CloudConfigParameters):
         # Should only ever be called once.
         assert not self._testcluster_volume
         self._testcluster_volume = True
+
+    resolvers = ["10.0.0.2"]

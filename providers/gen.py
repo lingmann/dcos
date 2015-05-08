@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
 """Generate provider-specific templates, data.
 Usage:
-gen.py [aws|testcluster] <base_url> <name>
-
+gen.py [aws|testcluster] <base_url> <release_name>
+gen.py vagrant <release_name> <cluster_name> [--copy]
 """
 import json
+import sys
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from pkgpanda.util import write_json, write_string
 from string import Template
 
 import aws
+import vagrant
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = Environment(loader=FileSystemLoader('templates'), undefined=StrictUndefined)
@@ -18,6 +20,7 @@ cc_template = env.get_template('cloud-config.yaml')
 
 
 def render_cloudconfig(paramters):
+    assert type(paramters.resolvers) == list
     return cc_template.render({
         'bootstrap_url': paramters.GetParameter('bootstrap_url'),
         'roles': paramters.roles,
@@ -26,6 +29,7 @@ def render_cloudconfig(paramters):
         'stack_name': paramters.GetParameter('stack_name'),
         'early_units': paramters.early_units,
         'config_writer': paramters.config_writer,
+        'resolvers': json.dumps(paramters.resolvers),
         'late_units': paramters.late_units
         })
 
@@ -115,27 +119,28 @@ def gen_aws(name, bootstrap_url):
 def main():
     arguments = docopt(__doc__)
 
-    do_gen_aws = False
+    release_name = arguments['<release_name>']
+
+    # Name shouldn't start or end with '/'
+    assert release_name[0] != '/'
+    assert release_name[-1] != '/'
+
+    if arguments['vagrant']:
+        vagrant.gen(
+            arguments['<release_name>'],
+            arguments['<cluster_name>'],
+            render_cloudconfig,
+            arguments['--copy'])
+        sys.exit(0)
+
     base_url = arguments['<base_url>']
-    name = arguments['<name>']
 
     # TODO(cmaloney): Make more human error messages
     # base_url must end in '/'
     assert base_url[-1] == '/'
 
-    # Name shouldn't start or end with '/'
-    assert name[0] != '/'
-    assert name[-1] != '/'
-
-    bootstrap_url = base_url + name
-
-    if arguments['aws']:
-        do_gen_aws = True
-    else:
-        do_gen_aws = True
-
-    if do_gen_aws:
-        gen_aws(name, bootstrap_url)
+    bootstrap_url = base_url + release_name
+    gen_aws(release_name, bootstrap_url)
 
 if __name__ == '__main__':
     main()

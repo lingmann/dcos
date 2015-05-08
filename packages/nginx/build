@@ -21,7 +21,8 @@ pushd "/pkg/src/nginx"
   --without-mail_pop3_module \
   --without-mail_imap_module \
   --without-mail_smtp_module \
-  --with-http_ssl_module
+  --with-http_ssl_module \
+  --with-luajit
 
 make -j8
 make install
@@ -33,7 +34,7 @@ mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
 
 # Write the config
-rm -rf "$PKG_PATH/conf/nginx.conf"
+rm -rf "$PKG_PATH/nginx/conf/nginx.conf"
 
 # THIS IS NOT A SECURE CERTIFICATE !!!!
 # To be replaced by proper cert generation for each cluster
@@ -95,7 +96,9 @@ XcfRkU5vMMC1/Ia+Uu7LdEG2NYya4sf0MMWuaD9En3NweDg3Qti0IYI=
 EOF
 
 # TODO(cmaloney): Make config outside of nginx package?
-cat <<EOF > "$PKG_PATH/conf/nginx.conf"
+nginx_config="$PKG_PATH/nginx/conf/nginx.conf"
+mkdir -p $(dirname "$nginx_config")
+cat <<EOF > "$nginx_config"
 error_log stderr;
 
 events {
@@ -188,7 +191,7 @@ PIDFile=$PKG_PATH/logs/nginx.pid
 PrivateDevices=yes
 SyslogLevel=err
 ExecPreStart=chmod 600 "${ssl_path}/snakeoil.key"
-ExecStart=$PKG_PATH/sbin/nginx
+ExecStart=$PKG_PATH/nginx/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT
 KillMode=mixed
@@ -204,7 +207,7 @@ Description=Reload nginx
 Type=oneshot
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=$PKG_PATH/sbin/nginx -s reload
+ExecStart=$PKG_PATH/nginx/sbin/nginx -s reload
 EOF
 
 systemd_master_timer="$PKG_PATH"/dcos.target.wants_master/nginx-reload.timer

@@ -8,3 +8,42 @@ cd /pkg/src/logrotate
 ./configure --prefix="$PKG_PATH"
 make
 make install
+
+
+config_file="$PKG_PATH/etc/logrotate.conf"
+mkdir -p $(dirname $config_file)
+cat <<'EOF' > "$config_file"
+/var/log/mesos/*.log {
+    daily
+    missingok
+    rotate 30
+    compress
+    delaycompress
+    notifempty
+    copytruncate
+}
+EOF
+
+
+logrotate_service="$PKG_PATH/dcos.target.wants/logrotate.service"
+mkdir -p "$(dirname "$logrotate_service")"
+cat <<EOF > "$logrotate_service"
+[Unit]
+Description=Rotate various logs on the system
+[Service]
+Type=simple
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/cloudenv
+ExecStart=$PKG_PATH/sbin/logrotate $config_file
+EOF
+
+logrotate_timer="$PKG_PATH/dcos.target.wants/logrotate.timer"
+mkdir -p "$(dirname "$logrotate_timer")"
+cat <<'EOF' > "$logrotate_timer"
+[Unit]
+Description=Daily log rotation
+[Timer]
+OnCalendar=daily
+Unit=logrotate.service
+EOF

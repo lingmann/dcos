@@ -19,18 +19,3 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStart=/opt/mesosphere/bin/java -jar "$PKG_PATH/usr/marathon.jar" --zk zk://localhost:2181/marathon --master zk://localhost:2181/mesos --hostname "\$MARATHON_HOSTNAME"
 EOF
-
-marathon_public_service="$PKG_PATH/dcos.target.wants_master/marathon-public.service"
-mkdir -p $(dirname "$marathon_public_service")
-
-cat <<EOF > "$marathon_public_service"
-[Unit]
-Description=Marathon public-facing
-After=mesos-master.service
-Requires=mesos-master.service
-[Service]
-Restart=on-failure
-EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/cloudenv
-ExecStart=/opt/mesosphere/bin/java -jar "$PKG_PATH/usr/marathon.jar" --zk zk://localhost:2181/marathon-public --master zk://localhost:2181/mesos --hostname "\$MARATHON_HOSTNAME" --http_port 8081 --mesos_role public --framework_name marathon-public
-EOF

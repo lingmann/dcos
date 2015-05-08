@@ -1,11 +1,8 @@
 {
   "docker": "node:0.10",
-  "sources" : {
-    "dcos-ui": {
-      "kind": "git",
-      "git": "git@github.com:mesosphere/dcos-ui.git",
-      "ref": "7edfc38d802464437dc7a7a2b9250fb2dcb79f72",
-      "ref_origin" : "feature/DCOS-540-production-deploy"
-      }
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-ui.git",
+    "ref": "v0.3.0"
   }
 }

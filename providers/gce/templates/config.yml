@@ -2,7 +2,11 @@
 #
 # Created M. Massenzio, 2015-04-27
 
-imports: ["vm_master.jinja", "vm_slave.jinja", "network.jinja", "cloud-config.yaml"]
+imports: 
+- path: vm_master.jinja
+- path: vm_slave.jinja
+- path: network.jinja
+- path: cloud-config.yaml
 
 resources:
 - name: master-cluster
@@ -16,6 +20,7 @@ resources:
     machine: n1-standard-1
     bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
     ssh_key: test_ssh_key
+    network: test-network
 
 - name: slaves-cluster
   type: vm_slave.jinja
@@ -27,11 +32,13 @@ resources:
     zone: us-central1-a
     ssh_key: test_ssh_key
     bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
+    network: test-network
 
 - name: subnet
   type: network.jinja
   properties:
-    base_name: test
+    base_name: mesos-internal
     zone: us-central1-a
     network_pool: 10.10.0.0/16
-    admin_range: 0.0.0.0/0
+    admin_range: 10.10.0.0/16
+    network: test-network

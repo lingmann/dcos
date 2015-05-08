@@ -9,7 +9,6 @@
 {% set machine_type = properties["machine"]%}
 {% set bootstrap_url= properties["bootstrap_url"] %}
 {% set master_quorum = properties["master_quorum"] %}
-{% set base_name = properties["base_name"] %}
 
 resources:
 {% for i in range(1, masters) %}
@@ -34,7 +33,7 @@ resources:
             value: |  
               {{cc.GenerateCloudConfig( bootstrap_url, "master", master_quorum ,  base_name ,masters) }}
         networkInterfaces:
-        - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+        - network: $(ref.{{ properties["network"] }}.selfLink)
           accessConfigs:
           - name: External NAT
             type: ONE_TO_ONE_NAT

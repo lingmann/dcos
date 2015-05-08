@@ -7,6 +7,7 @@
 {% set base_slave_name = base_name + '-slave' %}
 {% set machine_type = properties["machine"]%}
 {% set bootstrap_url= properties["bootstrap_url"] %}
+
 resources:
     - name: {{base_slave_name}}-template
       type: compute.v1.instanceTemplate
@@ -23,7 +24,7 @@ resources:
             initializeParams:
               sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
           networkInterfaces:
-          - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+          - network: $(ref.{{ properties["network"] }}.selfLink)
           metadata:
             items:
             - key: sshKeys

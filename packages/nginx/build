@@ -141,6 +141,24 @@ http {
         proxy_pass http://mesos/;
     }
 
+    location ~ ^/slave/(?<slaveid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
+        set $slaveip '';
+
+        rewrite ^/slave/[0-9a-zA-Z-]+/.*$ /$url break;
+        rewrite_by_lua '
+            local cjson = require "cjson"
+
+            local res = ngx.location.capture("/mesos/master/state-summary/")
+            local state = cjson.decode(res.body)
+
+            for _, slave in ipairs(state["slaves"]) do
+                if slave["id"] == ngx.var.slaveid then
+                    ngx.var.slaveip = slave["hostname"]
+                end
+            end';
+        proxy_pass http://$slaveip:5051;
+    }
+
     # TODO(cmaloney): Make the Web UI work in a subdirectory.
     location /marathon/ {
         proxy_pass http://marathon/;

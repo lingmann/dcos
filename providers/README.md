@@ -6,7 +6,7 @@ sources to prevent hand-dupliaction
 ## Requirements
 
 python 3
- - On OSX you can get this with `brew install python`
+ - On OSX you can get this with `brew install python3`
 
 
 Python requirements: `jinja`, `docopt`
@@ -46,7 +46,7 @@ The ui when it eventually comes up (Takes a while), will be at http://localhost:
 ## Debugging / watching it come up
 ```
 vagrant ssh
-jouranlctl -f
+journalctl -f
 ```
 
 Things are up when the nginx starts / finds leader.mesos. Should take 15 minutes or less.

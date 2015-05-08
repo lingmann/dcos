@@ -8,11 +8,21 @@ import json
 import sys
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from pkgpanda.util import write_json, write_string
 from string import Template
 
 import aws
 import vagrant
+
+
+def write_json(filename, data):
+    with open(filename, "w+") as f:
+        return json.dump(data, f)
+
+
+def write_string(filename, data):
+    with open(filename, "w+") as f:
+        return f.write(data)
+
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = Environment(loader=FileSystemLoader('templates'), undefined=StrictUndefined)

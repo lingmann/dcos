@@ -159,6 +159,24 @@ http {
         proxy_pass http://$slaveip:5051;
     }
 
+    location ~ ^/service/(?<serviceid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
+        set $serviceurl '';
+
+        rewrite ^/service/[0-9a-zA-Z-]+/.*$ /$url break;
+        rewrite_by_lua '
+            local cjson = require "cjson"
+
+            local res = ngx.location.capture("/mesos/master/state-summary/")
+            local state = cjson.decode(res.body)
+
+            for _, framework in ipairs(state["frameworks"]) do
+                if framework["id"] == ngx.var.serviceid then
+                    ngx.var.serviceurl = framework["webui_url"]
+                end
+            end';
+        proxy_pass $serviceurl;
+    }
+
     # TODO(cmaloney): Make the Web UI work in a subdirectory.
     location /marathon/ {
         proxy_pass http://marathon/;

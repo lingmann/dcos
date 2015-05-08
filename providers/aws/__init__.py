@@ -3,8 +3,20 @@ import re
 
 from copy import copy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from pkgpanda.util import load_json, write_string
 from cloud_config_parameters import CloudConfigParameters
+
+
+def load_json(filename):
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except ValueError as ex:
+        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
+
+
+def write_string(filename, data):
+    with open(filename, "w+") as f:
+        return f.write(data)
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 

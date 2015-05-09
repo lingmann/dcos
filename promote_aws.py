@@ -18,11 +18,13 @@ import urllib.parse
 from docopt import docopt
 from pkgpanda import PackageId
 from pkgpanda.util import load_json, write_json, write_string
-from jinja2 import Environment, FileSystemLoader
+from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from util import bucket, render_markdown_data, upload_s3
 
-env = Environment(loader=FileSystemLoader('providers/aws/templates/'))
+env = Environment(
+    loader=FileSystemLoader('providers/aws/templates/'),
+    undefined=StrictUndefined)
 landing_template = env.get_template("production.md")
 
 
@@ -45,19 +47,46 @@ def main():
             )
 
     aws_landing = landing_template.render({
-            'regions': [
-                'us-west-1',
-                'us-west-2',
-                'us-east-1',
-                'sa-east-1',
-                'eu-west-1',
-                'eu-central-1',
-                'ap-northeast-1',
-                'ap-southeast-1',
-                'ap-southeast-2'
-                ],
-            'name': name
-        })
+        'regions': [
+            {
+                'name': 'US West (N. California)',
+                'id': 'us-west-1'
+            },
+            {
+                'name': 'US West (Oregon)',
+                'id': 'us-west-2'
+            },
+            {
+                'name': 'US East (N. Virginia)',
+                'id': 'us-east-1'
+            },
+            {
+                'name': 'South America (Sao Paulo)',
+                'id': 'sa-east-1'
+            },
+            {
+                'name': 'EU (Ireland)',
+                'id': 'eu-west-1'
+            },
+            {
+                'name': 'EU (Frankfurt)',
+                'id': 'eu-central-1'
+            },
+            {
+                'name': 'Asia Pacific (Tokyo)',
+                'id': 'ap-northeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Singapore)',
+                'id': 'ap-southeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Sydney)',
+                'id': 'ap-southeast-2'
+            }
+        ],
+        'name': name
+    })
 
     # Generate new landing page
     write_string('prod.aws.html', render_markdown_data(aws_landing))

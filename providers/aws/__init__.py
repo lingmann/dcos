@@ -94,15 +94,42 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstr
 def render_buttons(name):
     return launch_template.render({
         'regions': [
-            'us-west-1',
-            'us-west-2',
-            'us-east-1',
-            'sa-east-1',
-            'eu-west-1',
-            'eu-central-1',
-            'ap-northeast-1',
-            'ap-southeast-1',
-            'ap-southeast-2'
+            {
+                'name': 'US West (N. California)',
+                'id': 'us-west-1'
+            },
+            {
+                'name': 'US West (Oregon)',
+                'id': 'us-west-2'
+            },
+            {
+                'name': 'US East (N. Virginia)',
+                'id': 'us-east-1'
+            },
+            {
+                'name': 'South America (Sao Paulo)',
+                'id': 'sa-east-1'
+            },
+            {
+                'name': 'EU (Ireland)',
+                'id': 'eu-west-1'
+            },
+            {
+                'name': 'EU (Frankfurt)',
+                'id': 'eu-central-1'
+            },
+            {
+                'name': 'Asia Pacific (Tokyo)',
+                'id': 'ap-northeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Singapore)',
+                'id': 'ap-southeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Sydney)',
+                'id': 'ap-southeast-2'
+            }
             ],
         'name': name
         })

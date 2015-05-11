@@ -1,7 +1,8 @@
 # DCOS {{ name }} AWS CloudFormation
 
-* Follow the [DCOS Documentation](http://beta-docs.mesosphere.com/) for how to setup and explore the cluster.
-  * Username and Password are included in the Early Access / Beta welcome E-Mail.
+* For more information on creating a DCOS cluster, see the [Mesosphere beta documentation](http://beta-docs.mesosphere.com/install/eapaws/#create
+)</a>.
+  * The username and password are included in the Early Access welcome email.
 
 
 | Region Name | Region Code | Single Master | HA: Three Master |

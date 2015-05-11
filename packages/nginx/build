@@ -142,10 +142,10 @@ http {
     }
 
     location ~ ^/slave/(?<slaveid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
-        set $slaveip '';
+        set \$slaveip '';
 
         more_clear_input_headers Accept-Encoding;
-        rewrite ^/slave/[0-9a-zA-Z-]+/.*$ /$url break;
+        rewrite ^/slave/[0-9a-zA-Z-]+/.*$ /\$url break;
         rewrite_by_lua '
             local cjson = require "cjson"
 
@@ -157,14 +157,14 @@ http {
                     ngx.var.slaveip = slave["hostname"]
                 end
             end';
-        proxy_pass http://$slaveip:5051;
+        proxy_pass http://\$slaveip:5051;
     }
 
     location ~ ^/service/(?<serviceid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
-        set $serviceurl '';
+        set \$serviceurl '';
 
         more_clear_input_headers Accept-Encoding;
-        rewrite ^/service/[0-9a-zA-Z-]+/.*$ /$url break;
+        rewrite ^/service/[0-9a-zA-Z-]+/.*$ /\$url break;
         rewrite_by_lua '
             local cjson = require "cjson"
 
@@ -176,7 +176,7 @@ http {
                     ngx.var.serviceurl = framework["webui_url"]
                 end
             end';
-        proxy_pass $serviceurl;
+        proxy_pass \$serviceurl;
     }
 
     # TODO(cmaloney): Make the Web UI work in a subdirectory.

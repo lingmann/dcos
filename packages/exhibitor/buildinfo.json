@@ -5,8 +5,8 @@
     "exhibitor": {
       "kind": "git",
       "git": "https://github.com/mesosphere/exhibitor.git",
-      "ref": "bfe37276de159c254764aa6a5d70c69eb7eed367",
-      "ref_origin": "azure_support"
+      "ref": "f1b62fbd44ff83fc725fd3ffd9e57d47f9cb6915",
+      "ref_origin": "multicloud"
     },
     "zookeeper": {
       "kind": "url_extract",

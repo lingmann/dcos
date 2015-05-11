@@ -144,6 +144,7 @@ http {
     location ~ ^/slave/(?<slaveid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
         set $slaveip '';
 
+        more_clear_input_headers Accept-Encoding;
         rewrite ^/slave/[0-9a-zA-Z-]+/.*$ /$url break;
         rewrite_by_lua '
             local cjson = require "cjson"
@@ -162,6 +163,7 @@ http {
     location ~ ^/service/(?<serviceid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
         set $serviceurl '';
 
+        more_clear_input_headers Accept-Encoding;
         rewrite ^/service/[0-9a-zA-Z-]+/.*$ /$url break;
         rewrite_by_lua '
             local cjson = require "cjson"

@@ -45,6 +45,12 @@ finally, deploy the configuration::
 
 See the [gcloud compute page](https://cloud.google.com/compute/docs/gcloud-compute/#auth) for
 more details.
+To login to instance, you can use gcloud command::
+
+    $ gcloud compute ssh <mesos_instance_name> --zone <zone_name>
+
+One important thing, please make sure, that your local machine public ip address is included
+``admin_range`` parameter, in other case you will not have access to the instances.
 
 For more information about DM, see [here](https://cloud.google.com/deployment-manager/create-first-deployment).
 

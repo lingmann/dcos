@@ -616,7 +616,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
-        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "false",
         "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
@@ -656,7 +656,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
-        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "PublicSlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : {{ start_param }}PublicSlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
@@ -677,9 +677,9 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "SlaveSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "5051",
-        "ToPort" : "5051",
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
         "SourceSecurityGroupId" : { "Ref" : "MasterSecurityGroup" }
       }
     },
@@ -687,29 +687,9 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "5050",
-        "ToPort" : "5050",
-        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
-        }
-    },
-    "SlaveToMasterDNSUDPIngress" : {
-      "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "udp",
-        "FromPort" : "53",
-        "ToPort" : "53",
-        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
-        }
-    },
-    "SlaveToMasterDNSTCPIngress" : {
-      "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "53",
-        "ToPort" : "53",
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
         }
     },
@@ -722,6 +702,74 @@
         "ToPort" : "2181",
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
       }
+    },
+
+    "PublicSlaveSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Mesos Slaves Public",
+        "VpcId" : { "Ref" : "Vpc" }
+      }
+    },
+    "MasterToPublicSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "MasterSecurityGroup" }
+      }
+    },
+    "PublicSlaveToMasterIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "MasterSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
+        }
+    },
+    "PublicSlaveToMasterIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "MasterSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
+        }
+    },
+    "PublicSlaveIngressOne" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "21",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressTwo" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "23",
+        "ToPort" : "5050",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressThree" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "5052",
+        "ToPort" : "65535",
+        "CidrIp" : "0.0.0.0/0"
+        }
     }
   },
 

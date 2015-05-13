@@ -731,21 +731,11 @@
         "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
         }
     },
-    "PublicSlaveToMasterIngress" : {
-      "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "-1",
-        "FromPort" : "0",
-        "ToPort" : "65535",
-        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
-        }
-    },
     "PublicSlaveIngressOne" : {
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
-        "IpProtocol" : "-1",
+        "IpProtocol" : "tcp",
         "FromPort" : "0",
         "ToPort" : "21",
         "CidrIp" : "0.0.0.0/0"
@@ -755,7 +745,7 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
-        "IpProtocol" : "-1",
+        "IpProtocol" : "tcp",
         "FromPort" : "23",
         "ToPort" : "5050",
         "CidrIp" : "0.0.0.0/0"
@@ -765,7 +755,37 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
-        "IpProtocol" : "-1",
+        "IpProtocol" : "tcp",
+        "FromPort" : "5052",
+        "ToPort" : "65535",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressFour" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
+        "FromPort" : "0",
+        "ToPort" : "21",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressFive" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
+        "FromPort" : "23",
+        "ToPort" : "5050",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressSix" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
         "FromPort" : "5052",
         "ToPort" : "65535",
         "CidrIp" : "0.0.0.0/0"

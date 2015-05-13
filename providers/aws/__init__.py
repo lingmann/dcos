@@ -120,7 +120,7 @@ class Parameters(CloudConfigParameters):
       MASTER_ELB={{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS=10.0.0.2
+      FALLBACK_DNS={{ "Ref" : "FallbackDNS" }}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
       AWS_S3_BUCKET={{ "Ref" : "ExhibitorS3Bucket" }}

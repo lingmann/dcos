@@ -16,11 +16,6 @@
   },
 
   "Mappings" : {
-    "SubnetConfig" : {
-      "VPC"     : { "CIDR" : "10.0.0.0/16" },
-      "Public"  : { "CIDR" : "10.0.0.0/24" },
-      "Private" : { "CIDR" : "10.0.1.0/24" }
-    },
     "RegionToAmi" : {
       "ap-northeast-1": {
         "stable": "ami-9cb9439c"
@@ -87,7 +82,7 @@
       "Properties" : {
         "EnableDnsSupport" : "true",
         "EnableDnsHostnames" : "true",
-        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]},
+        "CidrBlock" : { "Ref" : "VPCSubnetRange" },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -99,7 +94,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]},
+        "CidrBlock" : { "Ref" : "PublicSubnetRange" },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -111,7 +106,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Private", "CIDR" ]},
+        "CidrBlock" : { "Ref" : "PrivateSubnetRange" },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Private" }

@@ -8,6 +8,42 @@
     "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
     "ConstraintDescription" : "must be a valid CIDR."
   },
+  "VPCSubnetRange" : {
+    "Description" : "The IP range to use for the VPC.",
+    "Type" : "String",
+    "MinLength" : "9",
+    "MaxLength" : "18",
+    "Default" : "10.0.0.0/16",
+    "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+    "ConstraintDescription" : "must be a valid CIDR."
+  },
+  "PrivateSubnetRange" : {
+    "Description" : "The IP range to use for the private subnet.",
+    "Type" : "String",
+    "MinLength" : "9",
+    "MaxLength" : "18",
+    "Default" : "10.0.0.0/24",
+    "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+    "ConstraintDescription" : "must be a valid CIDR."
+  },
+  "PublicSubnetRange" : {
+    "Description" : "The IP range to use for the public subnet.",
+    "Type" : "String",
+    "MinLength" : "9",
+    "MaxLength" : "18",
+    "Default" : "10.0.1.0/24",
+    "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+    "ConstraintDescription" : "must be a valid CIDR."
+  },
+  "FallbackDNS" : {
+    "Description" : "The IP to use for fallback DNS (base of VPC network range plus two).",
+    "Type" : "String",
+    "MinLength" : "7",
+    "MaxLength" : "13",
+    "Default" : "10.0.0.2",
+    "AllowedPattern" : "^([0-9]+\\.){3}2",
+    "ConstraintDescription" : "must be a valid IP with last octet 2."
+  },
   "MasterInstanceType" : {
     "Description" : "EC2 instance type",
     "Type" : "String",

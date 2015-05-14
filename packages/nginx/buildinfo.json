@@ -3,6 +3,6 @@
   "requires": ["openssl"],
   "single_source" : {
     "kind": "url_extract",
-    "url": "http://nginx.org/download/nginx-1.8.0.tar.gz"
+    "url": "http://openresty.org/download/ngx_openresty-1.7.10.1.tar.gz"
   }
 }

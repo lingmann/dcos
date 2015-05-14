@@ -3,8 +3,20 @@ import re
 
 from copy import copy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from pkgpanda.util import load_json, write_string
 from cloud_config_parameters import CloudConfigParameters
+
+
+def load_json(filename):
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except ValueError as ex:
+        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
+
+
+def write_string(filename, data):
+    with open(filename, "w+") as f:
+        return f.write(data)
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
@@ -83,15 +95,42 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_
 def render_buttons(name):
     return launch_template.render({
         'regions': [
-            'us-west-1',
-            'us-west-2',
-            'us-east-1',
-            'sa-east-1',
-            'eu-west-1',
-            'eu-central-1',
-            'ap-northeast-1',
-            'ap-southeast-1',
-            'ap-southeast-2'
+            {
+                'name': 'US West (N. California)',
+                'id': 'us-west-1'
+            },
+            {
+                'name': 'US West (Oregon)',
+                'id': 'us-west-2'
+            },
+            {
+                'name': 'US East (N. Virginia)',
+                'id': 'us-east-1'
+            },
+            {
+                'name': 'South America (Sao Paulo)',
+                'id': 'sa-east-1'
+            },
+            {
+                'name': 'EU (Ireland)',
+                'id': 'eu-west-1'
+            },
+            {
+                'name': 'EU (Frankfurt)',
+                'id': 'eu-central-1'
+            },
+            {
+                'name': 'Asia Pacific (Tokyo)',
+                'id': 'ap-northeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Singapore)',
+                'id': 'ap-southeast-1'
+            },
+            {
+                'name': 'Asia Pacific (Sydney)',
+                'id': 'ap-southeast-2'
+            }
             ],
         'name': name
         })
@@ -242,3 +281,5 @@ class Parameters(CloudConfigParameters):
         # Should only ever be called once.
         assert not self._testcluster_volume
         self._testcluster_volume = True
+
+    resolvers = ["10.0.0.2"]

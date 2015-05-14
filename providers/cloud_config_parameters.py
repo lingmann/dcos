@@ -23,3 +23,4 @@ class CloudConfigParameters:
     stack_name = None
     early_units = None
     config_writer = None
+    resolvers = ["8.8.8.8", "8.8.4.4"]

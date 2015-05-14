@@ -14,10 +14,3 @@ generic general-purpose ones.
 The core of DCOS is built automated in TeamCity and pushed to S3. See the TeamCity
 [DCOS Image Builder](https://teamcity.mesosphere.io/project.html?projectId=ClosedSource_Dcos_ImageBuilder&tab=projectOverview)
 project.
-
-
-## Old notes
-
- - [Run in Terraform](terraform/dcos-playground.msphere.co/README.md) in the
-`terraform/dcos-playground` directory.
- - [CoreOS Notes](docs/CoreOS_notes.md)

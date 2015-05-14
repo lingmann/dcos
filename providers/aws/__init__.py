@@ -270,6 +270,7 @@ class Parameters(CloudConfigParameters):
 
         real_name = {
             'bootstrap_url': 'BootstrapRepoRoot',
+            'fallback_dns': 'FallbackDNS',
             'master_quorum': 'MasterQuorumCount',
             'dd_api_key': 'DatadogApiKey',
             'github_deploy_key_base64': 'GithubDeployKeyBase64'

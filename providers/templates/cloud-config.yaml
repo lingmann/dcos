@@ -18,7 +18,7 @@ write_files:
         "ttl": 60,
         "domain": "mesos",
         "port": 53,
-        "resolvers": {{ resolvers }},
+        "resolvers": "{{ resolvers }}",
         "timeout": 5,
         "listener": "0.0.0.0",
         "email": "root.mesos-dns.mesos"

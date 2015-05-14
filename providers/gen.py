@@ -39,7 +39,7 @@ def render_cloudconfig(paramters):
         'stack_name': paramters.GetParameter('stack_name'),
         'early_units': paramters.early_units,
         'config_writer': paramters.config_writer,
-        'resolvers': json.dumps(paramters.resolvers),
+        'resolvers': paramters.GetParameter('fallback_dns'),
         'late_units': paramters.late_units
         })
 

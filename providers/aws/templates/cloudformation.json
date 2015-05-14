@@ -76,6 +76,10 @@
     }
   },
 
+  "Conditions" : {
+    "RegionIsUsEast1": { "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-east-1" ] }
+  },
+
   "Resources" : {
     "Vpc" : {
       "Type" : "AWS::EC2::VPC",
@@ -112,6 +116,25 @@
           { "Key" : "Network", "Value" : "Private" }
         ]
       }
+    },
+
+    "DHCPOptions" : {
+      "Type" : "AWS::EC2::DHCPOptions",
+      "Properties" : {
+        "DomainName" : { "Fn::If" : [
+            "RegionIsUsEast1",
+            "ec2.internal",
+            { "Fn::Join" :  [  "", [ { "Ref": "AWS::Region" }, ".compute.internal" ] ] } ] },
+            "DomainNameServers": [ "AmazonProvidedDNS" ]
+      }
+    },
+
+    "VPCDHCPOptionsAssociation" : {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+       "Properties": {
+          "DhcpOptionsId": { "Ref": "DHCPOptions" },
+          "VpcId": { "Ref": "Vpc" }
+       }
     },
 
     "InternetGateway" : {

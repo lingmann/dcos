@@ -9,6 +9,7 @@
 {% set machine_type = properties["machine"]%}
 {% set bootstrap_url= properties["bootstrap_url"] %}
 {% set master_quorum = properties["master_quorum"] %}
+{% set bucket_name = properties["base_name"]+'-'+env["project"]+'-exh' %}
 
 resources:
 {% for i in range(1, masters) %}
@@ -35,7 +36,7 @@ resources:
           items:
           - key: user-data
             value: |  
-              {{cc.GenerateCloudConfig( bootstrap_url, "master", master_quorum ,  base_name ,masters) }}
+              {{cc.GenerateCloudConfig( bootstrap_url, "master", master_quorum ,  base_name ,masters, bucket_name) }}
         networkInterfaces:
         - network: $(ref.{{ properties["network"] }}.selfLink)
           accessConfigs:

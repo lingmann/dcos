@@ -1,4 +1,4 @@
-{%- macro GenerateCloudConfig(bootstrap_url='', role='', master_quorum='', stack_name ='', master_count ='') -%}
+{%- macro GenerateCloudConfig(bootstrap_url='', role='', master_quorum='', stack_name ='', master_count ='', gce_bucket_name='') -%}
 
                   #cloud-config
                   write_files:
@@ -47,6 +47,8 @@
                         ZOOKEEPER_CLUSTER_SIZE={{master_count}}
                         FALLBACK_DNS=169.254.169.254
                         MARATHON_HOSTNAME=
+                        GCE_BUCKET_NAME={{ gce_bucket_name }}
+                        GCE_OBJECT_NAME=gce-config
                   {{ extra_files }}
                   coreos:
                     update:

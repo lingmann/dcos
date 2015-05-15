@@ -1,8 +1,16 @@
 {
   "docker": "dcos-builder",
   "requires": ["openssl"],
-  "single_source" : {
-    "kind": "url_extract",
-    "url": "http://openresty.org/download/ngx_openresty-1.7.10.1.tar.gz"
+  "sources" :{
+      "nginx": {
+          "kind": "url_extract",
+          "url": "http://openresty.org/download/ngx_openresty-1.7.10.1.tar.gz"
+      },
+      "adminrouter": {
+          "kind": "git",
+          "git": "git@github.com:mesosphere/adminrouter.git",
+          "ref": "e530b9ef42cb83e957a3cdeaf3901bd2a5b3ddb7",
+          "ref_origin": "master"
+      }
   }
 }

@@ -69,8 +69,6 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstr
         'end_param': end_param_simple if simple else end_param_full
     })
 
-    write_string('temp', template_str)
-
     template_json = json.loads(template_str)
 
     params['BootstrapRepoRoot']['Default'] = bootstrap_url

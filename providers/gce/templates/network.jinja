@@ -13,7 +13,7 @@ resources:
         IPv4Range: {{network_pool}}
 
     - type: compute.v1.firewall
-      name: admin-access
+      name: {{ name }}-admin-access
       properties:
         allowed:
           - IPProtocol: TCP
@@ -22,7 +22,7 @@ resources:
         network: $(ref.{{name}}.selfLink)
 
     - type: compute.v1.firewall
-      name: default-allow-internal
+      name: {{ name }}-allow-internal
       properties:
         allowed:
           - IPProtocol: TCP

@@ -18,6 +18,10 @@ resources:
       properties:
         zone: {{ properties["zone"] }}
         machineType: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ zone }}/machineTypes/{{ machine_type }}
+        serviceAccounts:
+         - email: default
+           scopes:
+           - https://www.googleapis.com/auth/devstorage.full_control
         disks:
         - deviceName: boot
           type: PERSISTENT

@@ -40,5 +40,5 @@ resources:
     base_name: mesos-internal
     zone: us-central1-a
     network_pool: 10.10.0.0/16
-    admin_range: 0.0.0.0/16
+    admin_range: 0.0.0.0/0
     network: test-network

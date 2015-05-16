@@ -1,6 +1,4 @@
 #!/bin/bash
-set -o errexit -o nounset -o pipefail
-
 libdir="$PKG_PATH/lib"
 
 # TODO(cmaloney): Check prerequisites installed (glog, protobuf, boost)

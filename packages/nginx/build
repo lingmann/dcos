@@ -1,8 +1,5 @@
 #!/bin/bash
 
-libdir="$PKG_PATH/lib"
-ssl_path="$PKG_PATH/etc/ssl"
-
 mkdir -p "/build"
 
 export CXXFLAGS=-I/opt/mesosphere/include
@@ -29,185 +26,20 @@ make install
 
 popd
 
+pushd "/pkg/src/adminrouter"
+
+nginx_config_path="$PKG_PATH/nginx/conf"
+mkdir -p $nginx_config_path
+cp nginx.conf $nginx_config_path/
+cp snakeoil.crt $nginx_config_path/
+cp snakeoil.key $nginx_config_path/
+cp *.lua $nginx_config_path/
+
+popd
+
 # Copy  in needed libraries
 mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
-
-# Write the config
-rm -rf "$PKG_PATH/nginx/conf/nginx.conf"
-
-# THIS IS NOT A SECURE CERTIFICATE !!!!
-# To be replaced by proper cert generation for each cluster
-mkdir -p "$ssl_path"
-cat <<EOF > "${ssl_path}/snakeoil.crt"
------BEGIN CERTIFICATE-----
-MIID0jCCAroCCQC9fcikSKDLgzANBgkqhkiG9w0BAQsFADCBqjELMAkGA1UEBhMC
-VVMxEzARBgNVBAgMCkNhbGlmb3JuaWExFjAUBgNVBAcMDVNhbiBGcmFuY2lzY28x
-EzARBgNVBAoMCk1lc29zcGhlcmUxDDAKBgNVBAsMA09wczEiMCAGA1UEAwwZKi5z
-bmFrZW9pbC5tZXNvc3BoZXJlLmNvbTEnMCUGCSqGSIb3DQEJARYYaG9zdG1hc3Rl
-ckBtZXNvc3BoZXJlLmlvMB4XDTE1MDQyOTIzMDIwMloXDTI1MDQyNjIzMDIwMlow
-gaoxCzAJBgNVBAYTAlVTMRMwEQYDVQQIDApDYWxpZm9ybmlhMRYwFAYDVQQHDA1T
-YW4gRnJhbmNpc2NvMRMwEQYDVQQKDApNZXNvc3BoZXJlMQwwCgYDVQQLDANPcHMx
-IjAgBgNVBAMMGSouc25ha2VvaWwubWVzb3NwaGVyZS5jb20xJzAlBgkqhkiG9w0B
-CQEWGGhvc3RtYXN0ZXJAbWVzb3NwaGVyZS5pbzCCASIwDQYJKoZIhvcNAQEBBQAD
-ggEPADCCAQoCggEBAN+kZLEuQU9A998ZJLEaGYfQuSjYds59dfjORReDnMhHpqX1
-RzUAi++hfHH95OzvGzxxP6zF/3Yo50jyDlOa+Gd05d80DdG9zO4dUwTt13SNCjAJ
-ybsaaw+ZZ8BPWtSOi2Px3KshsAWg0PQ8MRbebkiMpfOkrKDxDeJV/cLeorT7KLlG
-Jll6bQsmuCNSyMQI5IhAE31pArqjvWrvgVEoVTHDsLv8GDw29ESV616/k6DDVC3C
-eGcOSYpi0TKPNYOvexPR9B6kyoSqmqqAIPHqzOMu2HkfqycbG/y0Y9e4Jx5pfW8W
-IwaX+DLFNzidJ36ZdZWnn82Fgtyw/aLhi7EpU6MCAwEAATANBgkqhkiG9w0BAQsF
-AAOCAQEAed6dlgYx/26QIkTI0RJQ0iWnMCVsQZyBf2XPYSZ2XnoGuVSBh7fkeavF
-XExmsjRwgkUrLKhR4Wx52BC6RRxWEA7BI9HcuuzvTmwhF3zpWK3Sq7i/yVW55kHU
-ODAL3M+PkNig2FshN9jnnKvqNLpDX7gooBmak/UrEes2nWQjTe4UQ3bFhl29fqs2
-TCD0TXKLRD+i2is3nW7XAFQ1FS6cxNmBkHBGZqrIETGXU1cenlTxD/MJ9wnGWDLW
-IQnsj0dPtj+nbimyHW2AtWDD/DiSruxF0kQXQ/8xRKhp2Bqb5s8ZpAGVC5/XhYfu
-3R9RJ6miEZylEUWnRJ3JO/RK6SVgUg==
------END CERTIFICATE-----
-EOF
-
-cat <<EOF > "${ssl_path}/snakeoil.key"
------BEGIN RSA PRIVATE KEY-----
-MIIEpQIBAAKCAQEA36RksS5BT0D33xkksRoZh9C5KNh2zn11+M5FF4OcyEempfVH
-NQCL76F8cf3k7O8bPHE/rMX/dijnSPIOU5r4Z3Tl3zQN0b3M7h1TBO3XdI0KMAnJ
-uxprD5lnwE9a1I6LY/HcqyGwBaDQ9DwxFt5uSIyl86SsoPEN4lX9wt6itPsouUYm
-WXptCya4I1LIxAjkiEATfWkCuqO9au+BUShVMcOwu/wYPDb0RJXrXr+ToMNULcJ4
-Zw5JimLRMo81g697E9H0HqTKhKqaqoAg8erM4y7YeR+rJxsb/LRj17gnHml9bxYj
-Bpf4MsU3OJ0nfpl1laefzYWC3LD9ouGLsSlTowIDAQABAoIBADIzXaLkBib7J2i9
-5R2YBTkWYinIBUsuoGecLagsk+nlI4RHPZepKsA8mImh+1wwBAYaSbfHriNg5SHb
-q9mahL38YIkszxlQqIqerH8DwIRaEHpeCBlmwbd7sO1bIsFpyeJCbU1Av5lT0vOv
-+zjt7wV8BNhfE50A3yP6N38hqJZFCyA9gEnjLCRG0KMjTctOltVNM7yUCx4qruLq
-q2CxmKgjGwQTGFmQpoCna8znyAeNOJjokVj0Q3wfm9d03JebpNOpMbxTvxwUmLD9
-X46Ktrg5NtOrYbFicUHBfggi/8dkayPBxm2jfNlCVr1ABZ4Pw5cth5zvbL7Gav1Y
-hM7aU1ECgYEA8AK8yrRHGzO8dKggkz2uNpT6rrvHiz27waIM+TAHv3R1ommcrn4V
-vEatIJPkWFqCyr3bfgAluKFw7301knWi+Y1LH5buWv01pjjKO7AfWtJLpFSDh3i2
-YQwtzPCKVrjQLmbw7lkkbS9XsSRiivJ52EJRDoWR8AGscZDVhfjur3kCgYEA7op/
-rF29dLCTH/b1tCXsYi8iFZlHie4pWCTPR7N6Y+eqVfZiVEZMysEpFZ12RD9+65Ty
-uFFWObgu117ZqYUtrxQXVDviTGFVlUe38IAJaMq05W+gRlUi9QYXUzu8BjJmHs7X
-m3awWrXCeuWPo8SIsYwwLrVW5GFSuIToiX+DiPsCgYEAiw7a+Yr4A8+26dQbg5Pi
-IyewEpsjow4ygZ71a08jvg6otWABcqwExeAhINXvIC3Yx8S2rktBj7ah63AdIO1d
-br8pfnUBRuCcO+F9cpW5pPJg9yYsSspqyNG4m5vmWxabL7de8ondbBFY+n59Rcn1
-RJIvyn0jL+6YTfg/bm7rQ+kCgYEApAufTdyRhARCycK+qotCCyu61vu4lQSybimy
-Wu71Bmu1WrS8XpSSDwXTyUemo7y+/ihK27MkB0HBBN/39HrgNf0tJgKg2EI/5w+R
-UdXborN0wCyKHpRCHBt6QwVbgy95x0ocQI/ZLCi/fGEO7WMlVmTAZf7TqO+9QaQ1
-fwmwXa0CgYEAqJKQLRUHM9e2LHu+HuTIPXsymk2uV4+dwPahlrUlo0mUuyzNNrL4
-gAJ7hOZs3V6PwtyBRaz3C/3mKfZZbB3QZ8mtyjvBoQ3j92nCNNZnIz8P2MDVgZEt
-XcfRkU5vMMC1/Ia+Uu7LdEG2NYya4sf0MMWuaD9En3NweDg3Qti0IYI=
------END RSA PRIVATE KEY-----
-EOF
-
-# TODO(cmaloney): Make config outside of nginx package?
-nginx_config="$PKG_PATH/nginx/conf/nginx.conf"
-mkdir -p $(dirname "$nginx_config")
-cat <<EOF > "$nginx_config"
-error_log stderr;
-
-events {
-  worker_connections 1024;
-}
-
-http {
-  include mime.types;
-  default_type application/octet-stream;
-
-  sendfile on;
-  keepalive_timeout 65;
-
-  upstream mesos {
-    server leader.mesos:5050;
-  }
-
-  upstream marathon {
-    server master.mesos:8080;
-  }
-
-  upstream dcos_history_service {
-    server master.mesos:15055;
-  }
-
-  upstream artemis {
-    server master.mesos:9889;
-  }
-
-  server {
-    listen 80 default_server;
-    listen 443 ssl default_server;
-    ssl_certificate ${ssl_path}/snakeoil.crt;
-    ssl_certificate_key ${ssl_path}/snakeoil.key;
-    server_name dcos.*;
-    root /opt/mesosphere/active/dcos-ui/usr;
-
-    # TODO(cmaloney): Make the Web UI work in a subdirectory.
-    location /mesos/ {
-        proxy_pass http://mesos/;
-    }
-
-    location ~ ^/slave/(?<slaveid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
-        set \$slaveip '';
-
-        more_clear_input_headers Accept-Encoding;
-        rewrite ^/slave/[0-9a-zA-Z-]+/.*$ /\$url break;
-        rewrite_by_lua '
-            local cjson = require "cjson"
-
-            local res = ngx.location.capture("/mesos/master/state-summary/")
-            local state = cjson.decode(res.body)
-
-            for _, slave in ipairs(state["slaves"]) do
-                if slave["id"] == ngx.var.slaveid then
-                    ngx.var.slaveip = slave["hostname"]
-                end
-            end';
-        proxy_pass http://\$slaveip:5051;
-    }
-
-    location ~ ^/service/(?<serviceid>[0-9a-zA-Z-]+)/(?<url>.*)$ {
-        set \$serviceurl '';
-
-        more_clear_input_headers Accept-Encoding;
-        rewrite ^/service/[0-9a-zA-Z-]+/.*$ /\$url break;
-        rewrite_by_lua '
-            local cjson = require "cjson"
-
-            local res = ngx.location.capture("/mesos/master/state-summary/")
-            local state = cjson.decode(res.body)
-
-            for _, framework in ipairs(state["frameworks"]) do
-                if framework["id"] == ngx.var.serviceid then
-                    ngx.var.serviceurl = framework["webui_url"]
-                end
-            end';
-        proxy_pass \$serviceurl;
-    }
-
-    # TODO(cmaloney): Make the Web UI work in a subdirectory.
-    location /marathon/ {
-        proxy_pass http://marathon/;
-    }
-
-    location /pkgpanda/active.buildinfo.full.json {
-      add_header Cache-Control "no-cache";
-      alias /opt/mesosphere/active.buildinfo.full.json;
-    }
-
-    location /dcos-history-service/ {
-      proxy_pass http://dcos_history_service/;
-    }
-
-    location /artemis/ {
-      proxy_pass http://artemis/;
-    }
-  }
-
-
-  # Seperate ports for when there isn't DNS pointing to the load balancer.
-  server {
-    listen 1024;
-    location / {
-      proxy_pass http://mesos/;
-    }
-  }
-}
-EOF
 
 # From: https://projects.archlinux.org/svntogit/packages.git/tree/trunk/service?h=packages/nginx
 systemd_master="$PKG_PATH"/dcos.target.wants_master/nginx.service
@@ -228,7 +60,6 @@ Type=forking
 PIDFile=$PKG_PATH/nginx/logs/nginx.pid
 PrivateDevices=yes
 SyslogLevel=err
-ExecPreStart=chmod 600 "${ssl_path}/snakeoil.key"
 ExecStart=$PKG_PATH/nginx/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT

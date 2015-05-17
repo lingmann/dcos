@@ -19,7 +19,7 @@ resources:
     disk_size: 10G
     zone: us-central1-a
     machine: n1-standard-1
-    bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
+    bootstrap_url: http://storage.googleapis.com/bootstrap-dcos
     ssh_key: test_ssh_key
     network: test-network
 
@@ -32,7 +32,7 @@ resources:
     disk_size: 15G
     zone: us-central1-a
     ssh_key: test_ssh_key
-    bootstrap_url: http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess
+    bootstrap_url: http://storage.googleapis.com/bootstrap-dcos
     network: test-network
 
 - name: subnet

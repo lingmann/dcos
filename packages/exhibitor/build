@@ -118,7 +118,6 @@ then
     --configtype=azure --azureconfig="\$AZURE_CONTAINER:\$AZURE_PREFIX" \\
     --azurecredentials \$exhibitor_properties \\
     --hostname \$EXHIBITOR_HOSTNAME
-elif [[ -n "\${EXHIBITOR_FSCONFIGDIR:-}" ]]
 
 elif [[ -n "\${GCE_BUCKET_NAME:-}" && \\
         -n "\${GCE_OBJECT_NAME:-}" ]]

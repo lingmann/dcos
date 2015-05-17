@@ -48,6 +48,8 @@
                         FALLBACK_DNS=169.254.169.254
                         GCE_BUCKET_NAME={{ gce_bucket_name }}
                         GCE_OBJECT_NAME=gce-config
+                    - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
+                      content: |
                         EXHIBITOR_WEB_UI_PORT=8181
                   {{ extra_files }}
                   coreos:

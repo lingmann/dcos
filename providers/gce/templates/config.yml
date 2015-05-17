@@ -14,8 +14,8 @@ resources:
   type: vm_master.jinja
   properties:
     base_name: test
-    masters: 1
-    master_quorum: 1
+    masters: 3
+    master_quorum: 2
     disk_size: 10G
     zone: us-central1-a
     machine: n1-standard-1
@@ -27,7 +27,7 @@ resources:
   type: vm_slave.jinja
   properties:
     base_name: test
-    nodes: 1
+    nodes: 3
     machine: n1-standard-1
     disk_size: 15G
     zone: us-central1-a

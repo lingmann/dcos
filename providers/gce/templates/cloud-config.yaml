@@ -19,7 +19,7 @@
                           "ttl": 60,
                           "domain": "mesos",
                           "port": 53,
-                          "resolvers": ["10.0.0.2"],
+                          "resolvers": ["169.254.169.254"],
                           "timeout": 5,
                           "listener": "0.0.0.0",
                           "email": "root.mesos-dns.mesos"
@@ -43,7 +43,6 @@
                         MESOS_SLAVE_SUBSYSTEMS=cpu,memory
                     - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
                       content: |
-                        MASTER_ELB=127.0.0.1
                         ZOOKEEPER_CLUSTER_SIZE={{master_count}}
                         FALLBACK_DNS=169.254.169.254
                         GCE_BUCKET_NAME={{ gce_bucket_name }}
@@ -72,9 +71,10 @@
                           [Service]
                           Type=oneshot
                           ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/hostname' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-                          ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/hostname' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-                          ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/hostname' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
-                          ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/hostname' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
+                          ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+                          ExecStart=/usr/bin/bash -c "echo MASTER_ELB=$(curl 'http://metadata/computeMetadata/v1/instance/attributes/master_elb' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+                          ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
+                          ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl 'http://metadata/computeMetadata/v1/instance/network-interfaces/0/access-configs/0/external-ip' -H 'Metadata-Flavor: Google') >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
 
                       - name: link-env.service
                         command: start

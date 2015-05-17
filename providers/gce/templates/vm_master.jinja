@@ -3,16 +3,17 @@
 
 {% import 'cloud-config.yaml' as cc %}
 
-{% set masters = properties["masters"] + 1 %}
+{% set masters = properties["masters"] %}
 {% set zone =  properties["zone"] %}
 {% set base_name = properties["base_name"] %}
 {% set machine_type = properties["machine"]%}
 {% set bootstrap_url= properties["bootstrap_url"] %}
 {% set master_quorum = properties["master_quorum"] %}
 {% set bucket_name = properties["base_name"]+'-'+env["project"]+'-exh' %}
+{#{% set lb_ip = $(ref.{{ properties["network"] }}-lb.IPAddress) %}#}
 
 resources:
-{% for i in range(1, masters) %}
+{% for i in range(1, masters+1) %}
     {% set name = "%s-master-%d" % (base_name, i) %}
     - name: {{ name }}
       type: compute.v1.instance
@@ -34,6 +35,8 @@ resources:
             sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
         metadata:
           items:
+          - key: master_elb
+            value: $(ref.{{ base_name }}-lb.IPAddress)
           - key: user-data
             value: |  
               {{cc.GenerateCloudConfig( bootstrap_url, "master", master_quorum ,  base_name ,masters, bucket_name) }}
@@ -43,3 +46,28 @@ resources:
           - name: External NAT
             type: ONE_TO_ONE_NAT
 {% endfor %}
+
+    - name: {{ base_name }}-health-check
+      type: compute.v1.httpHealthCheck
+      properties:
+        port: 8181
+        requestPath: /exhibitor/v1/cluster/status
+
+    - name: {{ base_name }}-targer-pool
+      type: compute.v1.targetPool
+      properties:
+        region: us-central1
+        healthChecks: [$(ref.{{ base_name }}-health-check.selfLink)]
+        instances: [
+        {% for i in range(1, masters+1) %}
+          "https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/instances/{{ base_name }}-master-{{ i }}",
+          {% endfor %}
+        ]
+
+    - name: {{ base_name }}-lb
+      type: compute.v1.forwardingRule
+      properties:
+        region: us-central1
+        portRange: 8181-8181
+{#        IPAddress: $(ref.{{ name }}-lb-instance.address)#}
+        target: $(ref.{{ base_name }}-targer-pool.selfLink)

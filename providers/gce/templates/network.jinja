@@ -18,6 +18,9 @@ resources:
         allowed:
           - IPProtocol: TCP
             ports: [1-65535]
+          - IPProtocol: UDP
+            ports: [1-65535]
+          - IPProtocol: ICMP
         sourceRanges: [ {{admin_range}} ]
         network: $(ref.{{name}}.selfLink)
 
@@ -30,5 +33,5 @@ resources:
           - IPProtocol: UDP
             ports: [1-65535]
           - IPProtocol: ICMP
-        sourceRanges: [ 10.255.0.0/16 ]
+        sourceRanges: [ {{network_pool}} ]
         network: $(ref.{{name}}.selfLink)

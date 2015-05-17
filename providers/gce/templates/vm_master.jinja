@@ -10,6 +10,7 @@
 {% set bootstrap_url= properties["bootstrap_url"] %}
 {% set master_quorum = properties["master_quorum"] %}
 {% set bucket_name = properties["base_name"]+'-'+env["project"]+'-exh' %}
+{#{% set lb_ip = $(ref.{{ properties["network"] }}-lb.IPAddress) %}#}
 
 resources:
 {% for i in range(1, masters+1) %}

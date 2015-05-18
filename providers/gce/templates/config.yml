@@ -7,7 +7,6 @@ imports:
 - path: vm_slave.jinja
 - path: network.jinja
 - path: cloud-config.yaml
-- path: storage.jinja
 
 resources:
 - name: master-cluster
@@ -44,8 +43,3 @@ resources:
     network_pool: 10.10.0.0/16
     admin_range: 0.0.0.0/0
     network: test-network
-
-- name: storage
-  type: storage.jinja
-  properties:
-    base_name: test

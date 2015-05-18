@@ -7,7 +7,6 @@ imports:
 - path: vm_slave.jinja
 - path: network.jinja
 - path: cloud-config.yaml
-- path: storage.jinja
 
 resources:
 - name: master-cluster
@@ -18,6 +17,7 @@ resources:
     master_quorum: 2
     disk_size: 10G
     zone: us-central1-a
+    region: us-central1
     machine: n1-standard-1
     bootstrap_url: http://storage.googleapis.com/bootstrap-dcos
     ssh_key: test_ssh_key
@@ -43,8 +43,3 @@ resources:
     network_pool: 10.10.0.0/16
     admin_range: 0.0.0.0/0
     network: test-network
-
-- name: storage
-  type: storage.jinja
-  properties:
-    base_name: test

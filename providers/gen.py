@@ -39,7 +39,7 @@ def render_cloudconfig(paramters):
         'stack_name': paramters.GetParameter('stack_name'),
         'early_units': paramters.early_units,
         'config_writer': paramters.config_writer,
-        'resolvers': json.dumps(paramters.resolvers),
+        'resolvers': paramters.GetParameter('fallback_dns'),
         'late_units': paramters.late_units
         })
 
@@ -103,6 +103,7 @@ def gen_aws(name, bootstrap_url):
             simple,
             render_cloudconfig(get_params(['master'])),
             render_cloudconfig(get_params(['slave'])),
+            render_cloudconfig(get_params(['slave_public'])),
             bootstrap_url,
             testcluster
             )

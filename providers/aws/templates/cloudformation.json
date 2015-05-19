@@ -12,14 +12,29 @@
       "Description" : "Please read and agree to our EULA: https://docs.mesosphere.com/community-edition-eula/",
       "Type" : "String",
       "AllowedValues": ["Yes"]
+    },
+    "AdminLocation": {
+      "Description" : "The IP range to whitelist for admin access.",
+      "Type" : "String",
+      "MinLength" : "9",
+      "MaxLength" : "18",
+      "Default" : "0.0.0.0/0",
+      "AllowedPattern" : "^([0-9]+\\.){3}[0-9]+\\/[0-9]+$",
+      "ConstraintDescription" : "must be a valid CIDR."
+    },
+    "SlaveInstanceCount" : {
+      "Description" : "Number of slave nodes to launch",
+      "Type" : "Number",
+      "Default" : "5"
+    },
+    "PublicSlaveInstanceCount" : {
+      "Description" : "Number of public slave nodes to launch",
+      "Type" : "Number",
+      "Default" : "0"
     }
   },
 
   "Mappings" : {
-    "SubnetConfig" : {
-      "VPC"     : { "CIDR" : "10.0.0.0/16" },
-      "Public"  : { "CIDR" : "10.0.0.0/24" }
-    },
     "RegionToAmi" : {
       "ap-northeast-1": {
         "stable": "ami-9cb9439c"
@@ -48,7 +63,40 @@
       "us-west-2": {
         "stable": "ami-37280207"
       }
+    },
+    "NATAmi" : {
+      "ap-northeast-1": {
+          "default": "ami-55c29e54"
+      },
+      "ap-southeast-1": {
+          "default": "ami-b082dae2"
+      },
+      "ap-southeast-2": {
+          "default": "ami-996402a3"
+      },
+      "eu-central-1": {
+          "default": "ami-204c7a3d"
+      },
+      "eu-west-1": {
+          "default": "ami-3760b040"
+      },
+      "sa-east-1": {
+          "default": "ami-b972dba4"
+      },
+      "us-east-1": {
+          "default": "ami-4c9e4b24"
+      },
+      "us-west-1": {
+          "default": "ami-2b2b296e"
+      },
+      "us-west-2": {
+          "default": "ami-bb69128b"
+      }
     }
+  },
+
+  "Conditions" : {
+    "RegionIsUsEast1": { "Fn::Equals": [ { "Ref": "AWS::Region" }, "us-east-1" ] }
   },
 
   "Resources" : {
@@ -57,7 +105,7 @@
       "Properties" : {
         "EnableDnsSupport" : "true",
         "EnableDnsHostnames" : "true",
-        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "VPC", "CIDR" ]},
+        "CidrBlock" : {{ start_param }}VPCSubnetRange{{ end_param }},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -69,12 +117,43 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : { "Fn::FindInMap" : [ "SubnetConfig", "Public", "CIDR" ]},
+        "CidrBlock" : {{ start_param }}PublicSubnetRange{{ end_param }},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
         ]
       }
+    },
+
+    "PrivateSubnet" : {
+      "Type" : "AWS::EC2::Subnet",
+      "Properties" : {
+        "VpcId" : { "Ref" : "Vpc" },
+        "CidrBlock" : {{ start_param }}PrivateSubnetRange{{ end_param }},
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
+          { "Key" : "Network", "Value" : "Private" }
+        ]
+      }
+    },
+
+    "DHCPOptions" : {
+      "Type" : "AWS::EC2::DHCPOptions",
+      "Properties" : {
+        "DomainName" : { "Fn::If" : [
+            "RegionIsUsEast1",
+            "ec2.internal",
+            { "Fn::Join" :  [  "", [ { "Ref": "AWS::Region" }, ".compute.internal" ] ] } ] },
+            "DomainNameServers": [ "AmazonProvidedDNS" ]
+      }
+    },
+
+    "VPCDHCPOptionsAssociation" : {
+      "Type": "AWS::EC2::VPCDHCPOptionsAssociation",
+       "Properties": {
+          "DhcpOptionsId": { "Ref": "DHCPOptions" },
+          "VpcId": { "Ref": "Vpc" }
+       }
     },
 
     "InternetGateway" : {
@@ -169,6 +248,99 @@
       }
     },
 
+    "PrivateRouteTable" : {
+      "Type" : "AWS::EC2::RouteTable",
+      "Properties" : {
+        "VpcId" : { "Ref" : "Vpc" },
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
+          { "Key" : "Network", "Value" : "Public" }
+        ]
+      }
+    },
+
+    "PrivateRoute" : {
+      "Type" : "AWS::EC2::Route",
+      "Properties" : {
+        "RouteTableId" : { "Ref" : "PrivateRouteTable" },
+        "DestinationCidrBlock" : "0.0.0.0/0",
+        "InstanceId" : { "Ref" : "NATInstance" }
+      }
+    },
+
+    "PrivateSubnetRouteTableAssociation" : {
+      "Type" : "AWS::EC2::SubnetRouteTableAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "PrivateSubnet" },
+        "RouteTableId" : { "Ref" : "PrivateRouteTable" }
+      }
+    },
+
+    "PrivateNetworkAcl" : {
+      "Type" : "AWS::EC2::NetworkAcl",
+      "Properties" : {
+        "VpcId" : { "Ref" : "Vpc" },
+        "Tags" : [
+          { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
+          { "Key" : "Network", "Value" : "Public" }
+        ]
+      }
+    },
+
+    "PrivateInboundNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "-1",
+        "RuleAction" : "allow",
+        "Egress" : "false",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "0", "To" : "65535" }
+      }
+    },
+
+    "PrivateOutboundNetworkAclEntry" : {
+      "Type" : "AWS::EC2::NetworkAclEntry",
+      "Properties" : {
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" },
+        "RuleNumber" : "100",
+        "Protocol" : "-1",
+        "RuleAction" : "allow",
+        "Egress" : "true",
+        "CidrBlock" : "0.0.0.0/0",
+        "PortRange" : { "From" : "0", "To" : "65535" }
+      }
+    },
+
+    "PrivateSubnetNetworkAclAssociation" : {
+      "Type" : "AWS::EC2::SubnetNetworkAclAssociation",
+      "Properties" : {
+        "SubnetId" : { "Ref" : "PrivateSubnet" },
+        "NetworkAclId" : { "Ref" : "PrivateNetworkAcl" }
+      }
+    },
+
+    "NATInstance" : {
+      "Type" : "AWS::EC2::Instance",
+      "DependsOn" : "GatewayToInternet",
+      "Properties" : {
+        "SourceDestCheck" : "false",
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Fn::FindInMap" : [ "NATAmi", { "Ref" : "AWS::Region" }, "default" ] },
+        "InstanceType" : "m3.medium",
+        "NetworkInterfaces" : [ 
+          {
+            "SubnetId" : { "Ref" : "PublicSubnet" },
+            "AssociatePublicIpAddress" : "true",
+            "DeviceIndex" : "0",
+            "GroupSet" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+            "DeleteOnTermination" : "true"
+          }
+        ]
+      }
+    },
+
     "AdminSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",
       "Properties" : {
@@ -178,7 +350,7 @@
           "IpProtocol" : "-1",
           "FromPort" : "0",
           "ToPort" : "65535",
-          "CidrIp" : {{ start_param }}AdminLocation{{ end_param }}
+          "CidrIp" : { "Ref" : "AdminLocation" }
         } ]
       }
     },
@@ -350,7 +522,7 @@
     "InternalMasterLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }, { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "PublicSlaveSecurityGroup" }, { "Ref" : "MasterSecurityGroup" }],
         "Subnets": [{ "Ref": "PublicSubnet" }],
         "Scheme": "internal",
         "Listeners" : [
@@ -453,11 +625,51 @@
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
-        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PrivateSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
-        "MinSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
-        "MaxSize" : {{ start_param }}SlaveInstanceCount{{ end_param }},
-        "DesiredCapacity" : {{ start_param }}SlaveInstanceCount{{ end_param }},
+        "MinSize" : { "Ref" : "SlaveInstanceCount" },
+        "MaxSize" : { "Ref" : "SlaveInstanceCount" },
+        "DesiredCapacity" : { "Ref" : "SlaveInstanceCount" },
+        "VPCZoneIdentifier" : [{ "Ref" : "PrivateSubnet" }],
+        "Tags" : [
+          {
+            "Key" : "role",
+            "Value" : "mesos-slave",
+            "PropagateAtLaunch" : "true"
+          }
+        ]
+      },
+      "CreationPolicy" : {
+        "ResourceSignal" : {
+          "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
+          "Count" : { "Ref" : "SlaveInstanceCount" }
+        }
+      }
+    },
+
+    "SlaveLaunchConfig" : {
+      "Type" : "AWS::AutoScaling::LaunchConfiguration",
+      "Properties" : {
+        "KeyName" : { "Ref" : "KeyName" },
+        "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
+        "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
+        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
+        "AssociatePublicIpAddress" : "false",
+        "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
+        "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
+          {{ slave_cloud_config }}
+        ]]}}
+      }
+    },
+
+    "PublicSlaveServerGroup" : {
+      "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "Properties" : {
+        "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
+        "LaunchConfigurationName" : { "Ref" : "PublicSlaveLaunchConfig" },
+        "MinSize" : { "Ref" : "PublicSlaveInstanceCount" },
+        "MaxSize" : { "Ref" : "PublicSlaveInstanceCount" },
+        "DesiredCapacity" : { "Ref" : "PublicSlaveInstanceCount" },
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
@@ -470,22 +682,22 @@
       "CreationPolicy" : {
         "ResourceSignal" : {
           "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
-          "Count" : {{ start_param }}SlaveInstanceCount{{ end_param }}
+          "Count" : { "Ref" : "PublicSlaveInstanceCount" }
         }
       }
     },
 
-    "SlaveLaunchConfig" : {
+    "PublicSlaveLaunchConfig" : {
       "Type" : "AWS::AutoScaling::LaunchConfiguration",
       "Properties" : {
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "RegionToAmi", { "Ref" : "AWS::Region" }, "stable" ] },
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
-        "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
+        "SecurityGroups" : [ { "Ref" : "PublicSlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
+        "InstanceType" : {{ start_param }}PublicSlaveInstanceType{{ end_param }},
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          {{ slave_cloud_config }}
+          {{ public_slave_cloud_config }}
         ]]}}
       }
     },
@@ -502,9 +714,9 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "SlaveSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "5051",
-        "ToPort" : "5051",
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
         "SourceSecurityGroupId" : { "Ref" : "MasterSecurityGroup" }
       }
     },
@@ -512,29 +724,9 @@
       "Type" : "AWS::EC2::SecurityGroupIngress",
       "Properties" : {
         "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "5050",
-        "ToPort" : "5050",
-        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
-        }
-    },
-    "SlaveToMasterDNSUDPIngress" : {
-      "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "udp",
-        "FromPort" : "53",
-        "ToPort" : "53",
-        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
-        }
-    },
-    "SlaveToMasterDNSTCPIngress" : {
-      "Type" : "AWS::EC2::SecurityGroupIngress",
-      "Properties" : {
-        "GroupId" : { "Ref" : "MasterSecurityGroup" },
-        "IpProtocol" : "tcp",
-        "FromPort" : "53",
-        "ToPort" : "53",
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
         }
     },
@@ -547,6 +739,94 @@
         "ToPort" : "2181",
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
       }
+    },
+
+    "PublicSlaveSecurityGroup" : {
+      "Type" : "AWS::EC2::SecurityGroup",
+      "Properties" : {
+        "GroupDescription" : "Mesos Slaves Public",
+        "VpcId" : { "Ref" : "Vpc" }
+      }
+    },
+    "MasterToPublicSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "MasterSecurityGroup" }
+      }
+    },
+    "PublicSlaveToMasterIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "MasterSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
+        }
+    },
+    "PublicSlaveIngressOne" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "tcp",
+        "FromPort" : "0",
+        "ToPort" : "21",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressTwo" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "tcp",
+        "FromPort" : "23",
+        "ToPort" : "5050",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressThree" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "tcp",
+        "FromPort" : "5052",
+        "ToPort" : "65535",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressFour" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
+        "FromPort" : "0",
+        "ToPort" : "21",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressFive" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
+        "FromPort" : "23",
+        "ToPort" : "5050",
+        "CidrIp" : "0.0.0.0/0"
+        }
+    },
+    "PublicSlaveIngressSix" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "udp",
+        "FromPort" : "5052",
+        "ToPort" : "65535",
+        "CidrIp" : "0.0.0.0/0"
+        }
     }
   },
 

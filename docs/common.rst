@@ -82,7 +82,7 @@ These are the details for the AWS templates properties::
                 "Default" : "1"
           },
           "SlaveInstanceCount" : {
-                "Description" : "Number of master nodes to launch",
+                "Description" : "Number of slave nodes to launch",
                 "Type" : "Number",
                 "Default" : "5"
           },

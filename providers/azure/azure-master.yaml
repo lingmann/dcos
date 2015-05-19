@@ -30,6 +30,7 @@ write_files:
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_QUORUM=[[[variables('mesosQuorum')]]]
       MESOS_CLUSTER=[[[variables('uniqueName')]]]
+      MESOS_ROLES=slave_public
       MESOS_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
       MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv

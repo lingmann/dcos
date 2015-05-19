@@ -55,7 +55,7 @@ def render_parameter(simple, name):
     return start_param_full + name + end_param_full
 
 
-def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstrap_url, testcluster):
+def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_slave_cloudconfig, bootstrap_url, testcluster):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -65,6 +65,7 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, bootstr
     template_str = cloudformation_template.render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
+        'public_slave_cloud_config': transform_lines(public_slave_cloudconfig),
         'start_param': start_param_simple if simple else start_param_full,
         'end_param': end_param_simple if simple else end_param_full
     })
@@ -156,13 +157,13 @@ class Parameters(CloudConfigParameters):
       MASTER_ELB={{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS=10.0.0.2
+      FALLBACK_DNS={fallback_dns}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
     content: |
       AWS_S3_BUCKET={{ "Ref" : "ExhibitorS3Bucket" }}
       AWS_S3_PREFIX={{ "Ref" : "AWS::StackName" }}
       EXHIBITOR_WEB_UI_PORT=8181
-""".format(master_count=render_parameter(self._simple, 'MasterInstanceCount'))
+""".format(master_count=render_parameter(self._simple, 'MasterInstanceCount'),fallback_dns=render_parameter(self._simple, 'FallbackDNS'))
 
     @property
     def stack_name(self):
@@ -224,14 +225,20 @@ class Parameters(CloudConfigParameters):
         Description=Write out dynamic config values
         [Service]
         Type=oneshot
-        ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-        ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
-        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/public-hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
+        ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+        ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
+        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave"
 """
 
     @property
     def late_units_base(self):
+        if 'master' in self.roles:
+            report_name = 'MasterServerGroup'
+        elif 'slave' in self.roles:
+            report_name = 'SlaveServerGroup'
+        else:
+            report_name = 'PublicSlaveServerGroup'
         return """    - name: cfn-signal.service
       command: start
       content: |
@@ -253,7 +260,7 @@ class Parameters(CloudConfigParameters):
           --stack {{ "Ref": "AWS::StackName" }} \\
           --region {{ "Ref" : "AWS::Region" }}
         ExecStart=/usr/bin/touch /var/lib/cfn-signal
-""".format(report_name='MasterServerGroup' if 'master' in self.roles else 'SlaveServerGroup')
+""".format(report_name=report_name)
 
     def GetParameter(self, name):
         if name == 'stack_name':
@@ -261,6 +268,7 @@ class Parameters(CloudConfigParameters):
 
         real_name = {
             'bootstrap_url': 'BootstrapRepoRoot',
+            'fallback_dns': 'FallbackDNS',
             'master_quorum': 'MasterQuorumCount',
             'dd_api_key': 'DatadogApiKey',
             'github_deploy_key_base64': 'GithubDeployKeyBase64'

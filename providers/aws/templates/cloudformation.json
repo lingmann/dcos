@@ -503,7 +503,7 @@
     "InternalMasterLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }, { "Ref" : "SlaveSecurityGroup" }, { "Ref" : "PublicSlaveSecurityGroup" }, { "Ref" : "MasterSecurityGroup" }],
         "Subnets": [{ "Ref": "PublicSubnet" }],
         "Scheme": "internal",
         "Listeners" : [

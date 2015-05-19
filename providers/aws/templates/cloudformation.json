@@ -86,7 +86,7 @@
       "Properties" : {
         "EnableDnsSupport" : "true",
         "EnableDnsHostnames" : "true",
-        "CidrBlock" : { "Ref" : "VPCSubnetRange" },
+        "CidrBlock" : {{ start_param }}VPCSubnetRange{{ end_param }},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -98,7 +98,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : { "Ref" : "PublicSubnetRange" },
+        "CidrBlock" : {{ start_param }}PublicSubnetRange{{ end_param }},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -110,7 +110,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : { "Ref" : "PrivateSubnetRange" },
+        "CidrBlock" : {{ start_param }}PrivateSubnetRange{{ end_param }},
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Private" }

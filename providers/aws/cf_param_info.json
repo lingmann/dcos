@@ -78,7 +78,7 @@
   "PublicSlaveInstanceCount" : {
     "Description" : "Number of public slave nodes to launch",
     "Type" : "Number",
-    "Default" : "5"
+    "Default" : "0"
   },
   "MasterQuorumCount" : {
     "Description" : "Number of masters needed for Mesos replicated log registry quorum (should be ceiling(<MasterInstanceCount>/2))",

@@ -64,7 +64,8 @@ class Parameters(CloudConfigParameters):
         return {
             'bootstrap_url': s3_url.format(self._release_name),
             'master_quorum': '1',
-            'stack_name': self.stack_name
+            'stack_name': self.stack_name,
+            'fallback_dns': '8.8.8.8'
         }[name]
 
     def AddTestclusterEphemeralVolume(self):

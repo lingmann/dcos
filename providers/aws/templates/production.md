@@ -2,7 +2,6 @@
 
 * For more information on creating a DCOS cluster, see the [Mesosphere beta documentation](http://beta-docs.mesosphere.com/install/eapaws/#create
 )</a>.
-  * The username and password are included in the Early Access welcome email.
 
 
 | Region Name | Region Code | Single Master | HA: Three Master |

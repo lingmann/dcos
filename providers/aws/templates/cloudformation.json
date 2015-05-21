@@ -30,7 +30,7 @@
     "PublicSlaveInstanceCount" : {
       "Description" : "Number of public slave nodes to launch",
       "Type" : "Number",
-      "Default" : "0"
+      "Default" : "1"
     }
   },
 

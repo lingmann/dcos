@@ -740,6 +740,46 @@
         "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
       }
     },
+    "SlaveToSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "SlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
+      }
+    },
+    "PublicSlaveToSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "SlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
+      }
+    },
+    "SlaveToPublicSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "SlaveSecurityGroup" }
+      }
+    },
+    "PublicSlaveToPublicSlaveIngress" : {
+      "Type" : "AWS::EC2::SecurityGroupIngress",
+      "Properties" : {
+        "GroupId" : { "Ref" : "PublicSlaveSecurityGroup" },
+        "IpProtocol" : "-1",
+        "FromPort" : "0",
+        "ToPort" : "65535",
+        "SourceSecurityGroupId" : { "Ref" : "PublicSlaveSecurityGroup" }
+      }
+    },
 
     "PublicSlaveSecurityGroup" : {
       "Type" : "AWS::EC2::SecurityGroup",

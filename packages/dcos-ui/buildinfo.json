@@ -3,6 +3,6 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-ui.git",
-    "ref": "v0.3.2"
+    "ref": "v0.3.3"
   }
 }

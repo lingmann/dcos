@@ -1,7 +1,7 @@
 # Mesos Master Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% import 'cloud-config.yaml' as cc %}
+{% import 'cloud-config.gce.yaml' as cc %}
 
 {% set masters = properties["masters"] %}
 {% set zone =  properties["zone"] %}

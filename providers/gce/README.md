@@ -39,15 +39,31 @@ then setup the default ``project`` to use for your deployment and enable "previe
     $ gcloud config set project PROJECT
     $ gcloud components update preview
 
-finally, deploy the configuration::
+You can test the configuration, using the ``preview`` command::
 
     $ gcloud preview dm-v2 deployments create mesos-test --config templates/config.yml
 
 See the [gcloud compute page](https://cloud.google.com/compute/docs/gcloud-compute/#auth) for
 more details.
+
+To actually deploy to your project, in a new "deployment", named ``<deployment name>``::
+
+    gcloud beta deployment-manager deployments create <deployment_name> \
+        --config providers/gce/templates/config.yml
+
 To login to instance, you can use gcloud command::
 
     $ gcloud compute ssh <mesos_instance_name> --zone <zone_name>
+    
+this may take a while (up to 10-15 min) to complete; then, to list instances::
+
+    gcloud compute instances list
+    
+at which point you should be able to log in to any of the Master using its ``EXTERNAL_IP``; or::
+
+    gcloud compute forwarding-rules list
+   
+to get the load balancer's IP address for Exhibitor
 
 One important thing, please make sure, that your local machine public ip address is included
 ``admin_range`` parameter, in other case you will not have access to the instances.

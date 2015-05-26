@@ -6,7 +6,7 @@ write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root
-    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess'
+    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/ea5-rc5'
   - path: /etc/mesosphere/roles/master
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'

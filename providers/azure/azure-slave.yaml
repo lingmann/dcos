@@ -6,7 +6,7 @@ write_files:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root
-    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess'
+    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/ea5-rc5'
   - path: /etc/mesosphere/roles/slave
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
@@ -18,7 +18,8 @@ write_files:
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/var/lib/mesos/slave
-      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-65535]
+      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
+      MESOS_SLAVE_SUBSYSTEMS=cpu,memory
       MESOS_HOSTNAME=$private_ipv4
       MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
@@ -41,7 +42,6 @@ coreos:
         Where=/var/lib
         Type=ext4
     - name: systemd-resolved.service
-      mask: true
       command: stop
     - name: etcd.service
       mask: true
@@ -56,6 +56,15 @@ coreos:
         EnvironmentFile=/etc/environment
         # Marathon depends on `hostname` resolution working
         ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) > /etc/hosts"
+    - name: link-env.service
+      command: start
+      content: |
+        [Service]
+        Type=oneshot
+        Before=dcos.target
+        ConditionPathExists=!/etc/profile.d/dcos.sh
+        ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
+        ExecStart=/usr/bin/ln -s /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
     - name: dcos-download.service
       content: |
         [Unit]
@@ -79,6 +88,6 @@ coreos:
         [Service]
         Type=oneshot
         EnvironmentFile=/opt/mesosphere/environment
-        ExecStart=/opt/mesosphere/bin/pkgpanda setup
+        ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
         [Install]
         WantedBy=multi-user.target

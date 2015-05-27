@@ -32,10 +32,10 @@ from pkgpanda.util import extract_tarball, if_exists, load_json, write_json, wri
 reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 env_header = """# Pandapkg provided environment variables
 LD_LIBRARY_PATH={0}/lib
-PATH=/usr/bin:{0}/bin\n\n"""
+PATH=/usr/sbin:/usr/bin:{0}/bin\n\n"""
 env_export_header = """# Pandapkg provided environment variables
 export LD_LIBRARY_PATH={0}/lib
-export PATH=/usr/bin:{0}/bin\n\n"""
+export PATH=/usr/sbin:/usr/bin:{0}/bin\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"

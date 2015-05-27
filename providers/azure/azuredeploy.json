@@ -26,7 +26,7 @@
   "variables": {
     "adminUsername": "core",
     "vmStorageAccountContainerName": "vhd",
-    "vmSourceImageName": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Beta-633.1.0",
+    "vmSourceImageName": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Stable-633.1.0",
     "subnet1Name": "Data",
     "uniqueName": "[resourceGroup().name]",
     "storageAccountName": "[concat(variables('uniqueName'), 'dcsan')]",

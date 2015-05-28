@@ -118,7 +118,18 @@ then
     --configtype=azure --azureconfig="\$AZURE_CONTAINER:\$AZURE_PREFIX" \\
     --azurecredentials \$exhibitor_properties \\
     --hostname \$EXHIBITOR_HOSTNAME
+
+elif [[ -n "\${GCE_BUCKET_NAME:-}" && \\
+        -n "\${GCE_OBJECT_NAME:-}" ]]
+then
+  echo "Starting Exhibitor for GCE"
+  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
+    --port \$EXHIBITOR_WEB_UI_PORT \\
+    --defaultconfig \$exhibitor_defaults \\
+    --configtype=gcs --gcsconfig="\${GCE_BUCKET_NAME}:\${GCE_BUCKET_NAME}" \\
+    --hostname \$EXHIBITOR_HOSTNAME
 elif [[ -n "\${EXHIBITOR_FSCONFIGDIR:-}" ]]
+
 then
   echo "Starting Exhibitor for local setup"
   /bin/mkdir -p \$EXHIBITOR_FSCONFIGDIR

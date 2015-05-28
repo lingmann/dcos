@@ -4,9 +4,9 @@
   "sources": {
     "exhibitor": {
       "kind": "git",
-      "git": "https://github.com/mesosphere/exhibitor.git",
-      "ref": "92e6d35d4c11a10c522cc64cf7e3134764784605",
-      "ref_origin": "multicloud"
+      "git": "https://github.com/YuraTolochkevich/exhibitor.git",
+      "ref": "69eb6b084655e8c0dc531e0afcb6594070588660",
+      "ref_origin": "gce_support_new"
     },
     "zookeeper": {
       "kind": "url_extract",

@@ -2,33 +2,44 @@
 #
 # Created M. Massenzio, 2015-04-27
 
-imports: ["vm_master.jinja", "vm_slave.jinja", "network.jinja"]
+imports: 
+- path: vm_master.jinja
+- path: vm_slave.jinja
+- path: network.jinja
+- path: cloud-config.gce.yaml
 
 resources:
 - name: master-cluster
   type: vm_master.jinja
   properties:
-    base_name: test
-    masters: 3
+    base_name: test-2
+    masters: 1
+    master_quorum: 1
     disk_size: 10G
     zone: us-central1-a
-    machine: f1-micro
+    region: us-central1
+    machine: n1-standard-1
+    bootstrap_url: http://storage.googleapis.com/bootstrap-dcos
     ssh_key: test_ssh_key
+    network: test-network-2
 
 - name: slaves-cluster
   type: vm_slave.jinja
   properties:
-    base_name: test
+    base_name: test-2
     nodes: 3
-    machine: f1-micro
+    machine: n1-standard-1
     disk_size: 15G
     zone: us-central1-a
     ssh_key: test_ssh_key
+    bootstrap_url: http://storage.googleapis.com/bootstrap-dcos
+    network: test-network-2
 
 - name: subnet
   type: network.jinja
   properties:
-    base_name: test
+    base_name: mesos-internal
     zone: us-central1-a
     network_pool: 10.10.0.0/16
-    admin_range: 10.1.0.0/16
+    admin_range: 0.0.0.0/0
+    network: test-network-2

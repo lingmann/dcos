@@ -1,9 +1,17 @@
 # Mesos Slave Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% set base_slave_name = properties["base_name"] + '-slave' %}
-{% set machine_type = properties["machine"]%}
+{% import 'cloud-config.gce.yaml' as cc %}
 
+{% set base_name = properties["base_name"]  %}
+{% set base_slave_name = base_name + '-slave' %}
+{% set machine_type = properties["machine"]%}
+{% set bootstrap_url= properties["bootstrap_url"] %}
+
+{% set base_name = properties["base_name"]  %}
+{% set base_slave_name = base_name + '-slave' %}
+{% set machine_type = properties["machine"]%}
+{% set bootstrap_url= properties["bootstrap_url"] %}
 resources:
     - name: {{base_slave_name}}-template
       type: compute.v1.instanceTemplate
@@ -20,12 +28,17 @@ resources:
             initializeParams:
               sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
           networkInterfaces:
-          - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+          - network: $(ref.{{ properties["network"] }}.selfLink)
+            accessConfigs:
+            - name: External NAT
+              type: ONE_TO_ONE_NAT
           metadata:
-                items:
-                    - key: sshKeys
-                      value: {{properties["ssh_key"]}}
-
+            items:
+            - key: master_elb
+              value: $(ref.{{ base_name }}-lb.IPAddress)
+            - key: user-data
+              value: |
+                {{cc.GenerateCloudConfig( bootstrap_url, "slave", "",  base_name ) }}
     - name: {{base_slave_name}}
       type: replicapool.v1beta2.instanceGroupManager
       properties:

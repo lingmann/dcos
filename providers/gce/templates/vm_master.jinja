@@ -1,19 +1,28 @@
 # Mesos Master Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% set masters = properties["masters"] + 1 %}
+{% import 'cloud-config.gce.yaml' as cc %}
+
+{% set masters = properties["masters"] %}
 {% set zone =  properties["zone"] %}
 {% set base_name = properties["base_name"] %}
 {% set machine_type = properties["machine"]%}
+{% set bootstrap_url= properties["bootstrap_url"] %}
+{% set master_quorum = properties["master_quorum"] %}
+{% set bucket_name = properties["base_name"]+'-'+env["project"]+'-exh' %}
 
 resources:
-{% for i in range(1, masters) %}
+{% for i in range(1, masters+1) %}
     {% set name = "%s-master-%d" % (base_name, i) %}
     - name: {{ name }}
       type: compute.v1.instance
       properties:
         zone: {{ properties["zone"] }}
         machineType: https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ zone }}/machineTypes/{{ machine_type }}
+        serviceAccounts:
+         - email: default
+           scopes:
+           - https://www.googleapis.com/auth/devstorage.full_control
         disks:
         - deviceName: boot
           type: PERSISTENT
@@ -25,11 +34,41 @@ resources:
             sourceImage: https://www.googleapis.com/compute/v1/projects/coreos-cloud/global/images/coreos-stable-633-1-0-v20150414
         metadata:
           items:
-          - key: sshKeys
-            value: {{properties["ssh_key"]}}
+          - key: master_elb
+            value: $(ref.{{ base_name }}-lb.IPAddress)
+          - key: user-data
+            value: |  
+              {{cc.GenerateCloudConfig( bootstrap_url, "master", master_quorum ,  base_name ,masters, bucket_name) }}
         networkInterfaces:
-        - network: $(ref.{{properties["base_name"]}}-network.selfLink)
+        - network: $(ref.{{ properties["network"] }}.selfLink)
           accessConfigs:
           - name: External NAT
             type: ONE_TO_ONE_NAT
 {% endfor %}
+
+    - name: {{ base_name }}-health-check
+      type: compute.v1.httpHealthCheck
+      properties:
+        port: 8181
+        requestPath: /exhibitor/v1/cluster/status
+
+    - name: {{ base_name }}-targer-pool
+      type: compute.v1.targetPool
+      properties:
+        region: {{ properties["region"] }}
+        healthChecks: [$(ref.{{ base_name }}-health-check.selfLink)]
+        instances: [
+        {% for i in range(1, masters+1) %}
+          "https://www.googleapis.com/compute/v1/projects/{{ env["project"] }}/zones/{{ properties["zone"] }}/instances/{{ base_name }}-master-{{ i }}",
+          {% endfor %}
+        ]
+
+    - name: {{ base_name }}-lb
+      type: compute.v1.forwardingRule
+      properties:
+        region: {{ properties["region"] }}
+        portRange: 8181-8181
+        target: $(ref.{{ base_name }}-targer-pool.selfLink)
+
+    - name: {{ properties["base_name"] }}-{{ env["project"] }}-exh
+      type: storage.v1.bucket

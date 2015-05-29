@@ -625,7 +625,7 @@
     "PublicSlaveLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties" : {
-        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "SecurityGroups": [{ "Ref": "PublicSlaveSecurityGroup" }],
         "Subnets": [{ "Ref": "PublicSubnet" }],
         "Listeners" : [
           {

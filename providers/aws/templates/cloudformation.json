@@ -622,6 +622,33 @@
         }
       }
     },
+    "PublicSlaveLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
+        "Subnets": [{ "Ref": "PublicSubnet" }],
+        "Listeners" : [
+          {
+            "LoadBalancerPort" : "80",
+            "Protocol" : "HTTP",
+            "InstancePort" : "80",
+            "InstanceProtocol" : "HTTP"
+          },
+          {
+            "LoadBalancerPort" : "443",
+            "Protocol" : "TCP",
+            "InstancePort" : "443",
+            "InstanceProtocol" : "TCP"
+          }],
+        "HealthCheck" : {
+          "Target" : "HTTP:80",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "2",
+          "Interval" : "30",
+          "Timeout" : "5"
+        }
+      }
+    },
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
       "Properties" : {
@@ -670,6 +697,7 @@
         "MinSize" : { "Ref" : "PublicSlaveInstanceCount" },
         "MaxSize" : { "Ref" : "PublicSlaveInstanceCount" },
         "DesiredCapacity" : { "Ref" : "PublicSlaveInstanceCount" },
+        "LoadBalancerNames" : [{ "Ref" : "PublicSlaveLoadBalancer" }],
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {

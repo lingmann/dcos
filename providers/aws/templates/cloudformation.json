@@ -641,7 +641,7 @@
             "InstanceProtocol" : "TCP"
           }],
         "HealthCheck" : {
-          "Target" : "HTTP:80",
+          "Target" : "HTTP:80/",
           "HealthyThreshold" : "2",
           "UnhealthyThreshold" : "2",
           "Interval" : "30",

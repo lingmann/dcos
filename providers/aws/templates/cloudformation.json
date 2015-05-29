@@ -902,6 +902,10 @@
     "DnsAddress" : {
       "Description" : "Mesos Master",
       "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
+    },
+    "PublicSlaveDnsAddress" : {
+      "Description" : "Public slaves",
+      "Value" : { "Fn::GetAtt" : [ "PublicSlaveLoadBalancer", "DNSName" ]}
     }
   }
 }

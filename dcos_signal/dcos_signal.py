@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
 USAGE:
-    dcos_signal --write_key=<write_key> --stack_id=<stack_id>
+    dcos_signal --write_key=<write_key>
 """
 
 

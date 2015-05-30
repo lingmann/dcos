@@ -7,6 +7,7 @@ USAGE:
 
 import analytics
 import docopt
+import os
 import requests
 import uuid
 
@@ -35,11 +36,21 @@ def get_cluster_summary_event_from_json(summary_json):
             'cluster_name': cluster_name}
 
 
-def report_heartbeat(stack_id):
+def read_env():
+    # TODO(mj): These keys should be less tied to AWS.
+    env_vars = ['AWS_REGION', 'AWS_STACK_ID', 'AWS_STACK_NAME']
+
+    return {env_var: os.environ.get(env_var) for env_var in env_vars}
+
+
+def report_heartbeat():
     summary_json = get_state_summary()
 
     cluster_event = get_cluster_summary_event_from_json(summary_json)
-    cluster_event['stack_id'] = stack_id
+
+    env_vars = read_env()
+    for env_var in env_vars:
+        cluster_event[env_var] = env_vars[env_var]
 
     analytics.track(anonymous_id=uuid.uuid4().hex,
                     event=EVENT_NAME,
@@ -55,4 +66,4 @@ def start():
 
     analytics.write_key = args['--write_key']
 
-    return report_heartbeat(stack_id=args['--stack_id'])
+    return report_heartbeat()

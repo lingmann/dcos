@@ -7,7 +7,7 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 mkdir -p "$LIB_INSTALL_DIR"
 
 # Build the dcos-signal service
-pushd /pkg/src/dcos-image
+pushd /pkg/src/dcos-signal
 python3 setup.py install --root=/ --prefix=$PKG_PATH
 
 # Create the service file

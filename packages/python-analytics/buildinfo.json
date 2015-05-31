@@ -1,0 +1,12 @@
+{
+  "requires": ["python"],
+  "docker": "dcos-builder",
+  "sources": {
+    "python-analytics": {
+      "kind": "git",
+      "git": "https://github.com/segmentio/analytics-python.git",
+      "ref": "627637e2b5de0d423d807320790bde224854923c",
+      "ref_origin": "master"
+    }
+  }
+}

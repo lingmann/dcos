@@ -1,5 +1,5 @@
 {
-  "requires": ["python-docopt", "python", "python-requests"],
+  "requires": ["python-docopt", "python", "python-requests", "python-analytics"],
   "docker": "dcos-builder",
   "sources": {
     "dcos-signal": {

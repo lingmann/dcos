@@ -7,6 +7,8 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 mkdir -p "$LIB_INSTALL_DIR"
 
 # Build all the packages. We'd use pip to install them but that fails badly.
-pushd /pkg/src/python-analytics
-python3 setup.py install --root=/ --prefix=$PKG_PATH
-popd
+for package in six dateutil python-analytics; do
+    pushd "/pkg/src/$package"
+    python3 setup.py install --root=/ --prefix=$PKG_PATH
+    popd
+done

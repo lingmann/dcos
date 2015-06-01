@@ -38,7 +38,7 @@ def get_cluster_summary_event_from_json(summary_json):
 
 def read_env():
     # TODO(mj): These keys should be less tied to AWS.
-    env_vars = ['AWS_REGION', 'AWS_STACK_ID', 'AWS_STACK_NAME']
+    env_vars = ['AWS_REGION', 'AWS_STACK_ID', 'AWS_STACK_NAME', 'EXTERNAL_ELB']
 
     return {env_var: os.environ.get(env_var) for env_var in env_vars}
 

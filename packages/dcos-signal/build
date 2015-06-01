@@ -16,7 +16,7 @@ mkdir -p "$(dirname "$service")"
 cat <<EOF > "$service"
 [Unit]
 Description=DCOS Tracking
-After=dcos-tracking.service
+After=mesos-master.service
 [Service]
 Restart=on-failure
 StartLimitInterval=0
@@ -32,6 +32,6 @@ cat <<'EOF' > "$service_timer"
 [Unit]
 Description=Tracking every interval
 [Timer]
-OnCalendar="minutely"
+OnCalendar=minutely
 Unit=dcos-signal.service
 EOF

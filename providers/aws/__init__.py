@@ -157,6 +157,7 @@ class Parameters(CloudConfigParameters):
       AWS_SECRET_ACCESS_KEY={{ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }}
       ZOOKEEPER_CLUSTER_SIZE={master_count}
       MASTER_ELB={{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }}
+      EXTERNAL_ELB={{ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS={fallback_dns}

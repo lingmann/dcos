@@ -23,7 +23,7 @@ StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
-ExecStart=/opt/mesosphere/bin/dcos-signal --write_key=39uhSEOoRHMw6cMR6st9tYXDbAL3JSaP
+ExecStart=/opt/mesosphere/bin/dcos-signal --write_key=51ybGTeFEFU1xo6u10XMDrr6kATFyRyh
 EOF
 
 service_timer="$PKG_PATH/dcos.target.wants/dcos-signal.timer"
@@ -32,6 +32,6 @@ cat <<'EOF' > "$service_timer"
 [Unit]
 Description=Tracking every interval
 [Timer]
-OnCalendar=minutely
+OnCalendar=hourly
 Unit=dcos-signal.service
 EOF

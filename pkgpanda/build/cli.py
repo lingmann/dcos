@@ -318,7 +318,6 @@ def build_tree(repository, mkbootstrap, tree_name):
         # TODO(cmaloney): This does a ton of excess repeated work...
         # use the repository built during package building instead of
         # building a new one for the package tarball (just mv it).
-        print("Making bootstrap tarball")
         make_bootstrap_tarball(tree_name, list(sorted(built_package_paths)))
 
 

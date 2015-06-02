@@ -10,7 +10,7 @@ from urllib.parse import urlparse
 
 import pkgpanda
 from pkgpanda.exceptions import ValidationError
-from pkgpanda.util import make_file, make_tar, rewrite_symlinks, write_json
+from pkgpanda.util import make_file, make_tar, rewrite_symlinks, write_json, write_string
 
 
 def sha1(filename):
@@ -222,23 +222,8 @@ def fetch_sources(sources):
 # If work_dir is None, makes a temp folder in the current directory, deletes after.
 # NOTE: NOT A LIBRARY FUNCTION. ASSUMES CLI.
 def make_bootstrap_tarball(output_name, packages, work_dir=None):
-    work_dir_set = work_dir is not None
-    if work_dir is None:
-        work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
 
-    if output_name and len(output_name):
-        output_name = output_name + '.'
-    else:
-        # Just for type safety
-        output_name = ''
-
-    def make_abs(path):
-        return os.path.join(work_dir, path)
-
-    pkgpanda_root = make_abs("opt/mesosphere")
-    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
-
-    # Fetch all the packages to the root
+    # Convert filenames to package ids
     pkg_ids = list()
     for pkg_path in packages:
         # Get the package id from the given package path
@@ -249,10 +234,51 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
         pkg_id = filename[:-len(".tar.xz")]
         pkg_ids.append(pkg_id)
 
-        # TODO(camloney): Allow grabbing packages via http.
+    # Filename is output_name.<sha-1>.{active.json|.bootstrap.tar.xz}
+    bootstrap_id = hash_checkout(pkg_ids)
+    if output_name and len(output_name):
+        output_name = output_name + '.'
+    else:
+        # Just for type safety
+        output_name = ''
+
+    latest_name = "{}bootstrap.latest".format(output_name)
+
+    output_name += bootstrap_id + '.'
+
+    # bootstrap tarball = <sha1 of packages in tarball>.bootstrap.tar.xz
+    bootstrap_name = "{}bootstrap.tar.xz".format(output_name)
+    active_name = "{}active.json".format(output_name)
+    if (os.path.exists(bootstrap_name)):
+        # Ensure latest is always written
+        write_string(latest_name, bootstrap_id)
+
+        print("Bootstrap already up to date, not recreating")
+        print("bootstrap: {}".format(bootstrap_name))
+        print("active: {}".format(active_name))
+        print("latest: {}".format(latest_name))
+        return bootstrap_name
+
+    print("Building bootstrap tarball")
+
+    work_dir_set = work_dir is not None
+    if work_dir is None:
+        work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
+
+    def make_abs(path):
+        return os.path.join(work_dir, path)
+
+    pkgpanda_root = make_abs("opt/mesosphere")
+    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
+
+    # Fetch all the packages to the root
+    for pkg_path in packages:
+        filename = os.path.basename(pkg_path)
+        pkg_id = filename[:-len(".tar.xz")]
+
         def local_fetcher(id, target):
             shutil.unpack_archive(pkg_path, target, "gztar")
-        repository.add(local_fetcher, pkg_id)
+        repository.add(local_fetcher, pkg_id, False)
 
     # Activate the packages inside the repository.
     # Do generate dcos.target.wants inside the root so that we don't
@@ -271,12 +297,21 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
     make_file(make_abs("opt/mesosphere/bootstrap"))
 
     # Write out an active.json for the bootstrap tarball
-    write_json("{}active.json".format(output_name), pkg_ids)
+    write_json(active_name, pkg_ids)
 
     # Rewrite all the symlinks to point to /opt/mesosphere
     rewrite_symlinks(work_dir, work_dir, "/")
 
-    make_tar("{}bootstrap.tar.xz".format(output_name), pkgpanda_root)
+    make_tar(bootstrap_name, pkgpanda_root)
 
     if not work_dir_set:
         shutil.rmtree(work_dir)
+
+    # Update latest last so that we don't ever use partially-built things.
+    write_string(latest_name, bootstrap_id)
+
+    print("Built bootstrap")
+    print("bootstrap: {}".format(bootstrap_name))
+    print("active: {}".format(active_name))
+    print("latest: {}".format(latest_name))
+    return bootstrap_name

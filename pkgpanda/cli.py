@@ -22,14 +22,12 @@ Options:
                                 rather than /etc/systemd/system/dcos.target.wants
 """
 
-import json
 import os.path
 import sys
 from itertools import groupby
 from os import umask
 from subprocess import check_call
-from urllib.error import HTTPError, URLError
-from urllib.request import urlopen
+from urllib.error import URLError
 
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, urllib_fetcher
@@ -110,36 +108,21 @@ def do_bootstrap(install, repository):
         setup_packages_to_activate.append(pkg_id_str)
 
     # If active.json is set on the host, use that as the set of packages to
-    # activate. Otherwise use one from the bootstrap url.
+    # activate. Otherwise just use the set of currently active packages (those
+    # active in the bootstrap tarball)
     to_activate = None
     active_path = install.get_config_filename("setup-flags/active.json")
     if os.path.exists(active_path):
         print("active.json loaded from filesystem")
         to_activate = load_json(active_path)
-    elif repository_url:
-        print("active.json loaded from repository {}".format(repository_url))
-        try:
-            active_url = repository_url + "/config/active.json"
-            req = urlopen(active_url)
-            to_activate = json.loads(req.read().decode('utf-8'))
-        except HTTPError as ex:
-            print("Unable to get list of packages to activate from: {0}".format(active_url))
-            print(ex)
-            sys.exit(1)
-        except ValueError as ex:
-            print("Unable to decode as JSON: {0}".format(active_url))
-            sys.exit(1)
-    else:
-        print("ERROR: No active.json available to load. Either one needs to " +
-              "be set in setup-flags/active.json or set " +
-              "setup-flags/bootstrap-url and active.json will be fetched from" +
-              " the given url.")
-        sys.exit(1)
 
-    # Ensure all packages are local
-    print("Ensuring all packages in active set {} are local".format(",".join(to_activate)))
-    for package in to_activate:
-        repository.add(fetcher, package)
+        # Ensure all packages are local
+        print("Ensuring all packages in active set {} are local".format(",".join(to_activate)))
+        for package in to_activate:
+            repository.add(fetcher, package)
+    else:
+        print("active.json from bootstrap tarball")
+        to_activate = list(install.get_active())
 
     to_activate = list(set(to_activate + setup_packages_to_activate))
 

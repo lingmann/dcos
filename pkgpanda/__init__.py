@@ -312,11 +312,12 @@ class Repository:
     # Add the given package to the repository.
     # If the package is already in the repository does a no-op and returns false.
     # Returns true otherwise.
-    def add(self, fetcher, id):
+    def add(self, fetcher, id, warn_added=True):
         # If the package already exists, return true
         package_path = self.package_path(id)
         if os.path.exists(package_path):
-            print("Package already added.")
+            if warn_added:
+                print("Package already added.")
             return False
 
         # TODO(cmaloney): Supply a temporary directory to extract to

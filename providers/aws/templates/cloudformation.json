@@ -395,7 +395,31 @@
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
               ]
-            } ]
+            },
+            {
+              "Resource": [
+                  { "Ref" : "AWS::StackId" },
+                  { "Fn::Join" : ["", [{ "Ref" : "AWS::StackId" }, "/*" ]]}
+              ],
+              "Action": [
+                  "cloudformation:*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+                "Resource": "*",
+                "Action": [
+                    "ec2:DescribeKeyPairs",
+                    "ec2:DescribeSubnets",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
+                ],
+                "Effect": "Allow"
+            }
+ ]
           }
         } ]
       }
@@ -426,7 +450,31 @@
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
               ]
-            } ]
+            },
+            {
+                "Resource": [
+                    { "Ref" : "AWS::StackId" },
+                    { "Fn::Join" : ["", [{ "Ref" : "AWS::StackId" }, "/*" ]]}
+                ],
+                "Action": [
+                    "cloudformation:*"
+                ],
+                "Effect": "Allow"
+            },
+            {
+                "Resource": "*",
+                "Action": [
+                    "ec2:DescribeKeyPairs",
+                    "ec2:DescribeSubnets",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
+                ],
+                "Effect": "Allow"
+            }
+            ]
           }
         } ]
       }

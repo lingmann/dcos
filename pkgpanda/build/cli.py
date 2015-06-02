@@ -523,7 +523,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
             sys.exit(1)
 
     # Add requires to the package id, calculate the final package id.
-    build_ids['requires'] = [str(x) for x in active_packages]
+    build_ids['requires'] = [str(x.id) for x in active_packages]
     version_base = hash_checkout(build_ids)
     version = None
     if "version_extra" in buildinfo:

@@ -405,6 +405,19 @@
                   "cloudformation:*"
               ],
               "Effect": "Allow"
+            },
+            {
+                "Resource": "*",
+                "Action": [
+                    "ec2:DescribeKeyPairs",
+                    "ec2:DescribeSubnets",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
+                ],
+                "Effect": "Allow"
             }
  ]
           }
@@ -456,7 +469,8 @@
                     "autoscaling:DescribeLaunchConfigurations",
                     "autoscaling:UpdateAutoScalingGroup",
                     "autoscaling:DescribeAutoScalingGroups",
-                    "autoscaling:DescribeScalingActivities"
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
                 ],
                 "Effect": "Allow"
             }

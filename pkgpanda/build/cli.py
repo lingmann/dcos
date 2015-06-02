@@ -25,7 +25,6 @@ import tempfile
 from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists, expanduser, normpath
 from subprocess import CalledProcessError, check_call, check_output
-from tempfile import TemporaryDirectory
 
 import pkgpanda.build.constants
 from docopt import docopt

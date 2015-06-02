@@ -455,6 +455,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     active_packages = list()
     active_package_names = set()
+    active_package_ids = set()
     auto_deps = set()
     # Verify all requires are in the repository.
     if 'requires' in buildinfo:
@@ -505,6 +506,8 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                         continue
                     active_packages.append(package)
 
+                active_package_ids.add(pkg_id_str)
+
                 # Mount the package into the docker container.
                 cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id_str)
 
@@ -531,7 +534,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
             sys.exit(1)
 
     # Add requires to the package id, calculate the final package id.
-    build_ids['requires'] = [str(x.id) for x in active_packages]
+    # NOTE: active_packages isn't fully constructed here since we lazily load
+    # packages not already in the repository.
+    build_ids['requires'] = list(active_package_ids)
     version_base = hash_checkout(build_ids)
     version = None
     if "version_extra" in buildinfo:

@@ -314,10 +314,6 @@ def build_tree(repository, mkbootstrap, tree_name):
             pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
             built_package_paths.add(pkg_path)
 
-    finally:
-        # Always clear out the temporary repository.
-        check_call(["rm", "-rf", repository.path])
-
     # Build the tarball if requested, along with a "active.json"
     if mkbootstrap:
         # TODO(cmaloney): This does a ton of excess repeated work...

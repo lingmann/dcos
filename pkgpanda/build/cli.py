@@ -14,7 +14,8 @@ Usage:
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
-                            dependencies. [default: ~/.pkgpanda/repository]
+                            dependencies. If not specified will build a new one
+                            for each build.
 """
 
 import copy
@@ -24,6 +25,7 @@ import tempfile
 from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists, expanduser, normpath
 from subprocess import CalledProcessError, check_call, check_output
+from tempfile import TemporaryDirectory
 
 import pkgpanda.build.constants
 from docopt import docopt
@@ -89,7 +91,13 @@ def main():
     umask(0o022)
 
     # Load the repository
-    repository = Repository(normpath(expanduser(arguments['--repository-path'])))
+    if arguments['--repository-path']:
+        repository_path = arguments['--repository-path']
+    else:
+        tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
+        repository_path = tmpdir.name
+
+    repository = Repository(normpath(expanduser(repository_path)))
 
     # Repository management commands.
     if arguments['add']:

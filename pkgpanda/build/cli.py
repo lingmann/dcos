@@ -436,12 +436,6 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     # not live in buildinfo.json.
     build_ids['environment'] = buildinfo.get('environment', {})
 
-    # Only fresh builds are allowed which don't overlap existing artifacts.
-    if exists("result"):
-        print("result folder must not exist. It will be made when the package " +
-              "is built. {}".format(abspath("result")))
-        sys.exit(1)
-
     # Packages need directories inside the fake install root (otherwise docker
     # will try making the directories on a readonly filesystem), so build the
     # install root now, and make the package directories in it as we go.
@@ -557,6 +551,12 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     # Clean out src, result so later steps can use them freely for building.
     clean()
+
+    # Only fresh builds are allowed which don't overlap existing artifacts.
+    if exists("result"):
+        print("result folder must not exist. It will be made when the package " +
+              "is built. {}".format(abspath("result")))
+        sys.exit(1)
 
     # 'mkpanda add' all implicit dependencies since we actually need to build.
     for dep in auto_deps:

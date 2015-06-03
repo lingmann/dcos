@@ -286,34 +286,31 @@ def build_tree(repository, mkbootstrap, tree_name):
         visit(name)
 
     built_package_paths = set()
-    try:
-        for name in build_order:
-            print("Building: {}".format(name))
-            override_buildinfo = None
-            if 'single_source' in packages[name] or 'sources' in packages[name]:
-                # Get the sources
-                sources = expand_single_source_alias(name, packages[name])
+    for name in build_order:
+        print("Building: {}".format(name))
+        override_buildinfo = None
+        if 'single_source' in packages[name] or 'sources' in packages[name]:
+            # Get the sources
+            sources = expand_single_source_alias(name, packages[name])
 
-                # Write to an override buildinfo file, providing the options to the build.
-                fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
-                os.close(fd)  # TODO(cmaloney): Should really write to the fd...
-                write_json(override_buildinfo, {"sources": sources})
+            # Write to an override buildinfo file, providing the options to the build.
+            fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
+            os.close(fd)  # TODO(cmaloney): Should really write to the fd...
+            write_json(override_buildinfo, {"sources": sources})
 
-            # Run the build
-            start_dir = os.path.abspath(getcwd())
-            os.chdir(start_dir + '/' + name)
-            pkg_path = build(repository, name, override_buildinfo, False)
-            os.chdir(start_dir)
+        # Run the build
+        start_dir = os.path.abspath(getcwd())
+        os.chdir(start_dir + '/' + name)
+        pkg_path = build(repository, name, override_buildinfo, False)
+        os.chdir(start_dir)
 
-            # Store the path to the package for use in building tarballs
-            assert(pkg_path)
-            built_package_paths.add(pkg_path)
+        # Store the path to the package for use in building tarballs
+        assert(pkg_path)
+        built_package_paths.add(pkg_path)
 
-            # Clean up temporary files
-            if override_buildinfo:
-                os.remove(override_buildinfo)
-    finally:
-        pass
+        # Clean up temporary files
+        if override_buildinfo:
+            os.remove(override_buildinfo)
 
     # Build the tarball if requested, along with a "active.json"
     if mkbootstrap:

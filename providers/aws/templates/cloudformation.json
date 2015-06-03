@@ -1,7 +1,7 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "Launches a Mesosphere DCOS cluster",
+  "Description" : "Launching the Mesosphere DCOS cluster",
 
   "Parameters" : {
     "KeyName" : {

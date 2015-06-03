@@ -138,7 +138,7 @@ def main():
     sys.exit(0)
 
 
-def load_buildinfo(path):
+def load_buildinfo(path=os.getcwd()):
     # Load the package build info.
     try:
         return load_json(os.path.join(path, "buildinfo.json"))
@@ -288,6 +288,7 @@ def build_tree(repository, mkbootstrap, tree_name):
     built_package_paths = set()
     for name in build_order:
         print("Building: {}".format(name))
+        build_cmd = ["mkpanda"]
         override_buildinfo = None
         if 'single_source' in packages[name] or 'sources' in packages[name]:
             # Get the sources
@@ -297,20 +298,20 @@ def build_tree(repository, mkbootstrap, tree_name):
             fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
             os.close(fd)  # TODO(cmaloney): Should really write to the fd...
             write_json(override_buildinfo, {"sources": sources})
+            build_cmd += ['--override-buildinfo', override_buildinfo]
 
         # Run the build
-        start_dir = os.path.abspath(getcwd())
-        os.chdir(start_dir + '/' + name)
-        pkg_path = build(repository, name, override_buildinfo, False)
-        os.chdir(start_dir)
-
-        # Store the path to the package for use in building tarballs
-        assert(pkg_path)
-        built_package_paths.add(pkg_path)
+        check_call(build_cmd, cwd=abspath(name))
 
         # Clean up temporary files
         if override_buildinfo:
             os.remove(override_buildinfo)
+
+        # Add the package to the set of built packages.
+        # Don't auto-add since 'mkpanda' will add as needed.
+        package_id = load_string(os.path.join(name, "cache/last_build"))
+        pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
+        built_package_paths.add(pkg_path)
 
     # Build the tarball if requested, along with a "active.json"
     if mkbootstrap:
@@ -346,7 +347,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo(os.getcwd())
+    buildinfo = load_buildinfo()
 
     if 'name' in buildinfo:
         print("WARNING: 'name' in buildinfo is deprecated.")

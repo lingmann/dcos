@@ -342,8 +342,6 @@ def assert_no_duplicate_keys(lhs, rhs):
 
 
 def build(repository, name, override_buildinfo_file, no_auto_deps):
-    # Clean out src, result so later steps can use them freely for building.
-    clean()
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
@@ -556,6 +554,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
         write_string("cache/last_build", str(pkg_id))
 
         return pkg_path
+
+    # Clean out src, result so later steps can use them freely for building.
+    clean()
 
     # 'mkpanda add' all implicit dependencies since we actually need to build.
     for dep in auto_deps:

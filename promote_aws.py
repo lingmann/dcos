@@ -17,7 +17,7 @@ Promtion steps:
 import urllib.parse
 from docopt import docopt
 from pkgpanda import PackageId
-from pkgpanda.util import load_json, write_json, write_string
+from pkgpanda.util import load_json, load_string, write_json, write_string
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from util import bucket, render_markdown_data, upload_s3
@@ -119,19 +119,21 @@ def main():
             new_object.copy_from(CopySource=old_path)
 
     # Copy across packages
-    fetch_from_s3('config/active.json', 'prod.active.json')
+    fetch_from_s3('bootstrap.latest', 'bootstrap.latest')
+    bootstrap_id = load_string('bootstrap.latest')
+    fetch_from_s3('config/{}.active.json'.format(bootstrap_id), 'prod.active.json')
     for pkg_id_str in load_json('prod.active.json'):
         pkg_id = PackageId(pkg_id_str)
 
         pkg_path = 'packages/{}/{}.tar.xz'.format(pkg_id.name, pkg_id_str)
         copy_across(pkg_path)
 
-    # TODO(cmaloney): Should show a temporary interstatial while the next couple
-    # steps complete since things are going to be inconsistent.
-    # Copy across active.json, bootstrap.tar.xz
     # TODO(cmaloney): Figure out ideal cache settings for these
-    copy_across('config/active.json', no_cache=True)
-    copy_across('bootstrap.tar.xz', no_cache=True)
+    # NOTE: active.json here isn't actually used by the setup() of pkgpanda,
+    # just useful for programatically accessing the list of what is in a given
+    # bootstrap tarball.
+    copy_across('config/{}.active.json'.format(bootstrap_id), no_cache=True)
+    copy_across('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id), no_cache=True)
 
     # Upload cloudformation template, new landing page
     upload_s3(

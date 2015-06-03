@@ -5,9 +5,13 @@ write_files:
     owner: root
     content: |
       {{bootstrap_url}}
-  {% for role in roles %}
-  - path: /etc/mesosphere/roles/{{role}}
-  {% endfor %}
+  - path: /etc/mesosphere/setup-flags/bootstrap-id
+    permissions: 0644
+    owner: root
+    content: |
+      BOOTSTRAP_ID={{ bootstrap_id }}
+{% for role in roles %}  - path: /etc/mesosphere/roles/{{role}}
+{% endfor %}
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
     content: '{}'
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json
@@ -88,8 +92,9 @@ coreos:
         Wants=network-online.target
         ConditionPathExists=!/opt/mesosphere/
         [Service]
+        EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
         Type=oneshot
-        ExecStartPre=/usr/bin/bash -c 'until wget --progress=dot -e dotbytes=10M --continue {{ bootstrap_url }}/bootstrap.tar.xz -O /tmp/bootstrap.tar.xz; do echo "failed to download"; sleep 5; done'
+        ExecStartPre=/usr/bin/bash -c "until wget --progress=dot -e dotbytes=10M --continue {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz -O /tmp/bootstrap.tar.xz; do echo 'failed to download'; sleep 5; done"
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
         ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     - name: dcos-setup.service

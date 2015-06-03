@@ -14,17 +14,10 @@ Deploy steps:
 
 from docopt import docopt
 from pkgpanda import PackageId
-from pkgpanda.util import load_json
+from pkgpanda.util import load_json, load_string
 from subprocess import check_call
 
 from util import render_markdown, upload_s3
-
-
-def upload_packages(name):
-    # List packages from active.json, upload them all
-    for id_str in load_json('packages/active.json'):
-        id = PackageId(id_str)
-        upload_s3(name, 'packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
 
 
 def main():
@@ -36,18 +29,40 @@ def main():
         # Build all the packages
         check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages')
 
+    # Get the last bootstrap build version
+    last_bootstrap = load_string('packages/bootstrap.latest')
+
     # Build aws cloudformation
     check_call([
         './gen.py',
         'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/',
-        name
+        name,
+        '--bootstrap-id={}'.format(last_bootstrap)
         ], cwd='providers')
     # Upload to s3 bucket
     if not arguments['--skip-package-upload']:
-        upload_packages(name)
+        # Upload packages
+        for id_str in load_json('packages/{}.active.json'.format(last_bootstrap)):
+            id = PackageId(id_str)
+            upload_s3(name, 'packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
+
         # Upload bootstrap
-        upload_s3(name, 'packages/bootstrap.tar.xz', 'bootstrap.tar.xz', no_cache=True)
-        upload_s3(name, 'packages/active.json', 'config/active.json', no_cache=True)
+        upload_s3(
+                name,
+                'packages/{}.bootstrap.tar.xz'.format(last_bootstrap),
+                'bootstrap/{}.bootstrap.tar.xz'.format(last_bootstrap),
+                no_cache=True)
+        upload_s3(
+                name,
+                'packages/{}.active.json'.format(last_bootstrap),
+                'config/{}.active.json'.format(last_bootstrap),
+                no_cache=True)
+        upload_s3(
+                name,
+                'packages/bootstrap.latest',
+                'bootstrap.latest',
+                no_cache=True)
+
     # Upload CloudFormation
     upload_s3(name, 'providers/cloudformation.json', 'cloudformation.json', no_cache=True)
     upload_s3(

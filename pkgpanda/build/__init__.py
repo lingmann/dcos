@@ -176,7 +176,7 @@ def fetch_sources(sources):
                     "--git-dir",
                     bare_folder,
                     "rev-parse",
-                    git_ref]).decode('ascii').strip()
+                    git_ref + "^{commit}"]).decode('ascii').strip()
 
             commit = get_sha1(ref)
 

@@ -397,7 +397,7 @@ class Install:
         if not os.path.exists(active_dir):
             if os.path.exists(active_dir + ".old") or os.path.exists(active_dir + ".new"):
                 raise InstallError(
-                    ("Broken past deploy. See {0}.new for what the (potentially incomplete) new state shuold be " +
+                    ("Broken past deploy. See {0}.new for what the (potentially incomplete) new state should be " +
                      "and optionally {0}.old if it exists for the complete previous state.").format(active_dir))
             else:
                 raise InstallError(

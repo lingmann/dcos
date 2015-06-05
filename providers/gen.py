@@ -7,6 +7,7 @@ gen.py vagrant <release_name> <cluster_name> [--copy]
 
 from datetime import datetime
 import json
+import os
 import sys
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
@@ -16,7 +17,15 @@ from subprocess import check_output
 import aws
 import vagrant
 
-dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+dcos_image_commit = None
+dcos_image_commit = os.getenv('BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2')
+
+if dcos_image_commit is None:
+    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+
+if dcos_image_commit is None:
+    raise "Unable to set dcos_image_commit from teamcity or git."
+
 template_generation_date = str(datetime.utcnow())
 
 

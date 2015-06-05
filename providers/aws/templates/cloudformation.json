@@ -3,6 +3,11 @@
 
   "Description" : "Launching the Mesosphere DCOS cluster",
 
+  "Metadata": {
+    "DcosImageCommit": "unset",
+    "TemplateGenerationDate": "unset"
+  },
+
   "Parameters" : {
     "KeyName" : {
       "Description" : "Name of SSH key to link",
@@ -329,7 +334,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "NATAmi", { "Ref" : "AWS::Region" }, "default" ] },
         "InstanceType" : "m3.medium",
-        "NetworkInterfaces" : [ 
+        "NetworkInterfaces" : [
           {
             "SubnetId" : { "Ref" : "PublicSubnet" },
             "AssociatePublicIpAddress" : "true",

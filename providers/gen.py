@@ -4,14 +4,20 @@ Usage:
 gen.py [aws|testcluster] <base_url> <release_name>
 gen.py vagrant <release_name> <cluster_name> [--copy]
 """
+
+from datetime import datetime
 import json
 import sys
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from string import Template
+from subprocess import check_output
 
 import aws
 import vagrant
+
+dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+template_generation_date = str(datetime.utcnow())
 
 
 def write_json(filename, data):
@@ -105,7 +111,9 @@ def gen_aws(name, bootstrap_url):
             render_cloudconfig(get_params(['slave'])),
             render_cloudconfig(get_params(['slave_public'])),
             bootstrap_url,
-            testcluster
+            testcluster,
+            dcos_image_commit,
+            template_generation_date
             )
 
     # Parameterized / custom template.

@@ -55,7 +55,15 @@ def render_parameter(simple, name):
     return start_param_full + name + end_param_full
 
 
-def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_slave_cloudconfig, bootstrap_url, testcluster):
+def render_cloudformation(
+        simple,
+        master_cloudconfig,
+        slave_cloudconfig,
+        public_slave_cloudconfig,
+        bootstrap_url,
+        testcluster,
+        dcos_image_commit,
+        template_generation_date):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -71,6 +79,9 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_
     })
 
     template_json = json.loads(template_str)
+
+    template_json['Metadata']['DcosImageCommit'] = dcos_image_commit
+    template_json['Metadata']['TemplateGenerationDate'] = template_generation_date
 
     params['BootstrapRepoRoot']['Default'] = bootstrap_url
 

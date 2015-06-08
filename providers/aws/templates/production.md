@@ -1,6 +1,6 @@
 # DCOS {{ name }} AWS CloudFormation
 
-* For more information on creating a DCOS cluster, see the [Mesosphere beta documentation](http://beta-docs.mesosphere.com/install/eapaws/#create).
+* For more information on creating a DCOS cluster, see the [Mesosphere documentation](http://beta-docs.mesosphere.com/install/eapaws/#create).
 
 
 | Region Name | Region Code | Single Master | HA: Three Master |

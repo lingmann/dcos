@@ -631,24 +631,6 @@
         "Subnets": [{ "Ref": "PublicSubnet" }],
         "Listeners" : [
           {
-            "LoadBalancerPort" : "5050",
-            "Protocol" : "HTTP",
-            "InstancePort" : "5050",
-            "InstanceProtocol" : "HTTP"
-          },
-          {
-            "LoadBalancerPort" : "2181",
-            "Protocol" : "TCP",
-            "InstancePort" : "2181",
-            "InstanceProtocol" : "TCP"
-          },
-          {
-            "LoadBalancerPort" : "8181",
-            "Protocol" : "HTTP",
-            "InstancePort" : "8181",
-            "InstanceProtocol" : "HTTP"
-          },
-          {
             "LoadBalancerPort" : "80",
             "Protocol" : "HTTP",
             "InstancePort" : "80",
@@ -659,12 +641,6 @@
             "Protocol" : "TCP",
             "InstancePort" : "443",
             "InstanceProtocol" : "TCP"
-          },
-          {
-            "LoadBalancerPort" : "8080",
-            "Protocol" : "HTTP",
-            "InstancePort" : "8080",
-            "InstanceProtocol" : "HTTP"
           }],
         "HealthCheck" : {
           "Target" : "HTTP:5050/health",

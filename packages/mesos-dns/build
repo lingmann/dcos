@@ -45,6 +45,8 @@ cat <<'EOF' > "$resolvconf_service"
 Description=Update systemd-resolved for mesos-dns
 [Service]
 Type=simple
+StandardOutput=journal
+StandardError=journal
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv

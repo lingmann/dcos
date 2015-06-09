@@ -2,13 +2,14 @@
 """Generate provider-specific templates, data.
 Usage:
 gen.py [aws|testcluster] <base_url> <release_name> --bootstrap-id=<bootstrap_id>
-gen.py vagrant <release_name> <cluster_name> [--copy] --bootstrap-id=<bootstrap_id>
+gen.py vagrant <release_name> <cluster_name> [--copy] [--bootstrap-id=<bootstrap_id>]
 """
 
 from datetime import datetime
 import json
 import os
 import sys
+import urllib.request
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from string import Template
@@ -155,6 +156,11 @@ def main():
     arguments = docopt(__doc__)
 
     release_name = arguments['<release_name>']
+
+    if not arguments['--bootstrap-id']:
+        # Download the bootstrap id
+        url = 'http://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(release_name)
+        arguments['--bootstrap-id'] = urllib.request.urlopen(url).read().decode('utf-8')
 
     def render_cloudconfig(parameters):
         return render_cloudconfig_base(parameters, arguments['--bootstrap-id'].strip())

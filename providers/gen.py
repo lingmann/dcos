@@ -17,8 +17,13 @@ from subprocess import check_output
 import aws
 import vagrant
 
-dcos_image_commit = None
-dcos_image_commit = os.getenv('BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2')
+dcos_image_commit = os.getenv(
+    'DCOS_IMAGE_COMMIT',
+    os.getenv(
+        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
+        None
+        )
+    )
 
 if dcos_image_commit is None:
     dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()

@@ -14,9 +14,10 @@ config_file="$PKG_PATH/etc/logrotate.conf"
 mkdir -p $(dirname $config_file)
 cat <<'EOF' > "$config_file"
 /var/log/mesos/*.log {
+    maxsize 2000k
     daily
     missingok
-    rotate 30
+    rotate 7
     compress
     delaycompress
     notifempty
@@ -44,6 +45,6 @@ cat <<'EOF' > "$logrotate_timer"
 [Unit]
 Description=Daily log rotation
 [Timer]
-OnCalendar=daily
+OnActiveSec=5min
 Unit=logrotate.service
 EOF

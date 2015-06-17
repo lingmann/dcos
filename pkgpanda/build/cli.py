@@ -477,6 +477,10 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
                     pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
                     pkg_requires = pkg_buildinfo.get('requires', list())
                     pkg_path = repository.package_path(pkg_id_str)
+                    if not os.path.exists(pkg_path):
+                        print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
+                              " Rebuild the dependency.")
+                        sys.exit(1)
 
                     if PackageId(pkg_id_str).name in active_package_names:
                         continue

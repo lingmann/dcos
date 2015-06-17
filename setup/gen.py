@@ -19,10 +19,14 @@ import jinja2
 import jinja2.meta
 import json
 import os
+import os.path
 import sys
 import urllib.request
 import yaml
 from math import floor
+from pkgpanda.build import hash_checkout
+from pkgpanda.util import make_tar
+from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
 current_roles = {"master", "slave", "public_slave", "master_slave"}
@@ -31,6 +35,10 @@ current_roles = {"master", "slave", "public_slave", "master_slave"}
 env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(os.getcwd()),
         undefined=jinja2.StrictUndefined)
+
+
+def render_yaml(data):
+    return yaml.dump(data, default_style='|', default_flow_style=False)
 
 
 # Recursively merge to python dictionaries.
@@ -226,6 +234,8 @@ if __name__ == "__main__":
             '--config',
             type=str,
             help='JSON configuration file to load')
+    parser.add_argument('--assume-defaults', action='store_true')
+    parser.add_argument('--save-config', type=str)
     args = parser.parse_args()
 
     # Load the templates for the target and figure out mandatory parameters.
@@ -249,17 +259,16 @@ if __name__ == "__main__":
     # TODO(cmaloney): If in strict mode and some arguments aren't used, error
     # and exit.
 
-    # TODO(cmaloney): If config-only + 'use defaults' is set then load the
-    # defaults into the arguments for anything not set.
-
-    # TODO(cmaloney): If no-prompt / config-only error if not all parameters are
-    # set.
-
     # Prompt user to provide all unset arguments. If a config file was specified
     # output
     user_arguments = {}
     for name in to_set:
         while True:
+            if args.assume_defaults and name in defaults:
+                user_arguments[name] = defaults[name]
+                break
+
+            # TODO(cmaloney): If 'config only' is set never prompt.
             default_str = ' [{}]'.format(defaults[name]) if name in defaults else ''
             value = input('{}{}: '.format(name, default_str))
             if value:
@@ -270,6 +279,7 @@ if __name__ == "__main__":
                 break
             print("ERROR: Must provide a value")
 
+    # TODO(cmaloney): Error If non-interactive and not all arguments are set.
     arguments = update_dictionary(arguments, user_arguments)
 
     # TODO(cmaloney): Validate basic arguments
@@ -290,20 +300,59 @@ if __name__ == "__main__":
     # Validate that all parameters have been set
     assert(parameters - arguments.keys() == set())
 
-    print("Final parameters:")
+    print("Final arguments:")
     print(json.dumps(arguments, sort_keys=True, indent=2))
 
+    # ID of this configuration is a hash of the parameters
+    config_id = hash_checkout(arguments)
+
+    config_package_id = "dcos-config--setup-{}".format(config_id)
+
+    # This isn't included in the 'final arguments', but it is computable from it
+    # so this isn't a "new" argument, just a "derived" argument.
+    arguments['config_package_id'] = config_package_id
+    config_package_filename = config_package_id + '.tar.xz'
+
     # Save config parameters
-    #final_config_filename = write_to_non_taken("config-result.json", arguments)
-    #print("Config saved to:", final_config_filename)
+    if args.save_config:
+        write_json(args.save_config, arguments)
+        print("Config saved to:", args.save_config)
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
 
-    # Render dcos-config--setup template into a tarball with user-specific data.
-    for name, data in rendered_templates.items():
-        print("#" + name)
-        print(yaml.dump(data, default_flow_style=False))
+    # There is only the dcos-config--setup and cloud-config templates
+    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config--setup"])
+
+    # Get out the cloud-config text for use in provider-specific templates
+    # Cloud config must start with #cloud-config so prepend the name
+    # to the start of the YAML
+    cloud_config = "#cloud-config\n" + \
+        render_yaml(rendered_templates['cloud-config'])
+
+    config_package_filename = "dcos-config--setup-{}.tar.xz".format(config_id)
+    # Generate the specific dcos-config package.
+    # Version will be setup-{sha1 of contents}
+    with TemporaryDirectory("dcos-config--setup") as tmpdir:
+        dcos_setup = rendered_templates['dcos-config--setup']
+
+        # Only contains write_files
+        assert len(dcos_setup) == 1
+
+        # Write out the individual files
+        for file_info in dcos_setup["write_files"]:
+            path = tmpdir + file_info['path']
+            try:
+                os.makedirs(os.path.dirname(path), mode=0o755)
+            except FileExistsError:
+                pass
+
+            with open(path, 'w') as f:
+                f.write(file_info['content'])
+
+        make_tar(config_package_filename, tmpdir)
+
+    print("Config package filename: ", config_package_filename)
 
     # TODO(cmaloney): Get provider-specific templates and render them (Ex:
-    # cloud-formation templates with embedded cloud-config)
+    # cloud-formation templates with embedded cloud-config).

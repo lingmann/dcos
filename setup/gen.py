@@ -28,8 +28,13 @@ from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
 from tempfile import TemporaryDirectory
 
+
 # List of all roles all templates should have.
 current_roles = {"master", "slave", "public_slave", "master_slave"}
+
+# The set of supported providers and distributions.
+providers = ['vagrant', 'aws', 'gce', 'azure',  'on_prem']
+distributions = ['coreos', 'jessie', 'centos7']
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(
@@ -69,31 +74,31 @@ def merge_dictionaries(base, additions):
     return base_copy
 
 
+# Order in a file determines order in which things like services get placed,
+# changing it can break components (Ex: moving dcos-download and dcos-setup
+# too early will break some configurations).
+def get_filenames(provider, distribution, target):
+    return [
+        target,
+        distribution + '/' + target,
+        provider + '/' + target,
+        distribution + '-' + provider + '/' + target]
+
+
 # Returns a dictionary of the jinja templates to use
 def get_template_names(provider, distribution):
-    # Order in a file determines order in which things like services get placed,
-    # changing it can break components (Ex: moving dcos-download and dcos-setup
-    # too early will break some configurations).
     return {
         # Contains core DCOS service configuration, updated always via pkgpanda.
         # Order is important for running bits properly
-        "dcos-config--setup": [
-            "dcos-config.yaml",
-            "dcos-config-" + distribution + '.yaml',
-            "dcos-config-" + provider + '.yaml',
-            "dcos-config-" + distribution + '-' + provider + '.yaml',
-        ],
+        "dcos-config--setup":
+            get_filenames(provider, distribution, 'dcos-config.yaml'),
         # Cloud config contains the per-host configuration configured by the
         # provider, as well as provider-specific config packages which depend on
         # initial launch parameters. All files entries, services should be
         # updated via system config managers. The dcos-config-{provider} package
         # should be updated via pkgpanda.
-        "cloud-config": [
-            distribution + '.yaml',
-            provider + '.yaml',
-            distribution + '-' + provider + '.yaml',
-            "cloud-config.yaml"
-        ]
+        "cloud-config":
+            get_filenames(provider, distribution, 'cloud-config.yaml')
     }
 
 
@@ -172,12 +177,9 @@ def update_dictionary(base, addition):
 # TODO(cmaloney): Do a recursive dictionary merge
 def load_arguments(provider, distribution, config):
     # Order is important for overriding
-    files_to_load = [
-        provider + '.json',
-        distribution + '.json',
-        distribution + '-' + provider + '.json',
-    ]
-    arguments = load_json_list(files_to_load, merge_dictionaries)
+    arguments = load_json_list(
+            get_filenames(provider, distribution, 'arguments.json'),
+            merge_dictionaries)
 
     # Load the config if it was specified. Seperate from the other options
     # because it not existing is a hard error.
@@ -196,14 +198,9 @@ def load_arguments(provider, distribution, config):
 
 
 def load_default_arguments(provider, distribution):
-    # Order is important for overriding
-    files_to_load = [
-        'defaults.json',
-        provider + '.defaults.json',
-        distribution + '.defaults.json',
-        distribution + '.' + provider + '.defaults.json',
-    ]
-    return load_json_list(files_to_load, update_dictionary)
+    return load_json_list(
+            get_filenames(provider, distribution, 'defaults.json'),
+            update_dictionary)
 
 
 def write_json(filename, data):
@@ -227,8 +224,8 @@ if __name__ == "__main__":
     # Get basic arguments from user.
     parser = argparse.ArgumentParser(
             description='Generate config for a DCOS environment')
-    parser.add_argument('provider', choices=['aws', 'gce', 'azure',  'on_prem'])
-    parser.add_argument('distribution', choices=['coreos', 'jessie', 'centos7'])
+    parser.add_argument('provider', choices=providers)
+    parser.add_argument('distribution', choices=distributions)
     parser.add_argument(
             '-c',
             '--config',
@@ -354,5 +351,12 @@ if __name__ == "__main__":
 
     print("Config package filename: ", config_package_filename)
 
-    # TODO(cmaloney): Get provider-specific templates and render them (Ex:
-    # cloud-formation templates with embedded cloud-config).
+    # Generate provider-specific files.
+    if args.provider == 'vagrant':
+        import vagrant
+        vagrant.gen(cloud_config, config_package_filename)
+    elif args.provider == 'aws':
+        import aws
+        aws.gen(cloud_config, config_package_filename)
+    else:
+        raise NotImplementedError()

@@ -75,8 +75,7 @@ class Parameters(CloudConfigParameters):
     roles = ["master", "slave"]
 
 
-def gen(release_name, cluster_name, cloudconfig_render_func, copy_files):
-
+def gen(cloud_config, config_package_filename, cluster_name):
     cluster_folder = "vagrant/cluster/{}".format(cluster_name)
 
     if os.path.exists(cluster_folder):
@@ -85,10 +84,6 @@ def gen(release_name, cluster_name, cloudconfig_render_func, copy_files):
               "cluster folder than gen a new cluster config. Cluster folder: " +
               "'{}'".format(cluster_folder))
         sys.exit(1)
-
-    # Gen the cloud-config
-    params = Parameters(cluster_name, release_name)
-    cloud_config = cloudconfig_render_func(params)
 
     # Copy the vagrant-specific stuff
     # Make folder for the cluster-specific files

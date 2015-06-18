@@ -15,6 +15,7 @@ NOTE:
 """
 
 import argparse
+import importlib
 import jinja2
 import jinja2.meta
 import json
@@ -74,6 +75,30 @@ def merge_dictionaries(base, additions):
     return base_copy
 
 
+def load_json(filename):
+    try:
+        with open(filename) as f:
+            return json.load(f)
+    except ValueError as ex:
+        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
+
+
+def load_json_list(filenames, merge_func):
+    result = {}
+    # Update with all arguments
+    for filename in filenames:
+        # TODO(cmaloney): Make sure no arguments are overwritten / this only
+        # adds arguments.
+        try:
+            new_result = load_json(filename)
+            result = merge_func(result, new_result)
+        except FileNotFoundError:
+            # print("NOTICE: not found", filename)
+            pass
+
+    return result
+
+
 # Order in a file determines order in which things like services get placed,
 # changing it can break components (Ex: moving dcos-download and dcos-setup
 # too early will break some configurations).
@@ -125,10 +150,14 @@ def render_templates(template_names, arguments):
     return rendered_templates
 
 
+def add_set(lhs, rhs):
+    return set(lhs) | set(rhs)
+
+
 # Load all the un-bound variables in the templates which need to be given values
 # in order to convert the templates to go from jinja -> yaml. These are
 # effectively the set of DCOS parameters.
-def get_parameters(templates):
+def get_parameters(provider, distribution, templates):
     parameters = set()
     for name, templates in templates.items():
         for template in templates:
@@ -141,31 +170,12 @@ def get_parameters(templates):
             template_parameters = jinja2.meta.find_undeclared_variables(ast)
             parameters |= set(template_parameters)
 
+    # Load any additional parameters
+    parameters |= load_json_list(
+            get_filenames(provider, distribution, "parameters.json"),
+            add_set)
+
     return parameters
-
-
-def load_json(filename):
-    try:
-        with open(filename) as f:
-            return json.load(f)
-    except ValueError as ex:
-        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
-
-
-def load_json_list(filenames, merge_func):
-    result = {}
-    # Update with all arguments
-    for filename in filenames:
-        # TODO(cmaloney): Make sure no arguments are overwritten / this only
-        # adds arguments.
-        try:
-            new_result = load_json(filename)
-            result = merge_func(result, new_result)
-        except FileNotFoundError:
-            # print("NOTICE: not found", filename)
-            pass
-
-    return result
 
 
 def update_dictionary(base, addition):
@@ -235,9 +245,11 @@ if __name__ == "__main__":
     parser.add_argument('--save-config', type=str)
     args = parser.parse_args()
 
+    provider = importlib.import_module(args.provider)
+
     # Load the templates for the target and figure out mandatory parameters.
     templates = get_template_names(args.provider, args.distribution)
-    parameters = get_parameters(templates)
+    parameters = get_parameters(args.provider, args.distribution, templates)
 
     # Filter out generated parameters
     parameters.remove('master_quorum')
@@ -281,6 +293,7 @@ if __name__ == "__main__":
 
     # TODO(cmaloney): Validate basic arguments
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
+
     # Calculate and set master_quorum based on num_masters
     arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2 + 1)
 
@@ -293,6 +306,9 @@ if __name__ == "__main__":
     else:
         # Needs to conflict with certain combinations of bootstrap_id and release_name
         raise NotImplementedError()
+
+    # TODO(cmaloney): add a mechanism for individual components to compute more
+    # arguments here and fill in.
 
     # Validate that all parameters have been set
     assert(parameters - arguments.keys() == set())
@@ -351,12 +367,4 @@ if __name__ == "__main__":
 
     print("Config package filename: ", config_package_filename)
 
-    # Generate provider-specific files.
-    if args.provider == 'vagrant':
-        import vagrant
-        vagrant.gen(cloud_config, config_package_filename)
-    elif args.provider == 'aws':
-        import aws
-        aws.gen(cloud_config, config_package_filename)
-    else:
-        raise NotImplementedError()
+    provider.gen(cloud_config, config_package_filename, arguments)

@@ -325,6 +325,7 @@ if __name__ == "__main__":
     # so this isn't a "new" argument, just a "derived" argument.
     arguments['config_package_id'] = config_package_id
     config_package_filename = config_package_id + '.tar.xz'
+    arguments['config_package_filename'] = config_package_filename
 
     # Save config parameters
     if args.save_config:
@@ -343,7 +344,6 @@ if __name__ == "__main__":
     cloud_config = "#cloud-config\n" + \
         render_yaml(rendered_templates['cloud-config'])
 
-    config_package_filename = "dcos-config--setup-{}.tar.xz".format(config_id)
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
     with TemporaryDirectory("dcos-config--setup") as tmpdir:
@@ -367,4 +367,4 @@ if __name__ == "__main__":
 
     print("Config package filename: ", config_package_filename)
 
-    provider.gen(cloud_config, config_package_filename, arguments)
+    provider.gen(cloud_config, arguments)

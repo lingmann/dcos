@@ -9,7 +9,7 @@ s3_url = 'https://downloads.mesosphere.io/dcos/{}'
 roles = ["master", "slave"]
 
 
-def gen(cloud_config, config_package_filename, arguments):
+def gen(cloud_config, arguments):
     cluster_name = arguments['cluster_name']
     cluster_folder = "vagrant/cluster/{}".format(cluster_name)
 

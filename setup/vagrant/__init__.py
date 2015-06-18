@@ -4,8 +4,6 @@ import shutil
 import sys
 from subprocess import check_call
 
-s3_url = 'https://downloads.mesosphere.io/dcos/{}'
-
 roles = ["master", "slave"]
 
 

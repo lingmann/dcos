@@ -1,4 +1,3 @@
 {
-  "fallback_dns": "automatic",
-  "report_name": "automatic"
+  "report_name": "{{ report_name_aws }}"
 }

@@ -3,7 +3,6 @@ import re
 
 from copy import copy
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
-from cloud_config_parameters import CloudConfigParameters
 
 
 def load_json(filename):

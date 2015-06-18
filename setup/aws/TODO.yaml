@@ -1,0 +1,24 @@
+coreos:
+  units:
+    # TODO(cmaloney): This needs to not be explicitly started until after dcos-setup.service
+    - name: cfn-signal.service
+      command: start
+      content: |
+        [Unit]
+        Description=Signal CloudFormation Success
+        After=dcos.target
+        Requires=dcos.target
+        ConditionPathExists=!/var/lib/cfn-signal
+        [Service]
+        Type=simple
+        Restart=on-failure
+        StartLimitInterval=0
+        RestartSec=15s
+        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+        ExecStartPre=/bin/ping -c1 leader.mesos
+        ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \\
+          cfn-signal -e 0 \\
+          --resource {{ report_name }} \\
+          --stack { "Ref": "AWS::StackName" } \\
+          --region { "Ref" : "AWS::Region" }
+        ExecStart=/usr/bin/touch /var/lib/cfn-signal

@@ -29,18 +29,34 @@ from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
 from tempfile import TemporaryDirectory
 
-
 # List of all roles all templates should have.
-current_roles = {"master", "slave", "public_slave", "master_slave"}
+role_names = {"master", "slave", "public_slave", "master_slave"}
 
 # The set of supported providers and distributions.
 providers = ['vagrant', 'aws', 'gce', 'azure',  'on_prem']
 distributions = ['coreos', 'jessie', 'centos7']
 
+role_template = '/etc/mesosphere/roles/{}'
+
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(
         loader=jinja2.FileSystemLoader(os.getcwd()),
         undefined=jinja2.StrictUndefined)
+
+
+def add_roles(cloud_config, roles):
+    raise NotImplementedError()
+
+
+def add_services(base_cloud_config, services_cloud_config):
+    raise NotImplementedError()
+
+utils = {
+    "role_template": role_template,
+    "add_roles": add_roles,
+    "role_names": role_names,
+    "add_services": add_services
+}
 
 
 def render_yaml(data):
@@ -293,6 +309,10 @@ if __name__ == "__main__":
 
     # TODO(cmaloney): Validate basic arguments
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
+
+    # Set arguments from command line flags.
+    arguments['provider'] = args.provider
+    arguments['distribution'] = args.distribution
 
     # Calculate and set master_quorum based on num_masters
     arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2 + 1)

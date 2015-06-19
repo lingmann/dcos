@@ -6,8 +6,8 @@ export CFLAGS=-I/opt/mesosphere/include
 export LDFLAGS="-L/opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib"
 export CXXFLAGS=-I/opt/mesosphere/include
 
-pushd "/pkg/src/linux"
-popd
+#pushd "/pkg/src/linux"
+#popd
 
 #pushd "/pkg/src/flex"
 #./configure \
@@ -38,12 +38,11 @@ popd
 #popd
 
 apt-get update
-apt-get -y install libnl-3-dev libnl-genl-3-dev libpopt-dev
+apt-get -y install libnl-3-dev libnl-genl-3-dev libpopt-dev linux-headers-3.19.0-21-generic pkg-config
 
 pushd "/pkg/src/keepalived"
 ./configure \
   "--prefix=$PKG_PATH" \
-  "--with-kernel-dir=/pkg/src/linux" \
   "--enable-sha1"
 make -j8
 make install

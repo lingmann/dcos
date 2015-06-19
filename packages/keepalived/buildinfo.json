@@ -5,10 +5,6 @@
       "keepalived": {
           "kind": "url_extract",
           "url": "http://keepalived.org/software/keepalived-1.2.17.tar.gz"
-      },
-      "linux": {
-          "kind": "url_extract",
-          "url": "https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.10.80.tar.xz"
       }
   }
 }

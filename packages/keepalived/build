@@ -24,6 +24,7 @@ popd
 pushd "/pkg/src/keepalived"
 ./configure \
   "--prefix=$PKG_PATH" \
+  "--with-kernel-dir=/pkg/src/linux" \
   "--enable-sha1"
 make -j8
 make install

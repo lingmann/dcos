@@ -1,14 +1,14 @@
 # Mesos Master Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% import 'cloud-config.gce.yaml' as cc %}
+{% import 'cloud-config.yaml' as cc %}
 
 {% set masters = properties["masters"] %}
 {% set zone =  properties["zone"] %}
 {% set base_name = properties["base_name"] %}
 {% set machine_type = properties["machine"]%}
-{% set bootstrap_url= properties["bootstrap_url"] %}
-{% set master_quorum = properties["master_quorum"] %}
+{% set bootstrap_url= properties["bootstrapUrl"] %}
+{% set master_quorum = (masters / 2) + 1 %}
 {% set bucket_name = properties["base_name"]+'-'+env["project"]+'-exh' %}
 
 resources:

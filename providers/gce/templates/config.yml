@@ -6,15 +6,14 @@ imports:
 - path: vm_master.jinja
 - path: vm_slave.jinja
 - path: network.jinja
-- path: cloud-config.gce.yaml
+- path: cloud-config.yaml
 
 resources:
 - name: master-cluster
   type: vm_master.jinja
   properties:
     base_name: test-2
-    masters: 1
-    master_quorum: 1
+    masters: 3
     disk_size: 10G
     zone: us-central1-a
     region: us-central1

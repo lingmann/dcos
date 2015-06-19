@@ -38,7 +38,7 @@ popd
 #popd
 
 apt-get update
-apt-get -y install libnl-3-dev libpopt-dev
+apt-get -y install libnl-3-dev libnl-gen-3 libpopt-dev
 
 pushd "/pkg/src/keepalived"
 ./configure \

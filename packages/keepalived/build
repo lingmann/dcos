@@ -68,5 +68,5 @@ EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/keepalived
 ExecStart=$PKG_PATH/keepalived/sbin/keepalived -n \$KEEPALIVED_OPTIONS
-ExecReload=/bin/kill -HUP $MAINPID
+ExecReload=/bin/kill -HUP \$MAINPID
 EOF

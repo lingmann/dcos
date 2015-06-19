@@ -1,7 +1,12 @@
 {
   "AWSTemplateFormatVersion" : "2010-09-09",
 
-  "Description" : "Launches a Mesos cluster",
+  "Description" : "Launching the Mesosphere DCOS cluster",
+
+  "Metadata": {
+    "DcosImageCommit": "unset",
+    "TemplateGenerationDate": "unset"
+  },
 
   "Parameters" : {
     "KeyName" : {
@@ -329,7 +334,7 @@
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "NATAmi", { "Ref" : "AWS::Region" }, "default" ] },
         "InstanceType" : "m3.medium",
-        "NetworkInterfaces" : [ 
+        "NetworkInterfaces" : [
           {
             "SubnetId" : { "Ref" : "PublicSubnet" },
             "AssociatePublicIpAddress" : "true",
@@ -395,7 +400,31 @@
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
               ]
-            } ]
+            },
+            {
+              "Resource": [
+                  { "Ref" : "AWS::StackId" },
+                  { "Fn::Join" : ["", [{ "Ref" : "AWS::StackId" }, "/*" ]]}
+              ],
+              "Action": [
+                  "cloudformation:*"
+              ],
+              "Effect": "Allow"
+            },
+            {
+                "Resource": "*",
+                "Action": [
+                    "ec2:DescribeKeyPairs",
+                    "ec2:DescribeSubnets",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
+                ],
+                "Effect": "Allow"
+            }
+ ]
           }
         } ]
       }
@@ -426,7 +455,31 @@
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }, "/*"]]},
                 { "Fn::Join" : ["", ["arn:aws:s3:::", { "Ref" : "ExhibitorS3Bucket" }]]}
               ]
-            } ]
+            },
+            {
+                "Resource": [
+                    { "Ref" : "AWS::StackId" },
+                    { "Fn::Join" : ["", [{ "Ref" : "AWS::StackId" }, "/*" ]]}
+                ],
+                "Action": [
+                    "cloudformation:*"
+                ],
+                "Effect": "Allow"
+            },
+            {
+                "Resource": "*",
+                "Action": [
+                    "ec2:DescribeKeyPairs",
+                    "ec2:DescribeSubnets",
+                    "autoscaling:DescribeLaunchConfigurations",
+                    "autoscaling:UpdateAutoScalingGroup",
+                    "autoscaling:DescribeAutoScalingGroups",
+                    "autoscaling:DescribeScalingActivities",
+                    "elasticloadbalancing:DescribeLoadBalancers"
+                ],
+                "Effect": "Allow"
+            }
+            ]
           }
         } ]
       }
@@ -578,23 +631,32 @@
         "Subnets": [{ "Ref": "PublicSubnet" }],
         "Listeners" : [
           {
-            "LoadBalancerPort" : "5050",
+            "LoadBalancerPort" : "80",
             "Protocol" : "HTTP",
-            "InstancePort" : "5050",
+            "InstancePort" : "80",
             "InstanceProtocol" : "HTTP"
           },
           {
-            "LoadBalancerPort" : "2181",
+            "LoadBalancerPort" : "443",
             "Protocol" : "TCP",
-            "InstancePort" : "2181",
+            "InstancePort" : "443",
             "InstanceProtocol" : "TCP"
-          },
-          {
-            "LoadBalancerPort" : "8181",
-            "Protocol" : "HTTP",
-            "InstancePort" : "8181",
-            "InstanceProtocol" : "HTTP"
-          },
+          }],
+        "HealthCheck" : {
+          "Target" : "HTTP:5050/health",
+          "HealthyThreshold" : "2",
+          "UnhealthyThreshold" : "2",
+          "Interval" : "30",
+          "Timeout" : "5"
+        }
+      }
+    },
+    "PublicSlaveLoadBalancer" : {
+      "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties" : {
+        "SecurityGroups": [{ "Ref": "PublicSlaveSecurityGroup" }],
+        "Subnets": [{ "Ref": "PublicSubnet" }],
+        "Listeners" : [
           {
             "LoadBalancerPort" : "80",
             "Protocol" : "HTTP",
@@ -606,15 +668,9 @@
             "Protocol" : "TCP",
             "InstancePort" : "443",
             "InstanceProtocol" : "TCP"
-          },
-          {
-            "LoadBalancerPort" : "8080",
-            "Protocol" : "HTTP",
-            "InstancePort" : "8080",
-            "InstanceProtocol" : "HTTP"
           }],
         "HealthCheck" : {
-          "Target" : "HTTP:5050/health",
+          "Target" : "HTTP:80/",
           "HealthyThreshold" : "2",
           "UnhealthyThreshold" : "2",
           "Interval" : "30",
@@ -670,6 +726,7 @@
         "MinSize" : { "Ref" : "PublicSlaveInstanceCount" },
         "MaxSize" : { "Ref" : "PublicSlaveInstanceCount" },
         "DesiredCapacity" : { "Ref" : "PublicSlaveInstanceCount" },
+        "LoadBalancerNames" : [{ "Ref" : "PublicSlaveLoadBalancer" }],
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
           {
@@ -874,6 +931,10 @@
     "DnsAddress" : {
       "Description" : "Mesos Master",
       "Value" : { "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ]}
+    },
+    "PublicSlaveDnsAddress" : {
+      "Description" : "Public slaves",
+      "Value" : { "Fn::GetAtt" : [ "PublicSlaveLoadBalancer", "DNSName" ]}
     }
   }
 }

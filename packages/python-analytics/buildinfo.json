@@ -1,0 +1,19 @@
+{
+  "requires": ["python"],
+  "docker": "dcos-builder",
+  "sources": {
+    "python-analytics": {
+      "kind": "git",
+      "git": "https://github.com/segmentio/analytics-python.git",
+      "ref": "1.0.3"
+    },
+    "six" : {
+      "kind": "url_extract",
+      "url": "https://pypi.python.org/packages/source/s/six/six-1.9.0.tar.gz"
+    },
+    "dateutil" : {
+      "kind": "url_extract",
+      "url": "https://pypi.python.org/packages/source/p/python-dateutil/python-dateutil-2.4.2.tar.gz"
+    }
+  }
+}

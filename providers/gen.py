@@ -1,17 +1,38 @@
 #!/usr/bin/env python3
 """Generate provider-specific templates, data.
 Usage:
-gen.py [aws|testcluster] <base_url> <release_name>
-gen.py vagrant <release_name> <cluster_name> [--copy]
+gen.py [aws|testcluster] <base_url> <release_name> --bootstrap-id=<bootstrap_id>
+gen.py vagrant <release_name> <cluster_name> [--copy] [--bootstrap-id=<bootstrap_id>]
 """
+
+from datetime import datetime
 import json
+import os
 import sys
+import urllib.request
 from docopt import docopt
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from string import Template
+from subprocess import check_output
 
 import aws
 import vagrant
+
+dcos_image_commit = os.getenv(
+    'DCOS_IMAGE_COMMIT',
+    os.getenv(
+        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
+        None
+        )
+    )
+
+if dcos_image_commit is None:
+    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+
+if dcos_image_commit is None:
+    raise "Unable to set dcos_image_commit from teamcity or git."
+
+template_generation_date = str(datetime.utcnow())
 
 
 def write_json(filename, data):
@@ -29,9 +50,11 @@ env = Environment(loader=FileSystemLoader('templates'), undefined=StrictUndefine
 cc_template = env.get_template('cloud-config.yaml')
 
 
-def render_cloudconfig(paramters):
+def render_cloudconfig_base(paramters, bootstrap_id):
     assert type(paramters.resolvers) == list
+    assert bootstrap_id
     return cc_template.render({
+        'bootstrap_id': bootstrap_id,
         'bootstrap_url': paramters.GetParameter('bootstrap_url'),
         'roles': paramters.roles,
         'master_quorum': paramters.GetParameter('master_quorum'),
@@ -40,7 +63,7 @@ def render_cloudconfig(paramters):
         'early_units': paramters.early_units,
         'config_writer': paramters.config_writer,
         'resolvers': paramters.GetParameter('fallback_dns'),
-        'late_units': paramters.late_units
+        'late_units': paramters.late_units,
         })
 
 
@@ -88,7 +111,7 @@ def add_testcluster(parameters):
 
 # TODO(cmaloney): Minimize amount of code in this function. All
 # providers should be as simple as possible.
-def gen_aws(name, bootstrap_url):
+def gen_aws(name, bootstrap_url, render_cloudconfig):
 
     # TODO(cmaloney): That we talk about 'testcluster' here is wrong.
     # We should just talk about 'extra parameters'.
@@ -105,7 +128,9 @@ def gen_aws(name, bootstrap_url):
             render_cloudconfig(get_params(['slave'])),
             render_cloudconfig(get_params(['slave_public'])),
             bootstrap_url,
-            testcluster
+            testcluster,
+            dcos_image_commit,
+            template_generation_date
             )
 
     # Parameterized / custom template.
@@ -132,6 +157,14 @@ def main():
 
     release_name = arguments['<release_name>']
 
+    if not arguments['--bootstrap-id']:
+        # Download the bootstrap id
+        url = 'http://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(release_name)
+        arguments['--bootstrap-id'] = urllib.request.urlopen(url).read().decode('utf-8')
+
+    def render_cloudconfig(parameters):
+        return render_cloudconfig_base(parameters, arguments['--bootstrap-id'].strip())
+
     # Name shouldn't start or end with '/'
     assert release_name[0] != '/'
     assert release_name[-1] != '/'
@@ -151,7 +184,7 @@ def main():
     assert base_url[-1] == '/'
 
     bootstrap_url = base_url + release_name
-    gen_aws(release_name, bootstrap_url)
+    gen_aws(release_name, bootstrap_url, render_cloudconfig)
 
 if __name__ == '__main__':
     main()

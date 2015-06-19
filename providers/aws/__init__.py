@@ -55,7 +55,15 @@ def render_parameter(simple, name):
     return start_param_full + name + end_param_full
 
 
-def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_slave_cloudconfig, bootstrap_url, testcluster):
+def render_cloudformation(
+        simple,
+        master_cloudconfig,
+        slave_cloudconfig,
+        public_slave_cloudconfig,
+        bootstrap_url,
+        testcluster,
+        dcos_image_commit,
+        template_generation_date):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -71,6 +79,9 @@ def render_cloudformation(simple, master_cloudconfig, slave_cloudconfig, public_
     })
 
     template_json = json.loads(template_str)
+
+    template_json['Metadata']['DcosImageCommit'] = dcos_image_commit
+    template_json['Metadata']['TemplateGenerationDate'] = template_generation_date
 
     params['BootstrapRepoRoot']['Default'] = bootstrap_url
 
@@ -151,10 +162,13 @@ class Parameters(CloudConfigParameters):
   - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
     content: |
       AWS_REGION={{ "Ref" : "AWS::Region" }}
+      AWS_STACK_ID={{ "Ref" : "AWS::StackId" }}
+      AWS_STACK_NAME={{ "Ref" : "AWS::StackName" }}
       AWS_ACCESS_KEY_ID={{ "Ref" : "HostKeys" }}
       AWS_SECRET_ACCESS_KEY={{ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }}
       ZOOKEEPER_CLUSTER_SIZE={master_count}
       MASTER_ELB={{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }}
+      EXTERNAL_ELB={{ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS={fallback_dns}

@@ -1,0 +1,49 @@
+#!/bin/bash
+
+mkdir -p "/build"
+
+export CXXFLAGS=-I/opt/mesosphere/include
+
+pushd "/pkg/src/linux"
+popd
+
+pushd "/pkg/src/popt"
+./configure \
+  "--prefix=$PKG_PATH"
+make -j8
+make install
+popd
+
+pushd "/pkg/src/libnl"
+./configure \
+  "--prefix=$PKG_PATH"
+make -j8
+make install
+popd
+
+pushd "/pkg/src/keepalived"
+./configure \
+  "--prefix=$PKG_PATH" \
+  "--enable-sha1"
+make -j8
+make install
+popd
+
+systemd_master="$PKG_PATH"/dcos.target.wants_master/keepalived.service
+mkdir -p "$(dirname "$systemd_master")"
+cat <<EOF > "$systemd_master"
+[Unit]
+Description=LVS and VRRP High Availability Monitor
+After=syslog.target network.target
+ConditionPathExists=/opt/mesosphere/etc/keepalived
+
+[Service]
+Restart=on-failure
+StartLimitInterval=0
+RestartSec=5
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/keepalived
+ExecStart=$PKG_PATH/keepalived/sbin/keepalived -n $KEEPALIVED_OPTIONS
+ExecReload=/bin/kill -HUP $MAINPID
+EOF

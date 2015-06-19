@@ -7,6 +7,20 @@ export CXXFLAGS=-I/opt/mesosphere/include
 pushd "/pkg/src/linux"
 popd
 
+pushd "/pkg/src/flex"
+./configure \
+  "--prefix=$PKG_PATH"
+make -j8
+make install
+popd
+
+pushd "/pkg/src/bison"
+./configure \
+  "--prefix=$PKG_PATH"
+make -j8
+make install
+popd
+
 pushd "/pkg/src/popt"
 ./configure \
   "--prefix=$PKG_PATH"

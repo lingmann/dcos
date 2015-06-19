@@ -2,6 +2,8 @@
 
 mkdir -p "/build"
 
+export CFLAGS=-I/opt/mesosphere/include
+export LDFLAGS="-L/opt/mesosphere/lib:$PKG_PATH/lib -Wl,-rpath=/opt/mesosphere/lib:$PKG_PATH/lib"
 export CXXFLAGS=-I/opt/mesosphere/include
 
 pushd "/pkg/src/linux"

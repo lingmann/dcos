@@ -2,40 +2,43 @@
 
 mkdir -p "/build"
 
-export CFLAGS=-I/opt/mesosphere/include:$PKG_PATH/include
-export LDFLAGS="-L/opt/mesosphere/lib:$PKG_PATH/lib -Wl,-rpath=/opt/mesosphere/lib:$PKG_PATH/lib"
-export CXXFLAGS=-I/opt/mesosphere/include:$PKG_PATH/include
+export CFLAGS=-I/opt/mesosphere/include
+export LDFLAGS="-L/opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib"
+export CXXFLAGS=-I/opt/mesosphere/include
 
 pushd "/pkg/src/linux"
 popd
 
-pushd "/pkg/src/flex"
-./configure \
-  "--prefix=$PKG_PATH"
-make -j8
-make install
-popd
+#pushd "/pkg/src/flex"
+#./configure \
+#  "--prefix=$PKG_PATH"
+#make -j8
+#make install
+#popd
 
-pushd "/pkg/src/bison"
-./configure \
-  "--prefix=$PKG_PATH"
-make -j8
-make install
-popd
+#pushd "/pkg/src/bison"
+#./configure \
+#  "--prefix=$PKG_PATH"
+#make -j8
+#make install
+#popd
 
-pushd "/pkg/src/popt"
-./configure \
-  "--prefix=$PKG_PATH"
-make -j8
-make install
-popd
+#pushd "/pkg/src/popt"
+#./configure \
+#  "--prefix=$PKG_PATH"
+#make -j8
+#make install
+#popd
 
-pushd "/pkg/src/libnl"
-./configure \
-  "--prefix=$PKG_PATH"
-make -j8
-make install
-popd
+#pushd "/pkg/src/libnl"
+#./configure \
+#  "--prefix=$PKG_PATH"
+#make -j8
+#make install
+#popd
+
+apt-get update
+apt-get -y install libnl-3-dev libpopt-dev
 
 pushd "/pkg/src/keepalived"
 ./configure \

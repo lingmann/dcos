@@ -6,25 +6,9 @@
           "kind": "url_extract",
           "url": "http://keepalived.org/software/keepalived-1.2.17.tar.gz"
       },
-      "libnl": {
-          "kind": "url_extract",
-          "url": "http://www.infradead.org/~tgr/libnl/files/libnl-3.2.25.tar.gz"
-      },
-      "popt": {
-          "kind": "url_extract",
-          "url": "http://rpm5.org/files/popt/popt-1.16.tar.gz"
-      },
       "linux": {
           "kind": "url_extract",
           "url": "https://www.kernel.org/pub/linux/kernel/v3.x/linux-3.10.80.tar.xz"
-      },
-      "flex": {
-          "kind": "url_extract",
-          "url": "http://downloads.sourceforge.net/flex/flex-2.5.39.tar.xz"
-      },
-      "bison": {
-          "kind": "url_extract",
-          "url": "ftp://ftp.gnu.org/pub/gnu/bison/bison-3.0.4.tar.xz"
       }
   }
 }

@@ -1,12 +1,12 @@
 write_files:
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/pkginfo.json
+  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/pkginfo.json
     content: |
       {
         "environment": {
           "PROVIDER": "vagrant"
         }
       }
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/cloudenv
+  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/cloudenv
     content: |
       MASTER_ELB=127.0.0.1
       ZOOKEEPER_CLUSTER_SIZE=1
@@ -14,10 +14,10 @@ write_files:
       MARATHON_HOSTNAME=$private_ipv4
       MESOS_HOSTNAME=$private_ipv4
       MESOS_IP=$private_ipv4
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/mesos-master-provider
+  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/exhibitor
+  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/exhibitor
     content: |
       EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
       EXHIBITOR_WEB_UI_PORT=8181

@@ -228,10 +228,16 @@ def load_default_arguments(provider, distribution):
             get_filenames(provider, distribution, 'defaults.json'),
             update_dictionary)
 
+json_prettyprint_args = {
+    "sort_keys": True,
+    "indent": 2,
+    "separators": (',', ':')
+}
+
 
 def write_json(filename, data):
     with open(filename, "w+") as f:
-        return json.dump(data, f, sort_keys=True, indent=2, seperators=(',', ':'))
+        return json.dump(data, f, **json_prettyprint_args)
 
 
 def write_to_non_taken(base_filename, json):
@@ -252,11 +258,9 @@ if __name__ == "__main__":
             description='Generate config for a DCOS environment')
     parser.add_argument('provider', choices=providers)
     parser.add_argument('distribution', choices=distributions)
-    parser.add_argument(
-            '-c',
-            '--config',
-            type=str,
-            help='JSON configuration file to load')
+    parser.add_argument('--config',
+                        type=str,
+                        help='JSON configuration file to load')
     parser.add_argument('--assume-defaults', action='store_true')
     parser.add_argument('--save-config', type=str)
     args = parser.parse_args()
@@ -271,6 +275,7 @@ if __name__ == "__main__":
     parameters.remove('master_quorum')
     parameters.remove('bootstrap_url')
     parameters.add('release_name')
+    parameters.remove('cluster_packages')
 
     # Load the arguments provided by the provider, distro, and user.
     arguments = load_arguments(args.provider, args.distribution, args.config)
@@ -334,7 +339,7 @@ if __name__ == "__main__":
     assert(parameters - arguments.keys() == set())
 
     print("Final arguments:")
-    print(json.dumps(arguments, sort_keys=True, indent=2))
+    print(json.dumps(arguments, **json_prettyprint_args))
 
     # ID of this configuration is a hash of the parameters
     config_id = hash_checkout(arguments)
@@ -346,6 +351,8 @@ if __name__ == "__main__":
     arguments['config_package_id'] = config_package_id
     config_package_filename = config_package_id + '.tar.xz'
     arguments['config_package_filename'] = config_package_filename
+    # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
+    arguments['cluster_packages'] = json.dumps([config_package_id])
 
     # Save config parameters
     if args.save_config:

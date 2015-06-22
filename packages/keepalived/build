@@ -119,5 +119,5 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/etc/mesosphere/keepalived
-ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n \$KEEPALIVED_OPTIONS
+ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n -f $PKG_PATH/etc/keepalived/keepalived.conf \$KEEPALIVED_OPTIONS
 EOF

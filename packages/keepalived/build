@@ -106,10 +106,10 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/etc/mesosphere/keepalived
-ExecStartPre=/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
+ExecStartPre=/usr/bin/bash -c "/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
                  -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
                  -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
                  -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-                 "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf"
+                 "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf""
 ExecStart=$PKG_PATH/sbin/keepalived -n \$KEEPALIVED_OPTIONS
 EOF

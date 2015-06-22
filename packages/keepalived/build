@@ -57,11 +57,12 @@ cp /lib/x86_64-linux-gnu/libnl-3.so.200 "$PKG_PATH/lib/libnl-3.so.200"
 rm -rf "$PKG_PATH/etc/rc.d/"
 rm -rf "$PKG_PATH/etc/sysconfig/"
 rm -rf "$PKG_PATH/etc/keepalived/samples/"
+rm -f "$PKG_PATH/etc/keepalived/keepalived.conf"
 
 # write keepalived config
 # todo <lloesche>: just an example config. Must be generated somewhere else
 #                  or @KEEPALIVED_*@ placeholders replaced.
-keepalived_config="$PKG_PATH/etc/keepalived/keepalived.conf"
+keepalived_config="$PKG_PATH/etc/keepalived/keepalived.conf.template"
 mkdir -p "$(dirname "$keepalived_config")"
 cat <<EOF > "$keepalived_config"
 vrrp_script chk_http_port {
@@ -105,6 +106,11 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/keepalived
+ExecStartPre=sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
+                 -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
+                 -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
+                 -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
+                 "$PKG_PATH/keepalived/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/keepalived/etc/keepalived/keepalived.conf"
 ExecStart=$PKG_PATH/keepalived/sbin/keepalived -n \$KEEPALIVED_OPTIONS
 ExecReload=/bin/kill -HUP \$MAINPID
 EOF

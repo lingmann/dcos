@@ -97,7 +97,7 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=LVS and VRRP High Availability Monitor
 After=syslog.target network.target
-ConditionPathExists=/opt/mesosphere/etc/keepalived
+ConditionPathExists=/etc/mesosphere/keepalived
 
 [Service]
 Restart=on-failure
@@ -105,7 +105,7 @@ StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/keepalived
+EnvironmentFile=/etc/mesosphere/keepalived
 ExecStartPre=sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
                  -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
                  -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \

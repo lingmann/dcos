@@ -126,7 +126,7 @@ def do_bootstrap(install, repository):
 
         # Fetch and activate all requested additional packages to accompany the bootstrap packages.
         cluster_packages_filename = install.get_config_filename("setup-flags/cluster-packages.json")
-        cluster_packages = if_exists(load_string, load_json(cluster_packages_filename))
+        cluster_packages = if_exists(load_json, cluster_packages_filename)
         if cluster_packages:
             if not isinstance(cluster_packages, list):
                 print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(cluster_packages_filename,

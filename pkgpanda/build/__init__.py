@@ -23,6 +23,9 @@ def hash_checkout(item):
         hasher.update(s.encode('utf-8'))
         return binascii.hexlify(hasher.digest()).decode('ascii')
 
+    def hash_int(i):
+        return hash_str(str(i))
+
     def hash_dict(d):
         item_hashes = []
         for k in sorted(d.keys()):
@@ -43,6 +46,8 @@ def hash_checkout(item):
         return hash_dict(item)
     elif isinstance(item, list):
         return hash_list(item)
+    elif isinstance(item, int):
+        return hash_int(item)
     else:
         raise NotImplementedError(str(type(item)))
 

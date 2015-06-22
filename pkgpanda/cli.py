@@ -72,17 +72,17 @@ def do_bootstrap(install, repository):
     # the host (cloud-init).
     repository_url = if_exists(load_string, install.get_config_filename("setup-flags/repository-url"))
 
-    # If there is 1+ master, grab the active config from a master. If the
-    # config can't be grabbed from any of them, fail.
+    # TODO(cmaloney): If there is 1+ master, grab the active config from a master.
+    # If the config can't be grabbed from any of them, fail.
     def fetcher(id, target):
         if repository_url is None:
             print("ERROR: Non-local package {} but no repository url given.".format(repository_url))
             sys.exit(1)
         return urllib_fetcher(repository_url, id, target)
 
-    # Copy host/cluster-specific packages from setup-packages folder into
-    # the repository. Do not overwrite or merge existing packages, hard fail
-    # instead.
+    # Copy host/cluster-specific packages written to the filesystem manually
+    # from the setup-packages folder into the repository. Do not overwrite or
+    # merge existing packages, hard fail instead.
     setup_packages_to_activate = []
     setup_pkg_dir = install.get_config_filename("setup-packages")
     for pkg_id_str in os.listdir(setup_pkg_dir):
@@ -123,6 +123,26 @@ def do_bootstrap(install, repository):
     else:
         print("active.json from bootstrap tarball")
         to_activate = list(install.get_active())
+
+        # Fetch and activate all requested additional packages to accompany the bootstrap packages.
+        extra_packages_filename = install.get_config_filename("setup-flags/extra-bootstrap-packages.json")
+        extra_packages = if_exists(load_string, load_json(extra_packages_filename))
+        if extra_packages:
+            if not isinstance(extra_packages, list):
+                print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(
+                            extra_packages_filename, type(extra_packages)))
+
+            for package_id_str in extra_packages:
+                # Validate the package ids
+                pkg_id = PackageId(pkg_id_str)
+
+                # Fetch the packages if not local
+                if repository.has_package(package_id_str):
+                    repository.add(fetcher, package_id_str)
+
+                # Add the package to the set to activate
+                setup_packages_to_activate.append(package_id_str)
+
 
     to_activate = list(set(to_activate + setup_packages_to_activate))
 

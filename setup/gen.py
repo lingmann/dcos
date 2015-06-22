@@ -274,7 +274,6 @@ if __name__ == "__main__":
     # Filter out generated parameters
     parameters.remove('master_quorum')
     parameters.remove('bootstrap_url')
-    parameters.add('release_name')
     parameters.remove('cluster_packages')
 
     # Load the arguments provided by the provider, distro, and user.

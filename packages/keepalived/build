@@ -48,9 +48,47 @@ make -j8
 make install
 popd
 
+# copy libs
 mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libnl-genl-3.so.200 "$PKG_PATH/lib/libnl-genl-3.so.200"
 cp /lib/x86_64-linux-gnu/libnl-3.so.200 "$PKG_PATH/lib/libnl-3.so.200"
+
+# remove examples and unused config
+rm -rf "$PKG_PATH/etc/rc.d/"
+rm -rf "$PKG_PATH/etc/sysconfig/"
+rm -rf "$PKG_PATH/etc/keepalived/samples/"
+
+# write keepalived config
+# todo <lloesche>: just an example config. Must be generated somewhere else
+#                  or @KEEPALIVED_*@ placeholders replaced.
+keepalived_config="$PKG_PATH/etc/keepalived/keepalived.conf"
+mkdir -p "$(dirname "$keepalived_config")"
+cat <<EOF > "$keepalived_config"
+vrrp_script chk_http_port {
+    script "</dev/tcp/127.0.0.1/80"
+    interval 1
+    weight -2
+}
+
+vrrp_instance VI_1 {
+    state EQUAL
+    interface @KEEPALIVED_INTERFACE@
+    virtual_router_id @KEEPALIVED_ROUTER_ID@
+    priority 100
+    advert_int 1
+    authentication {
+        auth_type PASS
+        auth_pass @KEEPALIVED_PASS@
+    }
+    virtual_ipaddress {
+        @KEEPALIVED_VIRTUAL_IPADDRESS@
+    }
+
+    track_script {
+       chk_http_port
+    }
+}
+EOF
 
 systemd_master="$PKG_PATH"/dcos.target.wants_master/keepalived.service
 mkdir -p "$(dirname "$systemd_master")"

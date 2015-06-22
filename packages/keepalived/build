@@ -54,15 +54,14 @@ cp /lib/x86_64-linux-gnu/libnl-genl-3.so.200 "$PKG_PATH/lib/libnl-genl-3.so.200"
 cp /lib/x86_64-linux-gnu/libnl-3.so.200 "$PKG_PATH/lib/libnl-3.so.200"
 
 # remove examples and unused config
-rm -rf "$PKG_PATH/etc/rc.d/"
-rm -rf "$PKG_PATH/etc/sysconfig/"
-rm -rf "$PKG_PATH/etc/keepalived/samples/"
-rm -f "$PKG_PATH/etc/keepalived/keepalived.conf"
+rm -rf "$PKG_PATH/etc/"
 
-# write keepalived config
-# todo <lloesche>: just an example config. Must be generated somewhere else
-#                  or @KEEPALIVED_*@ placeholders replaced.
-keepalived_config="$PKG_PATH/etc/keepalived/keepalived.conf.template"
+# create empty config so it will be symlinked during activation
+mkdir -p "$PKG_PATH/etc_master"
+touch "$PKG_PATH/etc_master/keepalived.conf"
+
+# write keepalived config template
+keepalived_config="$PKG_PATH/conf/keepalived.conf.template"
 mkdir -p "$(dirname "$keepalived_config")"
 cat <<EOF > "$keepalived_config"
 vrrp_script chk_http_port {
@@ -94,13 +93,12 @@ EOF
 keepalived_wrapper="$PKG_PATH/sbin/keepalived.wrapper"
 cat <<EOF > "$keepalived_wrapper"
 #!/bin/bash
-. /etc/mesosphere/keepalived
 /bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
          -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
          -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
          -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-         "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf"
-exec $PKG_PATH/sbin/keepalived \$*
+         "$PKG_PATH/conf/keepalived.conf.template" > "/opt/mesosphere/etc/keepalived/keepalived.conf" && \
+exec "$PKG_PATH/sbin/keepalived" -f "/opt/mesosphere/etc/keepalived.conf" \$*
 EOF
 chmod 700 "$keepalived_wrapper"
 
@@ -110,7 +108,7 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=LVS and VRRP High Availability Monitor
 After=syslog.target network.target
-ConditionPathExists=/etc/mesosphere/keepalived
+ConditionPathExists=/opt/mesosphere/etc/keepalived
 
 [Service]
 Restart=on-failure
@@ -118,6 +116,6 @@ StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/etc/mesosphere/keepalived
-ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n -f $PKG_PATH/etc/keepalived/keepalived.conf \$KEEPALIVED_OPTIONS
+EnvironmentFile=/opt/mesosphere/etc/keepalived
+ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n \$KEEPALIVED_OPTIONS
 EOF

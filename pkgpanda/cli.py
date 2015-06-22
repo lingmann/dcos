@@ -125,16 +125,16 @@ def do_bootstrap(install, repository):
         to_activate = list(install.get_active())
 
         # Fetch and activate all requested additional packages to accompany the bootstrap packages.
-        extra_packages_filename = install.get_config_filename("setup-flags/extra-bootstrap-packages.json")
-        extra_packages = if_exists(load_string, load_json(extra_packages_filename))
-        if extra_packages:
-            if not isinstance(extra_packages, list):
-                print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(
-                            extra_packages_filename, type(extra_packages)))
+        cluster_packages_filename = install.get_config_filename("setup-flags/cluster-packages.json")
+        cluster_packages = if_exists(load_string, load_json(cluster_packages_filename))
+        if cluster_packages:
+            if not isinstance(cluster_packages, list):
+                print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(cluster_packages_filename,
+                                                                                          type(cluster_packages)))
 
-            for package_id_str in extra_packages:
+            for package_id_str in cluster_packages:
                 # Validate the package ids
-                pkg_id = PackageId(pkg_id_str)
+                pkg_id = PackageId(package_id_str)
 
                 # Fetch the packages if not local
                 if repository.has_package(package_id_str):
@@ -143,7 +143,8 @@ def do_bootstrap(install, repository):
                 # Add the package to the set to activate
                 setup_packages_to_activate.append(package_id_str)
 
-
+    # Calculate the full set of final packages (Explicit activations + setup packages).
+    # De-duplicate using a set.
     to_activate = list(set(to_activate + setup_packages_to_activate))
 
     print("Activating packages")

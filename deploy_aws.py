@@ -13,10 +13,9 @@ Deploy steps:
 """
 
 from docopt import docopt
-from pkgpanda import PackageId
-from pkgpanda.util import load_json, load_string
+from pkgpanda.util import load_string
 from subprocess import check_call
-
+import upload_packages
 from util import render_markdown, upload_s3
 
 
@@ -30,7 +29,7 @@ def main():
         check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages')
 
     # Get the last bootstrap build version
-    last_bootstrap = load_string('packages/bootstrap.latest')
+    last_bootstrap = load_string('bootstrap.latest')
 
     # Build aws cloudformation
     check_call([
@@ -41,27 +40,7 @@ def main():
         ], cwd='providers')
     # Upload to s3 bucket
     if not arguments['--skip-package-upload']:
-        # Upload packages
-        for id_str in load_json('packages/{}.active.json'.format(last_bootstrap)):
-            id = PackageId(id_str)
-            upload_s3(name, 'packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
-
-        # Upload bootstrap
-        upload_s3(
-                name,
-                'packages/{}.bootstrap.tar.xz'.format(last_bootstrap),
-                'bootstrap/{}.bootstrap.tar.xz'.format(last_bootstrap),
-                no_cache=True)
-        upload_s3(
-                name,
-                'packages/{}.active.json'.format(last_bootstrap),
-                'config/{}.active.json'.format(last_bootstrap),
-                no_cache=True)
-        upload_s3(
-                name,
-                'packages/bootstrap.latest',
-                'bootstrap.latest',
-                no_cache=True)
+        upload_packages.do_upload(name, last_bootstrap)
 
     # Upload CloudFormation
     upload_s3(name, 'providers/cloudformation.json', 'cloudformation.json', no_cache=True)

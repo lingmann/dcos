@@ -131,17 +131,20 @@ def do_bootstrap(install, repository):
             if not isinstance(cluster_packages, list):
                 print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(cluster_packages_filename,
                                                                                           type(cluster_packages)))
+            print("Loading cluster-packages: {}".format(cluster_packages))
 
             for package_id_str in cluster_packages:
                 # Validate the package ids
                 pkg_id = PackageId(package_id_str)
 
                 # Fetch the packages if not local
-                if repository.has_package(package_id_str):
+                if not repository.has_package(package_id_str):
                     repository.add(fetcher, package_id_str)
 
                 # Add the package to the set to activate
                 setup_packages_to_activate.append(package_id_str)
+        else:
+            print("No cluster-packages specified")
 
     # Calculate the full set of final packages (Explicit activations + setup packages).
     # De-duplicate using a set.

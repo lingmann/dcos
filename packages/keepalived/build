@@ -97,7 +97,7 @@ cat <<EOF > "$keepalived_wrapper"
          -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
          -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
          -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-         "$PKG_PATH/conf/keepalived.conf.template" > "/opt/mesosphere/etc/keepalived/keepalived.conf" && \
+         "$PKG_PATH/conf/keepalived.conf.template" > "/opt/mesosphere/etc/keepalived.conf" && \
 exec "$PKG_PATH/sbin/keepalived" -f "/opt/mesosphere/etc/keepalived.conf" \$*
 EOF
 chmod 700 "$keepalived_wrapper"

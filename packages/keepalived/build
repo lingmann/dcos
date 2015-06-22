@@ -110,6 +110,6 @@ ExecStartPre=/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
                  -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
                  -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
                  -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-                 "$PKG_PATH/keepalived/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/keepalived/etc/keepalived/keepalived.conf"
-ExecStart=$PKG_PATH/keepalived/sbin/keepalived -n \$KEEPALIVED_OPTIONS
+                 "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf"
+ExecStart=$PKG_PATH/sbin/keepalived -n \$KEEPALIVED_OPTIONS
 EOF

@@ -91,6 +91,19 @@ vrrp_instance VI_1 {
 }
 EOF
 
+keepalived_wrapper="$PKG_PATH/sbin/keepalived.wrapper"
+cat <<EOF > "$keepalived_wrapper"
+#!/bin/bash
+. /etc/mesosphere/keepalived
+/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
+         -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
+         -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
+         -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
+         "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf"
+exec $PKG_PATH/sbin/keepalived \$*
+EOF
+chmod 700 "$keepalived_wrapper"
+
 systemd_master="$PKG_PATH"/dcos.target.wants_master/keepalived.service
 mkdir -p "$(dirname "$systemd_master")"
 cat <<EOF > "$systemd_master"
@@ -106,10 +119,5 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/etc/mesosphere/keepalived
-ExecStartPre=/usr/bin/bash -c "/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
-                 -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
-                 -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
-                 -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-                 "$PKG_PATH/etc/keepalived/keepalived.conf.template" > "$PKG_PATH/etc/keepalived/keepalived.conf""
-ExecStart=$PKG_PATH/sbin/keepalived -n \$KEEPALIVED_OPTIONS
+ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n \$KEEPALIVED_OPTIONS
 EOF

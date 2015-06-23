@@ -1,12 +1,12 @@
 # Mesos Slave Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% import 'cloud-config.gce.yaml' as cc %}
+{% import 'cloud-config.yaml' as cc %}
 
 {% set base_name = properties["base_name"]  %}
 {% set base_slave_name = base_name + '-slave' %}
 {% set machine_type = properties["machine"]%}
-{% set bootstrap_url= properties["bootstrap_url"] %}
+{% set bootstrap_url= properties["bootstrapUrl"] %}
 
 {% set base_name = properties["base_name"]  %}
 {% set base_slave_name = base_name + '-slave' %}

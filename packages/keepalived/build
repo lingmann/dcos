@@ -32,7 +32,7 @@ vrrp_script chk_http_port {
     weight -2
 }
 
-vrrp_instance VI_1 {
+vrrp_instance DCOS_1 {
     state EQUAL
     interface @KEEPALIVED_INTERFACE@
     virtual_router_id @KEEPALIVED_ROUTER_ID@

@@ -6,40 +6,6 @@ export CFLAGS=-I/opt/mesosphere/include
 export LDFLAGS="-L/opt/mesosphere/lib -Wl,-rpath=/opt/mesosphere/lib"
 export CXXFLAGS=-I/opt/mesosphere/include
 
-#pushd "/pkg/src/linux"
-#popd
-
-#pushd "/pkg/src/flex"
-#./configure \
-#  "--prefix=$PKG_PATH"
-#make -j8
-#make install
-#popd
-
-#pushd "/pkg/src/bison"
-#./configure \
-#  "--prefix=$PKG_PATH"
-#make -j8
-#make install
-#popd
-
-#pushd "/pkg/src/popt"
-#./configure \
-#  "--prefix=$PKG_PATH"
-#make -j8
-#make install
-#popd
-
-#pushd "/pkg/src/libnl"
-#./configure \
-#  "--prefix=$PKG_PATH"
-#make -j8
-#make install
-#popd
-
-apt-get update
-apt-get -y install libnl-3-dev libnl-genl-3-dev libpopt-dev linux-headers-3.19.0-21-generic pkg-config
-
 pushd "/pkg/src/keepalived"
 ./configure \
   "--prefix=$PKG_PATH" \
@@ -55,10 +21,6 @@ cp /lib/x86_64-linux-gnu/libnl-3.so.200 "$PKG_PATH/lib/libnl-3.so.200"
 
 # remove examples and unused config
 rm -rf "$PKG_PATH/etc/"
-
-# create empty config so it will be symlinked during activation
-mkdir -p "$PKG_PATH/etc_master"
-touch "$PKG_PATH/etc_master/keepalived.conf"
 
 # write keepalived config template
 keepalived_config="$PKG_PATH/conf/keepalived.conf.template"
@@ -93,14 +55,17 @@ EOF
 keepalived_wrapper="$PKG_PATH/sbin/keepalived.wrapper"
 cat <<EOF > "$keepalived_wrapper"
 #!/bin/bash
-/bin/sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
+set -o errexit -o nounset -o pipefail
+rm -f /tmp/keepalived.conf.*
+conf="\$(mktemp -p /tmp keepalived.conf.XXXXXXXX)"
+sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
          -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
          -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
          -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-         "$PKG_PATH/conf/keepalived.conf.template" > "/opt/mesosphere/etc/keepalived.conf" && \
-exec "$PKG_PATH/sbin/keepalived" -f "/opt/mesosphere/etc/keepalived.conf" \$*
+         "$PKG_PATH/conf/keepalived.conf.template" > "\$conf"
+exec "$PKG_PATH/sbin/keepalived" -f "\$conf" \$*
 EOF
-chmod 700 "$keepalived_wrapper"
+chmod 744 "$keepalived_wrapper"
 
 systemd_master="$PKG_PATH"/dcos.target.wants_master/keepalived.service
 mkdir -p "$(dirname "$systemd_master")"

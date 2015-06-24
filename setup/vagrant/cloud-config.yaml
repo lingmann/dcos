@@ -22,11 +22,11 @@ write_files:
       EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
       EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
+  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/exhibitor
     content: |
-      AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
-      AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
+      EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
       EXHIBITOR_WEB_UI_PORT=8181
+      EXHIBITOR_HOSTNAME=$private_ipv4
   - path: /etc/resolv.conf
     content: 'nameserver 8.8.8.8'
 coreos:

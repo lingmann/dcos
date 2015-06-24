@@ -25,6 +25,7 @@ import sys
 import urllib.request
 import yaml
 from math import floor
+from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
 from tempfile import TemporaryDirectory
@@ -44,19 +45,39 @@ env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
 
 
-def add_roles(cloud_config, roles):
-    raise NotImplementedError()
+def add_roles(cloudconfig, roles):
+    for role in roles:
+        cloudconfig['write_files'].append({
+            "path": role_template.format(role),
+            "content": ""
+            })
+
+    return cloudconfig
 
 
-def add_services(base_cloud_config, services_cloud_config):
-    raise NotImplementedError()
+def add_units(services, cloudconfig):
+    cloudconfig['coreos']['units'] += services
+    return cloudconfig
 
-utils = {
+
+# For converting util -> a namespace only.
+class Bunch(object):
+
+    def __init__(self, adict):
+        self.__dict__.update(adict)
+
+
+def render_cloudconfig(data):
+    return "#cloud-config\n" + render_yaml(data)
+
+
+utils = Bunch({
     "role_template": role_template,
     "add_roles": add_roles,
     "role_names": role_names,
-    "add_services": add_services
-}
+    "add_services": None,
+    "render_cloudconfig": render_cloudconfig
+})
 
 
 def render_yaml(data):
@@ -139,7 +160,8 @@ def get_template_names(provider, distribution):
         # updated via system config managers. The dcos-config-{provider} package
         # should be updated via pkgpanda.
         "cloud-config":
-            get_filenames(provider, distribution, 'cloud-config.yaml')
+            get_filenames(provider, distribution, 'cloud-config.yaml'),
+        "dcos-services": ['dcos-services.yaml']
     }
 
 
@@ -314,6 +336,12 @@ if __name__ == "__main__":
     # TODO(cmaloney): Validate basic arguments
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
 
+    assert arguments['repository_url'][-1] != '/'
+
+    if len(arguments['release_name']):
+        assert arguments['release_name'][0] != '/'
+        assert arguments['release_name'][-1] != '/'
+
     # Set arguments from command line flags.
     arguments['provider'] = args.provider
     arguments['distribution'] = args.distribution
@@ -322,11 +350,13 @@ if __name__ == "__main__":
     arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2 + 1)
 
     if arguments['bootstrap_id'] == 'automatic':
-        url = 'http://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(arguments['release_name'])
+        url = '{}/{}/bootstrap.latest'.format(arguments['repository_url'], arguments['release_name'])
         arguments['bootstrap_id'] = urllib.request.urlopen(url).read().decode('utf-8')
 
     if 'bootstrap_url' not in arguments:
-        arguments['bootstrap_url'] = 'http://downloads.mesosphere.com/dcos/{}'.format(arguments['release_name'])
+        arguments['bootstrap_url'] = arguments['repository_url']
+        if arguments['release_name']:
+            arguments['bootstrap_url'] += '/' + arguments['release_name']
     else:
         # Needs to conflict with certain combinations of bootstrap_id and release_name
         raise NotImplementedError()
@@ -343,11 +373,14 @@ if __name__ == "__main__":
     # ID of this configuration is a hash of the parameters
     config_id = hash_checkout(arguments)
 
-    config_package_id = "dcos-config--setup-{}".format(config_id)
+    config_package_id = "dcos-config--setup_{}".format(config_id)
 
     # This isn't included in the 'final arguments', but it is computable from it
     # so this isn't a "new" argument, just a "derived" argument.
     arguments['config_package_id'] = config_package_id
+    # Validate the PackageId conforms to the rules.
+    PackageId(config_package_id)
+
     config_package_filename = config_package_id + '.tar.xz'
     arguments['config_package_filename'] = config_package_filename
     # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
@@ -362,13 +395,12 @@ if __name__ == "__main__":
     rendered_templates = render_templates(templates, arguments)
 
     # There is only the dcos-config--setup and cloud-config templates
-    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config--setup"])
+    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config--setup", "dcos-services"])
 
     # Get out the cloud-config text for use in provider-specific templates
     # Cloud config must start with #cloud-config so prepend the name
     # to the start of the YAML
-    cloud_config = "#cloud-config\n" + \
-        render_yaml(rendered_templates['cloud-config'])
+    cloud_config = rendered_templates['cloud-config']
 
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
@@ -393,4 +425,11 @@ if __name__ == "__main__":
 
     print("Config package filename: ", config_package_filename)
 
-    provider.gen(cloud_config, arguments)
+    # Add in the add_services util. Done here instead of the initial
+    # map since we need to bind in parameters
+    def add_services(cloudconfig):
+        return add_units(rendered_templates['dcos-services'], cloudconfig)
+
+    utils.add_services = add_services
+
+    provider.gen(cloud_config, arguments, utils)

@@ -45,6 +45,7 @@ StartLimitInterval=0
 RestartSec=15
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
+EnvironmentFile=/opt/mesosphere/etc/mesos-master-provider
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStartPre=$PKG_PATH/bin/exhibitor_wait.py \$ZOOKEEPER_CLUSTER_SIZE
 ExecStart=$PKG_PATH/sbin/mesos-master

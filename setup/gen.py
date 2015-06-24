@@ -342,6 +342,10 @@ if __name__ == "__main__":
         assert arguments['release_name'][0] != '/'
         assert arguments['release_name'][-1] != '/'
 
+    if 'resolvers' in arguments:
+        assert isinstance(arguments['resolvers'], list)
+        arguments['resolvers'] = json.dumps(arguments['resolvers'])
+
     # Set arguments from command line flags.
     arguments['provider'] = args.provider
     arguments['distribution'] = args.distribution

@@ -1,0 +1,10 @@
+{
+  "docker": "dcos-builder",
+  "requires": ["openssl"],
+  "sources" :{
+      "keepalived": {
+          "kind": "url_extract",
+          "url": "http://keepalived.org/software/keepalived-1.2.17.tar.gz"
+      }
+  }
+}

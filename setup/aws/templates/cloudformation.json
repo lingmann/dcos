@@ -504,9 +504,9 @@
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "MasterLaunchConfig" },
-        "MinSize" : {{ start_param }}MasterInstanceCount{{ end_param }},
-        "MaxSize" : {{ start_param }}MasterInstanceCount{{ end_param }},
-        "DesiredCapacity" : {{ start_param }}MasterInstanceCount{{ end_param }},
+        "MinSize" : {{ master_count }},
+        "MaxSize" : {{ master_count }},
+        "DesiredCapacity" : {{ master_count }},
         "LoadBalancerNames" : [ { "Ref" : "ElasticLoadBalancer" }, { "Ref" : "InternalMasterLoadBalancer"} ],
         "VPCZoneIdentifier" : [{ "Ref" : "PublicSubnet" }],
         "Tags" : [
@@ -520,7 +520,7 @@
       "CreationPolicy" : {
         "ResourceSignal" : {
           "Timeout" : {{ start_param}}StackCreationTimeout{{ end_param }},
-          "Count" : {{ start_param }}MasterInstanceCount{{ end_param }}
+          "Count" : {{ master_count }}
         }
       }
     },

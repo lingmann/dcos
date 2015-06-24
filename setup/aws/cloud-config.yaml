@@ -13,7 +13,7 @@ write_files:
       AWS_STACK_NAME={ "Ref" : "AWS::StackName" }
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
-      ZOOKEEPER_CLUSTER_SIZE={master_count}
+      ZOOKEEPER_CLUSTER_SIZE={{ master_count }}
       MASTER_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
       EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
@@ -28,3 +28,14 @@ write_files:
       AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
       EXHIBITOR_WEB_UI_PORT=8181
 
+#- name: config-writer.service
+#command: start
+#content: |
+#  [Unit]
+#  Description=Write out dynamic config values
+#  [Service]
+#  Type=oneshot
+#  ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+#  ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
+#  ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
+#  ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave-common"

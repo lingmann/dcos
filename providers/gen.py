@@ -18,21 +18,6 @@ from subprocess import check_output
 import aws
 import vagrant
 
-dcos_image_commit = os.getenv(
-    'DCOS_IMAGE_COMMIT',
-    os.getenv(
-        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
-        None
-        )
-    )
-
-if dcos_image_commit is None:
-    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
-
-if dcos_image_commit is None:
-    raise "Unable to set dcos_image_commit from teamcity or git."
-
-template_generation_date = str(datetime.utcnow())
 
 
 def write_json(filename, data):
@@ -67,48 +52,6 @@ def render_cloudconfig_base(paramters, bootstrap_id):
         })
 
 
-def add_testcluster(parameters):
-    parameters.AddTestclusterEphemeralVolume()
-    # NOTE: Using python Template instead of .format to escape
-    # escaping hell.
-    parameters.extra_files_extra += Template("""  - path: /etc/mesosphere/clusterinfo.json
-    permissions: 0644
-    owner: root
-    content: |-
-      {
-        "cluster":{
-          "name":"$name"
-        },
-        "keys":{
-          "dd_api_key":"$dd_api_key",
-          "github_deploy_key_base64":"$github_deploy_key_base64"
-        }
-      }""").substitute(
-        name=parameters.GetParameter('stack_name'),
-        dd_api_key=parameters.GetParameter('dd_api_key'),
-        github_deploy_key_base64=parameters.GetParameter('github_deploy_key_base64')
-      )
-
-    parameters.late_units_extra = """    - name: datadog.service
-      command: start
-      content: |
-        [Unit]
-        Description=Monitoring Service
-        [Service]
-        TimeoutStartSec=0
-        Restart=on-failure
-        ExecStartPre=-/usr/bin/docker kill dd-agent
-        ExecStartPre=-/usr/bin/docker rm dd-agent
-        ExecStartPre=/usr/bin/docker pull mesosphere/dd-agent-mesos-slave
-        ExecStart=/usr/bin/bash -c \
-        "/usr/bin/docker run --privileged --name dd-agent --net=host \
-        -v /var/run/docker.sock:/var/run/docker.sock \
-        -v /proc/mounts:/host/proc/mounts:ro \
-        -v /sys/fs/cgroup/:/host/sys/fs/cgroup:ro \
-        -e API_KEY={0} \
-        mesosphere/dd-agent-mesos-slave" """.format(parameters.GetParameter('dd_api_key'))
-
-
 # TODO(cmaloney): Minimize amount of code in this function. All
 # providers should be as simple as possible.
 def gen_aws(name, bootstrap_url, render_cloudconfig):
@@ -116,11 +59,6 @@ def gen_aws(name, bootstrap_url, render_cloudconfig):
     # TODO(cmaloney): That we talk about 'testcluster' here is wrong.
     # We should just talk about 'extra parameters'.
     def aws_cloudformation(simple, testcluster=False):
-        def get_params(roles):
-            parameters = aws.Parameters(simple, roles)
-            if testcluster:
-                add_testcluster(parameters)
-            return parameters
 
         return aws.render_cloudformation(
             simple,

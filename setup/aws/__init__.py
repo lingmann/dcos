@@ -1,8 +1,29 @@
 import json
+import os
 import re
+import yaml
 
 from copy import copy
+from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
+from subprocess import check_output
+
+# TODO(cmaloney): Make a generic parameter to all templates
+dcos_image_commit = os.getenv(
+    'DCOS_IMAGE_COMMIT',
+    os.getenv(
+        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
+        None
+        )
+    )
+
+if dcos_image_commit is None:
+    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+
+if dcos_image_commit is None:
+    raise "Unable to set dcos_image_commit from teamcity or git."
+
+template_generation_date = str(datetime.utcnow())
 
 
 def load_json(filename):
@@ -12,10 +33,6 @@ def load_json(filename):
     except ValueError as ex:
         raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
 
-
-def write_string(filename, data):
-    with open(filename, "w+") as f:
-        return f.write(data)
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
@@ -28,7 +45,6 @@ end_param_full = '" }'
 env = Environment(loader=FileSystemLoader('aws/templates'), undefined=StrictUndefined)
 launch_template = env.get_template('launch_buttons.md')
 params = load_json("aws/cf_param_info.json")
-testcluster_params = load_json("aws/testcluster_param_info.json")
 cloudformation_template = env.get_template("cloudformation.json")
 
 
@@ -48,21 +64,12 @@ def transform(line):
     return "%s, %s, %s, %s,\n" % (transformed_before, transformed_ref, transformed_after, '"\\n"')
 
 
-def render_parameter(simple, name):
-    if simple:
-        return start_param_simple + name + end_param_simple
-    return start_param_full + name + end_param_full
-
-
 def render_cloudformation(
         simple,
+        master_count,
         master_cloudconfig,
         slave_cloudconfig,
-        public_slave_cloudconfig,
-        bootstrap_url,
-        testcluster,
-        dcos_image_commit,
-        template_generation_date):
+        public_slave_cloudconfig):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -70,6 +77,7 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     template_str = cloudformation_template.render({
+        'master_count': master_count,
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'public_slave_cloud_config': transform_lines(public_slave_cloudconfig),
@@ -82,12 +90,7 @@ def render_cloudformation(
     template_json['Metadata']['DcosImageCommit'] = dcos_image_commit
     template_json['Metadata']['TemplateGenerationDate'] = template_generation_date
 
-    params['BootstrapRepoRoot']['Default'] = bootstrap_url
-
     local_params = copy(params)
-
-    if testcluster:
-        local_params.update(testcluster_params)
 
     for param, info in local_params.items():
         if simple:
@@ -143,155 +146,79 @@ def render_buttons(name):
         'name': name
         })
 
+cf_instance_groups = {
+    'master': {
+        'report_name': 'MasterServerGroup',
+        'roles': ['master']
+    },
+    'slave': {
+        'report_name': 'SlaveServerGroup',
+        'roles': ['slave']
+    },
+    'public_slave': {
+        'report_name': 'PublicSlaveServerGroup',
+        'roles': ['public_slave']
+    }
+}
 
-class Parameters(CloudConfigParameters):
+late_services = """- name: cfn-signal.service
+  command: start
+  content: |
+    [Unit]
+    Description=Signal CloudFormation Success
+    After=dcos.target
+    Requires=dcos.target
+    ConditionPathExists=!/var/lib/cfn-signal
+    [Service]
+    Type=simple
+    Restart=on-failure
+    StartLimitInterval=0
+    RestartSec=15s
+    ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+    ExecStartPre=/bin/ping -c1 leader.mesos
+    ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \\
+      cfn-signal -e 0 \\
+      --resource {{ report_name }} \\
+      --stack { "Ref": "AWS::StackName" } \\
+      --region { "Ref" : "AWS::Region" }
+    ExecStart=/usr/bin/touch /var/lib/cfn-signal"""
 
-    def __init__(self, simple, roles):
-        self._simple = simple
-        self.roles = roles
-        self._testcluster_volume = False
+# TODO(cmaloney): Make it so we can load extra parameters from jina templates
+# per-provider.
+# TODO(cmaloney): Should provide a hook for various providers to give a argument
+# calculator to go with their extra templates (and the templates in general).
 
-        # Can only be master or slave currently because of stuff in
-        # late_units for cfn signaling
-        assert len(roles) == 1
+provider_templates = ['templates/cloudformation.json']
 
-    @property
-    def extra_files_base(self):
-        return """
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
-    content: |
-      AWS_REGION={{ "Ref" : "AWS::Region" }}
-      AWS_STACK_ID={{ "Ref" : "AWS::StackId" }}
-      AWS_STACK_NAME={{ "Ref" : "AWS::StackName" }}
-      AWS_ACCESS_KEY_ID={{ "Ref" : "HostKeys" }}
-      AWS_SECRET_ACCESS_KEY={{ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }}
-      ZOOKEEPER_CLUSTER_SIZE={master_count}
-      MASTER_ELB={{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }}
-      EXTERNAL_ELB={{ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }}
-      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
-      # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS={fallback_dns}
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
-    content: |
-      AWS_S3_BUCKET={{ "Ref" : "ExhibitorS3Bucket" }}
-      AWS_S3_PREFIX={{ "Ref" : "AWS::StackName" }}
-      EXHIBITOR_WEB_UI_PORT=8181
-""".format(master_count=render_parameter(self._simple, 'MasterInstanceCount'),fallback_dns=render_parameter(self._simple, 'FallbackDNS'))
 
-    @property
-    def stack_name(self):
-        return '{ "Ref" : "AWS::StackName" }'
+def gen(cloud_config, arguments, utils):
+    # Specialize for master, slave, public_slave
+    variant_cloudconfig = {}
+    for variant, params in cf_instance_groups.items():
+        cc_variant = copy(cloud_config)
 
-    @property
-    def early_units(self):
-        result = """    - name: format-var-lib-ephemeral.service
-      command: start
-      content: |
-        [Unit]
-        Description=Formats the /var/lib ephemeral drive
-        Before=var-lib.mount dbus.service
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/bin/bash -c '(blkid -t TYPE=ext4 | grep xvdb) || (/usr/sbin/mkfs.ext4 -F /dev/xvdb)'
-    - name: var-lib.mount
-      command: start
-      content: |
-        [Unit]
-        Description=Mount /var/lib
-        Before=dbus.service
-        [Mount]
-        What=/dev/xvdb
-        Where=/var/lib
-        Type=ext4
-"""
-        if self._testcluster_volume:
-            result += """    - name: format-ephemeral.service
-      command: start
-      content: |
-        [Unit]
-        Description=Formats the ephemeral drive
-        Before=ephemeral.mount
-        [Service]
-        Type=oneshot
-        RemainAfterExit=yes
-        ExecStart=/bin/sh -c 'mdadm --stop /dev/md/* ; true'
-        ExecStart=/usr/sbin/mdadm --create -f -R /dev/md0 --level=0 --raid-devices=2 /dev/xvdb /dev/xvdc
-        ExecStart=/bin/bash -c '(blkid -t TYPE=ext4 | grep md0) || /usr/sbin/mkfs.ext4 /dev/md0'
-    - name: ephemeral.mount
-      command: start
-      content: |
-        [Unit]
-        Description=Ephemeral Mount
-        [Mount]
-        What=/dev/md0
-        Where=/ephemeral
-        Type=ext4"""
-        return result
+        # Specialize the cfn-signal service
+        cc_variant = utils.add_units(
+            cc_variant,
+            yaml.load(env.from_string(late_services).render(params)))
 
-    @property
-    def config_writer(self):
-        return """    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        Type=oneshot
-        ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-        ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv"
-        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master"
-        ExecStart=/usr/bin/bash -c "echo MESOS_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave-common"
-"""
+        # Add roles
+        cc_variant = utils.add_roles(cc_variant, params['roles'] + ['aws'])
 
-    @property
-    def late_units_base(self):
-        if 'master' in self.roles:
-            report_name = 'MasterServerGroup'
-        elif 'slave' in self.roles:
-            report_name = 'SlaveServerGroup'
-        else:
-            report_name = 'PublicSlaveServerGroup'
-        return """    - name: cfn-signal.service
-      command: start
-      content: |
-        [Unit]
-        Description=Signal CloudFormation Success
-        After=dcos.target
-        Requires=dcos.target
-        ConditionPathExists=!/var/lib/cfn-signal
-        [Service]
-        Type=simple
-        Restart=on-failure
-        StartLimitInterval=0
-        RestartSec=15s
-        ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
-        ExecStartPre=/bin/ping -c1 leader.mesos
-        ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \\
-          cfn-signal -e 0 \\
-          --resource {report_name} \\
-          --stack {{ "Ref": "AWS::StackName" }} \\
-          --region {{ "Ref" : "AWS::Region" }}
-        ExecStart=/usr/bin/touch /var/lib/cfn-signal
-""".format(report_name=report_name)
+        # NOTE: If this gets printed in string stylerather than '|' the AWS
+        # parameters which need to be split out for the cloudformation to
+        # interpret end up all escaped and undoing it would be hard.
+        variant_cloudconfig[variant] = yaml.dump(cc_variant, default_style='|', default_flow_style=False)
 
-    def GetParameter(self, name):
-        if name == 'stack_name':
-            return '{ "Ref" : "AWS::StackName" }'
+    # Render the cloudformation
+    cloudformation = render_cloudformation(
+        True,
+        arguments['master_count'],
+        variant_cloudconfig['master'],
+        variant_cloudconfig['slave'],
+        variant_cloudconfig['public_slave']
+        )
 
-        real_name = {
-            'bootstrap_url': 'BootstrapRepoRoot',
-            'fallback_dns': 'FallbackDNS',
-            'master_quorum': 'MasterQuorumCount',
-            'dd_api_key': 'DatadogApiKey',
-            'github_deploy_key_base64': 'GithubDeployKeyBase64'
-        }[name]
-
-        return render_parameter(self._simple, real_name)
-
-    def AddTestclusterEphemeralVolume(self):
-        # Should only ever be called once.
-        assert not self._testcluster_volume
-        self._testcluster_volume = True
-
-    resolvers = ["10.0.0.2"]
+    # Write it out
+    with open('cloudformation.json', 'w') as f:
+        f.write(cloudformation)

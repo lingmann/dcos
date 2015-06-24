@@ -1,5 +1,4 @@
 {
   "resolvers": ["10.0.0.2"],
-  "fallback_dns": "10.0.0.2",
-  "report_name": "automatic"
+  "fallback_dns": "10.0.0.2"
 }

@@ -55,7 +55,7 @@ def add_roles(cloudconfig, roles):
     return cloudconfig
 
 
-def add_units(services, cloudconfig):
+def add_units(cloudconfig, services):
     cloudconfig['coreos']['units'] += services
     return cloudconfig
 
@@ -76,6 +76,7 @@ utils = Bunch({
     "add_roles": add_roles,
     "role_names": role_names,
     "add_services": None,
+    "add_units": add_units,
     "render_cloudconfig": render_cloudconfig
 })
 
@@ -274,7 +275,7 @@ def write_to_non_taken(base_filename, json):
 
     return filename
 
-if __name__ == "__main__":
+def main():
     # Get basic arguments from user.
     parser = argparse.ArgumentParser(
             description='Generate config for a DCOS environment')
@@ -432,8 +433,19 @@ if __name__ == "__main__":
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters
     def add_services(cloudconfig):
-        return add_units(rendered_templates['dcos-services'], cloudconfig)
+        return add_units(cloudconfig, rendered_templates['dcos-services'])
 
     utils.add_services = add_services
 
     provider.gen(cloud_config, arguments, utils)
+
+if __name__ == "__main__":
+    try:
+        main()
+    except jinja2.TemplateSyntaxError as ex:
+        print("ERROR: Jinja2 TemplateSyntaxError")
+        print("{}:{} - {}".format(
+            ex.filename if ex.filename else (ex.name if ex.name else '<>'),
+            ex.lineno,
+            ex.message))
+        sys.exit(1)

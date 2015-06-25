@@ -1,2 +1,3 @@
 dcos-config--*.tar.xz
 cloudformation.json
+dcos-config.latest

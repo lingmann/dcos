@@ -1,3 +1,4 @@
+from botocore.client import ClientError
 import boto3
 import requests
 
@@ -16,12 +17,23 @@ def render_markdown(path_to_md):
     return render_markdown_data(open(path_to_md, 'r'))
 
 
-def upload_s3(name, path, dest_path=None, args={}, no_cache=False):
+def upload_s3(name, path, dest_path=None, args={}, no_cache=False,  if_not_exists=False):
     if no_cache:
         args['CacheControl'] = 'no-cache'
 
+    if not dest_path:
+        dest_path = path
+
+    s3_object = bucket.Object('dcos/{name}/{path}'.format(name=name, path=dest_path))
+
+    if if_not_exists:
+        try:
+            s3_object.load()
+            print("Skipping {}: already exists".format(path))
+            return s3_object
+        except ClientError:
+            pass
+
     with open(path, 'rb') as data:
         print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
-        if not dest_path:
-            dest_path = path
-        return bucket.Object('dcos/{name}/{path}'.format(name=name, path=dest_path)).put(Body=data, **args)
+        return s3_object.put(Body=data, **args)

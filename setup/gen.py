@@ -27,7 +27,7 @@ import yaml
 from math import floor
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
-from pkgpanda.util import make_tar
+from pkgpanda.util import make_tar, write_string
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
@@ -237,7 +237,7 @@ def load_arguments(provider, distribution, config):
             new_arguments = load_json(config)
             arguments.update(new_arguments)
         except FileNotFoundError:
-            print("ERROR: Specified config file '", config, "' does not exist")
+            print("ERROR: Specified config file '" + config + "' does not exist")
             sys.exit(1)
         except ValueError as ex:
             print("ERROR:", ex.what())
@@ -274,6 +274,7 @@ def write_to_non_taken(base_filename, json):
     write_json(filename, json)
 
     return filename
+
 
 def main():
     # Get basic arguments from user.
@@ -352,7 +353,7 @@ def main():
     arguments['distribution'] = args.distribution
 
     # Calculate and set master_quorum based on num_masters
-    arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2 + 1)
+    arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2) + 1
 
     if arguments['bootstrap_id'] == 'automatic':
         url = '{}/{}/bootstrap.latest'.format(arguments['repository_url'], arguments['release_name'])
@@ -429,6 +430,7 @@ def main():
         make_tar(config_package_filename, tmpdir)
 
     print("Config package filename: ", config_package_filename)
+    write_string("dcos-config.latest", config_package_id)
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters

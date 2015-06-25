@@ -3,10 +3,49 @@ import os
 import re
 import yaml
 
-from copy import copy
+from copy import copy, deepcopy
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader, StrictUndefined
 from subprocess import check_output
+
+aws_region_names = [
+    {
+        'name': 'US West (N. California)',
+        'id': 'us-west-1'
+    },
+    {
+        'name': 'US West (Oregon)',
+        'id': 'us-west-2'
+    },
+    {
+        'name': 'US East (N. Virginia)',
+        'id': 'us-east-1'
+    },
+    {
+        'name': 'South America (Sao Paulo)',
+        'id': 'sa-east-1'
+    },
+    {
+        'name': 'EU (Ireland)',
+        'id': 'eu-west-1'
+    },
+    {
+        'name': 'EU (Frankfurt)',
+        'id': 'eu-central-1'
+    },
+    {
+        'name': 'Asia Pacific (Tokyo)',
+        'id': 'ap-northeast-1'
+    },
+    {
+        'name': 'Asia Pacific (Singapore)',
+        'id': 'ap-southeast-1'
+    },
+    {
+        'name': 'Asia Pacific (Sydney)',
+        'id': 'ap-southeast-2'
+    }]
+
 
 # TODO(cmaloney): Make a generic parameter to all templates
 dcos_image_commit = os.getenv(
@@ -66,7 +105,7 @@ def transform(line):
 
 def render_cloudformation(
         simple,
-        master_count,
+        num_masters,
         master_cloudconfig,
         slave_cloudconfig,
         public_slave_cloudconfig):
@@ -77,7 +116,7 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     template_str = cloudformation_template.render({
-        'master_count': master_count,
+        'num_masters': num_masters,
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'public_slave_cloud_config': transform_lines(public_slave_cloudconfig),
@@ -105,44 +144,7 @@ def render_cloudformation(
 
 def render_buttons(name):
     return launch_template.render({
-        'regions': [
-            {
-                'name': 'US West (N. California)',
-                'id': 'us-west-1'
-            },
-            {
-                'name': 'US West (Oregon)',
-                'id': 'us-west-2'
-            },
-            {
-                'name': 'US East (N. Virginia)',
-                'id': 'us-east-1'
-            },
-            {
-                'name': 'South America (Sao Paulo)',
-                'id': 'sa-east-1'
-            },
-            {
-                'name': 'EU (Ireland)',
-                'id': 'eu-west-1'
-            },
-            {
-                'name': 'EU (Frankfurt)',
-                'id': 'eu-central-1'
-            },
-            {
-                'name': 'Asia Pacific (Tokyo)',
-                'id': 'ap-northeast-1'
-            },
-            {
-                'name': 'Asia Pacific (Singapore)',
-                'id': 'ap-southeast-1'
-            },
-            {
-                'name': 'Asia Pacific (Sydney)',
-                'id': 'ap-southeast-2'
-            }
-            ],
+        'regions': aws_region_names,
         'name': name
         })
 
@@ -192,10 +194,13 @@ provider_templates = ['templates/cloudformation.json']
 
 
 def gen(cloud_config, arguments, utils):
+    # Add general services
+    cloud_config = utils.add_services(cloud_config)
+
     # Specialize for master, slave, public_slave
     variant_cloudconfig = {}
     for variant, params in cf_instance_groups.items():
-        cc_variant = copy(cloud_config)
+        cc_variant = deepcopy(cloud_config)
 
         # Specialize the cfn-signal service
         cc_variant = utils.add_units(
@@ -208,12 +213,12 @@ def gen(cloud_config, arguments, utils):
         # NOTE: If this gets printed in string stylerather than '|' the AWS
         # parameters which need to be split out for the cloudformation to
         # interpret end up all escaped and undoing it would be hard.
-        variant_cloudconfig[variant] = yaml.dump(cc_variant, default_style='|', default_flow_style=False)
+        variant_cloudconfig[variant] = utils.render_cloudconfig(cc_variant)
 
     # Render the cloudformation
     cloudformation = render_cloudformation(
         True,
-        arguments['master_count'],
+        arguments['num_masters'],
         variant_cloudconfig['master'],
         variant_cloudconfig['slave'],
         variant_cloudconfig['public_slave']

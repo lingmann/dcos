@@ -2,6 +2,11 @@
 
 Generates the files which need to be put on individual hosts in order to install DCOS on a cobmination of "Hardware Provider" and "Distribution".
 
+## Requirements
+
+python 3
+  - On OSX you can get this with `brew install python3`
+
 ## Planned extensions:
 
 Encoding site-specific details (Gen me customer X's setup)
@@ -26,3 +31,15 @@ Provider specifies required parameters for DCOS components (These can be specifi
 The information provided by DCOS then gets distribution, provider, and provider+distro specific configuration files added. For example, on cloud providers + CoreOS we disable etcd.
 
 The information then can be converted by provider-specific code into alternate formats as needed (Make a cloud-config or generate Salt config files).
+
+# Example usage for Vagrant
+`./gen.py vagrante coreos`
+
+Generates a vagrant, prompting for all needed parameters. Note that the dcos-config package which is generated needs to be uploaded or serve_packages needs to be run. Commands for running will be printed at the end of the script.
+
+## Debugging a cluster / watching it come up
+```
+ssh into the desired node `vagrant ssh`
+Watch using the journal `journalctl -f`
+
+Things are more or less up when the nginx starts / finds leader.mesos. Should take 15 minutes or less.

@@ -150,20 +150,15 @@ def get_filenames(provider, distribution, target):
 
 # Returns a dictionary of the jinja templates to use
 def get_template_names(provider, distribution):
-    return {
-        # Contains core DCOS service configuration, updated always via pkgpanda.
-        # Order is important for running bits properly
-        "dcos-config--setup":
-            get_filenames(provider, distribution, 'dcos-config.yaml'),
-        # Cloud config contains the per-host configuration configured by the
-        # provider, as well as provider-specific config packages which depend on
-        # initial launch parameters. All files entries, services should be
-        # updated via system config managers. The dcos-config-{provider} package
-        # should be updated via pkgpanda.
-        "cloud-config":
-            get_filenames(provider, distribution, 'cloud-config.yaml'),
-        "dcos-services": ['dcos-services.yaml']
-    }
+    templates = dict()
+    # dcos-config contains stuff statically known for clusters (ex: mesos slave
+    # configuration parametesr).
+    # cloud-config contains things injected per-cluster by tools such as
+    # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
+    # master loadbalancer DNS name
+    for template in ['dcos-config', 'cloud-config', 'dcos-services']:
+        templates[template] = get_filenames(provider, distribution, template + '.yaml')
+    return templates
 
 
 # Render the Jinja/YAML into YAML, then load the YAML and merge it to make the
@@ -400,8 +395,9 @@ def main():
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
 
-    # There is only the dcos-config--setup and cloud-config templates
-    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config--setup", "dcos-services"])
+    # Hard fail if more templates are added. Each new template needs code added
+    # below to deal with its output.
+    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config", "dcos-services"])
 
     # Get out the cloud-config text for use in provider-specific templates
     # Cloud config must start with #cloud-config so prepend the name
@@ -411,7 +407,7 @@ def main():
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
     with TemporaryDirectory("dcos-config--setup") as tmpdir:
-        dcos_setup = rendered_templates['dcos-config--setup']
+        dcos_setup = rendered_templates['dcos-config']
 
         # Only contains write_files
         assert len(dcos_setup) == 1

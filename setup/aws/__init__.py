@@ -1,3 +1,4 @@
+import boto3
 import json
 import os
 import re
@@ -227,3 +228,7 @@ def gen(cloud_config, arguments, utils):
     # Write it out
     with open('cloudformation.json', 'w') as f:
         f.write(cloudformation)
+
+    print("Validating CloudFormation")
+    client = boto3.client('cloudformation')
+    client.validate_template(TemplateBody=cloudformation)

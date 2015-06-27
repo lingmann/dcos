@@ -15,6 +15,7 @@ NOTE:
 """
 
 import argparse
+import collections
 import importlib
 import jinja2
 import jinja2.meta
@@ -22,9 +23,8 @@ import json
 import os
 import os.path
 import sys
-import urllib.request
 import yaml
-from math import floor
+from copy import deepcopy
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar, write_string
@@ -246,6 +246,89 @@ def load_default_arguments(provider, distribution):
             get_filenames(provider, distribution, 'defaults.json'),
             update_dictionary)
 
+
+def load_calculations(provider, distribution):
+    all_names = set()
+    must_fn = {}
+    can_fn = {}
+    for modulename in get_filenames(provider, distribution, 'calc'):
+        try:
+            module = importlib.import_module(modulename)
+        except ImportError:
+            break
+
+        # Can't calculate the same thing twice.
+        names = module.must.keys() | module.can.keys()
+        for name in names:
+            if name in all_names:
+                raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
+
+        all_names |= names
+
+        must_fn.update(module.must)
+        can_fn.update(module.can)
+
+    return must_fn, can_fn
+
+
+class LazyArgumentCalculator(collections.Mapping):
+
+    def __init__(self, must_fn, can_fn, arguments):
+        self._calculators = must_fn
+        self._calculators.update(can_fn)
+        self._arguments = arguments
+        self.__in_progress = set()
+
+    def __getitem__(self, name):
+        if name in self._arguments:
+            return self._arguments[name]
+
+        # Detect cycles by checking if we're in the middle of calculating the
+        # argument being asked for
+        if name in self.__in_progress:
+            raise AssertionError("Cycle detected. Encountered {}".format(name))
+
+        try:
+            self.__in_progress.add(name)
+            self._arguments[name] = self._calculators[name](self)
+        except AssertionError as ex:
+            raise AssertionError(str(ex) + " while calculating {}".format(name)) from ex
+        return self._arguments[name]
+
+    def __iter__(self):
+        raise NotImplementedError()
+
+    def __len__(self):
+        return len(self._arguments)
+
+    def get_arguments(self):
+        return self._arguments
+
+
+def calculate_args(must_fn, can_fn, arguments):
+    start_arguments = deepcopy(arguments)
+
+    # Build the argument dictionary
+    arg_calculator = LazyArgumentCalculator(must_fn, can_fn, arguments)
+
+    # Force calculation of all arguments by accessing
+    for key in must_fn.keys():
+        if key in start_arguments:
+            raise AssertionError("Argument which must be calculated '", key, "' manually specified in arguments")
+
+        arg_calculator[key]
+
+    # Force calculation of optional arguments.
+    # Seperated from mandatory ones since we just pass on pre-specified
+    for key in can_fn.keys():
+        if key in start_arguments:
+            pass
+
+        arg_calculator[key]
+
+    return arg_calculator.get_arguments()
+
+
 json_prettyprint_args = {
     "sort_keys": True,
     "indent": 2,
@@ -290,11 +373,6 @@ def main():
     templates = get_template_names(args.provider, args.distribution)
     parameters = get_parameters(args.provider, args.distribution, templates)
 
-    # Filter out generated parameters
-    parameters.remove('master_quorum')
-    parameters.remove('bootstrap_url')
-    parameters.remove('cluster_packages')
-
     # Load the arguments provided by the provider, distro, and user.
     arguments = load_arguments(args.provider, args.distribution, args.config)
 
@@ -303,6 +381,19 @@ def main():
 
     # Calculate the set of parameters which still need to be input.
     to_set = parameters - arguments.keys()
+
+    # Load what we can calculate
+    # TODO(cmaloney): Merge extra arguments, defaults into calc?
+    must_calc, can_calc = load_calculations(args.provider, args.distribution)
+
+    # Remove calculated parameters from those to calculate.
+    to_set -= must_calc.keys()
+    to_set -= can_calc.keys()
+
+    # Cluster packages is particularly magic
+    # as it depends on the config filename which depends on the initial set
+    # of arguments.
+    to_set.remove('cluster_packages')
 
     # TODO(cmaloney): If in strict mode and some arguments aren't used, error
     # and exit.
@@ -315,6 +406,12 @@ def main():
             if args.assume_defaults and name in defaults:
                 user_arguments[name] = defaults[name]
                 break
+
+            default_str = ''
+            if name in defaults:
+                default_str = ' [{}]'.format(defaults[name])
+            elif name in can_calc:
+                default_str = ' (can calculated)'
 
             # TODO(cmaloney): If 'config only' is set never prompt.
             default_str = ' [{}]'.format(defaults[name]) if name in defaults else ''
@@ -347,26 +444,11 @@ def main():
     arguments['provider'] = args.provider
     arguments['distribution'] = args.distribution
 
-    # Calculate and set master_quorum based on num_masters
-    arguments['master_quorum'] = floor(int(arguments['num_masters']) / 2) + 1
-
-    if arguments['bootstrap_id'] == 'automatic':
-        url = '{}/{}/bootstrap.latest'.format(arguments['repository_url'], arguments['release_name'])
-        arguments['bootstrap_id'] = urllib.request.urlopen(url).read().decode('utf-8')
-
-    if 'bootstrap_url' not in arguments:
-        arguments['bootstrap_url'] = arguments['repository_url']
-        if arguments['release_name']:
-            arguments['bootstrap_url'] += '/' + arguments['release_name']
-    else:
-        # Needs to conflict with certain combinations of bootstrap_id and release_name
-        raise NotImplementedError()
+    # Calculate the remaining arguments
+    arguments = calculate_args(must_calc, can_calc, arguments)
 
     # TODO(cmaloney): add a mechanism for individual components to compute more
     # arguments here and fill in.
-
-    # Validate that all parameters have been set
-    assert(parameters - arguments.keys() == set())
 
     print("Final arguments:")
     print(json.dumps(arguments, **json_prettyprint_args))

@@ -1,5 +1,4 @@
 {
   "resolvers": ["8.8.8.8"],
-  "fallback_dns": "8.8.8.8",
   "copy_files": true
 }

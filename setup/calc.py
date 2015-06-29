@@ -23,3 +23,14 @@ can = {
     'bootstrap_url': calculate_bootstrap,
     'bootstrap_id': calculate_bootstrap_id
 }
+
+
+def validate(arguments):
+    assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
+
+    assert arguments['repository_url'][-1] != '/'
+
+    if len(arguments['release_name']):
+        assert arguments['release_name'][0] != '/'
+        assert arguments['release_name'][-1] != '/'
+

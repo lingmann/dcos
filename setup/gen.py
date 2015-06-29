@@ -218,7 +218,6 @@ def update_dictionary(base, addition):
     return base_copy
 
 
-# TODO(cmaloney): Do a recursive dictionary merge
 def load_arguments(provider, distribution, config):
     # Order is important for overriding
     arguments = load_json_list(
@@ -251,6 +250,7 @@ def load_calculations(provider, distribution):
     all_names = set()
     must_fn = {}
     can_fn = {}
+    validate_fn = []
     for modulename in get_filenames(provider, distribution, 'calc'):
         try:
             module = importlib.import_module(modulename)
@@ -267,8 +267,12 @@ def load_calculations(provider, distribution):
 
         must_fn.update(module.must)
         can_fn.update(module.can)
+        try:
+            validate_fn.append(module.validate)
+        except AttributeError:
+            pass
 
-    return must_fn, can_fn
+    return must_fn, can_fn, validate_Fn
 
 
 class LazyArgumentCalculator(collections.Mapping):
@@ -329,6 +333,9 @@ def calculate_args(must_fn, can_fn, arguments):
     return arg_calculator.get_arguments()
 
 
+def validate_args(arguments):
+
+
 json_prettyprint_args = {
     "sort_keys": True,
     "indent": 2,
@@ -354,17 +361,21 @@ def write_to_non_taken(base_filename, json):
     return filename
 
 
-def main():
-    # Get basic arguments from user.
-    parser = argparse.ArgumentParser(
-            description='Generate config for a DCOS environment')
-    parser.add_argument('provider', choices=providers)
-    parser.add_argument('distribution', choices=distributions)
+def add_arguments(parser):
     parser.add_argument('--config',
                         type=str,
                         help='JSON configuration file to load')
     parser.add_argument('--assume-defaults', action='store_true')
     parser.add_argument('--save-config', type=str)
+
+    return parser
+
+
+def main():
+    # Get basic arguments from user.
+    parser = argparse.ArgumentParser(
+            description='Generate config for a DCOS environment')
+    parser = add_arguments(parser)
     args = parser.parse_args()
 
     provider = importlib.import_module(args.provider)
@@ -384,7 +395,7 @@ def main():
 
     # Load what we can calculate
     # TODO(cmaloney): Merge extra arguments, defaults into calc?
-    must_calc, can_calc = load_calculations(args.provider, args.distribution)
+    must_calc, can_calc, validate_fn = load_calculations(args.provider, args.distribution)
 
     # Remove calculated parameters from those to calculate.
     to_set -= must_calc.keys()
@@ -427,15 +438,6 @@ def main():
     # TODO(cmaloney): Error If non-interactive and not all arguments are set.
     arguments = update_dictionary(arguments, user_arguments)
 
-    # TODO(cmaloney): Validate basic arguments
-    assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
-
-    assert arguments['repository_url'][-1] != '/'
-
-    if len(arguments['release_name']):
-        assert arguments['release_name'][0] != '/'
-        assert arguments['release_name'][-1] != '/'
-
     if 'resolvers' in arguments:
         assert isinstance(arguments['resolvers'], list)
         arguments['resolvers'] = json.dumps(arguments['resolvers'])
@@ -444,11 +446,14 @@ def main():
     arguments['provider'] = args.provider
     arguments['distribution'] = args.distribution
 
-    # Calculate the remaining arguments
+    # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)
 
-    # TODO(cmaloney): add a mechanism for individual components to compute more
-    # arguments here and fill in.
+    # Validate arguments.
+    # TODO(cmaloney): Define an API for allowing multiple failures, reporting
+    # more than just the first error.
+    for fn in validate_fn:
+        fn(arguments)
 
     print("Final arguments:")
     print(json.dumps(arguments, **json_prettyprint_args))

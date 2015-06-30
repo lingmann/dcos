@@ -36,7 +36,6 @@ def validate(arguments):
 
 defaults = {
   "num_masters": 3,
-  "bootstrap_id": "automatic",
   "release_name": "testing/continuous",
   "repository_url": "https://downloads.mesosphere.com/dcos"
 }

@@ -168,7 +168,6 @@ def render_templates(template_names, arguments):
 
         rendered_templates[name] = full_template
 
-    print(rendered_templates)
     return rendered_templates
 
 
@@ -206,7 +205,7 @@ def update_dictionary(base, addition):
 class LazyArgumentCalculator(collections.Mapping):
 
     def __init__(self, must_fn, can_fn, arguments):
-        self._calculators = must_fn
+        self._calculators = deepcopy(must_fn)
         self._calculators.update(can_fn)
         self._arguments = arguments
         self.__in_progress = set()
@@ -246,6 +245,7 @@ def calculate_args(must_fn, can_fn, arguments):
     # Force calculation of all arguments by accessing
     for key in must_fn.keys():
         if key in start_arguments:
+            print(must_fn[key])
             raise AssertionError("Argument which must be calculated '", key, "' manually specified in arguments")
 
         arg_calculator[key]
@@ -295,6 +295,15 @@ def add_arguments(parser):
     parser.add_argument('--non-interactive', action='store_true')
 
     return parser
+
+
+def get_options_object():
+    return Bunch({
+        'config': None,
+        'assume_defaults': True,
+        'save_config': None,
+        'non_interactive': True
+        })
 
 
 def do_package_config(config, config_package_filename):
@@ -382,14 +391,14 @@ def load_mixins(mixins):
         except AttributeError:
             pass
 
-    return {
+    return Bunch({
         'arguments': arguments,
         'can_calc': can_fn,
         'defaults': defaults,
         'must_calc': must_fn,
         'validate_fn': validate_fn,
         'parameters': parameters
-    }
+    })
 
 
 def prompt_arguments(to_set, defaults, can_calc):
@@ -431,13 +440,13 @@ def do_generate(
     # Load information provided by mixins (parametesr that can be calculated,
     # defaults for some arguments, etc).
     mixin_helpers = load_mixins(mixins)
-    must_calc = mixin_helpers['must_calc']
-    can_calc = mixin_helpers['can_calc']
-    validate_fn = mixin_helpers['validate_fn']
+    must_calc = mixin_helpers.must_calc
+    can_calc = mixin_helpers.can_calc
+    validate_fn = mixin_helpers.validate_fn
     # TODO(cmaloney): Error if overriding.
-    arguments.update(mixin_helpers['arguments'])
-    defaults = mixin_helpers['defaults']
-    parameters.update(mixin_helpers['parameters'])
+    arguments.update(mixin_helpers.arguments)
+    defaults = mixin_helpers.defaults
+    parameters.update(mixin_helpers.parameters)
 
     # Load user specified arguments.
     # TODO(cmaloney): Repeating a set argument should be a hard error.
@@ -533,12 +542,12 @@ def do_generate(
 
     utils.add_services = add_services
 
-    return {
+    return Bunch({
         'arguments': arguments,
         'config_package_id': config_package_id,
         'templates': rendered_templates,
         'utils': utils
-    }
+    })
 
 
 def generate(

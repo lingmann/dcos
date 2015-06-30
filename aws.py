@@ -2,13 +2,14 @@
 """AWS Image Creation, Management, Testing
 
 Usage:
-    #NOTE: This should do the cf template validation using boto.
     aws.py build [--upload] [--skip-package-build]
-    aws.py promote <from_release> <to_release>
+    # promote_candidate <release_name> instead?
     aws.py make_candidate <release_name>
+    aws.py promote_candidate <release_name>
+    aws.py promote <from_release> <to_release>
     aws.py test_release <release_name> <name>
-    aws.py test <cf_url> <name>
-    aws.py test resume
+    aws.py test <name> [--cf-url=<url>]
+    aws.py test resume # Reads last test launched stack name out of file.
     aws.py cluster delete <name>
 """
 import argparse
@@ -39,10 +40,48 @@ prod_env['AWS_PROFILE'] = 'production'
 dev_env = deepcopy(os.environ)
 dev_env['AWS_PROFILE'] = 'development'
 
-env = jinja2.Environment(
+jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
 
 params = load_json("gen/aws/cf_param_info.json")
+
+aws_region_names = [
+    {
+        'name': 'US West (N. California)',
+        'id': 'us-west-1'
+    },
+    {
+        'name': 'US West (Oregon)',
+        'id': 'us-west-2'
+    },
+    {
+        'name': 'US East (N. Virginia)',
+        'id': 'us-east-1'
+    },
+    {
+        'name': 'South America (Sao Paulo)',
+        'id': 'sa-east-1'
+    },
+    {
+        'name': 'EU (Ireland)',
+        'id': 'eu-west-1'
+    },
+    {
+        'name': 'EU (Frankfurt)',
+        'id': 'eu-central-1'
+    },
+    {
+        'name': 'Asia Pacific (Tokyo)',
+        'id': 'ap-northeast-1'
+    },
+    {
+        'name': 'Asia Pacific (Singapore)',
+        'id': 'ap-southeast-1'
+    },
+    {
+        'name': 'Asia Pacific (Sydney)',
+        'id': 'ap-southeast-2'
+    }]
 
 # TODO(cmaloney): Make a generic parameter to all templates
 dcos_image_commit = os.getenv(
@@ -137,7 +176,7 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     print(cf_template)
-    template_str = env.from_string(cf_template).render({
+    template_str = jinja_env.from_string(cf_template).render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'public_slave_cloud_config': transform_lines(public_slave_cloudconfig)
@@ -157,7 +196,14 @@ def render_cloudformation(
     return json.dumps(template_json)
 
 
-def do_upload(release_name, bootstrap_id, config_package_id, cf_id, cloudformation_text):
+def upload_cf(release_name, cf_id, text):
+    cf_object = get_object(release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
+    cf_object.put(Body=text.encode('utf-8'), CacheControl='no-cache')
+
+    return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_object.key)
+
+
+def upload_packages(release_name, bootstrap_id, config_package_id):
     def upload(*args, **kwargs):
         return upload_s3(release_name, if_not_exists=True, *args, **kwargs)
 
@@ -176,34 +222,24 @@ def do_upload(release_name, bootstrap_id, config_package_id, cf_id, cloudformati
     upload('{}.tar.xz'.format(config_package_id),
            'packages/dcos-config--setup/{}.tar.xz'.format(config_package_id))
 
-    # Upload the cloudformation package
-    cf_bytes = cloudformation_text.encode('utf-8')
-    cf_object = get_object(release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
-    cf_object.put(Body=cf_bytes)
 
-    return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_object.key)
+def build_packages():
+    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=base_env)
+    return load_string('packages/bootstrap.latest')
 
 
-def do_build(args):
-    # TODO(cmaloney): don't shell out to mkpanda
-    if not args.skip_package_build:
-        check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=base_env)
-
-    bootstrap_id = load_string('packages/bootstrap.latest')
-
-    release_name = 'testing/' + args.testing_name
-
+def gen_templates(arguments, options):
     results = gen.generate(
-        options=args,
+        options=options,
         mixins=['aws', 'coreos', 'coreos-aws'],
         extra_templates={'cloudformation': ['gen/aws/templates/cloudformation.json']},
-        arguments={'bootstarp_id': bootstrap_id, 'release_name': release_name}
+        arguments=arguments
         )
 
-    cloud_config = results['templates']['cloud-config']
+    cloud_config = results.templates['cloud-config']
 
     # Add general services
-    cloud_config = results['utils'].add_services(cloud_config)
+    cloud_config = results.utils.add_services(cloud_config)
 
     # Specialize for master, fslave, public_slave
     variant_cloudconfig = {}
@@ -211,21 +247,21 @@ def do_build(args):
         cc_variant = deepcopy(cloud_config)
 
         # Specialize the cfn-signal service
-        cc_variant = results['utils'].add_units(
+        cc_variant = results.utils.add_units(
             cc_variant,
-            yaml.load(env.from_string(late_services).render(params)))
+            yaml.load(jinja_env.from_string(late_services).render(params)))
 
         # Add roles
-        cc_variant = results['utils'].add_roles(cc_variant, params['roles'] + ['aws'])
+        cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['aws'])
 
         # NOTE: If this gets printed in string stylerather than '|' the AWS
         # parameters which need to be split out for the cloudformation to
         # interpret end up all escaped and undoing it would be hard.
-        variant_cloudconfig[variant] = results['utils'].render_cloudconfig(cc_variant)
+        variant_cloudconfig[variant] = results.utils.render_cloudconfig(cc_variant)
 
     # Render the cloudformation
     cloudformation = render_cloudformation(
-        results['templates']['cloudformation'],
+        results.templates['cloudformation'],
         variant_cloudconfig['master'],
         variant_cloudconfig['slave'],
         variant_cloudconfig['public_slave']
@@ -235,34 +271,87 @@ def do_build(args):
     client = boto3.client('cloudformation')
     client.validate_template(TemplateBody=cloudformation)
 
+    return gen.Bunch({
+        'cloudformation': cloudformation,
+        'results': results
+    })
+
+
+def do_build(options):
+    # TODO(cmaloney): don't shell out to mkpanda
+    if not options.skip_package_build:
+        bootstrap_id = build_packages()
+    else:
+        bootstrap_id = load_string('packages/bootstrap.latest')
+
+    release_name = 'testing/' + options.testing_name
+
+    templates = gen_templates({'bootstarp_id': bootstrap_id, 'release_name': release_name}, options)
+
     # TODO(cmaloney): print out the final cloudformation s3 path.
-    if args.upload:
-        cf_bytes = cloudformation.encode('utf-8')
+    if options.upload:
+        cf_bytes = templates.cloudformation.encode('utf-8')
         hasher = hashlib.sha1()
         hasher.update(cf_bytes)
         cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
-        cf_path = do_upload(
+        upload_packages(
                 release_name,
                 bootstrap_id,
-                results['arguments']['config_package_id'],
-                cf_id,
-                cloudformation)
+                templates.results.arguments['config_package_id'])
+        cf_path = upload_cf(release_name, cf_id, templates.cloudformation)
         print("CloudFormation to launch: ", cf_path)
-    return cf_path
+
+
+def do_make_candidate(options):
+    # Make sure everything is built / up to date.
+    bootstrap_id = build_packages()
+    release_name = 'testing/' + options.release_name
+
+    # Generate the single-master and multi-master templates.
+    options = gen.get_options_object()
+    single_master = gen_templates(
+            {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 1},
+            options)
+    multi_master = gen_templates(
+            {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 3},
+            options)
+
+    # Generate the button page.
+    button_page = jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
+        'release_name': release_name,
+        'regions': aws_region_names
+        })
+
+    # Upload the packages.
+    upload_packages(
+            release_name,
+            bootstrap_id,
+            single_master.results.arguments['config_package_id'])
+    upload_cf(release_name, 'single-master', single_master.cloudformation)
+    upload_cf(release_name, 'multi-master', multi_master.cloudformation)
+
+    # Upload button page
+    get_object(release_name, 'aws.html').put(
+        Body=button_page.encode('utf-8'), CacheControl='no-cache', ContentType='text/html')
+
+    print("Candidate availabel at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
 
 
 def main():
-    parser = argparse.ArgumentParser('AWS DCOS template creation, management utilities.')
+    parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')
     subparsers = parser.add_subparsers(title='subcommands')
     build_parser = subparsers.add_parser('build')
     build_parser.set_defaults(func=do_build)
     add_build_arguments(build_parser)
-    args = parser.parse_args()
+    candidate_parser = subparsers.add_parser('make_candidate')
+    candidate_parser.set_defaults(func=do_make_candidate)
+    candidate_parser.add_argument('release_name')
+    options = parser.parse_args()
 
     # Use an if rather than try/except since lots of things inside could throw
     # an AttributeError.
-    if hasattr(args, 'func'):
-        args.func(args)
+    if hasattr(options, 'func'):
+        options.func(options)
         sys.exit(0)
     else:
         parser.print_help()

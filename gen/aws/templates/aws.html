@@ -1,0 +1,21 @@
+<!doctype html>
+<html>
+<head>
+  <title>DCOS {{ release_name }} AWS CloudFormation</title>
+</head>
+<body>
+<h1>DCOS {{ release_name }} AWS CloudFormation</h1>
+<ul><li>For more information on creating a DCOS cluster, see the [Mesosphere documentation](https://docs.mesosphere.com/install/awscluster/).</li></ul>
+
+<table>
+<tr><th>Region Name</th><th>Region Code</th><th>Single Master</th><th>HA: Three Master</th></tr>
+{% for region in regions %}<tr><td>{{ region['name'] }}</td><td>{{ region['id'] }}</td><td><a href='https://console.aws.amazon.com/cloudformation/home?region={{ region['id'] }}#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ release_name }}/cloudformation/single-master.cloudformation.json'><img src='https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png' alt='Launch stack button'></a></td><td><a href='https://console.aws.amazon.com/cloudformation/home?region={{ region['id'] }}#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ release_name }}/cloudformation/multi-master.cloudformation.json'><img src='https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png' alt='Launch stack button'></a></td></tr>{% endfor %}
+</table>
+
+<h2>Cluster Types</h2>
+<h3>Single-Master</h3>
+<p>Spawns a cluster with 1 master and 5 slaves. Should be suitable for running basic tests.</p>
+<h3>HA: Three Master</h3>
+<p>Spawns a cluster with 3 masters and 5 slaves. HA. Capable of basic production workloads, as well as testing how frameworks interact with master-failover.</p>
+</body>
+</html>

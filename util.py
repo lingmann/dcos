@@ -17,14 +17,18 @@ def render_markdown(path_to_md):
     return render_markdown_data(open(path_to_md, 'r'))
 
 
-def upload_s3(name, path, dest_path=None, args={}, no_cache=False,  if_not_exists=False):
+def get_object(release_name, path):
+    return bucket.Object('dcos/{name}/{path}'.format(name=release_name, path=path))
+
+
+def upload_s3(release_name, path, dest_path=None, args={}, no_cache=False,  if_not_exists=False):
     if no_cache:
         args['CacheControl'] = 'no-cache'
 
     if not dest_path:
         dest_path = path
 
-    s3_object = bucket.Object('dcos/{name}/{path}'.format(name=name, path=dest_path))
+    s3_object = get_object(release_name, dest_path)
 
     if if_not_exists:
         try:

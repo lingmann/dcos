@@ -14,7 +14,6 @@ NOTE:
       have people on.
 """
 
-import argparse
 import collections
 import importlib
 import jinja2
@@ -24,10 +23,10 @@ import os
 import os.path
 import sys
 import yaml
-from copy import deepcopy
+from copy import copy, deepcopy
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
-from pkgpanda.util import make_tar, write_string
+from pkgpanda.util import make_tar
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
@@ -121,35 +120,15 @@ def load_json(filename):
         raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
 
 
-def load_json_list(filenames, merge_func):
-    result = {}
-    # Update with all arguments
-    for filename in filenames:
-        # TODO(cmaloney): Make sure no arguments are overwritten / this only
-        # adds arguments.
-        try:
-            new_result = load_json(filename)
-            result = merge_func(result, new_result)
-        except FileNotFoundError:
-            # print("NOTICE: not found", filename)
-            pass
-
-    return result
-
-
 # Order in a file determines order in which things like services get placed,
 # changing it can break components (Ex: moving dcos-download and dcos-setup
 # too early will break some configurations).
-def get_filenames(provider, distribution, target):
-    return [
-        target,
-        distribution + '/' + target,
-        provider + '/' + target,
-        distribution + '-' + provider + '/' + target]
+def get_filenames(mixins, target, sep='/'):
+    return ['gen' + sep + target] + ['gen' + sep + mixin + sep + target for mixin in mixins]
 
 
 # Returns a dictionary of the jinja templates to use
-def get_template_names(provider, distribution):
+def get_template_names(mixins):
     templates = dict()
     # dcos-config contains stuff statically known for clusters (ex: mesos slave
     # configuration parametesr).
@@ -157,7 +136,7 @@ def get_template_names(provider, distribution):
     # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
     # master loadbalancer DNS name
     for template in ['dcos-config', 'cloud-config', 'dcos-services']:
-        templates[template] = get_filenames(provider, distribution, template + '.yaml')
+        templates[template] = get_filenames(mixins, template + '.yaml')
     return templates
 
 
@@ -166,21 +145,30 @@ def get_template_names(provider, distribution):
 def render_templates(template_names, arguments):
     rendered_templates = dict()
     for name, templates in template_names.items():
-        loaded_yaml = None
+        full_template = None
         for template in templates:
             if not os.path.exists(template):
                 continue
 
-            yaml_str = env.get_template(template).render(arguments)
-            template_data = yaml.load(yaml_str)
+            rendered_template = env.get_template(template).render(arguments)
 
-            if loaded_yaml:
-                loaded_yaml = merge_dictionaries(loaded_yaml, template_data)
+            # If not yaml, just treat opaquely.
+            if not template.endswith('.yaml'):
+                # No merging support currently.
+                assert len(templates) == 1
+                full_template = rendered_template
+                continue
+
+            template_data = yaml.load(rendered_template)
+
+            if full_template:
+                full_template = merge_dictionaries(full_template, template_data)
             else:
-                loaded_yaml = template_data
+                full_template = template_data
 
-        rendered_templates[name] = loaded_yaml
+        rendered_templates[name] = full_template
 
+    print(rendered_templates)
     return rendered_templates
 
 
@@ -191,23 +179,20 @@ def add_set(lhs, rhs):
 # Load all the un-bound variables in the templates which need to be given values
 # in order to convert the templates to go from jinja -> yaml. These are
 # effectively the set of DCOS parameters.
-def get_parameters(provider, distribution, templates):
+def get_parameters(templates):
     parameters = set()
-    for name, templates in templates.items():
-        for template in templates:
-            assert template.endswith('.yaml')
-            if not os.path.exists(template):
-                # print("NOTICE: not found", template)
-                continue
-            # TODO(cmaloney): Organize parameters based on where they came from.
-            ast = env.parse(open(template).read())
-            template_parameters = jinja2.meta.find_undeclared_variables(ast)
-            parameters |= set(template_parameters)
+    for templates in templates.values():
+        if len(templates) > 1:
+            for template in templates:
+                assert template.endswith('.yaml')
 
-    # Load any additional parameters
-    parameters |= load_json_list(
-            get_filenames(provider, distribution, "parameters.json"),
-            add_set)
+        for template in templates:
+            try:
+                ast = env.parse(open(template).read())
+                template_parameters = jinja2.meta.find_undeclared_variables(ast)
+                parameters |= set(template_parameters)
+            except FileNotFoundError as ex:
+                print("NOTICE: not found:", ex)
 
     return parameters
 
@@ -216,63 +201,6 @@ def update_dictionary(base, addition):
     base_copy = base.copy()
     base_copy.update(addition)
     return base_copy
-
-
-def load_arguments(provider, distribution, config):
-    # Order is important for overriding
-    arguments = load_json_list(
-            get_filenames(provider, distribution, 'arguments.json'),
-            merge_dictionaries)
-
-    # Load the config if it was specified. Seperate from the other options
-    # because it not existing is a hard error.
-    if config:
-        try:
-            new_arguments = load_json(config)
-            arguments.update(new_arguments)
-        except FileNotFoundError:
-            print("ERROR: Specified config file '" + config + "' does not exist")
-            sys.exit(1)
-        except ValueError as ex:
-            print("ERROR:", ex.what())
-            sys.exit(1)
-
-    return arguments
-
-
-def load_default_arguments(provider, distribution):
-    return load_json_list(
-            get_filenames(provider, distribution, 'defaults.json'),
-            update_dictionary)
-
-
-def load_calculations(provider, distribution):
-    all_names = set()
-    must_fn = {}
-    can_fn = {}
-    validate_fn = []
-    for modulename in get_filenames(provider, distribution, 'calc'):
-        try:
-            module = importlib.import_module(modulename)
-        except ImportError:
-            break
-
-        # Can't calculate the same thing twice.
-        names = module.must.keys() | module.can.keys()
-        for name in names:
-            if name in all_names:
-                raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
-
-        all_names |= names
-
-        must_fn.update(module.must)
-        can_fn.update(module.can)
-        try:
-            validate_fn.append(module.validate)
-        except AttributeError:
-            pass
-
-    return must_fn, can_fn, validate_Fn
 
 
 class LazyArgumentCalculator(collections.Mapping):
@@ -333,9 +261,6 @@ def calculate_args(must_fn, can_fn, arguments):
     return arg_calculator.get_arguments()
 
 
-def validate_args(arguments):
-
-
 json_prettyprint_args = {
     "sort_keys": True,
     "indent": 2,
@@ -367,84 +292,201 @@ def add_arguments(parser):
                         help='JSON configuration file to load')
     parser.add_argument('--assume-defaults', action='store_true')
     parser.add_argument('--save-config', type=str)
+    parser.add_argument('--non-interactive', action='store_true')
 
     return parser
 
 
-def main():
-    # Get basic arguments from user.
-    parser = argparse.ArgumentParser(
-            description='Generate config for a DCOS environment')
-    parser = add_arguments(parser)
-    args = parser.parse_args()
+def do_package_config(config, config_package_filename):
+    # Generate the specific dcos-config package.
+    # Version will be setup-{sha1 of contents}
+    with TemporaryDirectory("dcos-config--setup") as tmpdir:
+        dcos_setup = config
 
-    provider = importlib.import_module(args.provider)
+        # Only contains write_files
+        assert len(dcos_setup) == 1
 
-    # Load the templates for the target and figure out mandatory parameters.
-    templates = get_template_names(args.provider, args.distribution)
-    parameters = get_parameters(args.provider, args.distribution, templates)
+        # Write out the individual files
+        for file_info in dcos_setup["write_files"]:
+            path = tmpdir + file_info['path']
+            try:
+                os.makedirs(os.path.dirname(path), mode=0o755)
+            except FileExistsError:
+                pass
 
-    # Load the arguments provided by the provider, distro, and user.
-    arguments = load_arguments(args.provider, args.distribution, args.config)
+            with open(path, 'w') as f:
+                f.write(file_info['content'])
 
-    # Load default arguments
-    defaults = load_default_arguments(args.provider, args.distribution)
+        make_tar(config_package_filename, tmpdir)
+
+    print("Config package filename: ", config_package_filename)
+
+
+def load_mixins(mixins):
+    all_names = set()
+    arguments = dict()
+    can_fn = dict()
+    defaults = dict()
+    must_fn = dict()
+    parameters = list()
+    validate_fn = list()
+
+    for modulename in get_filenames(mixins, 'calc', sep='.'):
+        # Specifying all these is optional, as is having a module at all so we
+        # wrap them all in try / catches to handle non-existence.
+        try:
+            module = importlib.import_module(modulename)
+        except ImportError as ex:
+            print("NOTICE: not found:".format(modulename), ex)
+            break
+
+        try:
+            # Can't calculate the same thing twice.
+            names = module.must.keys()
+            for name in names:
+                if name in all_names:
+                    raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
+            all_names |= names
+            must_fn.update(module.must)
+        except AttributeError:
+            pass
+
+        try:
+            # Can't calculate the same thing twice.
+            names = module.can.keys()
+            for name in names:
+                if name in all_names:
+                    raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
+            all_names |= names
+            can_fn.update(module.can)
+        except AttributeError:
+            pass
+
+        try:
+            validate_fn.append(module.validate)
+        except AttributeError:
+            pass
+
+        try:
+            parameters += module.parameters
+        except AttributeError:
+            pass
+
+        try:
+            arguments = update_dictionary(arguments, module.arguments)
+        except AttributeError:
+            pass
+
+        try:
+            defaults = update_dictionary(defaults, module.defaults)
+        except AttributeError:
+            pass
+
+    return {
+        'arguments': arguments,
+        'can_calc': can_fn,
+        'defaults': defaults,
+        'must_calc': must_fn,
+        'validate_fn': validate_fn,
+        'parameters': parameters
+    }
+
+
+def prompt_arguments(to_set, defaults, can_calc):
+    arguments = dict()
+    for name in sorted(to_set):
+        while True:
+            default_str = ''
+            if name in defaults:
+                default_str = ' [{}]'.format(defaults[name])
+            elif name in can_calc:
+                default_str = ' (can calculate)'
+
+            # TODO(cmaloney): If 'config only' is set never prompt.
+            default_str = ' [{}]'.format(defaults[name]) if name in defaults else ''
+            value = input('{}{}: '.format(name, default_str))
+            if value:
+                arguments[name] = value
+                break
+            if name in defaults:
+                arguments[name] = defaults[name]
+                break
+            print("ERROR: Must provide a value")
+
+    return arguments
+
+
+def do_generate(
+        options,
+        mixins,
+        extra_templates,
+        arguments):
+
+    # Load the templates for the target and calculate the parameters based on
+    # the template variables.
+    templates = get_template_names(mixins)
+    templates.update(extra_templates)
+    parameters = get_parameters(templates)
+
+    # Load information provided by mixins (parametesr that can be calculated,
+    # defaults for some arguments, etc).
+    mixin_helpers = load_mixins(mixins)
+    must_calc = mixin_helpers['must_calc']
+    can_calc = mixin_helpers['can_calc']
+    validate_fn = mixin_helpers['validate_fn']
+    # TODO(cmaloney): Error if overriding.
+    arguments.update(mixin_helpers['arguments'])
+    defaults = mixin_helpers['defaults']
+    parameters.update(mixin_helpers['parameters'])
+
+    # Load user specified arguments.
+    # TODO(cmaloney): Repeating a set argument should be a hard error.
+    if options.config:
+        try:
+            new_arguments = load_json(arguments.config)
+            arguments.update(new_arguments)
+        except FileNotFoundError:
+            print("ERROR: Specified config file '" + arguments.config + "' does not exist")
+            sys.exit(1)
+        except ValueError as ex:
+            print("ERROR:", ex.what())
+            sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.
     to_set = parameters - arguments.keys()
 
-    # Load what we can calculate
-    # TODO(cmaloney): Merge extra arguments, defaults into calc?
-    must_calc, can_calc, validate_fn = load_calculations(args.provider, args.distribution)
-
     # Remove calculated parameters from those to calculate.
     to_set -= must_calc.keys()
     to_set -= can_calc.keys()
+
+    # If assume_defaults, apply all defaults
+    if options.assume_defaults:
+        for name in copy(to_set):
+            if name in defaults:
+                arguments[name] = defaults[name]
+                to_set.remove(name)
 
     # Cluster packages is particularly magic
     # as it depends on the config filename which depends on the initial set
     # of arguments.
     to_set.remove('cluster_packages')
 
-    # TODO(cmaloney): If in strict mode and some arguments aren't used, error
-    # and exit.
-
     # Prompt user to provide all unset arguments. If a config file was specified
     # output
-    user_arguments = {}
-    for name in to_set:
-        while True:
-            if args.assume_defaults and name in defaults:
-                user_arguments[name] = defaults[name]
-                break
-
-            default_str = ''
-            if name in defaults:
-                default_str = ' [{}]'.format(defaults[name])
-            elif name in can_calc:
-                default_str = ' (can calculated)'
-
-            # TODO(cmaloney): If 'config only' is set never prompt.
-            default_str = ' [{}]'.format(defaults[name]) if name in defaults else ''
-            value = input('{}{}: '.format(name, default_str))
-            if value:
-                user_arguments[name] = value
-                break
-            if name in defaults:
-                user_arguments[name] = defaults[name]
-                break
-            print("ERROR: Must provide a value")
-
-    # TODO(cmaloney): Error If non-interactive and not all arguments are set.
-    arguments = update_dictionary(arguments, user_arguments)
+    if options.non_interactive:
+        if len(to_set) > 0:
+            print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
+            sys.exit(1)
+    else:
+        user_arguments = prompt_arguments(to_set, defaults, can_calc, options.assume_defaults)
+        arguments = update_dictionary(arguments, user_arguments)
 
     if 'resolvers' in arguments:
         assert isinstance(arguments['resolvers'], list)
         arguments['resolvers'] = json.dumps(arguments['resolvers'])
 
     # Set arguments from command line flags.
-    arguments['provider'] = args.provider
-    arguments['distribution'] = args.distribution
+    arguments['mixins'] = mixins
 
     # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)
@@ -475,45 +517,14 @@ def main():
     arguments['cluster_packages'] = json.dumps([config_package_id])
 
     # Save config parameters
-    if args.save_config:
-        write_json(args.save_config, arguments)
-        print("Config saved to:", args.save_config)
+    if options.save_config:
+        write_json(options.save_config, arguments)
+        print("Config saved to:", options.save_config)
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
 
-    # Hard fail if more templates are added. Each new template needs code added
-    # below to deal with its output.
-    assert set(rendered_templates.keys()) == set(["cloud-config", "dcos-config", "dcos-services"])
-
-    # Get out the cloud-config text for use in provider-specific templates
-    # Cloud config must start with #cloud-config so prepend the name
-    # to the start of the YAML
-    cloud_config = rendered_templates['cloud-config']
-
-    # Generate the specific dcos-config package.
-    # Version will be setup-{sha1 of contents}
-    with TemporaryDirectory("dcos-config--setup") as tmpdir:
-        dcos_setup = rendered_templates['dcos-config']
-
-        # Only contains write_files
-        assert len(dcos_setup) == 1
-
-        # Write out the individual files
-        for file_info in dcos_setup["write_files"]:
-            path = tmpdir + file_info['path']
-            try:
-                os.makedirs(os.path.dirname(path), mode=0o755)
-            except FileExistsError:
-                pass
-
-            with open(path, 'w') as f:
-                f.write(file_info['content'])
-
-        make_tar(config_package_filename, tmpdir)
-
-    print("Config package filename: ", config_package_filename)
-    write_string("dcos-config.latest", config_package_id)
+    do_package_config(rendered_templates['dcos-config'], config_package_filename)
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters
@@ -522,11 +533,21 @@ def main():
 
     utils.add_services = add_services
 
-    provider.gen(cloud_config, arguments, utils)
+    return {
+        'arguments': arguments,
+        'config_package_id': config_package_id,
+        'templates': rendered_templates,
+        'utils': utils
+    }
 
-if __name__ == "__main__":
+
+def generate(
+        options,
+        mixins,
+        extra_templates=dict(),
+        arguments=dict()):
     try:
-        main()
+        return do_generate(options, mixins, extra_templates, arguments)
     except jinja2.TemplateSyntaxError as ex:
         print("ERROR: Jinja2 TemplateSyntaxError")
         print("{}:{} - {}".format(

@@ -23,6 +23,7 @@ def delete_buckets_without_stacks():
     deleted = 0
     skipped = 0
     exception = 0
+    dry_run = True
 
     stack_bucket_names = set()
     # Find s3 buckets by stack
@@ -35,7 +36,8 @@ def delete_buckets_without_stacks():
             print("Skipping bucket {}, in use".format(bucket.name))
             continue
         try:
-            delete_s3_nonempty(bucket)
+            if not dry_run:
+                delete_s3_nonempty(bucket)
             deleted += 1
             print("DELETE bucket {}".format(bucket.name))
         except botocore.exceptions.ClientError as ex:
@@ -43,6 +45,9 @@ def delete_buckets_without_stacks():
             exception += 1
 
     print("deleted: {} kept: {} exception: {}".format(deleted, skipped, exception))
+    if dry_run:
+        print("DRY RUN")
+        print("No changes made. Edit this script to do actual deletion (set dry_run=False)")
 
 if __name__ == '__main__':
     delete_buckets_without_stacks()

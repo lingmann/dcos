@@ -34,3 +34,11 @@ def validate(arguments):
         assert arguments['release_name'][0] != '/'
         assert arguments['release_name'][-1] != '/'
 
+defaults = {
+  "num_masters": 3,
+  "bootstrap_id": "automatic",
+  "release_name": "testing/continuous",
+  "repository_url": "https://downloads.mesosphere.com/dcos"
+}
+
+parameters = ["repository_url", "release_name"]

@@ -5,10 +5,11 @@ Usage:
     #NOTE: This should do the cf template validation using boto.
     aws.py build [--upload] [--skip-package-build]
     aws.py promote <from_release> <to_release>
-    aws.py release
-    aws.py test (build|--release=<release_name>) <name>
+    aws.py make_candidate <release_name>
+    aws.py test_release <release_name> <name>
+    aws.py test <cf_url> <name>
     aws.py test resume
-    aws.py cluster delete
+    aws.py cluster delete <name>
 """
 import argparse
 import binascii
@@ -156,7 +157,7 @@ def render_cloudformation(
     return json.dumps(template_json)
 
 
-def do_upload(release_name, bootstrap_id, config_package_id, cloudformation_text):
+def do_upload(release_name, bootstrap_id, config_package_id, cf_id, cloudformation_text):
     def upload(*args, **kwargs):
         return upload_s3(release_name, if_not_exists=True, *args, **kwargs)
 
@@ -176,11 +177,7 @@ def do_upload(release_name, bootstrap_id, config_package_id, cloudformation_text
            'packages/dcos-config--setup/{}.tar.xz'.format(config_package_id))
 
     # Upload the cloudformation package
-    # Caclulate cloudformation template id (sha1 of contents)
     cf_bytes = cloudformation_text.encode('utf-8')
-    hasher = hashlib.sha1()
-    hasher.update(cf_bytes)
-    cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
     cf_object = get_object(release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
     cf_object.put(Body=cf_bytes)
 
@@ -240,7 +237,16 @@ def do_build(args):
 
     # TODO(cmaloney): print out the final cloudformation s3 path.
     if args.upload:
-        cf_path = do_upload(release_name, bootstrap_id, results['arguments']['config_package_id'], cloudformation)
+        cf_bytes = cloudformation.encode('utf-8')
+        hasher = hashlib.sha1()
+        hasher.update(cf_bytes)
+        cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
+        cf_path = do_upload(
+                release_name,
+                bootstrap_id,
+                results['arguments']['config_package_id'],
+                cf_id,
+                cloudformation)
         print("CloudFormation to launch: ", cf_path)
     return cf_path
 

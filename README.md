@@ -15,7 +15,9 @@ The DCOS Image is made up of two major components. The first is a set of pkgpand
 
 Each provider has it's own top-level utility script which contains helpers for doing various deployment, updating, testing actions for that provider.
 
-## TODO(cmaloney): Document how to do meta-work for all providers/platforms (Make a release for all providers)
+## Deploying / Working across all providers
+
+TODO(cmaloney): Document how to do meta-work for all providers/platforms (Make a release for all providers)
 
 ## Info for various providers
 

@@ -113,7 +113,7 @@ def do_bootstrap(install, repository):
     to_activate = None
     active_path = install.get_config_filename("setup-flags/active.json")
     if os.path.exists(active_path):
-        print("active.json loaded from filesystem")
+        print("Loaded active packages from", active_path)
         to_activate = load_json(active_path)
 
         # Ensure all packages are local
@@ -121,12 +121,13 @@ def do_bootstrap(install, repository):
         for package in to_activate:
             repository.add(fetcher, package)
     else:
-        print("active.json from bootstrap tarball")
+        print("Calculated active packages from bootstrap tarball")
         to_activate = list(install.get_active())
 
         # Fetch and activate all requested additional packages to accompany the bootstrap packages.
         cluster_packages_filename = install.get_config_filename("setup-flags/cluster-packages.json")
         cluster_packages = if_exists(load_json, cluster_packages_filename)
+        print("Checking for cluster packages in:", cluster_packages_filename)
         if cluster_packages:
             if not isinstance(cluster_packages, list):
                 print('ERROR: {} should contain a JSON list of packages. Got a {}'.format(cluster_packages_filename,

@@ -7,25 +7,30 @@ Usage:
     aws.py make_candidate <release_name>
     aws.py promote_candidate <release_name>
     aws.py promote <from_release> <to_release>
-    aws.py test_release <release_name> <name>
-    aws.py test <name> [--cf-url=<url>]
-    aws.py test resume # Reads last test launched stack name out of file.
+    aws.py cluster launch <name> [--cf-url=<url>|--release_name=<release_name>]
+    aws.py cluster resume # Reads last test launched stack name out of file.
     aws.py cluster delete <name>
+    aws.py print_coreos_amis
+    aws.py print_nat_amis
 """
 import argparse
 import binascii
 import boto3
+import getpass
 import hashlib
 import jinja2
 import json
 import os
 import re
+import requests
 import sys
+import time
+import uuid
 import yaml
 from copy import copy, deepcopy
 from datetime import datetime
 from pkgpanda import PackageId
-from pkgpanda.util import load_json, load_string
+from pkgpanda.util import load_json, load_string, write_json
 from subprocess import check_call, check_output
 
 import gen
@@ -138,11 +143,11 @@ cf_instance_groups = {
 }
 
 
-def add_build_arguments(parser):
-    parser.add_argument('--upload', action='store_true')
-    parser.add_argument('--skip-package-build', action='store_true')
-    parser.add_argument('--testing_name', default='continuous')
-    gen.add_arguments(parser)
+def download_s3(obj, out_file):
+    body = obj.get()['Body']
+    with open(out_file, 'wb') as dest:
+        for chunk in iter(lambda: body.read(4096), b''):
+            dest.write(chunk)
 
 
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
@@ -302,6 +307,22 @@ def do_build(options):
         print("CloudFormation to launch: ", cf_path)
 
 
+def gen_buttons(release_name, title):
+    # Generate the button page.
+    return jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
+        'regions': aws_region_names,
+        'release_name': release_name,
+        'title': title
+        })
+
+
+def upload_buttons(release_name, content):
+    get_object(release_name, 'aws.html').put(
+            Body=content.encode('utf-8'),
+            CacheControl='no-cache',
+            ContentType='text/html')
+
+
 def do_make_candidate(options):
     # Make sure everything is built / up to date.
     bootstrap_id = build_packages()
@@ -316,11 +337,7 @@ def do_make_candidate(options):
             {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 3},
             options)
 
-    # Generate the button page.
-    button_page = jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
-        'release_name': release_name,
-        'regions': aws_region_names
-        })
+    button_page = gen_buttons(release_name, "RC for " + options.release_name)
 
     # Upload the packages.
     upload_packages(
@@ -331,21 +348,252 @@ def do_make_candidate(options):
     upload_cf(release_name, 'multi-master', multi_master.cloudformation)
 
     # Upload button page
-    get_object(release_name, 'aws.html').put(
-        Body=button_page.encode('utf-8'), CacheControl='no-cache', ContentType='text/html')
+    upload_buttons(release_name, button_page)
 
     print("Candidate availabel at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
 
 
+def do_promote_candidate(options):
+    """Steps:
+    1) Generate new landing page
+    2) Download, edit cloudformation templates to point to new url
+    3) s3 copy across individual packages (Discovered through active.json)
+    4) upload modified files, meta files:
+        - active.json
+        - bootstrap.tar.xz
+        - cloudformation template
+        - landing page
+    """
+    raise NotImplementedError()
+
+    rc_name = 'testing/' + options.release_name
+
+    def fetch_from_s3(name, target):
+        download_s3(get_object(rc_name, name), target)
+
+    button_page = gen_buttons(options.release_name, "DCOS " + options.release_name)
+    # Download and modify cloudformation template bootstrap_url
+
+    # TODO(cmaloney): Finish This
+    upload_buttons(options.release_name, button_page)
+
+
+def do_print_nat_amis(options):
+    region_to_ami = {}
+
+    for region in aws_region_names:
+        ec2 = boto3.client('ec2', region_name=region['id'])
+
+        instances = ec2.describe_images(
+            Filters=[{'Name': 'name', 'Values': ['amzn-ami-vpc-nat-hvm-2014.03.2.x86_64-ebs']}])['Images']
+
+        # Sanity check, if it fails spuriously can delete. Just would be odd to
+        # get more than one amazon vpc nat AMI.
+        assert len(instances) == 1
+
+        region_to_ami[region['id']] = {'default': instances[0]['ImageId']}
+
+    print(json.dumps(region_to_ami, indent=2, sort_keys=True, separators=(', ', ': ')))
+
+
+def do_print_coreos_amis(options):
+    all_amis = requests.get('http://stable.release.core-os.net/amd64-usr/current/coreos_production_ami_all.json').json()
+    region_to_ami = {}
+
+    for ami in all_amis['amis']:
+        region_to_ami[ami['name']] = {
+            'stable': ami['hvm']
+        }
+
+    print(json.dumps(region_to_ami, indent=2, sort_keys=True, separators=(', ', ': ')))
+    # TODO(cmaloney): Really want to just update hte cloudformation tempalte
+    # here, but it isn't real JSON so that is hard.
+
+
+def do_launch(name, template_url):
+    stack = boto3.resource('cloudformation').create_stack(
+        DisableRollback=True,
+        TimeoutInMinutes=20,
+        Capabilities=['CAPABILITY_IAM'],
+        Parameters=[{
+            'ParameterKey': 'AcceptEULA',
+            'ParameterValue': 'Yes'
+        }, {
+            'ParameterKey': 'KeyName',
+            'ParameterValue': 'default'
+        }],
+        StackName=name,
+        TemplateURL=template_url
+        )
+    print('StackId:', stack.stack_id)
+    return stack
+
+
+def do_wait_for_up(stack):
+    shown_events = set()
+    # Watch for the stack to come up. Error if steps take too long.
+    print("Waiting for stack to come up")
+    while(True):
+        stack.reload()
+        if stack.stack_status == 'CREATE_COMPLETE':
+            break
+
+        events = reversed(list(stack.events.all()))
+
+        for event in events:
+            if event.event_id in shown_events:
+                continue
+
+            shown_events.add(event.event_id)
+
+            status = event.resource_status_reason
+            if status is None:
+                status = ""
+
+            # TODO(cmaloney): Watch for Master, Slave scaling groups. When they
+            # come into existence watch them for IP addresses, print the IP
+            # addresses.
+            # if event.logical_resource_id in ['SlaveServerGroup', 'MasterServerGroup', 'PublicSlaveServerGroup']:
+
+            print(event.resource_status,
+                  event.logical_resource_id,
+                  event.resource_type,
+                  status)
+        time.sleep(10)
+
+    # TODO (cmaloney): Print DnsAddress once cluster is up
+    print("")
+    print("")
+    print("Cluster Up!")
+    stack.load()  # Force the stack to update since events have happened
+    for item in stack.outputs:
+        if item['OutputKey'] == 'DnsAddress':
+            print("DnsAddress:", item['OutputValue'])
+
+
+def get_launched_clusters():
+    try:
+        return load_json(os.path.expanduser("~/.config/dcos-image-clusters"))
+    except FileNotFoundError:
+        return []
+
+
+def save_launched_clusters(cluster_list):
+    write_json(os.path.expanduser("~/.config/dcos-image-clusters"), cluster_list)
+
+
+def do_list_clusters(options):
+    print("\n".join(get_launched_clusters()))
+
+
+def do_cluster_launch(options):
+    template_url = None
+    if options.cloudformation_url:
+        template_url = options.cloudformation_url
+    elif options.release_name:
+        template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
+                options.release_name + '/cloudformation/single-master.cloudformation.json'
+    else:
+        template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
+                'testing/continuous/cloudformation/single-master.cloudformation.json'
+
+    stack = do_launch(options.name, template_url)
+    save_launched_clusters([options.name] + get_launched_clusters())
+
+    do_wait_for_up(stack)
+
+
+def get_cluster_name_if_unset(name):
+    if not name:
+        clusters = get_launched_clusters()
+        if len(clusters) < 1:
+            print("ERROR: No launched clusters to resume")
+            sys.exit(1)
+        name = clusters[0]
+    return name
+
+
+def delete_s3_nonempty(bucket):
+    # This is an exhibitor bucket, should only have one item in it. Die hard rather
+    # than accidentally doing the wrong thing if there is more.
+
+    objects = [bucket.objects.all()]
+    assert len(objects) == 1
+
+    for obj in objects:
+        obj.delete()
+
+    bucket.delete()
+
+
+def do_cluster_resume(options):
+    name = get_cluster_name_if_unset(options.name)
+    stack = boto3.resource('cloudformation').Stack(name)
+    print("Resuming cluster", name)
+    do_wait_for_up(stack)
+
+
+def do_cluster_delete(options):
+    name = get_cluster_name_if_unset(options.name)
+    stack = boto3.resource('cloudformation').Stack(name)
+
+    # Delete the s3 bucket
+    stack_resource = stack.Resource('ExhibitorS3Bucket')
+    bucket = boto3.resource('s3').Bucket(stack_resource.physical_resource_id)
+    delete_s3_nonempty(bucket)
+
+    # Delete the stack
+    stack.delete()
+
+
 def main():
     parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')
-    subparsers = parser.add_subparsers(title='subcommands')
-    build_parser = subparsers.add_parser('build')
-    build_parser.set_defaults(func=do_build)
-    add_build_arguments(build_parser)
-    candidate_parser = subparsers.add_parser('make_candidate')
-    candidate_parser.set_defaults(func=do_make_candidate)
-    candidate_parser.add_argument('release_name')
+    subparsers = parser.add_subparsers(title='commands')
+
+    # build subcommand.
+    build = subparsers.add_parser('build')
+    build.set_defaults(func=do_build)
+    build.add_argument('--upload', action='store_true')
+    build.add_argument('--skip-package-build', action='store_true')
+    build.add_argument('--testing-name', default='continuous')
+    gen.add_arguments(parser)
+
+    # make_candidate subcommand.
+    make_candidate = subparsers.add_parser('make-candidate')
+    make_candidate.set_defaults(func=do_make_candidate)
+    make_candidate.add_argument('release-name')
+
+    # promote_candidate subcommand.
+    promote_candidate = subparsers.add_parser('promote-candidate')
+    promote_candidate.set_defaults(func=do_promote_candidate)
+    promote_candidate.add_argument('release-name')
+
+    # print_coreos_amis subcommand.
+    print_coreos_amis = subparsers.add_parser('print-coreos-amis')
+    print_coreos_amis.set_defaults(func=do_print_coreos_amis)
+
+    # print_nat_amis subcommand.
+    print_nat_amis = subparsers.add_parser('print-nat-amis')
+    print_nat_amis.set_defaults(func=do_print_nat_amis)
+
+    # cluster subcommand.
+    cluster = subparsers.add_parser('cluster')
+    cluster_subparsers = cluster.add_subparsers(title='actions')
+    cluster.set_defaults(func=do_list_clusters)
+    launch = cluster_subparsers.add_parser('launch')
+    release_cf_url = launch.add_mutually_exclusive_group()
+    release_cf_url.add_argument('--cloudformation-url', type=str)
+    release_cf_url.add_argument('--release-name', type=str)
+    launch.add_argument('name', nargs='?', default='dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex)
+    launch.set_defaults(func=do_cluster_launch)
+    resume = cluster_subparsers.add_parser('resume')
+    resume.add_argument('name', nargs='?', default=None)
+    resume.set_defaults(func=do_cluster_resume)
+    delete = cluster_subparsers.add_parser('delete')
+    delete.add_argument('name', nargs='?', default=None)
+    delete.set_defaults(func=do_cluster_delete)
+
+    # Parse the arguments and dispatch.
     options = parser.parse_args()
 
     # Use an if rather than try/except since lots of things inside could throw

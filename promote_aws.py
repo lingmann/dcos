@@ -22,6 +22,10 @@ from jinja2 import Environment, FileSystemLoader, StrictUndefined
 
 from util import bucket, render_markdown_data, upload_s3
 
+# For archival purposes currently. Was used with the "full" AWS template version.
+start_param_full = '{ "Ref" : "'
+end_param_full = '" }'
+
 env = Environment(
     loader=FileSystemLoader('providers/aws/templates/'),
     undefined=StrictUndefined)

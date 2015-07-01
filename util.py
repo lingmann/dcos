@@ -35,7 +35,7 @@ def upload_s3(release_name, path, dest_path=None, args={}, no_cache=False,  if_n
     if if_not_exists:
         try:
             s3_object.load()
-            print("Skipping {}: already exists".format(path))
+            print("Skipping {}: already exists".format(dest_path))
             return s3_object
         except ClientError:
             pass

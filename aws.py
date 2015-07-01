@@ -271,6 +271,8 @@ def gen_templates(arguments, options):
         'results': results
     })
 
+def gen_default_cluster_name():
+    return 'dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex
 
 def do_build(options):
 
@@ -304,7 +306,7 @@ def do_build(options):
         print("CloudFormation to launch: ", cf_url)
 
     if options.launch:
-        do_launch(get_cluster_name_if_unset(None), cf_url)
+        do_launch(gen_default_cluster_name(), cf_url)
 
 
 def gen_buttons(release_name, title):
@@ -590,7 +592,7 @@ def main():
     release_cf_url = launch.add_mutually_exclusive_group()
     release_cf_url.add_argument('--cloudformation-url', type=str)
     release_cf_url.add_argument('--release-name', type=str)
-    launch.add_argument('name', nargs='?', default='dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex)
+    launch.add_argument('name', nargs='?', default=gen_default_cluster_name())
     launch.set_defaults(func=do_cluster_launch)
     resume = cluster_subparsers.add_parser('resume')
     resume.add_argument('name', nargs='?', default=None)

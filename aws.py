@@ -220,7 +220,7 @@ def upload_packages(release_name, bootstrap_id, config_package_id):
 
     # Upload the config package
     upload('{}.tar.xz'.format(config_package_id),
-           'packages/dcos-config--setup/{}.tar.xz'.format(config_package_id))
+           'packages/dcos-config/{}.tar.xz'.format(config_package_id))
 
 
 def build_packages():
@@ -286,7 +286,7 @@ def do_build(options):
 
     release_name = 'testing/' + options.testing_name
 
-    templates = gen_templates({'bootstarp_id': bootstrap_id, 'release_name': release_name}, options)
+    templates = gen_templates({'bootstrap_id': bootstrap_id, 'release_name': release_name}, options)
 
     # TODO(cmaloney): print out the final cloudformation s3 path.
     if options.upload:
@@ -298,8 +298,11 @@ def do_build(options):
                 release_name,
                 bootstrap_id,
                 templates.results.arguments['config_package_id'])
-        cf_path = upload_cf(release_name, cf_id, templates.cloudformation)
-        print("CloudFormation to launch: ", cf_path)
+        cf_url = upload_cf(release_name, cf_id, templates.cloudformation)
+        print("CloudFormation to launch: ", cf_url)
+
+    if options.launch:
+        do_launch(get_cluster_name_if_unset(None), cf_url)
 
 
 def gen_buttons(release_name, title):
@@ -421,6 +424,10 @@ def do_launch(name, template_url):
         TemplateURL=template_url
         )
     print('StackId:', stack.stack_id)
+
+    save_launched_clusters([name] + get_launched_clusters())
+
+    do_wait_for_up(stack)
     return stack
 
 
@@ -492,10 +499,7 @@ def do_cluster_launch(options):
         template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
                 'testing/continuous/cloudformation/single-master.cloudformation.json'
 
-    stack = do_launch(options.name, template_url)
-    save_launched_clusters([options.name] + get_launched_clusters())
-
-    do_wait_for_up(stack)
+    do_launch(options.name, template_url)
 
 
 def get_cluster_name_if_unset(name):
@@ -553,9 +557,10 @@ def main():
     build = subparsers.add_parser('build')
     build.set_defaults(func=do_build)
     build.add_argument('--upload', action='store_true')
+    build.add_argument('--launch', action='store_true')
     build.add_argument('--skip-package-build', action='store_true')
     build.add_argument('--testing-name', default='continuous')
-    gen.add_arguments(parser)
+    gen.add_arguments(build)
 
     # make_candidate subcommand.
     make_candidate = subparsers.add_parser('make-candidate')

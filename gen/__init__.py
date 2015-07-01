@@ -448,6 +448,13 @@ def do_generate(
     defaults = mixin_helpers.defaults
     parameters.update(mixin_helpers.parameters)
 
+    # Validate all arguments passed in actually correspond to parameters to
+    # prevent human typo errors.
+    for argument in arguments:
+        if argument not in parameters:
+            print("ERROR: Argument", argument, "given but not in parameters:", ', '.join(parameters))
+            sys.exit(1)
+
     # Load user specified arguments.
     # TODO(cmaloney): Repeating a set argument should be a hard error.
     if options.config:

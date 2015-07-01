@@ -1,3 +1,4 @@
+import json
 import urllib.request
 from math import floor
 
@@ -14,9 +15,18 @@ def calculate_bootstrap_id(arguments):
     return urllib.request.urlopen(url).read().decode('utf-8')
 
 
+def calculate_fallback_dns(arguments):
+    # Validation because accidentally slicing a string instead of indexing a
+    # list of resolvers then finding out at cluster launch is painful.
+    assert isinstance(arguments['resolvers'], str)
+    resolvers = json.loads(arguments['resolvers'])
+    assert isinstance(resolvers, list)
+    return resolvers[0]
+
+
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
-    'fallback_dns': lambda arguments: arguments['resolvers'][0]
+    'fallback_dns': calculate_fallback_dns
 }
 
 can = {

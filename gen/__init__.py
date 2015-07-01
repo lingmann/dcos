@@ -497,10 +497,6 @@ def do_generate(
         user_arguments = prompt_arguments(to_set, defaults, can_calc)
         arguments = update_dictionary(arguments, user_arguments)
 
-    if 'resolvers' in arguments:
-        assert isinstance(arguments['resolvers'], list)
-        arguments['resolvers'] = json.dumps(arguments['resolvers'])
-
     # Set arguments from command line flags.
     arguments['mixins'] = mixins
 

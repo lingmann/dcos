@@ -2,7 +2,7 @@ from botocore.client import ClientError
 import boto3
 import requests
 
-bucket = boto3.resource('s3').Bucket('downloads.mesosphere.io')
+aws_prod_session = boto3.session.Session(profile_name='production')
 
 
 def render_markdown_data(data):
@@ -18,6 +18,8 @@ def render_markdown(path_to_md):
 
 
 def get_object(release_name, path):
+    bucket = aws_prod_session.resource('s3').Bucket('downloads.mesosphere.io')
+
     return bucket.Object('dcos/{name}/{path}'.format(name=release_name, path=path))
 
 

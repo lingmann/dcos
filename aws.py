@@ -32,13 +32,8 @@ import gen
 # TODO(cmaloney): Move upload_s3 into this.
 from util import upload_s3, get_object
 
-base_env = deepcopy(os.environ)
-
-prod_env = deepcopy(os.environ)
-prod_env['AWS_PROFILE'] = 'production'
-
-dev_env = deepcopy(os.environ)
-dev_env['AWS_PROFILE'] = 'development'
+aws_session_prod = boto3.session.Session(profile_name='production')
+aws_session_dev = boto3.session.Session(profile_name='development')
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -224,7 +219,7 @@ def upload_packages(release_name, bootstrap_id, config_package_id):
 
 
 def build_packages():
-    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=base_env)
+    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
     return load_string('packages/bootstrap.latest')
 
 
@@ -268,7 +263,7 @@ def gen_templates(arguments, options):
         )
 
     print("Validating CloudFormation")
-    client = boto3.client('cloudformation')
+    client = aws_session_dev.client('cloudformation')
     client.validate_template(TemplateBody=cloudformation)
 
     return gen.Bunch({
@@ -278,6 +273,13 @@ def gen_templates(arguments, options):
 
 
 def do_build(options):
+
+    # Can only laucnch if uploaded
+    if options.launch and not options.upload:
+        print("ERROR: Must upload in order to launch cluster")
+        sys.exit(1)
+
+
     # TODO(cmaloney): don't shell out to mkpanda
     if not options.skip_package_build:
         bootstrap_id = build_packages()
@@ -380,7 +382,7 @@ def do_print_nat_amis(options):
     region_to_ami = {}
 
     for region in aws_region_names:
-        ec2 = boto3.client('ec2', region_name=region['id'])
+        ec2 = aws_session_prod.client('ec2', region_name=region['id'])
 
         instances = ec2.describe_images(
             Filters=[{'Name': 'name', 'Values': ['amzn-ami-vpc-nat-hvm-2014.03.2.x86_64-ebs']}])['Images']
@@ -409,7 +411,7 @@ def do_print_coreos_amis(options):
 
 
 def do_launch(name, template_url):
-    stack = boto3.resource('cloudformation').create_stack(
+    stack = aws_session_dev.resource('cloudformation').create_stack(
         DisableRollback=True,
         TimeoutInMinutes=20,
         Capabilities=['CAPABILITY_IAM'],
@@ -527,18 +529,18 @@ def delete_s3_nonempty(bucket):
 
 def do_cluster_resume(options):
     name = get_cluster_name_if_unset(options.name)
-    stack = boto3.resource('cloudformation').Stack(name)
+    stack = aws_session_dev.resource('cloudformation').Stack(name)
     print("Resuming cluster", name)
     do_wait_for_up(stack)
 
 
 def do_cluster_delete(options):
     name = get_cluster_name_if_unset(options.name)
-    stack = boto3.resource('cloudformation').Stack(name)
+    stack = aws_session_dev.resource('cloudformation').Stack(name)
 
     # Delete the s3 bucket
     stack_resource = stack.Resource('ExhibitorS3Bucket')
-    bucket = boto3.resource('s3').Bucket(stack_resource.physical_resource_id)
+    bucket = aws_session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
     delete_s3_nonempty(bucket)
 
     # Delete the stack

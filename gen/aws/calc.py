@@ -1,5 +1,5 @@
 defaults = {
-  "resolvers": ["10.0.0.2"]
+  "resolvers": "[\"10.0.0.2\"]"
 }
 
 arguments = {

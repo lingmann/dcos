@@ -1,18 +1,13 @@
 #!/usr/bin/env python3
 """AWS Image Creation, Management, Testing
 
-Usage:
-    aws.py build [--upload] [--skip-package-build]
+TODO:
     # promote_candidate <release_name> instead?
     aws.py make_candidate <release_name>
     aws.py promote_candidate <release_name>
     aws.py promote <from_release> <to_release>
-    aws.py cluster launch <name> [--cf-url=<url>|--release_name=<release_name>]
-    aws.py cluster resume # Reads last test launched stack name out of file.
-    aws.py cluster delete <name>
-    aws.py print_coreos_amis
-    aws.py print_nat_amis
 """
+
 import argparse
 import binascii
 import boto3

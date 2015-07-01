@@ -487,7 +487,7 @@ def do_generate(
             print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
             sys.exit(1)
     else:
-        user_arguments = prompt_arguments(to_set, defaults, can_calc, options.assume_defaults)
+        user_arguments = prompt_arguments(to_set, defaults, can_calc)
         arguments = update_dictionary(arguments, user_arguments)
 
     if 'resolvers' in arguments:

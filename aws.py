@@ -545,6 +545,10 @@ def do_cluster_delete(options):
     # Delete the stack
     stack.delete()
 
+    launched = set(get_launched_clusters())
+    launched.remove(name)
+    save_launched_clusters(list(launched))
+
 
 def main():
     parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')

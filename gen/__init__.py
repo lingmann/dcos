@@ -32,10 +32,6 @@ from tempfile import TemporaryDirectory
 # List of all roles all templates should have.
 role_names = {"master", "slave", "public_slave", "master_slave"}
 
-# The set of supported providers and distributions.
-providers = ['vagrant', 'aws', 'gce', 'azure',  'on_prem']
-distributions = ['coreos', 'jessie', 'centos7']
-
 role_template = '/etc/mesosphere/roles/{}'
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
@@ -128,14 +124,14 @@ def get_filenames(mixins, target, sep='/'):
 
 
 # Returns a dictionary of the jinja templates to use
-def get_template_names(mixins):
+def get_template_names(mixins, cluster_packages):
     templates = dict()
     # dcos-config contains stuff statically known for clusters (ex: mesos slave
     # configuration parametesr).
     # cloud-config contains things injected per-cluster by tools such as
     # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
     # master loadbalancer DNS name
-    for template in ['dcos-config', 'cloud-config', 'dcos-services']:
+    for template in ['cloud-config', 'dcos-services'] + cluster_packages:
         templates[template] = get_filenames(mixins, template + '.yaml')
     return templates
 
@@ -306,10 +302,10 @@ def get_options_object():
         })
 
 
-def do_package_config(config, config_package_filename):
+def do_gen_package(config, package_filename):
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
-    with TemporaryDirectory("dcos-config--setup") as tmpdir:
+    with TemporaryDirectory("gen_tmp_pkg") as tmpdir:
         dcos_setup = config
 
         # Only contains write_files
@@ -317,9 +313,14 @@ def do_package_config(config, config_package_filename):
 
         # Write out the individual files
         for file_info in dcos_setup["write_files"]:
-            path = tmpdir + file_info['path']
+            if file_info['path'][0] == '/':
+                path = tmpdir + file_info['path']
+            else:
+                path = tmpdir + '/' + file_info['path']
             try:
-                os.makedirs(os.path.dirname(path), mode=0o755)
+                print(path)
+                if os.path.dirname(path):
+                    os.makedirs(os.path.dirname(path), mode=0o755)
             except FileExistsError:
                 pass
 
@@ -327,11 +328,12 @@ def do_package_config(config, config_package_filename):
                 f.write(file_info['content'])
 
         # Ensure the output directory exists
-        os.makedirs(os.path.dirname(config_package_filename), exist_ok=True)
+        if os.path.dirname(package_filename):
+            os.makedirs(os.path.dirname(package_filename), exist_ok=True)
 
-        make_tar(config_package_filename, tmpdir)
+        make_tar(package_filename, tmpdir)
 
-    print("Config package filename: ", config_package_filename)
+    print("Package filename: ", package_filename)
 
 
 def load_mixins(mixins):
@@ -350,7 +352,7 @@ def load_mixins(mixins):
             module = importlib.import_module(modulename)
         except ImportError as ex:
             print("NOTICE: not found:".format(modulename), ex)
-            break
+            continue
 
         try:
             # Can't calculate the same thing twice.
@@ -432,11 +434,16 @@ def do_generate(
         options,
         mixins,
         extra_templates,
-        arguments):
+        arguments,
+        extra_cluster_packages):
+    assert isinstance(extra_cluster_packages, list)
+    assert not isinstance(extra_cluster_packages, str)
+
+    cluster_packages = ['dcos-config'] + extra_cluster_packages
 
     # Load the templates for the target and calculate the parameters based on
     # the template variables.
-    templates = get_template_names(mixins)
+    templates = get_template_names(mixins, cluster_packages)
     templates.update(extra_templates)
     parameters = get_parameters(templates)
 
@@ -462,10 +469,10 @@ def do_generate(
     # TODO(cmaloney): Repeating a set argument should be a hard error.
     if options.config:
         try:
-            new_arguments = load_json(arguments.config)
+            new_arguments = load_json(options.config)
             arguments.update(new_arguments)
         except FileNotFoundError:
-            print("ERROR: Specified config file '" + arguments.config + "' does not exist")
+            print("ERROR: Specified config file '" + options.config + "' does not exist")
             sys.exit(1)
         except ValueError as ex:
             print("ERROR:", ex.what())
@@ -518,19 +525,25 @@ def do_generate(
 
     # ID of this configuration is a hash of the parameters
     config_id = hash_checkout(arguments)
+    arguments['config_id'] = config_id
 
-    config_package_id = "dcos-config--setup_{}".format(config_id)
-
+    # Calculate the set of cluster package ids, put them into 'cluster_packages'
     # This isn't included in the 'final arguments', but it is computable from it
     # so this isn't a "new" argument, just a "derived" argument.
-    arguments['config_package_id'] = config_package_id
-    # Validate the PackageId conforms to the rules.
-    PackageId(config_package_id)
+    def get_package_id(package_name):
+        pkg_id_str = "{}--setup_{}".format(package_name, config_id)
+        # validate the pkg_id_str generated is a valid PackageId
+        PackageId(pkg_id_str)
+        return pkg_id_str
 
-    config_package_filename = 'packages/dcos-config/{}.tar.xz'.format(config_package_id)
-    arguments['config_package_filename'] = config_package_filename
+    cluster_package_ids = []
+
+    # Calculate all the cluster package IDs.
+    for package_name in cluster_packages:
+        cluster_package_ids.append(get_package_id(package_name))
+
     # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
-    arguments['cluster_packages'] = json.dumps([config_package_id])
+    arguments['cluster_packages'] = json.dumps(cluster_package_ids)
 
     # Save config parameters
     if options.save_config:
@@ -540,7 +553,22 @@ def do_generate(
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
 
-    do_package_config(rendered_templates['dcos-config'], config_package_filename)
+    cluster_package_info = {}
+
+    # Render all the cluster packages
+    for package_name in cluster_packages:
+        package_id = get_package_id(package_name)
+        package_filename = 'packages/{}/{}.tar.xz'.format(
+            package_name,
+            package_id)
+
+        # Build the package
+        do_gen_package(rendered_templates[package_name], package_filename)
+
+        cluster_package_info[package_name] = {
+            'id': package_id,
+            'filename': package_filename
+        }
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters
@@ -551,7 +579,7 @@ def do_generate(
 
     return Bunch({
         'arguments': arguments,
-        'config_package_id': config_package_id,
+        'cluster_packages': cluster_package_info,
         'templates': rendered_templates,
         'utils': utils
     })
@@ -561,9 +589,10 @@ def generate(
         options,
         mixins,
         extra_templates=dict(),
-        arguments=dict()):
+        arguments=dict(),
+        extra_cluster_packages=[]):
     try:
-        return do_generate(options, mixins, extra_templates, arguments)
+        return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:
         print("ERROR: Jinja2 TemplateSyntaxError")
         print("{}:{} - {}".format(

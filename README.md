@@ -23,8 +23,7 @@ TODO(cmaloney): Document how to do meta-work for all providers/platforms (Make a
 
 ### AWS
 
-Configuring AWS:
-You need to add two profiles to your AWS/botocore config. "development" and "production". "production" needs to point to have credentials poitning to the "AWS Production" in OneLogin. "development" to "AWS Development" in OneLogin.
+The AWS tooling makes heavy use of boto3. It requires that you setup two [profiles](http://boto3.readthedocs.org/en/latest/guide/configuration.html#configuration-files), "development" and "production" which have credentials for the respective AWS Account buttons in OneLogin.
 
 - `aws.py build`: Make a new build of dcos_image and the current templates. Optionally upload the build so that a test cluster can be launched with it.
 - `aws.py make_candidate`: Make a new candidate for a release. Performs a build, then generates the single-master, multi-master, and button page templates. Uploads them all to a testing bucket for internal testing.

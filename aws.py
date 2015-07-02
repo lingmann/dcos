@@ -22,6 +22,7 @@ import sys
 import time
 import uuid
 import yaml
+from botocore.client import ClientError
 from copy import copy, deepcopy
 from datetime import datetime
 from pkgpanda import PackageId
@@ -358,13 +359,13 @@ def do_make_candidate(options):
     release_name = 'testing/' + options.release_name
 
     # Generate the single-master and multi-master templates.
-    options = gen.get_options_object()
+    gen_options = gen.get_options_object()
     single_master = gen_templates(
             {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 1},
-            options)
+            gen_options)
     multi_master = gen_templates(
             {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 3},
-            options)
+            gen_options)
 
     button_page = gen_buttons(release_name, "RC for " + options.release_name)
 
@@ -381,7 +382,7 @@ def do_make_candidate(options):
     # Upload button page
     upload_buttons(bucket, release_name, button_page)
 
-    print("Candidate availabel at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
+    print("Candidate available at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
 
 
 def do_promote_candidate(options):
@@ -599,12 +600,12 @@ def main():
     # make_candidate subcommand.
     make_candidate = subparsers.add_parser('make-candidate')
     make_candidate.set_defaults(func=do_make_candidate)
-    make_candidate.add_argument('release-name')
+    make_candidate.add_argument('release_name')
 
     # promote_candidate subcommand.
     promote_candidate = subparsers.add_parser('promote-candidate')
     promote_candidate.set_defaults(func=do_promote_candidate)
-    promote_candidate.add_argument('release-name')
+    promote_candidate.add_argument('release_name')
 
     # print_coreos_amis subcommand.
     print_coreos_amis = subparsers.add_parser('print-coreos-amis')

@@ -133,11 +133,16 @@ def do_chef(options):
     # TODO(cmaloney): Test the chef using kitchen?
 
     # Turn the chef files into a tarball to email to customers
-    gen.do_gen_package(chef_files, 'chef-{}.tar.xz'.format(results.arguments['config_id']))
+    chef_tarball = 'chef-{}.tar.xz'.format(results.arguments['config_id'])
+    gen.do_gen_package(chef_files, chef_tarball)
 
     # Upload the packages, make_dcos_vagrant script
     bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
     upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.cluster_packages)
+
+    print()
+    print()
+    print("Chef tarball:", chef_tarball)
 #
 #    # Upload the vagrant script
 #    obj = upload_string(

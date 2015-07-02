@@ -30,12 +30,12 @@
     "SlaveInstanceCount" : {
       "Description" : "Number of slave nodes to launch",
       "Type" : "Number",
-      "Default" : "5"
+      "Default" : "{{ num_private_slaves }}"
     },
     "PublicSlaveInstanceCount" : {
       "Description" : "Number of public slave nodes to launch",
       "Type" : "Number",
-      "Default" : "1"
+      "Default" : "{{ num_public_slaves }}"
     }
   },
 
@@ -97,6 +97,29 @@
       "us-west-2": {
           "default": "ami-bb69128b"
       }
+    },
+    "Parameters": {
+      "MasterInstanceType": {
+        "default": "{{ master_instance_type }}"
+      },
+      "SlaveInstanceType": {
+        "default": "{{ slave_instance_type }}"
+      },
+      "PublicSubnetRange": {
+        "default": "10.0.4.0/22"
+      },
+      "PrivateSubnetRange": {
+        "default": "10.0.0.0/22"
+      },
+      "VPCSubnetRange": {
+        "default": "10.0.0.0/16"
+      },
+      "PublicSlaveInstanceType": {
+        "default": "{{ public_slave_instance_type }}"
+      },
+      "StackCreationTimeout": {
+          "default": "PT30M"
+      }
     }
   },
 
@@ -110,7 +133,7 @@
       "Properties" : {
         "EnableDnsSupport" : "true",
         "EnableDnsHostnames" : "true",
-        "CidrBlock" : {{ start_param }}VPCSubnetRange{{ end_param }},
+        "CidrBlock" : { "Fn::FindInMap" : [ "Parameters", "VPCSubnetRange", "default" ] },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -122,7 +145,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : {{ start_param }}PublicSubnetRange{{ end_param }},
+        "CidrBlock" : { "Fn::FindInMap" : [ "Parameters", "PublicSubnetRange", "default" ] },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Public" }
@@ -134,7 +157,7 @@
       "Type" : "AWS::EC2::Subnet",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
-        "CidrBlock" : {{ start_param }}PrivateSubnetRange{{ end_param }},
+        "CidrBlock" : { "Fn::FindInMap" : [ "Parameters", "PrivateSubnetRange", "default" ] },
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },
           { "Key" : "Network", "Value" : "Private" }
@@ -333,7 +356,7 @@
         "SourceDestCheck" : "false",
         "KeyName" : { "Ref" : "KeyName" },
         "ImageId" : { "Fn::FindInMap" : [ "NATAmi", { "Ref" : "AWS::Region" }, "default" ] },
-        "InstanceType" : "m3.medium",
+        "InstanceType" : "{{ nat_instance_type }}",
         "NetworkInterfaces" : [
           {
             "SubnetId" : { "Ref" : "PublicSubnet" },
@@ -519,7 +542,7 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : {{ start_param}}StackCreationTimeout{{ end_param }},
+          "Timeout" : { "Fn::FindInMap" : [ "Parameters", "StackCreationTimeout", "default" ] },
           "Count" : {{ num_masters }}
         }
       }
@@ -533,7 +556,7 @@
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : {{ start_param }}MasterInstanceType{{ end_param}},
+        "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
           {{ master_cloud_config }}
         ]]
@@ -697,7 +720,7 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
+          "Timeout" : { "Fn::FindInMap" : [ "Parameters", "StackCreationTimeout", "default" ] },
           "Count" : { "Ref" : "SlaveInstanceCount" }
         }
       }
@@ -711,7 +734,7 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "false",
-        "InstanceType" : {{ start_param }}SlaveInstanceType{{ end_param }},
+        "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ slave_cloud_config }}
         ]]}}
@@ -738,7 +761,7 @@
       },
       "CreationPolicy" : {
         "ResourceSignal" : {
-          "Timeout" : {{ start_param }}StackCreationTimeout{{ end_param }},
+          "Timeout" : { "Fn::FindInMap" : [ "Parameters", "StackCreationTimeout", "default" ] },
           "Count" : { "Ref" : "PublicSlaveInstanceCount" }
         }
       }
@@ -752,7 +775,7 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "PublicSlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
-        "InstanceType" : {{ start_param }}PublicSlaveInstanceType{{ end_param }},
+        "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "PublicSlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ public_slave_cloud_config }}
         ]]}}

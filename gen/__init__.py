@@ -477,11 +477,13 @@ def do_generate(
     # Remove calculated parameters from those to calculate.
     to_set -= must_calc.keys()
 
-    # If assume_defaults, apply all defaults
+    # If assume_defaults, apply all defaults and calculated values.
     if options.assume_defaults:
         for name in copy(to_set):
             if name in defaults:
                 arguments[name] = defaults[name]
+                to_set.remove(name)
+            elif name in can_calc:
                 to_set.remove(name)
 
     # Cluster packages is particularly magic

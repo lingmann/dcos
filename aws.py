@@ -24,7 +24,7 @@ import util
 import uuid
 import yaml
 from botocore.client import ClientError
-from copy import copy, deepcopy
+from copy import deepcopy
 from pkgpanda import PackageId
 from pkgpanda.util import load_json, write_json
 
@@ -35,8 +35,6 @@ session_dev = boto3.session.Session(profile_name='development')
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
-
-params = load_json("gen/aws/cf_param_info.json")
 
 aws_region_names = [
     {
@@ -190,17 +188,12 @@ def render_cloudformation(
         'public_slave_cloud_config': transform_lines(public_slave_cloudconfig)
     })
 
+    print(template_str)
     template_json = json.loads(template_str)
 
     template_json['Metadata']['DcosImageCommit'] = util.dcos_image_commit
     template_json['Metadata']['TemplateGenerationDate'] = util.template_generation_date
 
-    local_params = copy(params)
-
-    for param, info in local_params.items():
-        if 'Parameters' not in template_json['Mappings']:
-            template_json['Mappings']['Parameters'] = {}
-        template_json['Mappings']['Parameters'][param] = {'default': info['Default']}
     return json.dumps(template_json)
 
 

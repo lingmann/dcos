@@ -48,4 +48,4 @@ cat <<'EOF' > config.rb
 EOF
 
 echo 'Vagrant based DCOS app-development VM ready to start. To start the cluster run:'
-echo '$vagrant up'
+echo '$ vagrant up'

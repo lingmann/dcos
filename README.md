@@ -32,3 +32,8 @@ TODO(cmaloney): More AWS commands
 
 ### Vagrant (TODO)
 
+`vagrant.py`: Performs a DCOS build and generates a self-contained script to create a Vagrantfile to launch a DCOS cluster.
+
+Uploads all the packages, bootstrap, config package automatically, as well as the script to generate the Vagrantfile.
+
+To use simply download the script from the provided url, run the script, then run `vagrant up`.

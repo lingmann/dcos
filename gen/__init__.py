@@ -326,6 +326,9 @@ def do_package_config(config, config_package_filename):
             with open(path, 'w') as f:
                 f.write(file_info['content'])
 
+        # Ensure the output directory exists
+        os.makedirs(os.path.dirname(config_package_filename), exist_ok=True)
+
         make_tar(config_package_filename, tmpdir)
 
     print("Config package filename: ", config_package_filename)
@@ -409,16 +412,16 @@ def prompt_arguments(to_set, defaults, can_calc):
             if name in defaults:
                 default_str = ' [{}]'.format(defaults[name])
             elif name in can_calc:
-                default_str = ' (can calculate)'
+                default_str = ' <calculated>'
 
-            # TODO(cmaloney): If 'config only' is set never prompt.
-            default_str = ' [{}]'.format(defaults[name]) if name in defaults else ''
             value = input('{}{}: '.format(name, default_str))
             if value:
                 arguments[name] = value
                 break
             if name in defaults:
                 arguments[name] = defaults[name]
+                break
+            if name in can_calc:
                 break
             print("ERROR: Must provide a value")
 
@@ -473,7 +476,6 @@ def do_generate(
 
     # Remove calculated parameters from those to calculate.
     to_set -= must_calc.keys()
-    to_set -= can_calc.keys()
 
     # If assume_defaults, apply all defaults
     if options.assume_defaults:
@@ -523,7 +525,7 @@ def do_generate(
     # Validate the PackageId conforms to the rules.
     PackageId(config_package_id)
 
-    config_package_filename = config_package_id + '.tar.xz'
+    config_package_filename = 'packages/dcos-config/{}.tar.xz'.format(config_package_id)
     arguments['config_package_filename'] = config_package_filename
     # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
     arguments['cluster_packages'] = json.dumps([config_package_id])

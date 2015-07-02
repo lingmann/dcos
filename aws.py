@@ -20,19 +20,18 @@ import re
 import requests
 import sys
 import time
+import util
 import uuid
 import yaml
 from botocore.client import ClientError
 from copy import copy, deepcopy
-from datetime import datetime
 from pkgpanda import PackageId
-from pkgpanda.util import load_json, load_string, write_json
-from subprocess import check_call, check_output
+from pkgpanda.util import load_json, write_json
 
 import gen
 
-aws_session_prod = boto3.session.Session(profile_name='production')
-aws_session_dev = boto3.session.Session(profile_name='development')
+session_prod = boto3.session.Session(profile_name='production')
+session_dev = boto3.session.Session(profile_name='development')
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -76,23 +75,6 @@ aws_region_names = [
         'name': 'Asia Pacific (Sydney)',
         'id': 'ap-southeast-2'
     }]
-
-# TODO(cmaloney): Make a generic parameter to all templates
-dcos_image_commit = os.getenv(
-    'DCOS_IMAGE_COMMIT',
-    os.getenv(
-        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
-        None
-        )
-    )
-
-if dcos_image_commit is None:
-    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
-
-if dcos_image_commit is None:
-    raise "Unable to set dcos_image_commit from teamcity or git."
-
-template_generation_date = str(datetime.utcnow())
 
 late_services = """- name: cfn-signal.service
   command: start
@@ -158,6 +140,12 @@ def upload_s3(bucket, release_name, path, dest_path=None, args={}, no_cache=Fals
         return s3_object.put(Body=data, **args)
 
 
+def upload_string(bucket, release_name, filename, text, s3_put_args={}):
+    obj = get_object(bucket, release_name, filename)
+    obj.put(Body=text.encode('utf-8'), **s3_put_args)
+    return obj
+
+
 def download_s3(obj, out_file):
     body = obj.get()['Body']
     with open(out_file, 'wb') as dest:
@@ -204,8 +192,8 @@ def render_cloudformation(
 
     template_json = json.loads(template_str)
 
-    template_json['Metadata']['DcosImageCommit'] = dcos_image_commit
-    template_json['Metadata']['TemplateGenerationDate'] = template_generation_date
+    template_json['Metadata']['DcosImageCommit'] = util.dcos_image_commit
+    template_json['Metadata']['TemplateGenerationDate'] = util.template_generation_date
 
     local_params = copy(params)
 
@@ -217,18 +205,23 @@ def render_cloudformation(
 
 
 def upload_cf(bucket, release_name, cf_id, text):
-    cf_object = get_object(bucket, release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
-    cf_object.put(Body=text.encode('utf-8'), CacheControl='no-cache')
-
-    return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_object.key)
+    cf_obj = upload_string(
+            bucket,
+            release_name,
+            'cloudformation/{}.cloudformation.json'.format(cf_id),
+            text,
+            {
+                'CacheControl': 'no-cache'
+            })
+    return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_obj.key)
 
 
 def upload_packages(bucket, release_name, bootstrap_id, config_package_id):
     def upload(*args, **kwargs):
         return upload_s3(bucket, release_name, if_not_exists=True, *args, **kwargs)
 
-    # Upload packages
-    for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)):
+    # Upload packages including config package
+    for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)) + [config_package_id]:
         id = PackageId(id_str)
         upload('packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
 
@@ -237,15 +230,6 @@ def upload_packages(bucket, release_name, bootstrap_id, config_package_id):
            'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
     upload('packages/{}.active.json'.format(bootstrap_id),
            'config/{}.active.json'.format(bootstrap_id))
-
-    # Upload the config package
-    upload('{}.tar.xz'.format(config_package_id),
-           'packages/dcos-config/{}.tar.xz'.format(config_package_id))
-
-
-def build_packages():
-    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
-    return load_string('packages/bootstrap.latest')
 
 
 def gen_templates(arguments, options):
@@ -288,7 +272,7 @@ def gen_templates(arguments, options):
         )
 
     print("Validating CloudFormation")
-    client = aws_session_dev.client('cloudformation')
+    client = session_dev.client('cloudformation')
     client.validate_template(TemplateBody=cloudformation)
 
     return gen.Bunch({
@@ -309,10 +293,7 @@ def do_build(options):
         sys.exit(1)
 
     # TODO(cmaloney): don't shell out to mkpanda
-    if not options.skip_package_build:
-        bootstrap_id = build_packages()
-    else:
-        bootstrap_id = load_string('packages/bootstrap.latest')
+    bootstrap_id = util.get_local_build(options.skip_package_build)
 
     release_name = 'testing/' + options.testing_name
 
@@ -320,7 +301,7 @@ def do_build(options):
 
     # TODO(cmaloney): print out the final cloudformation s3 path.
     if options.upload:
-        bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+        bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
         cf_bytes = templates.cloudformation.encode('utf-8')
         hasher = hashlib.sha1()
         hasher.update(cf_bytes)
@@ -347,15 +328,15 @@ def gen_buttons(release_name, title):
 
 
 def upload_buttons(bucket, release_name, content):
-    get_object(bucket, release_name, 'aws.html').put(
-            Body=content.encode('utf-8'),
-            CacheControl='no-cache',
-            ContentType='text/html')
+    upload_string(bucket, release_name, 'aws.html', content, {
+        'CacheControl': 'no-cache',
+        'ContentType': 'text/html'
+        })
 
 
 def do_make_candidate(options):
     # Make sure everything is built / up to date.
-    bootstrap_id = build_packages()
+    bootstrap_id = util.build_packages()
     release_name = 'testing/' + options.release_name
 
     # Generate the single-master and multi-master templates.
@@ -370,7 +351,7 @@ def do_make_candidate(options):
     button_page = gen_buttons(release_name, "RC for " + options.release_name)
 
     # Upload the packages.
-    bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
     upload_packages(
             bucket,
             release_name,
@@ -397,7 +378,7 @@ def do_promote_candidate(options):
         - landing page
     """
     raise NotImplementedError()
-    bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
 
     rc_name = 'testing/' + options.release_name
 
@@ -415,7 +396,7 @@ def do_print_nat_amis(options):
     region_to_ami = {}
 
     for region in aws_region_names:
-        ec2 = aws_session_prod.client('ec2', region_name=region['id'])
+        ec2 = session_prod.client('ec2', region_name=region['id'])
 
         instances = ec2.describe_images(
             Filters=[{'Name': 'name', 'Values': ['amzn-ami-vpc-nat-hvm-2014.03.2.x86_64-ebs']}])['Images']
@@ -444,7 +425,7 @@ def do_print_coreos_amis(options):
 
 
 def do_launch(name, template_url):
-    stack = aws_session_dev.resource('cloudformation').create_stack(
+    stack = session_dev.resource('cloudformation').create_stack(
         DisableRollback=True,
         TimeoutInMinutes=20,
         Capabilities=['CAPABILITY_IAM'],
@@ -562,18 +543,18 @@ def delete_s3_nonempty(bucket):
 
 def do_cluster_resume(options):
     name = get_cluster_name_if_unset(options.name)
-    stack = aws_session_dev.resource('cloudformation').Stack(name)
+    stack = session_dev.resource('cloudformation').Stack(name)
     print("Resuming cluster", name)
     do_wait_for_up(stack)
 
 
 def do_cluster_delete(options):
     name = get_cluster_name_if_unset(options.name)
-    stack = aws_session_dev.resource('cloudformation').Stack(name)
+    stack = session_dev.resource('cloudformation').Stack(name)
 
     # Delete the s3 bucket
     stack_resource = stack.Resource('ExhibitorS3Bucket')
-    bucket = aws_session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
+    bucket = session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
     delete_s3_nonempty(bucket)
 
     # Delete the stack

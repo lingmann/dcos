@@ -1,5 +1,8 @@
-arguments = {'num_masters': 1, 'cluster_name': '{{ cluster_name }}'}
+arguments = {
+    "num_masters": 1,
+    "cluster_name": "Vagrant_SingleNode"
+}
+
 defaults = {
-  "resolvers": ["8.8.8.8"],
-  "copy_files": True
-  }
+    "resolvers": "[\"8.8.8.8\"]"
+}

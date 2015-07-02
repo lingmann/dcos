@@ -38,7 +38,7 @@ write_files:
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-slave-public
+  - path: /etc/mesos-slave-public
     content: |
       MESOS_RESOURCES=ports:[1-21,23-5050,5052-65535]
       MESOS_DEFAULT_ROLE=slave_public

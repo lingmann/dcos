@@ -29,8 +29,6 @@ from pkgpanda.util import load_json, load_string, write_json
 from subprocess import check_call, check_output
 
 import gen
-# TODO(cmaloney): Move upload_s3 into this.
-from util import upload_s3, get_object
 
 aws_session_prod = boto3.session.Session(profile_name='production')
 aws_session_dev = boto3.session.Session(profile_name='development')
@@ -133,6 +131,32 @@ cf_instance_groups = {
 }
 
 
+def get_object(bucket, release_name, path):
+    return bucket.Object('dcos/{name}/{path}'.format(name=release_name, path=path))
+
+
+def upload_s3(bucket, release_name, path, dest_path=None, args={}, no_cache=False,  if_not_exists=False):
+    if no_cache:
+        args['CacheControl'] = 'no-cache'
+
+    if not dest_path:
+        dest_path = path
+
+    s3_object = get_object(bucket, release_name, dest_path)
+
+    if if_not_exists:
+        try:
+            s3_object.load()
+            print("Skipping {}: already exists".format(dest_path))
+            return s3_object
+        except ClientError:
+            pass
+
+    with open(path, 'rb') as data:
+        print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
+        return s3_object.put(Body=data, **args)
+
+
 def download_s3(obj, out_file):
     body = obj.get()['Body']
     with open(out_file, 'wb') as dest:
@@ -191,16 +215,16 @@ def render_cloudformation(
     return json.dumps(template_json)
 
 
-def upload_cf(release_name, cf_id, text):
-    cf_object = get_object(release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
+def upload_cf(bucket, release_name, cf_id, text):
+    cf_object = get_object(bucket, release_name, 'cloudformation/{}.cloudformation.json'.format(cf_id))
     cf_object.put(Body=text.encode('utf-8'), CacheControl='no-cache')
 
     return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_object.key)
 
 
-def upload_packages(release_name, bootstrap_id, config_package_id):
+def upload_packages(bucket, release_name, bootstrap_id, config_package_id):
     def upload(*args, **kwargs):
-        return upload_s3(release_name, if_not_exists=True, *args, **kwargs)
+        return upload_s3(bucket, release_name, if_not_exists=True, *args, **kwargs)
 
     # Upload packages
     for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)):
@@ -271,8 +295,10 @@ def gen_templates(arguments, options):
         'results': results
     })
 
+
 def gen_default_cluster_name():
     return 'dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex
+
 
 def do_build(options):
 
@@ -280,7 +306,6 @@ def do_build(options):
     if options.launch and not options.upload:
         print("ERROR: Must upload in order to launch cluster")
         sys.exit(1)
-
 
     # TODO(cmaloney): don't shell out to mkpanda
     if not options.skip_package_build:
@@ -294,15 +319,17 @@ def do_build(options):
 
     # TODO(cmaloney): print out the final cloudformation s3 path.
     if options.upload:
+        bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
         cf_bytes = templates.cloudformation.encode('utf-8')
         hasher = hashlib.sha1()
         hasher.update(cf_bytes)
         cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
         upload_packages(
+                bucket,
                 release_name,
                 bootstrap_id,
                 templates.results.arguments['config_package_id'])
-        cf_url = upload_cf(release_name, cf_id, templates.cloudformation)
+        cf_url = upload_cf(bucket, release_name, cf_id, templates.cloudformation)
         print("CloudFormation to launch: ", cf_url)
 
     if options.launch:
@@ -318,8 +345,8 @@ def gen_buttons(release_name, title):
         })
 
 
-def upload_buttons(release_name, content):
-    get_object(release_name, 'aws.html').put(
+def upload_buttons(bucket, release_name, content):
+    get_object(bucket, release_name, 'aws.html').put(
             Body=content.encode('utf-8'),
             CacheControl='no-cache',
             ContentType='text/html')
@@ -342,15 +369,17 @@ def do_make_candidate(options):
     button_page = gen_buttons(release_name, "RC for " + options.release_name)
 
     # Upload the packages.
+    bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
     upload_packages(
+            bucket,
             release_name,
             bootstrap_id,
             single_master.results.arguments['config_package_id'])
-    upload_cf(release_name, 'single-master', single_master.cloudformation)
-    upload_cf(release_name, 'multi-master', multi_master.cloudformation)
+    upload_cf(bucket, release_name, 'single-master', single_master.cloudformation)
+    upload_cf(bucket, release_name, 'multi-master', multi_master.cloudformation)
 
     # Upload button page
-    upload_buttons(release_name, button_page)
+    upload_buttons(bucket, release_name, button_page)
 
     print("Candidate availabel at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
 
@@ -367,17 +396,18 @@ def do_promote_candidate(options):
         - landing page
     """
     raise NotImplementedError()
+    bucket = aws_session_prod.resource('s3').Bucket('downloads.mesosphere.io')
 
     rc_name = 'testing/' + options.release_name
 
     def fetch_from_s3(name, target):
-        download_s3(get_object(rc_name, name), target)
+        download_s3(get_object(bucket, rc_name, name), target)
 
     button_page = gen_buttons(options.release_name, "DCOS " + options.release_name)
     # Download and modify cloudformation template bootstrap_url
 
     # TODO(cmaloney): Finish This
-    upload_buttons(options.release_name, button_page)
+    upload_buttons(bucket, options.release_name, button_page)
 
 
 def do_print_nat_amis(options):

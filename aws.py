@@ -209,12 +209,14 @@ def upload_cf(bucket, release_name, cf_id, text):
     return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_obj.key)
 
 
-def upload_packages(bucket, release_name, bootstrap_id, config_package_id):
+def upload_packages(bucket, release_name, bootstrap_id, cluster_packages):
     def upload(*args, **kwargs):
         return upload_s3(bucket, release_name, if_not_exists=True, *args, **kwargs)
 
+    cluster_package_ids = [pkg['id'] for pkg in cluster_packages.values()]
+
     # Upload packages including config package
-    for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)) + [config_package_id]:
+    for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)) + cluster_package_ids:
         id = PackageId(id_str)
         upload('packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
 
@@ -303,7 +305,7 @@ def do_build(options):
                 bucket,
                 release_name,
                 bootstrap_id,
-                templates.results.arguments['config_package_id'])
+                templates.results.cluster_packages)
         cf_url = upload_cf(bucket, release_name, cf_id, templates.cloudformation)
         print("CloudFormation to launch: ", cf_url)
 
@@ -349,7 +351,7 @@ def do_make_candidate(options):
             bucket,
             release_name,
             bootstrap_id,
-            single_master.results.arguments['config_package_id'])
+            single_master.results.cluster_packages)
     upload_cf(bucket, release_name, 'single-master', single_master.cloudformation)
     upload_cf(bucket, release_name, 'multi-master', multi_master.cloudformation)
 
@@ -515,7 +517,7 @@ def get_cluster_name_if_unset(name):
     if not name:
         clusters = get_launched_clusters()
         if len(clusters) < 1:
-            print("ERROR: No launched clusters to resume")
+            print("ERROR: No launched clusters to operate on")
             sys.exit(1)
         name = clusters[0]
     return name

@@ -47,7 +47,7 @@ def do_vagrant(options):
 
     # Upload the packages, make_dcos_vagrant script
     bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-    upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.arguments['config_package_id'])
+    upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.cluster_packages)
 
     # Upload the vagrant script
     obj = upload_string(

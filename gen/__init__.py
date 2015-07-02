@@ -318,7 +318,6 @@ def do_gen_package(config, package_filename):
             else:
                 path = tmpdir + '/' + file_info['path']
             try:
-                print(path)
                 if os.path.dirname(path):
                     os.makedirs(os.path.dirname(path), mode=0o755)
             except FileExistsError:

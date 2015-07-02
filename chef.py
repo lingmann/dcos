@@ -96,8 +96,6 @@ def do_chef(options):
             group=file_dict.get('group', 'root')
             )
 
-    print(results.utils.render_cloudconfig(results.templates['cloud-config']))
-
     # Grab the DCOS services and reformat them into chef_dcos_setup_services
     # Write out the units as files
     chef_services = ""

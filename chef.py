@@ -53,11 +53,10 @@ node['dcos']['roles'].each do |role|
 end
 directory '/etc/mesosphere/setup-flags'
 {chef_setup_flags}
-# Write out dcos services
+# Write out dcos services, start them.
 {chef_dcos_setup_services}
-# Start DCOS on the machine
-execute 'systemctl enable dcos-setup'
-execute 'systemctl start dcos-setup'
+
+# Wait for machine to come up
 execute 'wait for leader' do
   command 'ping -c 1 leader.mesos'
   retries 1800
@@ -118,7 +117,8 @@ def do_chef(options):
 
     # Get the general chef files
     chef_files = yaml.load(jinja_env.from_string(load_string('gen/chef/chef.yaml')).render({
-        'version': util.dcos_image_commit,
+        'dcos_image_commit': util.dcos_image_commit,
+        'generation_date': util.template_generation_date,
         'distro': 'centos'
     }))
 

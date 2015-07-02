@@ -6,10 +6,12 @@ write_files:
       maintainer_email 'support@mesosphere.io'
       license 'Apache 2.0'
       description "Installs and configures DCOS"
-      # long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
-      version {{ version }}
-      supports {{ distro }}
+      long_description IO.read(File.join(File.dirname(__FILE__), 'README.md'))
+      version 0.0.0
+      supports '{{ distro }}'
   - path: README.md
     content: |
       # TODO
+      DCOS Image Commit: {{ dcos_image_commit }}
+      Generation Date: {{ generation_date }}
 # TODO: kitchen.yaml / testing

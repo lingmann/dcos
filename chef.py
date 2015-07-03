@@ -1,16 +1,7 @@
 #!/usr/bin/env python3
-"""Vagrantfile Creation.
+"""Chef Creation.
 
-Generates Vagrantfile + helper script.
-
-All needed DCOS packages are uploaded to AWS, so the bits are useable without
-seeing / touching the dcos-image repository
-
-Use cases:
-1) Local dcos-image dev (Do a local build, make a vagrant using it, launch)
-2) Generate a make_vagrant script which can be shipped to customers to launch
-   basic vagrant clusters
-
+Generates a chef cookbook
 """
 
 import argparse
@@ -112,7 +103,7 @@ def do_chef(options):
         name = service['name'][:-8]
         if service.get('enable'):
             chef_services += "execute 'systemctl enable {}'\n".format(name)
-        if service.get('start'):
+        if service.get('command') == 'start':
             chef_services += "execute 'systemctl start {}'\n".format(name)
 
     # Get the general chef files
@@ -143,18 +134,6 @@ def do_chef(options):
     print()
     print()
     print("Chef tarball:", chef_tarball)
-#
-#    # Upload the vagrant script
-#    obj = upload_string(
-#            bucket,
-#            results.arguments['release_name'],
-#            'make_dcos_vagrant.sh',
-#            vagrant_script,
-#            {
-#                'CacheControl': 'no-cache',
-#                'ContentType': 'application/x-sh; charset=utf-8',
-#            })
-#    print("Vagrant available at: https://downloads.mesosphere.com/{}".format(obj.key))
 
 
 if __name__ == '__main__':

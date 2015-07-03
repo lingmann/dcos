@@ -11,6 +11,7 @@ TODO:
 import argparse
 import binascii
 import boto3
+import botocore.exceptions
 import getpass
 import hashlib
 import jinja2
@@ -543,21 +544,50 @@ def do_cluster_resume(options):
     do_wait_for_up(stack)
 
 
-def do_cluster_delete(options):
-    name = get_cluster_name_if_unset(options.name)
-    stack = session_dev.resource('cloudformation').Stack(name)
-
+def delete_stack(stack):
     # Delete the s3 bucket
     stack_resource = stack.Resource('ExhibitorS3Bucket')
-    bucket = session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
-    delete_s3_nonempty(bucket)
+    try:
+        bucket = session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
+        delete_s3_nonempty(bucket)
+    except botocore.exceptions.ClientError as ex:
+        print("ERROR deleting bucket:",ex)
 
     # Delete the stack
     stack.delete()
 
+
+def do_cluster_delete(options):
+    name = get_cluster_name_if_unset(options.name)
+    stack = session_dev.resource('cloudformation').Stack(name)
+
+    delete_stack(stack)
+
     launched = set(get_launched_clusters())
     launched.remove(name)
     save_launched_clusters(list(launched))
+
+
+def do_clean_stacks(options):
+    # Cycle through regions, listing all cloudformation stacks and prompting for
+    # each if it should be deleted. If yes, delete the stack and s3 bucket
+    for region in [region['id'] for region in aws_region_names]:
+        client = session_dev.resource('cloudformation', region_name=region)
+
+        # Do a for to convert from iterator to list
+        stacks = [stack for stack in client.stacks.all()]
+
+        for stack in stacks:
+            print("Stack: {}".format(stack.stack_name))
+            print("Launched: {}".format(stack.creation_time))
+            # Loop until y or n is given
+            while True:
+                delete = input("Delete? [y/n]: ")
+                if delete == 'y':
+                    delete_stack(stack)
+                    break
+                elif delete == 'n':
+                    break
 
 
 def main():
@@ -590,6 +620,10 @@ def main():
     # print_nat_amis subcommand.
     print_nat_amis = subparsers.add_parser('print-nat-amis')
     print_nat_amis.set_defaults(func=do_print_nat_amis)
+
+    # cleanup_cf_stacks
+    clean_stacks = subparsers.add_parser('clean_stacks')
+    clean_stacks.set_defaults(func=do_clean_stacks)
 
     # cluster subcommand.
     cluster = subparsers.add_parser('cluster')

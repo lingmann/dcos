@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-modules-private.git",
-    "ref" : "39e83a79aa971d19d1a7943c986b8abd61a4bbd4",
-    "ref_origin": "cmaloney/pkgpanda"
+    "ref" : "ff2a43b6e4d50296e2e39eccde5b3ada2e03d061",
+    "ref_origin": "master"
   }
 }

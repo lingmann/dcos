@@ -15,6 +15,37 @@ The DCOS Image is made up of two major components. The first is a set of pkgpand
 
 Each provider has it's own top-level utility script which contains helpers for doing various deployment, updating, testing actions for that provider.
 
+## Getting Started
+
+General requirements: Python3, pkgpanda, everything in requirements.txt, docker relatively new (1.5+ probably)
+
+Building dcos-image.
+
+1) Setup a Python3 virtualenv containing pkgpanda, dcos-image dependencies.
+```
+# Make a virtualenv (python 3.4 method). Others work as well. Must be python3
+pyvenv pkgpanda_env
+# cd into pkgpanda checkout
+# NOTE: Develop makes it so local changes will be reflected automatically
+python3 setup.py develop
+
+# cd into dcos-image checkout
+# Install dcos-image requirements
+pip install -r requirements.txt
+```
+2) Build packages
+```
+# cd dcos-image checkout
+cd packages
+mkpanda tree
+```
+
+3) Build a custom aws with your local changes
+```
+# cd dcos-image checkout
+./aws.py build --upload
+```
+
 ## Deploying / Working across all providers
 
 TODO(cmaloney): Document how to do meta-work for all providers/platforms (Make a release for all providers)

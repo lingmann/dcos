@@ -31,8 +31,16 @@ from pkgpanda.util import load_json, write_json
 
 import gen
 
-session_prod = boto3.session.Session(profile_name='production')
-session_dev = boto3.session.Session(profile_name='development')
+if 'ENV_AWS_CONFIG' in os.enivron:
+    session_prod = boto3.session.Session(
+        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
+        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
+        aws_default_region='us-west-2'
+        )
+    session_dev = None
+else:
+    session_prod = boto3.session.Session(profile_name='production')
+    session_dev = boto3.session.Session(profile_name='development')
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)

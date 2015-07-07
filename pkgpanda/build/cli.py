@@ -51,6 +51,9 @@ class DockerCmd:
         check_call(docker)
 
 
+def get_docker_id(docker_name):
+    return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
+
 # package {id, name} + repo -> package id
 def get_package_id(repository, pkg_str, error_if_not_exist=True):
     if PackageId.is_id(pkg_str):
@@ -407,7 +410,13 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     cmd.container = docker_name
 
     # Add the id of the docker build environment to the build_ids.
-    docker_id = check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
+    try:
+        docker_id = get_docker_id(docker_name)
+    except CalledProcessError:
+        # docker pull the container and try again
+        check_call(['docker', 'pull', docker_name])
+        docker_id = get_docker_id(docker_name)
+
     build_ids['docker'] = docker_id
 
     # TODO(cmaloney): The environment variables should be generated during build

@@ -276,7 +276,7 @@ def gen_templates(arguments, options):
         )
 
     print("Validating CloudFormation")
-    client = session_dev.client('cloudformation')
+    client = session_prod.client('cloudformation')
     client.validate_template(TemplateBody=cloudformation)
 
     return gen.Bunch({

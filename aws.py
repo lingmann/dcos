@@ -31,7 +31,7 @@ from pkgpanda.util import load_json, write_json
 
 import gen
 
-if 'ENV_AWS_CONFIG' in os.enivron:
+if 'ENV_AWS_CONFIG' in os.environ:
     session_prod = boto3.session.Session(
         aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
         aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),

@@ -35,6 +35,7 @@ write_files:
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
+      MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]
@@ -43,3 +44,9 @@ write_files:
       MESOS_RESOURCES=ports:[1-21,23-5050,5052-65535]
       MESOS_DEFAULT_ROLE=slave_public
       MESOS_ATTRIBUTES=public_ip:true
+  - path: /etc/mesos-executor-environment.json
+    content: |
+      {
+        "PATH": "/usr/bin",
+        "SHELL": "/usr/bin/bash"
+      }

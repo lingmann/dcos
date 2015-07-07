@@ -25,6 +25,7 @@ Building dcos-image.
 ```
 # Make a virtualenv (python 3.4 method). Others work as well. Must be python3
 pyvenv pkgpanda_env
+source pkgpanda_env/bin/activate
 # cd into pkgpanda checkout
 # NOTE: Develop makes it so local changes will be reflected automatically
 python3 setup.py develop

@@ -777,7 +777,7 @@
         "AssociatePublicIpAddress" : "true",
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "PublicSlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          {{ public_slave_cloud_config }}
+          {{ slave_public_cloud_config }}
         ]]}}
       }
     },

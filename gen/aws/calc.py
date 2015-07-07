@@ -12,5 +12,5 @@ defaults = {
 arguments = {
     'slave_cloud_config': '{{ slave_cloud_config }}',
     'master_cloud_config': '{{ master_cloud_config }}',
-    'public_slave_cloud_config': '{{ public_slave_cloud_config }}'
+    'slave_public_cloud_config': '{{ slave_public_cloud_config }}'
 }

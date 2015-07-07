@@ -106,9 +106,9 @@ cf_instance_groups = {
         'report_name': 'SlaveServerGroup',
         'roles': ['slave']
     },
-    'public_slave': {
+    'slave_public': {
         'report_name': 'PublicSlaveServerGroup',
-        'roles': ['public_slave']
+        'roles': ['slave_public']
     }
 }
 
@@ -175,7 +175,7 @@ def render_cloudformation(
         cf_template,
         master_cloudconfig,
         slave_cloudconfig,
-        public_slave_cloudconfig):
+        slave_public_cloudconfig):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -186,7 +186,7 @@ def render_cloudformation(
     template_str = jinja_env.from_string(cf_template).render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
-        'public_slave_cloud_config': transform_lines(public_slave_cloudconfig)
+        'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
     })
 
     print(template_str)
@@ -241,7 +241,7 @@ def gen_templates(arguments, options):
     # Add general services
     cloud_config = results.utils.add_services(cloud_config)
 
-    # Specialize for master, fslave, public_slave
+    # Specialize for master, slave, slave_public
     variant_cloudconfig = {}
     for variant, params in cf_instance_groups.items():
         cc_variant = deepcopy(cloud_config)
@@ -264,7 +264,7 @@ def gen_templates(arguments, options):
         results.templates['cloudformation'],
         variant_cloudconfig['master'],
         variant_cloudconfig['slave'],
-        variant_cloudconfig['public_slave']
+        variant_cloudconfig['slave_public']
         )
 
     print("Validating CloudFormation")

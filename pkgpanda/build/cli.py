@@ -54,6 +54,7 @@ class DockerCmd:
 def get_docker_id(docker_name):
     return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
 
+
 # package {id, name} + repo -> package id
 def get_package_id(repository, pkg_str, error_if_not_exist=True):
     if PackageId.is_id(pkg_str):

@@ -49,7 +49,7 @@ def hash_checkout(item):
     elif isinstance(item, int):
         return hash_int(item)
     else:
-        raise NotImplementedError(str(type(item)))
+        raise NotImplementedError("{} of type {}".format(item, str(type(item))))
 
 
 def get_filename(out_dir, url_str):

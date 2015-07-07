@@ -84,3 +84,5 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/keepalived
 ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n \$KEEPALIVED_OPTIONS
 EOF
+
+chmod go+r "$PKG_PATH/sbin/keepalived"

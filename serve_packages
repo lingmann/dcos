@@ -1,0 +1,43 @@
+#!/bin/bash
+
+# TODO(cmaloney): Make a simpler python proxying version for
+# people running local vagrant.
+cat <<EOF > "nginx.conf"
+
+pid nginx.pid;
+daemon off;
+
+events {}
+
+http {
+server {
+    rewrite_log on;
+    error_log stderr;
+    access_log off;
+    root $PWD;
+    listen 4000;
+    autoindex on;
+
+    location / {}
+
+    location /bootstrap/ {
+      alias $PWD/packages/;
+    }
+
+    location /config/ {
+      alias $PWD/packages/;
+    }
+
+    location /packages/dcos-config/ {
+      alias $PWD/setup/;
+    }
+
+    location /bootstrap.latest {
+      alias $PWD/packages/bootstrap.latest;
+    }
+}
+}
+EOF
+
+nginx -c nginx.conf -p $PWD
+

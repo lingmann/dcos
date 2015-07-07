@@ -1,0 +1,16 @@
+write_files:
+  - path: /etc/mesosphere/setup-flags/repository-url
+    permissions: 0644
+    owner: root
+    content: |
+      {{ bootstrap_url }}
+  - path: /etc/mesosphere/setup-flags/bootstrap-id
+    permissions: 0644
+    owner: root
+    content: |
+      BOOTSTRAP_ID={{ bootstrap_id }}
+  - path: /etc/mesosphere/setup-flags/cluster-packages.json
+    permissions: 0644
+    owner: root
+    content: |
+      {{ cluster_packages }}

@@ -1,5 +1,4 @@
 __pycache__
-prod.*
-aws.html
 .idea/
-
+dcos-config--setup*.tar.xz
+chef-*.tar.xz

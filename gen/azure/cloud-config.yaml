@@ -1,0 +1,55 @@
+write_files:
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/pkginfo.json
+    content: |
+      {
+        "environment": {
+          "PROVIDER": "azure"
+        }
+      }
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/cloudenv
+    content: |
+      # TODO(cmaloney): This needs to become an internal load balancer between the masters.
+      MASTER_ELB=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
+      FALLBACK_DNS=168.63.129.16
+      MARATHON_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-slave-provider
+    content: |
+      MESOS_HOSTNAME=$private_ipv4
+      MESOS_IP=$private_ipv4
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-master-provider
+    # TODO(cmaloney): MESOS_HOSTNAME, MESOS_IP break upgrade paths
+    content: |
+      MESOS_CLUSTER=[[[variables('uniqueName')]]]
+      MESOS_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
+      MESOS_IP=$private_ipv4
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor
+    content: |
+      AZURE_CONTAINER=apollo-exhibitor
+      AZURE_PREFIX=[[[variables('uniqueName')]]]
+      AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
+      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
+      EXHIBITOR_WEB_UI_PORT=8181
+      EXHIBITOR_HOSTNAME=$private_ipv4
+
+coreos:
+  units:
+    - name: var-lib.mount
+      command: start
+      content: |
+        [Unit]
+        Description=Mount /var/lib
+        Before=dbus.service
+        [Mount]
+        What=/dev/sdb1
+        Where=/var/lib
+        Type=ext4
+    - name: config-writer.service
+      command: start
+      content: |
+        [Unit]
+        Description=Write out dynamic config values
+        [Service]
+        Type=oneshot
+        EnvironmentFile=/etc/environment
+        # Marathon depends on `hostname` resolution working
+        ExecStart=/usr/bin/bash -c "echo $private_ipv4 $(hostname) > /etc/hosts"

@@ -2,6 +2,6 @@
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "url_extract",
-    "url": "http://openssl.org/source/openssl-1.0.2a.tar.gz"
+    "url": "https://openssl.org/source/openssl-1.0.2c.tar.gz"
   }
 }

@@ -1,27 +1,33 @@
-import boto3
-import requests
+import os
+from datetime import datetime
+from subprocess import check_call, check_output
+from pkgpanda.util import load_string
 
-bucket = boto3.resource('s3').Bucket('downloads.mesosphere.io')
+dcos_image_commit = os.getenv(
+    'DCOS_IMAGE_COMMIT',
+    os.getenv(
+        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
+        None
+        )
+    )
+
+if dcos_image_commit is None:
+    dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+
+if dcos_image_commit is None:
+    raise "Unable to set dcos_image_commit from teamcity or git."
+
+template_generation_date = str(datetime.utcnow())
 
 
-def render_markdown_data(data):
-    return requests.post(
-            "https://api.github.com/markdown/raw",
-            headers={'Content-type': 'text/plain'},
-            data=data
-            ).text
+def build_packages():
+    # TODO(cmaloney): don't shell out.
+    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
+    return load_string('packages/bootstrap.latest')
 
 
-def render_markdown(path_to_md):
-    return render_markdown_data(open(path_to_md, 'r'))
-
-
-def upload_s3(name, path, dest_path=None, args={}, no_cache=False):
-    if no_cache:
-        args['CacheControl'] = 'no-cache'
-
-    with open(path, 'rb') as data:
-        print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
-        if not dest_path:
-            dest_path = path
-        return bucket.Object('dcos/{name}/{path}'.format(name=name, path=dest_path)).put(Body=data, **args)
+def get_local_build(skip_build):
+    if not skip_build:
+        return build_packages()
+    else:
+        return load_string('packages/bootstrap.latest')

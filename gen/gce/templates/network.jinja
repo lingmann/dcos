@@ -34,5 +34,23 @@ resources:
             ports: [1-65535]
           - IPProtocol: ICMP
         sourceRanges: [ {{network_pool}} ]
-        sourceRanges: [ 10.255.0.0/16 ]
         network: $(ref.{{name}}.selfLink)
+
+    - type: compute.v1.firewall
+      name: {{ name }}-allow-ssh
+      properties:
+        allowed:
+          - IPProtocol: TCP
+            ports: [22]
+        sourceRanges: ["0.0.0.0/0"]
+        network: $(ref.{{properties["network"]}}.selfLink)
+
+    - type: compute.v1.firewall
+      name: {{ name }}-allow-http
+      properties:
+        allowed:
+          - IPProtocol: TCP
+            ports: [80]
+        sourceRanges: ["0.0.0.0/0"]
+        targetTags: ["http-server"]
+        network: $(ref.{{properties["network"]}}.selfLink)

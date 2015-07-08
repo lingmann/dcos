@@ -1,17 +1,13 @@
 # Mesos Slave Jinja Template
 # Created M. Massenzio, 2015-04-27
 
-{% import 'cloud-config.yaml' as cc %}
+{% import 'cloud-config.jinja' as cc %}
 
 {% set base_name = properties["base_name"]  %}
 {% set base_slave_name = base_name + '-slave' %}
-{% set machine_type = properties["machine"]%}
-{% set bootstrap_url= properties["bootstrapUrl"] %}
-
-{% set base_name = properties["base_name"]  %}
-{% set base_slave_name = base_name + '-slave' %}
-{% set machine_type = properties["machine"]%}
+{% set machine_type = properties["machine_type"]%}
 {% set bootstrap_url= properties["bootstrap_url"] %}
+
 resources:
     - name: {{base_slave_name}}-template
       type: compute.v1.instanceTemplate

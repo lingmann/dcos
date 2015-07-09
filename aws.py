@@ -108,7 +108,7 @@ late_services = """- name: cfn-signal.service
 cf_instance_groups = {
     'master': {
         'report_name': 'MasterServerGroup',
-        'roles': ['master']
+        'roles': ['master', 'aws_master']
     },
     'slave': {
         'report_name': 'SlaveServerGroup',

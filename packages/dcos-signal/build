@@ -22,7 +22,7 @@ Restart=on-failure
 StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/etc/mesosphere/etc/cloudenv
+EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStart=/opt/mesosphere/bin/dcos-signal --write_key=51ybGTeFEFU1xo6u10XMDrr6kATFyRyh
 EOF

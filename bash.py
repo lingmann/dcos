@@ -102,7 +102,6 @@ def do_bash(options):
             group='root'
             )
 
-
     setup_services += "\n"
 
     # Start, enable services which request it.

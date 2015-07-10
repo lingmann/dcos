@@ -23,7 +23,7 @@ chef_file_template = """file '{filename}' do
     mode '{mode}'
     owner '{owner}'
     group '{group}'
-done
+end
 """
 
 default_recipe = """# Cookbook Name:: dcos
@@ -114,7 +114,7 @@ def do_chef(options):
     }))
 
     chef_files['write_files'].append({
-        'path': 'recipies/default.rb',
+        'path': 'recipes/default.rb',
         'content': default_recipe.format(
             chef_setup_flags=chef_cloud_config_files,
             chef_dcos_setup_services=chef_services

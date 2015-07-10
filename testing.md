@@ -6,7 +6,7 @@
 - docker (1.5+ probably)
 - Vagrant
 
-### Prepare target test machine
+### Prepare the target test machine
 
 - Follow instructions on http://vagrantbox.es and setup a VM (CentOS 7 for instance)
 - Customize `Vagrantfile`
@@ -20,28 +20,30 @@
 - `service docker restart`
 - Edit `/etc/hosts`, add `192.168.33.10 leader.mesos`
 
-### Building dcos-image.
+### Building dcos-image
 
-Setup a Python3 virtualenv containing pkgpanda, dcos-image dependencies.
+- Setup a Python3 virtualenv containing pkgpanda, dcos-image dependencies.
+    ```
+    # Make a virtualenv (python 3.4 method). Others work as well. Must be python3
+    WORKDIR=/tmp/work
+    pyvenv pkgpanda_env
+    source pkgpanda_env/bin/activate
+    git clone https://github.com/mesosphere/dcos-image.git $WORKDIR/dcos-image
+    git clone https://github.com/mesosphere/pkgpanda.git $WORKDIR/pkgpanda
+    cd $WORKDIR/pkgpanda
+    python3 setup.py develop
 
-```
-# Make a virtualenv (python 3.4 method). Others work as well. Must be python3
-WORKDIR=/tmp/work
-pyvenv pkgpanda_env
-source pkgpanda_env/bin/activate
-git clone https://github.com/mesosphere/dcos-image.git $WORKDIR/dcos-image
-git clone https://github.com/mesosphere/pkgpanda.git $WORKDIR/pkgpanda
-cd $WORKDIR/pkgpanda
-python3 setup.py develop
+    cd $WORKDIR/dcos-image
+    pip install -r requirements.txt
+    ```
+- Edit ref and ref_origin to match pkgpanda branch
+  - `vi packages/pkgpanda/buildinfo.json`
+- Run the `dcos-image` build pertaining to `chef`
+  - `./chef.py`
+- Copy resulting tar.xz file to test machine
+  - `scp chef-*.tar.xz 192.168.33.10:/tmp`
 
-cd $WORKDIR/dcos-image
-pip install -r requirements.txt
-vi packages/pkgpanda/buildinfo.json # Edit ref and ref_origin to match pkgpanda branch
-./chef.py
-scp chef-*.tar.xz 192.168.33.10:/tmp
-```
-
-### Running `chef-solo` on test machine
+### Running `chef-solo` on the test machine
 
 Execute the following steps on the test machine
 

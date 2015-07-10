@@ -6,11 +6,8 @@ the necessary dependencies.
 
 Usage:
   mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps]
-  mkpanda add <package-tarball> [options]
+  mkpanda tree [--mkbootstrap] [<name>] [options]
   mkpanda clean
-  mkpanda list [options]
-  mkpanda remove <name-or-id>... [options]
-  mkpanda tree [--mkbootstrap] [<name>]
 
 Options:
   --repository-path=<path>  Path to pkgpanda repository containing all the
@@ -30,7 +27,7 @@ import pkgpanda.build.constants
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, make_bootstrap_tarball, sha1
-from pkgpanda.cli import add_to_repository, print_repo_list
+from pkgpanda.cli import add_to_repository
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
 
@@ -52,6 +49,10 @@ class DockerCmd:
         docker.append(self.container)
         docker += cmd
         check_call(docker)
+
+
+def get_docker_id(docker_name):
+    return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
 
 
 # package {id, name} + repo -> package id
@@ -97,22 +98,6 @@ def main():
         repository_path = tmpdir.name
 
     repository = Repository(normpath(expanduser(repository_path)))
-
-    # Repository management commands.
-    if arguments['add']:
-        add_to_repository(repository, arguments['<package-tarball>'])
-        sys.exit(0)
-
-    if arguments['list']:
-        print_repo_list(repository.list())
-        sys.exit(0)
-
-    if arguments['remove']:
-        for package in arguments['<name-or-id>']:
-            pkg_id = get_package_id(repository, package)
-            # TODO(cmaloney): the str() here is ugly.
-            repository.remove(pkg_id)
-        sys.exit(0)
 
     if arguments['tree']:
         build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'])
@@ -426,7 +411,13 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     cmd.container = docker_name
 
     # Add the id of the docker build environment to the build_ids.
-    docker_id = check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
+    try:
+        docker_id = get_docker_id(docker_name)
+    except CalledProcessError:
+        # docker pull the container and try again
+        check_call(['docker', 'pull', docker_name])
+        docker_id = get_docker_id(docker_name)
+
     build_ids['docker'] = docker_id
 
     # TODO(cmaloney): The environment variables should be generated during build

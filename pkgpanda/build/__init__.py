@@ -23,6 +23,9 @@ def hash_checkout(item):
         hasher.update(s.encode('utf-8'))
         return binascii.hexlify(hasher.digest()).decode('ascii')
 
+    def hash_int(i):
+        return hash_str(str(i))
+
     def hash_dict(d):
         item_hashes = []
         for k in sorted(d.keys()):
@@ -43,8 +46,10 @@ def hash_checkout(item):
         return hash_dict(item)
     elif isinstance(item, list):
         return hash_list(item)
+    elif isinstance(item, int):
+        return hash_int(item)
     else:
-        raise NotImplementedError(str(type(item)))
+        raise NotImplementedError("{} of type {}".format(item, type(item)))
 
 
 def get_filename(out_dir, url_str):
@@ -61,14 +66,22 @@ def fetch_url(out_filename, url_str):
 
     # Handle file:// urls specially since urllib will interpret them to have a
     # netloc when they never have a netloc...
-    if url.scheme == 'file':
-        abspath = os.path.abspath(url_str[len('file://'):])
-        shutil.copyfile(abspath, out_filename)
-    else:
-        # Download the file.
-        with open(out_filename, "w+b") as f:
-            with urllib.request.urlopen(url_str) as response:
-                shutil.copyfileobj(response, f)
+    try:
+        if url.scheme == 'file':
+            abspath = os.path.abspath(url_str[len('file://'):])
+            shutil.copyfile(abspath, out_filename)
+        else:
+            # Download the file.
+            with open(out_filename, "w+b") as f:
+                with urllib.request.urlopen(url_str) as response:
+                    shutil.copyfileobj(response, f)
+    except:
+        try:
+            os.remove(out_filename)
+        except Exception as ex:
+            print("ERROR: Unable to remove temp file: {}. Future builds may have problems because of it.".format(
+                out_filename), ex)
+        raise
 
 
 # TODO(cmaloney): Restructure checkout_sources and fetch_sources so all

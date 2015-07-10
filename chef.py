@@ -19,7 +19,8 @@ jinja_env = jinja2.Environment(
 chef_file_template = """file '{filename}' do
     atomic_update true
     content <<EOF
-{content}EOF
+{content}
+EOF
     mode '{mode}'
     owner '{owner}'
     group '{group}'

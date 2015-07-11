@@ -218,14 +218,20 @@ def upload_cf(bucket, release_name, cf_id, text):
     return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_obj.key)
 
 
-def upload_packages(bucket, release_name, bootstrap_id, cluster_packages):
+# TODO(cmaloney): Cluster packages as passed here is borked in some situations.
+# adding extra_packages as a quick hacky workaround. Biggest one is we generate
+# and upload two templates which have the same 'cluster package' name, but two
+# different package IDs. make_candidate
+def upload_packages(bucket, release_name, bootstrap_id, cluster_packages, extra_packages=[]):
     def upload(*args, **kwargs):
         return upload_s3(bucket, release_name, if_not_exists=True, *args, **kwargs)
 
     cluster_package_ids = [pkg['id'] for pkg in cluster_packages.values()]
 
+    cluster_package_ids += extra_packages
+
     # Upload packages including config package
-    for id_str in load_json('packages/{}.active.json'.format(bootstrap_id)) + cluster_package_ids:
+    for id_str in sorted(set(load_json('packages/{}.active.json'.format(bootstrap_id)) + cluster_package_ids)):
         id = PackageId(id_str)
         upload('packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
 
@@ -354,13 +360,18 @@ def do_make_candidate(options):
 
     button_page = gen_buttons(release_name, "RC for " + options.release_name)
 
+    # Make sure we upload the packages for both the multi-master templates as well
+    # as the single-master templates.
+    extra_packages = [pkg['id'] for pkg in multi_master.results.cluster_packages.values()]
+
     # Upload the packages.
     bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
     upload_packages(
             bucket,
             release_name,
             bootstrap_id,
-            single_master.results.cluster_packages)
+            single_master.results.cluster_packages,
+            extra_packages)  # The multi_master template cluster packages
     upload_cf(bucket, release_name, 'single-master', single_master.cloudformation)
     upload_cf(bucket, release_name, 'multi-master', multi_master.cloudformation)
 

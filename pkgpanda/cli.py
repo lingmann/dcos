@@ -24,6 +24,8 @@ Options:
 
 import os.path
 import sys
+
+from functools import partial
 from itertools import groupby
 from os import umask
 from subprocess import check_call
@@ -67,6 +69,11 @@ def print_repo_list(packages):
                 print("  " + package.version)
 
 
+def _copy_fetcher(setup_pkg_dir, id, target):
+    src_pkg_path = os.path.join(setup_pkg_dir, id) + "/"
+    check_call(["cp", "-rp", src_pkg_path, target])
+
+
 def do_bootstrap(install, repository):
     # These files should be set by the environment which initially builds
     # the host (cloud-init).
@@ -85,27 +92,25 @@ def do_bootstrap(install, repository):
     # merge existing packages, hard fail instead.
     setup_packages_to_activate = []
     setup_pkg_dir = install.get_config_filename("setup-packages")
-    for pkg_id_str in os.listdir(setup_pkg_dir):
-        print("Installing setup package: {}".format(pkg_id_str))
-        if not PackageId.is_id(pkg_id_str):
-            print("Invalid package id in setup package: {}".format(pkg_id_str))
-            sys.exit(1)
-        pkg_id = PackageId(pkg_id_str)
-        if pkg_id.version != "setup":
-            print("Setup packages (those in `{0}`) must have the version setup. Bad package: {1}"
-                  .format(setup_pkg_dir, pkg_id_str))
-            sys.exit(1)
+    copy_fetcher = partial(_copy_fetcher, setup_pkg_dir)
+    if os.path.exists(setup_pkg_dir):
+        for pkg_id_str in os.listdir(setup_pkg_dir):
+            print("Installing setup package: {}".format(pkg_id_str))
+            if not PackageId.is_id(pkg_id_str):
+                print("Invalid package id in setup package: {}".format(pkg_id_str))
+                sys.exit(1)
+            pkg_id = PackageId(pkg_id_str)
+            if pkg_id.version != "setup":
+                print("Setup packages (those in `{0}`) must have the version setup. Bad package: {1}"
+                      .format(setup_pkg_dir, pkg_id_str))
+                sys.exit(1)
 
-        # Make sure there is no existing package
-        if repository.has_package(pkg_id_str):
-            print("WARNING: Ignoring already installed package {}".format(pkg_id_str))
+            # Make sure there is no existing package
+            if repository.has_package(pkg_id_str):
+                print("WARNING: Ignoring already installed package {}".format(pkg_id_str))
 
-        def copy_fetcher(id, target):
-            src_pkg_path = os.path.join(setup_pkg_dir, pkg_id_str) + "/"
-            check_call(["cp", "-rp", src_pkg_path, target])
-
-        repository.add(copy_fetcher, pkg_id_str)
-        setup_packages_to_activate.append(pkg_id_str)
+            repository.add(copy_fetcher, pkg_id_str)
+            setup_packages_to_activate.append(pkg_id_str)
 
     # If active.json is set on the host, use that as the set of packages to
     # activate. Otherwise just use the set of currently active packages (those

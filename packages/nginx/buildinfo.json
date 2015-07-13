@@ -4,7 +4,7 @@
   "sources" :{
       "nginx": {
           "kind": "url_extract",
-          "url": "http://openresty.org/download/ngx_openresty-1.7.10.1.tar.gz"
+          "url": "https://s3.amazonaws.com/downloads.mesosphere.io/openresty_mirror/ngx_openresty-1.7.10.2.tar.gz"
       },
       "adminrouter": {
           "kind": "git",

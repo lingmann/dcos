@@ -75,12 +75,13 @@ def fetch_url(out_filename, url_str):
             with open(out_filename, "w+b") as f:
                 with urllib.request.urlopen(url_str) as response:
                     shutil.copyfileobj(response, f)
-    except:
+    except Exception as fetch_exception:
+        print("ERROR: Unable to fetch {}".format(url_str), fetch_exception)
         try:
             os.remove(out_filename)
-        except Exception as ex:
+        except Exception as cleanup_exception:
             print("ERROR: Unable to remove temp file: {}. Future builds may have problems because of it.".format(
-                out_filename), ex)
+                out_filename), cleanup_exception)
         raise
 
 

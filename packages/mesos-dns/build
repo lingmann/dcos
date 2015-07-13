@@ -88,7 +88,7 @@ if len(sys.argv) != 4:
 status_url = EXHIBITOR_STATUS_URL.format(sys.argv[1])
 fallback_dns = sys.argv[2]
 resolvconf_path = sys.argv[3]
-dns_test_query = 's3.amazonaws.com'
+dns_test_query = 'master.mesos'
 dns_timeout = 5
 
 servers = []

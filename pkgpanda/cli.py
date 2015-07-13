@@ -24,7 +24,6 @@ Options:
 
 import os.path
 import sys
-
 from functools import partial
 from itertools import groupby
 from os import umask

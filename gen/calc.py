@@ -1,6 +1,20 @@
 import json
+import os
 import urllib.request
 from math import floor
+from subprocess import check_output
+
+
+def calulate_dcos_image_commit(arguments):
+    dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
+
+    if dcos_image_commit is None:
+        dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()
+
+    if dcos_image_commit is None:
+        raise "Unable to set dcos_image_commit from teamcity or git."
+
+    return dcos_image_commit
 
 
 def calculate_bootstrap(arguments):
@@ -26,7 +40,8 @@ def calculate_fallback_dns(arguments):
 
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
-    'fallback_dns': calculate_fallback_dns
+    'fallback_dns': calculate_fallback_dns,
+    'dcos_image_commit': calulate_dcos_image_commit
 }
 
 can = {

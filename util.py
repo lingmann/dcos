@@ -3,13 +3,7 @@ from datetime import datetime
 from subprocess import check_call, check_output
 from pkgpanda.util import load_string
 
-dcos_image_commit = os.getenv(
-    'DCOS_IMAGE_COMMIT',
-    os.getenv(
-        'BUILD_VCS_NUMBER_ClosedSource_Dcos_ImageBuilder_MesosphereDcosImage2',
-        None
-        )
-    )
+dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 
 if dcos_image_commit is None:
     dcos_image_commit = check_output(['git', 'rev-parse', 'HEAD']).decode('utf-8').strip()

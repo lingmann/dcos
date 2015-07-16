@@ -76,7 +76,7 @@ After=syslog.target network.target
 ConditionPathExists=/opt/mesosphere/etc/keepalived
 
 [Service]
-Restart=on-failure
+Restart=always
 StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/etc/environment

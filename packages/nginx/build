@@ -51,7 +51,7 @@ After=mesos-dns.service
 Requires=mesos-dns.service
 
 [Service]
-Restart=on-failure
+Restart=always
 StartLimitInterval=0
 RestartSec=5
 EnvironmentFile=/etc/environment

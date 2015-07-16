@@ -570,7 +570,7 @@ def delete_stack(stack):
         bucket = session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
         delete_s3_nonempty(bucket)
     except botocore.exceptions.ClientError as ex:
-        print("ERROR deleting bucket:",ex)
+        print("ERROR deleting bucket:", ex)
 
     # Delete the stack
     stack.delete()
@@ -609,6 +609,46 @@ def do_clean_stacks(options):
                     break
 
 
+def do_clean_buckets(options):
+    # List s3 buckets, Prompt to delete any that don't have an associated stack
+    s3 = session_dev.resource('s3')
+    buckets = [bucket for bucket in s3.buckets.all()]
+
+    # NOTE: We list s3 buckets before cf stacks so that we hopefully don't get
+    # any stacks just starting up.
+
+    # Get all the current cf stack buckets
+    cf_buckets = []
+    for region in [region['id'] for region in aws_region_names]:
+        cf = session_dev.resource('cloudformation', region_name=region)
+
+        for stack in cf.stacks.all():
+            for resource in stack.resource_summaries.all():
+                if resource.logical_resource_id == 'ExhibitorS3Bucket':
+                    if resource.physical_resource_id is None:
+                        break
+                    cf_buckets.append(resource.physical_resource_id)
+                    break
+
+
+    for bucket in buckets:
+        if bucket.name in cf_buckets:
+            continue
+
+        # TODO(cmaloney): This should be a 'prompt' function.
+        while True:
+            delete = input("{} [y/n]: ".format(bucket.name))
+            if delete == 'y':
+                try:
+                    delete_s3_nonempty(bucket)
+                except Exception as ex:
+                    print("ERROR",ex)
+                    print("ERROR: Unable to delete", bucket.name)
+                break
+            elif delete == 'n':
+                break
+
+
 def main():
     parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')
     subparsers = parser.add_subparsers(title='commands')
@@ -643,6 +683,10 @@ def main():
     # cleanup_cf_stacks
     clean_stacks = subparsers.add_parser('clean_stacks')
     clean_stacks.set_defaults(func=do_clean_stacks)
+
+    # cleanup s3 buckets
+    clean_stacks = subparsers.add_parser('clean_buckets')
+    clean_stacks.set_defaults(func=do_clean_buckets)
 
     # cluster subcommand.
     cluster = subparsers.add_parser('cluster')

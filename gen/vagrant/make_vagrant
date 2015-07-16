@@ -4,7 +4,7 @@
 # date: {{ template_generation_date }}
 #
 #
-# This file is © 2015 Mesosphere, Inc. ("Mesosphere"). Mesosphere licenses this
+# This file is (C) 2015 Mesosphere, Inc. ("Mesosphere"). Mesosphere licenses this
 # file to you solely pursuant to the agreement between Mesosphere and you (if
 # any).  If there is no such agreement, the following terms apply (and you may
 # not use this file except in compliance with such terms):

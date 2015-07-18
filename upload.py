@@ -4,7 +4,7 @@
 Does a full package build by default and uploads it to the requested release name.
 
 Usage:
-    upload.py <release_name> [--skip-build] [--skip-upload]
+    upload.py <release_name> [--skip-build] [--skip-upload] [--make-latest]
 """
 
 import botocore.client
@@ -88,6 +88,11 @@ def do_build_and_upload(options):
     if not options['--skip-upload']:
         upload_release(options['<release_name>'], bootstrap_id)
 
+    if options['--make-latest']:
+        upload_string(options['<release_name>'], 'boostrap.latest', bootstrap_id, {
+            'CacheControl': 'no-cache',
+            'ContentType': 'text/plain; charset=utf-8',
+        })
 
 if __name__ == '__main__':
     options = docopt(__doc__)

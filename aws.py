@@ -275,7 +275,7 @@ def upload_buttons(release_name, content):
 
 def do_make_candidate(options):
     # Make sure everything is built / up to date.
-    bootstrap_id = util.get_local_build(False)
+    bootstrap_id = util.get_local_build(True)
     release_name = 'testing/' + options.release_name
 
     # Generate the single-master and multi-master templates.

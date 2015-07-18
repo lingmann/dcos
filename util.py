@@ -1,7 +1,7 @@
 import os
 from datetime import datetime
-from subprocess import check_call, check_output
 from pkgpanda.util import load_string
+from subprocess import check_call, check_output
 
 dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 
@@ -14,14 +14,13 @@ if dcos_image_commit is None:
 template_generation_date = str(datetime.utcnow())
 
 
-def build_packages():
-    # TODO(cmaloney): don't shell out.
-    check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
-    return load_string('packages/bootstrap.latest')
+def cluster_to_extra_packages(cluster_packages):
+    return [pkg['id'] for pkg in cluster_packages.values()]
 
 
 def get_local_build(skip_build):
     if not skip_build:
-        return build_packages()
-    else:
+        check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
         return load_string('packages/bootstrap.latest')
+
+    return load_string('packages/bootstrap.latest')

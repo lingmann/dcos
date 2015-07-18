@@ -18,7 +18,7 @@ import jinja2
 
 import gen
 import util
-from aws import session_prod, upload_packages, upload_string
+from upload import upload_release, upload_string
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -46,12 +46,13 @@ def do_vagrant(options):
         })
 
     # Upload the packages, make_dcos_vagrant script
-    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-    upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.cluster_packages)
+    upload_release(
+        results.arguments['release_name'],
+        bootstrap_id,
+        util.cluster_to_extra_packages(results.cluster_packages))
 
     # Upload the vagrant script
     obj = upload_string(
-            bucket,
             results.arguments['release_name'],
             'make_dcos_vagrant.sh',
             vagrant_script,
@@ -59,6 +60,8 @@ def do_vagrant(options):
                 'CacheControl': 'no-cache',
                 'ContentType': 'application/x-sh; charset=utf-8',
             })
+
+    # TODO(cmaloney): Unless making a "stable" release output at a unique url.
     print("Vagrant available at: https://downloads.mesosphere.com/{}".format(obj.key))
 
 

@@ -10,7 +10,7 @@ from pkgpanda.util import write_string
 
 import gen
 import util
-from aws import session_prod, upload_packages
+from upload import upload_release
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -33,8 +33,8 @@ bash_template = """#!/bin/bash
 #
 #
 # Metadata:
-#   dcos image commit: {{ dcos_image_commit }}
-#   generation date: {{ generation_date }}
+#   dcos image commit: {dcos_image_commit}
+#   generation date: {generation_date}
 #
 # TODO(cmaloney): Copyright + License string here
 
@@ -105,7 +105,6 @@ def do_bash(options):
     setup_services += "\n"
 
     # Start, enable services which request it.
-    print(results.templates['dcos-services'])
     for service in results.templates['dcos-services']:
         assert service['name'].endswith('.service')
         name = service['name'][:-8]
@@ -123,8 +122,10 @@ def do_bash(options):
         )
 
     # Upload the packages
-    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-    upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.cluster_packages)
+    upload_release(
+        results.arguments['release_name'],
+        bootstrap_id,
+        util.cluster_to_extra_packages(results.cluster_packages))
 
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)

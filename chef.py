@@ -11,7 +11,7 @@ from pkgpanda.util import load_string
 
 import gen
 import util
-from aws import session_prod, upload_packages
+from upload import upload_release
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -129,8 +129,10 @@ def do_chef(options):
     gen.do_gen_package(chef_files, chef_tarball)
 
     # Upload the packages, make_dcos_vagrant script
-    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-    upload_packages(bucket, results.arguments['release_name'], bootstrap_id, results.cluster_packages)
+    upload_release(
+        results.arguments['release_name'],
+        bootstrap_id,
+        util.cluster_to_extra_packages(results.cluster_packages))
 
     print()
     print()

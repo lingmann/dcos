@@ -10,7 +10,6 @@ TODO:
 
 import argparse
 import binascii
-import boto3
 import botocore.exceptions
 import getpass
 import hashlib
@@ -21,26 +20,15 @@ import re
 import requests
 import sys
 import time
-import util
 import uuid
 import yaml
-from botocore.client import ClientError
 from copy import deepcopy
-from pkgpanda import PackageId
 from pkgpanda.util import load_json, write_json
 
 import gen
-
-if 'ENV_AWS_CONFIG' in os.environ:
-    session_prod = boto3.session.Session(
-        aws_access_key_id=os.getenv('AWS_ACCESS_KEY_ID'),
-        aws_secret_access_key=os.getenv('AWS_SECRET_ACCESS_KEY'),
-        region_name='us-east-1'
-        )
-    session_dev = None
-else:
-    session_prod = boto3.session.Session(profile_name='production')
-    session_dev = boto3.session.Session(profile_name='development')
+from aws_config import session_dev, session_prod
+from upload import get_object, upload_release, upload_string
+import util
 
 jinja_env = jinja2.Environment(
         undefined=jinja2.StrictUndefined)
@@ -121,38 +109,6 @@ cf_instance_groups = {
 }
 
 
-def get_object(bucket, release_name, path):
-    return bucket.Object('dcos/{name}/{path}'.format(name=release_name, path=path))
-
-
-def upload_s3(bucket, release_name, path, dest_path=None, args={}, no_cache=False,  if_not_exists=False):
-    if no_cache:
-        args['CacheControl'] = 'no-cache'
-
-    if not dest_path:
-        dest_path = path
-
-    s3_object = get_object(bucket, release_name, dest_path)
-
-    if if_not_exists:
-        try:
-            s3_object.load()
-            print("Skipping {}: already exists".format(dest_path))
-            return s3_object
-        except ClientError:
-            pass
-
-    with open(path, 'rb') as data:
-        print("Uploading {}{}".format(path, " as {}".format(dest_path) if dest_path else ''))
-        return s3_object.put(Body=data, **args)
-
-
-def upload_string(bucket, release_name, filename, text, s3_put_args={}):
-    obj = get_object(bucket, release_name, filename)
-    obj.put(Body=text.encode('utf-8'), **s3_put_args)
-    return obj
-
-
 def download_s3(obj, out_file):
     body = obj.get()['Body']
     with open(out_file, 'wb') as dest:
@@ -206,9 +162,8 @@ def render_cloudformation(
     return json.dumps(template_json)
 
 
-def upload_cf(bucket, release_name, cf_id, text):
+def upload_cf(release_name, cf_id, text):
     cf_obj = upload_string(
-            bucket,
             release_name,
             'cloudformation/{}.cloudformation.json'.format(cf_id),
             text,
@@ -216,30 +171,6 @@ def upload_cf(bucket, release_name, cf_id, text):
                 'CacheControl': 'no-cache'
             })
     return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_obj.key)
-
-
-# TODO(cmaloney): Cluster packages as passed here is borked in some situations.
-# adding extra_packages as a quick hacky workaround. Biggest one is we generate
-# and upload two templates which have the same 'cluster package' name, but two
-# different package IDs. make_candidate
-def upload_packages(bucket, release_name, bootstrap_id, cluster_packages, extra_packages=[]):
-    def upload(*args, **kwargs):
-        return upload_s3(bucket, release_name, if_not_exists=True, *args, **kwargs)
-
-    cluster_package_ids = [pkg['id'] for pkg in cluster_packages.values()]
-
-    cluster_package_ids += extra_packages
-
-    # Upload packages including config package
-    for id_str in sorted(set(load_json('packages/{}.active.json'.format(bootstrap_id)) + cluster_package_ids)):
-        id = PackageId(id_str)
-        upload('packages/{name}/{id}.tar.xz'.format(name=id.name, id=id_str))
-
-    # Upload bootstrap
-    upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
-           'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-    upload('packages/{}.active.json'.format(bootstrap_id),
-           'config/{}.active.json'.format(bootstrap_id))
 
 
 def gen_templates(arguments, options):
@@ -303,7 +234,7 @@ def do_build(options):
         sys.exit(1)
 
     # TODO(cmaloney): don't shell out to mkpanda
-    bootstrap_id = util.get_local_build(options.skip_package_build)
+    bootstrap_id = util.get_local_build(False)
 
     release_name = 'testing/' + options.testing_name
 
@@ -311,17 +242,15 @@ def do_build(options):
 
     # TODO(cmaloney): print out the final cloudformation s3 path.
     if options.upload:
-        bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
         cf_bytes = templates.cloudformation.encode('utf-8')
         hasher = hashlib.sha1()
         hasher.update(cf_bytes)
         cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
-        upload_packages(
-                bucket,
-                release_name,
-                bootstrap_id,
-                templates.results.cluster_packages)
-        cf_url = upload_cf(bucket, release_name, cf_id, templates.cloudformation)
+        upload_release(
+            release_name,
+            bootstrap_id,
+            util.cluster_to_extra_packages(templates.results.cluster_packages))
+        cf_url = upload_cf(release_name, cf_id, templates.cloudformation)
         print("CloudFormation to launch: ", cf_url)
 
     if options.launch:
@@ -337,8 +266,8 @@ def gen_buttons(release_name, title):
         })
 
 
-def upload_buttons(bucket, release_name, content):
-    upload_string(bucket, release_name, 'aws.html', content, {
+def upload_buttons(release_name, content):
+    upload_string(release_name, 'aws.html', content, {
         'CacheControl': 'no-cache',
         'ContentType': 'text/html'
         })
@@ -346,7 +275,7 @@ def upload_buttons(bucket, release_name, content):
 
 def do_make_candidate(options):
     # Make sure everything is built / up to date.
-    bootstrap_id = util.build_packages()
+    bootstrap_id = util.get_local_build(False)
     release_name = 'testing/' + options.release_name
 
     # Generate the single-master and multi-master templates.
@@ -362,21 +291,19 @@ def do_make_candidate(options):
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.
-    extra_packages = [pkg['id'] for pkg in multi_master.results.cluster_packages.values()]
+    extra_packages = []
+    extra_packages += util.cluster_to_extra_packages(multi_master.results.cluster_packages)
+    extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
 
     # Upload the packages.
-    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-    upload_packages(
-            bucket,
-            release_name,
-            bootstrap_id,
-            single_master.results.cluster_packages,
-            extra_packages)  # The multi_master template cluster packages
-    upload_cf(bucket, release_name, 'single-master', single_master.cloudformation)
-    upload_cf(bucket, release_name, 'multi-master', multi_master.cloudformation)
+    upload_release(release_name, bootstrap_id, extra_packages)
+
+    # Upload the cf templates
+    upload_cf(release_name, 'single-master', single_master.cloudformation)
+    upload_cf(release_name, 'multi-master', multi_master.cloudformation)
 
     # Upload button page
-    upload_buttons(bucket, release_name, button_page)
+    upload_buttons(release_name, button_page)
 
     print("Candidate available at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
 
@@ -404,7 +331,7 @@ def do_promote_candidate(options):
     # Download and modify cloudformation template bootstrap_url
 
     # TODO(cmaloney): Finish This
-    upload_buttons(bucket, options.release_name, button_page)
+    upload_buttons(options.release_name, button_page)
 
 
 def do_print_nat_amis(options):
@@ -630,7 +557,6 @@ def do_clean_buckets(options):
                     cf_buckets.append(resource.physical_resource_id)
                     break
 
-
     for bucket in buckets:
         if bucket.name in cf_buckets:
             continue
@@ -642,7 +568,7 @@ def do_clean_buckets(options):
                 try:
                     delete_s3_nonempty(bucket)
                 except Exception as ex:
-                    print("ERROR",ex)
+                    print("ERROR", ex)
                     print("ERROR: Unable to delete", bucket.name)
                 break
             elif delete == 'n':
@@ -658,7 +584,7 @@ def main():
     build.set_defaults(func=do_build)
     build.add_argument('--upload', action='store_true')
     build.add_argument('--launch', action='store_true')
-    build.add_argument('--skip-package-build', action='store_true')
+    build.add_argument('--skip-build', action='store_true')
     build.add_argument('--testing-name', default='continuous')
     gen.add_arguments(build)
 

@@ -131,7 +131,7 @@ if __name__ == '__main__':
     build.add_argument('--skip-build', action='store_true')
 
     # make_candidate subcommand
-    make_candidate = subparsers.add_parser('make_candidate')
+    make_candidate = subparsers.add_parser('make-candidate')
     gen.add_arguments(make_candidate)
     make_candidate.set_defaults(func=do_vagrant_make_candidate)
     make_candidate.add_argument('candidate_name')

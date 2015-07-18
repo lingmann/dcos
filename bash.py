@@ -1,19 +1,12 @@
 #!/usr/bin/env python3
-"""Bash script DCOS integration
-
-Generates a bash script that you provide a list of roles to. Run the bash script
-on hosts with the correct roles and DCOS will be installed."""
+"""Generates a bash script for installing DCOS On-Prem."""
 
 import argparse
-import jinja2
 from pkgpanda.util import write_string
 
 import gen
 import util
 from upload import upload_release
-
-jinja_env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined)
 
 file_template = """mkdir -p `dirname {filename}`
 cat <<'EOF' > "{filename}"
@@ -63,20 +56,12 @@ done
 {setup_services}"""
 
 
-def do_bash(options):
-    bootstrap_id = util.get_local_build(options.skip_build)
-
-    results = gen.generate(
-        options=options,
-        mixins=['bash', 'centos', 'onprem'],
-        arguments={'bootstrap_id': bootstrap_id},
-        extra_cluster_packages=['onprem-config']
-        )
+def make_bash(gen_out):
 
     # Reformat the cloud-config into bash heredocs
     # Assert the cloud-config is only write_files
     setup_flags = ""
-    cloud_config = results.templates['cloud-config']
+    cloud_config = gen_out.templates['cloud-config']
     assert len(cloud_config) == 1
     for file_dict in cloud_config['write_files']:
         # NOTE: setup-packages is explicitly disallowed. Should all be in extra
@@ -93,7 +78,7 @@ def do_bash(options):
     # Reformat the DCOS systemd units to be bash written and started.
     # Write out the units as files
     setup_services = ""
-    for service in results.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services']:
         setup_services += file_template.format(
             filename='/etc/systemd/system/{}'.format(service['name']),
             content=service['content'],
@@ -105,7 +90,7 @@ def do_bash(options):
     setup_services += "\n"
 
     # Start, enable services which request it.
-    for service in results.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services']:
         assert service['name'].endswith('.service')
         name = service['name'][:-8]
         if service.get('enable'):
@@ -121,21 +106,53 @@ def do_bash(options):
         setup_services=setup_services
         )
 
-    # Upload the packages
-    upload_release(
-        results.arguments['release_name'],
-        bootstrap_id,
-        util.cluster_to_extra_packages(results.cluster_packages))
-
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)
-    print()
-    print()
-    print("Dcos install script: dcos_install.sh")
+
+    return 'dcos_install.sh'
+
+
+def do_bash_and_build(options):
+    bootstrap_id = util.get_local_build(options.skip_build)
+    gen_out = gen.generate(
+        options=options,
+        mixins=['bash', 'centos', 'onprem'],
+        arguments={'bootstrap_id': bootstrap_id},
+        extra_cluster_packages=['onprem-config']
+        )
+    make_bash(gen_out)
+    upload_release(
+        gen_out.arguments['release_name'],
+        bootstrap_id,
+        util.cluster_to_extra_packages(gen_out.cluster_packages)
+        )
+    print("\n\nDcos install script: dcos_install.sh")
+
+
+def do_bash_only(options):
+    gen_out = gen.generate(
+        options=options,
+        mixins=['bash', 'centos', 'onprem'],
+        extra_cluster_packages=['onprem-config']
+        )
+    make_bash(gen_out)
+    print("\n\nDcos install script: dcos_install.sh")
+
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='BASH template creation.')
-    parser.add_argument('--skip-build', action='store_true')
+    parser = argparse.ArgumentParser(description='Gen BASH templates to use to install a DCOS cluster')
+    subparsers = parser.add_subparsers(title='commands')
+
+    # No subcommand
     gen.add_arguments(parser)
+    parser.set_defaults(func=do_bash_only)
+
+    # Build subcommand
+    build = subparsers.add_parser('build')
+    gen.add_arguments(build)
+    build.set_defaults(func=do_bash_and_build)
+    build.add_argument('--skip-build', action='store_true')
+
+    # Parse the arguments and dispatch.
     options = parser.parse_args()
-    do_bash(options)
+    options.func(options)

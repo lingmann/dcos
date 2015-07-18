@@ -1,8 +1,5 @@
 #!/usr/bin/env python3
-"""Chef Creation.
-
-Generates a chef cookbook
-"""
+"""Generates a chef cookbook for installing DCOS On-Prem"""
 
 import argparse
 import jinja2
@@ -60,20 +57,11 @@ end
 """
 
 
-def do_chef(options):
-    bootstrap_id = util.get_local_build(options.skip_build)
-
-    results = gen.generate(
-        options=options,
-        mixins=['chef', 'centos', 'onprem'],
-        arguments={'bootstrap_id': bootstrap_id},
-        extra_cluster_packages=['onprem-config']
-        )
-
+def make_chef(gen_out):
     # Reformat the cloud-config into chef_cloud_config_files.
     # Assert the cloud-config is only write_files
     chef_cloud_config_files = ""
-    cloud_config = results.templates['cloud-config']
+    cloud_config = gen_out.templates['cloud-config']
     assert len(cloud_config) == 1
     for file_dict in cloud_config['write_files']:
         # NOTE: setup-packages is explicitly disallowed. Should all be in extra
@@ -90,7 +78,7 @@ def do_chef(options):
     # Grab the DCOS services and reformat them into chef_dcos_setup_services
     # Write out the units as files
     chef_services = ""
-    for service in results.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services']:
         chef_services += chef_file_template.format(
             filename='/etc/systemd/system/{}'.format(service['name']),
             content=service['content'],
@@ -99,7 +87,7 @@ def do_chef(options):
             group='root'
             )
     # Start, enable services which request it.
-    for service in results.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services']:
         assert service['name'].endswith('.service')
         name = service['name'][:-8]
         if service.get('enable'):
@@ -125,23 +113,52 @@ def do_chef(options):
     # TODO(cmaloney): Test the chef using kitchen?
 
     # Turn the chef files into a tarball to email to customers
-    chef_tarball = 'chef-{}.tar.xz'.format(results.arguments['config_id'])
+    chef_tarball = 'chef-{}.tar.xz'.format(gen_out.arguments['config_id'])
     gen.do_gen_package(chef_files, chef_tarball)
 
-    # Upload the packages, make_dcos_vagrant script
-    upload_release(
-        results.arguments['release_name'],
-        bootstrap_id,
-        util.cluster_to_extra_packages(results.cluster_packages))
+    return chef_tarball
 
-    print()
-    print()
+
+def do_chef_and_build(options):
+    bootstrap_id = util.get_local_build(options.skip_build)
+    gen_out = gen.generate(
+        options=options,
+        mixins=['chef', 'centos', 'onprem'],
+        arguments={'bootstrap_id': bootstrap_id},
+        extra_cluster_packages=['onprem-config']
+        )
+    chef_tarball = make_chef(gen_out)
+    upload_release(
+        gen_out.arguments['release_name'],
+        bootstrap_id,
+        util.cluster_to_extra_packages(gen_out.cluster_packages))
+    print("Chef tarball:", chef_tarball)
+
+
+def do_chef_only(options):
+    gen_out = gen.generate(
+        options=options,
+        mixins=['chef', 'centos', 'onprem'],
+        extra_cluster_packages=['onprem-config']
+        )
+    chef_tarball = make_chef(gen_out)
     print("Chef tarball:", chef_tarball)
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Chef template creation.')
-    parser.add_argument('--skip-build', action='store_true')
+    parser = argparse.ArgumentParser(description='Gen Chef templates to use to install a DCOS cluster')
+    subparsers = parser.add_subparsers(title='commands')
+
+    # No subcommand
     gen.add_arguments(parser)
+    parser.set_defaults(func=do_chef_only)
+
+    # Build subcommand
+    build = subparsers.add_parser('build')
+    gen.add_arguments(build)
+    build.set_defaults(func=do_chef_and_build)
+    build.add_argument('--skip-build', action='store_true')
+
+    # Parse the arguments and dispatch.
     options = parser.parse_args()
-    do_chef(options)
+    options.func(options)

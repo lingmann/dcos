@@ -121,8 +121,9 @@ if __name__ == '__main__':
     subparsers = parser.add_subparsers(title='commands')
 
     # No subcommand
-    gen.add_arguments(parser)
-    parser.set_defaults(func=do_vagrant_only)
+    # TODO(cmaloney): Re-enable this after figuring out team-city
+    # gen.add_arguments(parser)
+    # parser.set_defaults(func=do_vagrant_only)
 
     # build subcommand
     build = subparsers.add_parser('build')

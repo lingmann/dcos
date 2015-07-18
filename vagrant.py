@@ -92,7 +92,7 @@ def do_vagrant_make_candidate(options):
     release_name = "testing/" + options.candidate_name
     bootstrap_id = util.get_local_build(True)
     gen_out = gen.generate(
-        options=options,
+        options=gen.get_options_object(),
         mixins=['vagrant', 'coreos'],
         arguments={
             'release_name': release_name,
@@ -124,15 +124,14 @@ if __name__ == '__main__':
     gen.add_arguments(parser)
     parser.set_defaults(func=do_vagrant_only)
 
-    # Build subcommand
+    # build subcommand
     build = subparsers.add_parser('build')
     gen.add_arguments(build)
     build.set_defaults(func=do_vagrant_and_build)
     build.add_argument('--skip-build', action='store_true')
 
-    # make_candidate subcommand
+    # make-candidate subcommand
     make_candidate = subparsers.add_parser('make-candidate')
-    gen.add_arguments(make_candidate)
     make_candidate.set_defaults(func=do_vagrant_make_candidate)
     make_candidate.add_argument('candidate_name')
 

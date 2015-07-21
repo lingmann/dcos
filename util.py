@@ -1,5 +1,4 @@
 import os
-import urllib.request
 from datetime import datetime
 from pkgpanda.util import load_string
 from subprocess import check_call, check_output

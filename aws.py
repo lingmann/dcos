@@ -299,8 +299,10 @@ def do_make_candidate(options):
     upload_release(release_name, bootstrap_id, extra_packages)
 
     # Upload the cf templates
-    upload_cf(release_name, 'single-master', single_master.cloudformation)
-    upload_cf(release_name, 'multi-master', multi_master.cloudformation)
+    cf_url = upload_cf(release_name, 'single-master', single_master.cloudformation)
+    print("Uploaded CloudFormation Template:", cf_url)
+    cf_url = upload_cf(release_name, 'multi-master', multi_master.cloudformation)
+    print("Uploaded CloudFormation Template:", cf_url)
 
     # Upload button page
     upload_buttons(release_name, button_page)
@@ -457,6 +459,7 @@ def do_cluster_launch(options):
         template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
                 'testing/continuous/cloudformation/single-master.cloudformation.json'
 
+    print("Launching cluster with template: ", template_url)
     do_launch(options.name, template_url)
 
 

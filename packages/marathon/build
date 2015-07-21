@@ -12,7 +12,6 @@ cat <<EOF > "$marathon_service"
 [Unit]
 Description=Marathon
 After=mesos-master.service
-Requires=mesos-master.service
 [Service]
 Restart=always
 StartLimitInterval=0

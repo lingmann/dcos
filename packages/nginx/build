@@ -48,7 +48,6 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=A high performance web server and a reverse proxy server
 After=mesos-dns.service
-Requires=mesos-dns.service
 
 [Service]
 Restart=always

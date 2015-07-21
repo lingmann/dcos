@@ -459,7 +459,7 @@ def do_cluster_launch(options):
         template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
                 'testing/continuous/cloudformation/single-master.cloudformation.json'
 
-    print("Launching cluster with template: ", template_url)
+    print("Launching cluster with template:", template_url)
     do_launch(options.name, template_url)
 
 

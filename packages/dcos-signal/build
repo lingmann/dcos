@@ -17,6 +17,7 @@ cat <<EOF > "$service"
 [Unit]
 Description=DCOS Tracking
 After=mesos-master.service
+[Service]
 Restart=always
 StartLimitInterval=0
 RestartSec=5

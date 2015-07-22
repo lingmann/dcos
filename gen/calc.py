@@ -18,14 +18,15 @@ def calulate_dcos_image_commit(arguments):
 
 
 def calculate_bootstrap(arguments):
-    bootstrap_url = arguments['repository_url']
-    if arguments['release_name']:
-        bootstrap_url += '/' + arguments['release_name']
-    return bootstrap_url
+    return arguments['repository_url'].format(release_name=arguments['release_name'])
 
 
 def calculate_bootstrap_id(arguments):
-    url = '{}/{}/bootstrap.latest'.format(arguments['repository_url'], arguments['release_name'])
+    # NOTE: We always use our repository for figuring out the current
+    # bootstrap_id because it has all the bootstraps. For on-prem customers who
+    # change the bootstrap_url to point to a local cluster, they still need
+    # to be shipped our canoncial bootstrap for the selected release.
+    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(arguments['release_name'])
     return urllib.request.urlopen(url).read().decode('utf-8')
 
 
@@ -53,7 +54,7 @@ can = {
 def validate(arguments):
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
 
-    assert arguments['repository_url'][-1] != '/'
+    assert arguments['bootstrap_url'][-1] != '/'
 
     if len(arguments['release_name']):
         assert arguments['release_name'][0] != '/'
@@ -62,7 +63,7 @@ def validate(arguments):
 defaults = {
   "num_masters": 3,
   "release_name": "testing/continuous",
-  "repository_url": "https://downloads.mesosphere.com/dcos"
+  "repository_url": "https://downloads.mesosphere.com/dcos/{release_name}"
 }
 
-parameters = ["repository_url", "release_name"]
+parameters = ["release_name", "repository_url"]

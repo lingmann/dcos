@@ -89,6 +89,7 @@ def do_build_and_upload(options):
         upload_release(options['<release_name>'], bootstrap_id)
 
     if options['--make-latest']:
+        print("Setting bootstrap.latest to id:", bootstrap_id)
         upload_string(options['<release_name>'], 'bootstrap.latest', bootstrap_id, {
             'CacheControl': 'no-cache',
             'ContentType': 'text/plain; charset=utf-8',

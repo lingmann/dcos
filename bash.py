@@ -43,6 +43,9 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+mkdir -p /etc/mesosphere/roles
+mkdir -p /etc/mesosphere/setup-flags
+
 # Set DCOS roles
 for role in "$@"
 do

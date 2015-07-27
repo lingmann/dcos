@@ -1,0 +1,11 @@
+{
+  "cluster_name":"test_cluster",
+  "master_lb":"172.17.10.101",
+  "num_masters":3,
+  "release_name": "%RELEASE_NAME%",
+  "repository_url":"https://downloads.mesosphere.com/dcos/{release_name}",
+  "resolvers":"[\"8.8.8.8\"]",
+  "exhibitor_storage_backend": "zookeeper",
+  "exhibitor_zk_hosts": "zk://%ZK_HOSTS%",
+  "exhibitor_zk_path": "/test-cluster-discovery"
+}

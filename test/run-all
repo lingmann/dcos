@@ -1,0 +1,60 @@
+#!/bin/bash
+# We can't use -u since we source the virtualenv activate script which
+# uses undefined variables.
+set -eo pipefail
+
+[ -z "${HOME+x}" ] && export HOME=/root
+if [ "$#" -lt 2 ]; then
+  echo "$0 name platform [platform...]"
+  exit 1
+fi
+
+NAME=$1
+shift
+PLATFORMS="$@"
+
+if [ ! -f "build/pkgpanda-env/bin/activate" ]; then
+  echo "Couldn't find virtualenv in build/pkgpanda-env" 2>&1
+  exit 1
+fi
+
+. build/pkgpanda-env/bin/activate
+TMP=$(mktemp /tmp/onprem-vagrant.XXXXXX)
+HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
+sed "s|%RELEASE_NAME%|testing/$NAME|;s|zk://%ZK_HOSTS%|$HOST_IP:2181|" test/config.json.in > "$TMP"
+
+if [ ! -e "build/zookeeper" ]; then
+  curl -L https://www.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz | tar -C build -xzf -
+  mv build/zookeeper-* build/zookeeper
+  cp build/zookeeper/conf/zoo_sample.cfg build/zookeeper/conf/zoo.cfg
+fi
+
+cleanup() {
+  rm "$TMP"
+}
+
+trap cleanup EXIT
+
+for platform in $PLATFORMS; do
+  # We need to run 'build' again to make sure bash.py uploads config packages
+  ./${platform}.py build --config "$TMP" --assume-defaults --non-interactive
+
+  # Starting zookeeper
+  ./build/zookeeper/bin/zkServer.sh start
+  [ -e "exhibitor/" ] && rm -rf "exhibitor/"
+  pushd test/
+  PLATFORM=$platform vagrant up
+  popd
+
+  while ! [ -n "$(dig +short leader.mesos @172.17.10.101)" ]; do sleep 1; done # Wait for elected leader
+  while ! curl -Lfso /dev/null http://172.17.10.101; do sleep 1; done # Wait for web ui
+
+  DCOS_DNS_ADDRESS=http://172.17.10.101 py.test integration_test.py
+
+  pushd test/
+  vagrant destroy -f
+  popd
+
+  ./build/zookeeper/bin/zkServer.sh stop
+  rm -rf /tmp/zookeeper
+done

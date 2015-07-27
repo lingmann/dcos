@@ -75,3 +75,8 @@ The AWS tooling makes heavy use of boto3. It requires that you setup two [profil
 - `aws.py make_candidate`: Make a new candidate for a release. Performs a build, then generates the single-master, multi-master, and button page templates. Uploads them all to a testing bucket for internal testing.
 
 TODO(cmaloney): More AWS commands
+
+### Vagrant multi node cluster
+`test/run-all name platform [platform...]` build the necessary artifacts and spins up a multi node cluster (3 dedicated masters, 2 slaves) for the given platform (bash, chef etc).
+
+You can also test local changes by running `PLATFORM=platform vagrant up` in `test`/ after creating the build artifacts manually.

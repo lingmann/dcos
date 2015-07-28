@@ -120,6 +120,10 @@ nameservers.append(fallback_dns)
 
 print('Updating {}'.format(resolvconf_path))
 with open(resolvconf_path, 'w') as f:
+    print("options timeout:1", file=f)
+    print("options attempts:3", file=f)
+    print("options timeout:1", file=sys.stderr)
+    print("options attempts:3", file=sys.stderr)
     for ns in nameservers:
         line = "nameserver {}".format(ns)
         print(line, file=sys.stderr)

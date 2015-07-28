@@ -2,3 +2,8 @@ __pycache__
 .idea/
 dcos-config--setup*.tar.xz
 chef-*.tar.xz
+tmp/
+runner.env
+artifacts/
+dcos_install.sh
+bash_onprem.tar.xz

@@ -1,0 +1,5 @@
+write_files:
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_FSCONFIGDIR={{ exhibitor_fs_config_dir }}
+      EXHIBITOR_WEB_UI_PORT=8181

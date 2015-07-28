@@ -135,7 +135,7 @@ def do_bash_and_build(options):
 def do_bash_only(options):
     gen_out = gen.generate(
         options=options,
-        mixins=['bash', 'centos', 'onprem'],
+        mixins=['bash', 'centos', 'onprem', 'onprem-exhibitor-fs'],
         extra_cluster_packages=['onprem-config']
         )
     make_bash(gen_out)

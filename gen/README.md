@@ -33,7 +33,7 @@ The information provided by DCOS then gets distribution, provider, and provider+
 The information then can be converted by provider-specific code into alternate formats as needed (Make a cloud-config or generate Salt config files).
 
 # Example usage for Vagrant
-`./gen.py vagrante coreos`
+`./gen.py vagrant coreos`
 
 Generates a vagrant, prompting for all needed parameters. Note that the dcos-config package which is generated needs to be uploaded or serve_packages needs to be run. Commands for running will be printed at the end of the script.
 

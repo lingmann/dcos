@@ -13,7 +13,7 @@ make install
 config_file="$PKG_PATH/etc/logrotate.conf"
 mkdir -p $(dirname $config_file)
 cat <<'EOF' > "$config_file"
-/var/log/mesos/*.log {
+/var/log/mesos/* {
     maxsize 2000k
     daily
     missingok

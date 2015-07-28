@@ -1,0 +1,27 @@
+[Unit]
+Description=Cleanup the DCOS installation
+
+[Service]
+EnvironmentFile=/etc/environment
+Type=oneshot
+
+# Stop all services
+ExecStartPre=-/usr/bin/systemctl stop exhibitor.service marathon.service mesos-dns.service mesos-master.service nginx-reload.service  nginx.service dcos-history-service.service artemis.service mesos-slave.service dcos-download.service dcos-setup.service cfn-signal.service
+
+# Base DCOS directories
+ExecStartPre=-/usr/bin/systemctl disable dcos.target
+ExecStartPre=-/usr/bin/rm -rf /opt/mesosphere
+ExecStartPre=-/usr/bin/rm -rf /etc/mesosphere
+ExecStartPre=-/usr/bin/rm -rf /etc/systemd/system/dcos.target
+ExecStartPre=-/usr/bin/rm -rf /etc/systemd/system/dcos.target.wants
+
+# TEMP
+ExecStartPre=-/usr/bin/rm -rf /home/montana
+
+
+# Places services write data
+ExecStartPre=-/usr/bin/rm -rf /var/lib/zookeeper/snapshot /var/lib/zookeeper/transactions
+ExecStart=-/usr/bin/rm -f /tmp/bootstrap.tar.xz
+
+[X-Fleet]
+Global=true

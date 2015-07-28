@@ -36,6 +36,8 @@ write_files:
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json
+      MESOS_DOCKER_REMOVE_DELAY=1hrs
+      MESOS_GC_DELAY=2days
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]

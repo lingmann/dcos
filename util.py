@@ -1,7 +1,9 @@
 import os
+import shutil
 from datetime import datetime
 from pkgpanda.util import load_string
 from subprocess import check_call, check_output
+from tempfile import TemporaryDirectory
 
 dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 
@@ -24,3 +26,50 @@ def get_local_build(skip_build):
         return load_string('packages/bootstrap.latest')
 
     return load_string('packages/bootstrap.latest')
+
+
+def try_makedirs(path):
+    try:
+        os.makedirs(path)
+    except FileExistsError:
+        pass
+
+
+def copy_makedirs(src, dest):
+    try_makedirs(os.path.dirname(dest))
+    shutil.copy(src, dest)
+
+
+def do_bundle_onprem(extra_files, gen_out):
+    # Make a directory for assembling the output
+    with TemporaryDirectory(prefix='dcos_gen') as directory:
+
+        # Copy in the extra_files
+        for filename in extra_files:
+            shutil.copy(filename, directory + '/' + filename)
+
+        for name, info in gen_out.cluster_packages.items():
+            copy_makedirs(info['filename'], directory + "/" + info['filename'])
+
+        # Download and place the bootstrap tarball
+        # Download to ~/packages/{}.tar.xz then copy so that downloads can be cached.
+        bootstrap_id = gen_out.arguments['bootstrap_id']
+        local_bootstrap_path = "packages/{}.bootstrap.tar.xz".format(bootstrap_id)
+        if not os.path.exists(local_bootstrap_path):
+            try:
+                check_call([
+                    "wget",
+                    "-O",
+                    local_bootstrap_path,
+                    "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}.bootstrap.tar.xz".format(
+                        gen_out.arguments['release_name'],
+                        gen_out.arguments['bootstrap_id'])
+                    ])
+            except:
+                os.remove(local_bootstrap_path)
+                raise
+        # Copy the tarball in to the artifacts
+        copy_makedirs(local_bootstrap_path, directory + "/bootstrap/{}.bootstrap.tar.xz".format(bootstrap_id))
+
+        # Tar the whole thing up
+        check_call(["tar", "-czf", "onprem.tar.xz", "-C", directory, "."])

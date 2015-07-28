@@ -139,7 +139,8 @@ def do_bash_only(options):
         extra_cluster_packages=['onprem-config']
         )
     make_bash(gen_out)
-    print("\n\nDcos install script: dcos_install.sh")
+    util.do_bundle_onprem(['dcos_install.sh'], gen_out)
+    print("\n\nDCOS Install Package: onprem.tar.xz")
 
 
 if __name__ == '__main__':

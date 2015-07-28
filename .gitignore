@@ -6,4 +6,4 @@ tmp/
 runner.env
 artifacts/
 dcos_install.sh
-bash_onprem.tar.xz
+onprem.tar.xz

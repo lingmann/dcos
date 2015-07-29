@@ -43,8 +43,8 @@ logrotate_timer="$PKG_PATH/dcos.target.wants/logrotate.timer"
 mkdir -p "$(dirname "$logrotate_timer")"
 cat <<'EOF' > "$logrotate_timer"
 [Unit]
-Description=Daily log rotation
+Description=Rotate logs every 2 minutes
 [Timer]
-OnActiveSec=5min
-Unit=logrotate.service
+OnBootSec=2min
+OnUnitActiveSec=2min
 EOF

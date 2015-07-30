@@ -1,5 +1,5 @@
 {
-  "requires": ["mesos-buildenv"],
+  "requires": ["mesos-buildenv", "exhibitor"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",

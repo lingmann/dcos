@@ -63,7 +63,9 @@ def validate(arguments):
 defaults = {
   "num_masters": 3,
   "release_name": "testing/continuous",
-  "repository_url": "https://downloads.mesosphere.com/dcos/{release_name}"
+  "repository_url": "https://downloads.mesosphere.com/dcos/{release_name}",
+  "roles": "slave_public",
+  "weights": "slave_public=1"
 }
 
 parameters = ["release_name", "repository_url"]

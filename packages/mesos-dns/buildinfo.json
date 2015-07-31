@@ -8,7 +8,7 @@
     "mesos-dns": {
       "kind": "git",
       "git": "https://github.com/mesosphere/mesos-dns.git",
-      "ref": "f2d61df16c4f96da76d0d3755b2d78a9fc09a5ba",
+      "ref": "06635ff6e44f68b8d21ad5eca886c49149118ba3",
       "ref_origin": "master"
     }
   }

@@ -2,6 +2,6 @@
   "requires": ["java", "exhibitor"],
   "single_source": {
     "kind": "url_extract",
-    "url": "http://downloads.mesosphere.io/marathon/v0.9.0/marathon-0.9.0.tgz"
+    "url": "http://downloads.mesosphere.io/marathon/v0.9.1/marathon-0.9.1.tgz"
   }
 }

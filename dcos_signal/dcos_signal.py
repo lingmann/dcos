@@ -29,10 +29,13 @@ def get_cluster_summary_event_from_json(summary_json):
     num_frameworks = len(summary_json['frameworks'])
     num_slaves = len(summary_json['slaves'])
     cluster_name = summary_json['cluster']
+    frameworks = summary_json['frameworks']
+    frameworks_names_only = [f.get('name') for f in frameworks]
 
     return {'hostname': hostname,
             'num_frameworks': num_frameworks,
             'num_slaves': num_slaves,
+            'frameworks': frameworks_names_only,
             'cluster_name': cluster_name}
 
 

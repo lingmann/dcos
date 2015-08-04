@@ -234,7 +234,7 @@ def do_build(options):
         sys.exit(1)
 
     # TODO(cmaloney): don't shell out to mkpanda
-    bootstrap_id = util.get_local_build(False)
+    bootstrap_id = util.get_local_build(options.skip_build)
 
     release_name = 'testing/' + options.testing_name
 

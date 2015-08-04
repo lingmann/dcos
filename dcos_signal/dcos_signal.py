@@ -32,11 +32,17 @@ def get_cluster_summary_event_from_json(summary_json):
     frameworks = summary_json['frameworks']
     frameworks_names_only = [f.get('name') for f in frameworks]
 
-    return {'hostname': hostname,
-            'num_frameworks': num_frameworks,
-            'num_slaves': num_slaves,
-            'frameworks': frameworks_names_only,
-            'cluster_name': cluster_name}
+    result_dict = {'hostname': hostname,
+                   'num_frameworks': num_frameworks,
+                   'num_slaves': num_slaves,
+                   'frameworks': frameworks_names_only,
+                   'cluster_name': cluster_name}
+
+    for framework in frameworks_names_only:
+        key = "has_framework_%s" % framework
+        result_dict[key] = True
+
+    return result_dict
 
 
 def read_env():

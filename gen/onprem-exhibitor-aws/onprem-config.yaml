@@ -1,3 +1,4 @@
+write_files:
   - path: /etc/exhibitor
     content: |
       AWS_REGION={{ aws_region }}

@@ -319,26 +319,50 @@ def do_gen_package(config, package_filename):
     print("Package filename: ", package_filename)
 
 
-def prompt_arguments(to_set, defaults, can_calc):
+def prompt_argument(non_interactive, name, can_calc=False, default=None, possible_values=None):
+    if non_interactive:
+        print("ERROR: Unset variable when run in non-interactive mode:", name)
+        sys.exit(1)
+
+    while True:
+        default_str = ''
+        if default is not None:
+            # Validate default
+            if possible_values is not None:
+                assert default in possible_values
+            default_str = ' [{}]'.format(default)
+        elif can_calc:
+            default_str = ' <calculated>'
+
+        value = input('{}{}: '.format(name, default_str))
+
+        # Make sure value is one of the allowed values
+        if possible_values is not None and value not in possible_values:
+            print("ERROR: Value not one of the possible values:", ','.join(possible_values))
+            continue
+
+        if value:
+            return value
+        if default:
+            return default
+        if can_calc:
+            return None
+
+        print("ERROR: Must provide a value")
+
+
+def prompt_arguments(non_interactive, to_set, defaults, can_calc):
+    if non_interactive and len(to_set) > 0:
+        print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
+        sys.exit(1)
+
     arguments = dict()
     for name in sorted(to_set):
-        while True:
-            default_str = ''
-            if name in defaults:
-                default_str = ' [{}]'.format(defaults[name])
-            elif name in can_calc:
-                default_str = ' <calculated>'
+        result = prompt_argument(non_interactive, name, name in can_calc, defaults.get(name))
 
-            value = input('{}{}: '.format(name, default_str))
-            if value:
-                arguments[name] = value
-                break
-            if name in defaults:
-                arguments[name] = defaults[name]
-                break
-            if name in can_calc:
-                break
-            print("ERROR: Must provide a value")
+        # Only if we got a value (Shouldn't calculate), set the argument.
+        if result is not None:
+            arguments[name] = result
 
     return arguments
 
@@ -347,7 +371,7 @@ def prompt_arguments(to_set, defaults, can_calc):
 def get_templates(mixin_name, cluster_packages, core_templates):
     templates = dict()
     # dcos-config contains stuff statically known for clusters (ex: mesos slave
-    # configuration parametesr).
+    # configuration parameters).
     # cloud-config contains things injected per-cluster by tools such as
     # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
     # master loadbalancer DNS name3
@@ -376,6 +400,7 @@ class Mixin:
         self.can_fn = dict()
         self.defaults = dict()
         self.must_fn = dict()
+        self.implies = dict()
 
         def no_validate(arguments):
             pass
@@ -423,6 +448,11 @@ class Mixin:
             except AttributeError:
                 pass
 
+            try:
+                self.implies = module.implies
+            except AttributeError:
+                pass
+
 
 # Ensure arguments aren't given repeatedly.
 # Can be once in the set: defaults, can_fn, must_fn
@@ -455,6 +485,38 @@ def do_generate(
     assert isinstance(extra_cluster_packages, list)
     assert not isinstance(extra_cluster_packages, str)
 
+    # TODO(cmaloney): Remove flattening and teach lower code to operate on list
+    # of mixins.
+    templates = dict()
+    parameters = set()
+    must_calc = dict()
+    can_calc = dict()
+    validate_fn = list()
+    defaults = dict()
+
+    # Load user specified arguments.
+    # TODO(cmaloney): Repeating a set argument should be a hard error.
+    if options.config:
+        try:
+            user_arguments = load_json(options.config)
+
+            # Make sure there are no overlaps between arguments and user_arguments.
+            # TODO(cmaloney): Switch to a better dictionary diff here which will
+            # show all the errors at once.
+            for k in user_arguments.keys():
+                if k in arguments.keys():
+                    print("ERROR: User config contains option `{}` already ".format(k) +
+                          "provided by caller of gen.generate()")
+
+            # update arguments with the user_arguments
+            arguments.update(user_arguments)
+        except FileNotFoundError:
+            print("ERROR: Specified config file '" + options.config + "' does not exist")
+            sys.exit(1)
+        except ValueError as ex:
+            print("ERROR:", ex.what())
+            sys.exit(1)
+
     # Empty string (top level directory) is always implicitly included
     assert '' not in mixins
     assert None not in mixins
@@ -468,16 +530,35 @@ def do_generate(
     mixin_objs = list()
     for mixin in mixins:
         mixin_objs.append(Mixin(mixin, cluster_packages, core_templates))
-    ensure_no_repeated(mixin_objs)
 
-    # TODO(cmaloney): Remove flattening and teach lower code to operate on list
-    # of mixins.
-    templates = dict()
-    parameters = set()
-    must_calc = dict()
-    can_calc = dict()
-    validate_fn = list()
-    defaults = dict()
+    # Ask / prompt about "implies", recursively until we've resolved all implies.
+    mixin_set = set(mixins)
+    mixins_to_visit = copy(mixin_objs)
+    while len(mixins_to_visit) > 0:
+        mixin_obj = mixins_to_visit.pop()
+        if not mixin_obj.implies:
+            continue
+
+        # Expand implies, prompt for every choice the user hasn't provided in
+        # user_arguments.
+        for name, value in mixin_obj.implies.items():
+            parameters.add(name)
+            # Prompt if the user hasn't already chosen which option to use.
+            if name not in arguments:
+                arguments[name] = prompt_argument(
+                        options.non_interactive,
+                        name,
+                        can_calc=False,
+                        default=None,
+                        possible_values=value.keys())
+            choice = arguments[name]
+
+            # Add the mixin to the set to be visited
+            new_mixin = Mixin(value[choice], cluster_packages, core_templates)
+            mixin_objs.append(new_mixin)
+            mixins_to_visit.append(new_mixin)
+
+    ensure_no_repeated(mixin_objs)
 
     for mixin in mixin_objs:
         templates = merge_dictionaries(templates, mixin.templates)
@@ -508,19 +589,6 @@ def do_generate(
             print("ERROR: Argument", argument, "given but not in parameters:", ', '.join(parameters))
             sys.exit(1)
 
-    # Load user specified arguments.
-    # TODO(cmaloney): Repeating a set argument should be a hard error.
-    if options.config:
-        try:
-            new_arguments = load_json(options.config)
-            arguments.update(new_arguments)
-        except FileNotFoundError:
-            print("ERROR: Specified config file '" + options.config + "' does not exist")
-            sys.exit(1)
-        except ValueError as ex:
-            print("ERROR:", ex.what())
-            sys.exit(1)
-
     # Calculate the set of parameters which still need to be input.
     to_set = parameters - arguments.keys()
 
@@ -543,13 +611,8 @@ def do_generate(
 
     # Prompt user to provide all unset arguments. If a config file was specified
     # output
-    if options.non_interactive:
-        if len(to_set) > 0:
-            print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
-            sys.exit(1)
-    else:
-        user_arguments = prompt_arguments(to_set, defaults, can_calc)
-        arguments = update_dictionary(arguments, user_arguments)
+    user_arguments = prompt_arguments(options.non_interactive, to_set, defaults, can_calc)
+    arguments = update_dictionary(arguments, user_arguments)
 
     # Set arguments from command line flags.
     arguments['mixins'] = mixins

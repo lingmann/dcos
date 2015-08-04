@@ -480,10 +480,22 @@ def delete_s3_nonempty(bucket):
     objects = [bucket.objects.all()]
     assert len(objects) == 1
 
-    for obj in objects:
+    # While almost everything s3 is region agnostic (Including the listing,
+    # uploading, etc), for deleting things the Hamburg region has different
+    # auth than other regions, and if you use an s3 client from the wrong region
+    # things break. So figure out the bucket's region, make a s3 resource for
+    # that region, then delete that way.
+    s3_client = session_dev.client('s3')
+    region = s3_client.get_bucket_location(Bucket=bucket.name)['LocationConstraint']
+
+    region_s3 = session_dev.resource('s3', region_name=region)
+
+    region_bucket = region_s3.Bucket(bucket.name)
+
+    for obj in region_bucket.objects.all():
         obj.delete()
 
-    bucket.delete()
+    region_bucket.delete()
 
 
 def do_cluster_resume(options):

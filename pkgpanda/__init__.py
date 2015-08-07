@@ -425,7 +425,12 @@ class Install:
     def get_active_names(self):
         return list(map(
             self._make_abs,
-            self.__well_known_dirs + ["environment", "environment.export", "active", "active.buildinfo.full.json"]))
+            self.__well_known_dirs + [
+                "environment",
+                "environment.export",
+                "active",
+                "active.buildinfo.full.json"
+            ]))
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
@@ -567,12 +572,42 @@ class Install:
                 os.fsync(f.fileno())
             os.rename(state_filename + ".new", state_filename)
 
+        # TODO(pyronicide): DCOS-2535, systemd requires units to be both in the
+        # root directory (/etc/systemd/system) *and* (for starting) in a
+        # specific wants directory (dcos.target.wants). If they're not in both
+        # places, units randomly move into a `not-loaded` state (which makes
+        # for sad pandas). This treats dcos.target.wants as the single source
+        # of truth and just sets things up locally.
+        def manage_systemd_linking(method):
+            base_systemd = os.path.normpath(
+                os.path.join(self._make_abs(self.__systemd_dir), ".."))
+            wants_path = self._make_abs(self.__systemd_dir)
+
+            if not os.path.exists(wants_path):
+                return
+
+            for unit_name in os.listdir(wants_path):
+                real_path = os.path.realpath(
+                    os.path.join(wants_path, unit_name))
+                if method == "cleanup":
+                    try:
+                        os.remove(os.path.join(base_systemd, unit_name))
+                    except FileNotFoundError:
+                        # This is going from an old to new version of DCOS.
+                        pass
+                elif method == "setup":
+                    os.symlink(real_path, os.path.join(base_systemd, unit_name))
+                else:
+                    raise Exception("You called manage_systemd_linking wrong.")
+
         if archive:
             # TODO(cmaloney): stop all systemd services in dcos.target.wants
             record_state({"stage": "archive"})
 
             # Stop all systemd services
             systemd.stop_all()
+
+            manage_systemd_linking("cleanup")
 
             # Archive the current config.
             for active in active_names:
@@ -588,6 +623,8 @@ class Install:
         for active in active_names:
             new_path = active + extension
             os.rename(new_path, active)
+
+        manage_systemd_linking("setup")
 
         # All done with what we need to redo if host restarts.
         os.remove(state_filename)

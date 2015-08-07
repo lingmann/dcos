@@ -477,7 +477,6 @@ def do_generate(
     must_calc = dict()
     can_calc = dict()
     validate_fn = list()
-    arguments = dict()
     defaults = dict()
 
     for mixin in mixin_objs:

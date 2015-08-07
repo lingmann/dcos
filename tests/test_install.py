@@ -53,6 +53,7 @@ def test_recovery_archive(tmpdir, repository):
     expect_fs(
         str(tmpdir.join("install")),
         {
+            ".gitignore": None,
             "active": ["mesos"],
             "active.buildinfo.full.json": None,
             "active.old": ["mesos"],
@@ -78,6 +79,7 @@ def test_recovery_move_new(tmpdir, repository):
     expect_fs(
         str(tmpdir.join("install")),
         {
+            ".gitignore": None,
             "active": ["mesos"],
             "active.buildinfo.full.json": None,
             "bin": ["mesos", "mesos-dir"],

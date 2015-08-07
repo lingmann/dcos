@@ -13,14 +13,17 @@ make install
 config_file="$PKG_PATH/etc/logrotate.conf"
 mkdir -p $(dirname $config_file)
 cat <<'EOF' > "$config_file"
+compress
+delaycompress
+notifempty
+missingok
+nomail
+
 /var/log/mesos/* {
+    olddir /var/log/mesos/archive
     maxsize 2000k
     daily
-    missingok
     rotate 7
-    compress
-    delaycompress
-    notifempty
     copytruncate
 }
 EOF
@@ -36,6 +39,7 @@ Type=simple
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
+ExecStartPre=/usr/bin/mkdir -p /var/log/mesos/archive
 ExecStart=$PKG_PATH/sbin/logrotate $config_file
 EOF
 

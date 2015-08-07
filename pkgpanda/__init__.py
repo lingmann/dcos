@@ -40,6 +40,12 @@ export PATH="{0}/bin:$PATH"\n\n"""
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
 
+reserved_unit_names = [
+    "dcos.target",
+    "dcos-download.service",
+    "dcos-setup.service"
+]
+
 
 # Manage starting/stopping all systemd services inside a folder.
 class Systemd:
@@ -587,18 +593,22 @@ class Install:
                 return
 
             for unit_name in os.listdir(wants_path):
+                if unit_name in reserved_unit_names:
+                    raise Exception(
+                        "Stopping install. " +
+                        "Reserved name encountered - {}.".format(unit_name))
+
                 real_path = os.path.realpath(
                     os.path.join(wants_path, unit_name))
-                if method == "cleanup":
-                    try:
-                        os.remove(os.path.join(base_systemd, unit_name))
-                    except FileNotFoundError:
-                        # This is going from an old to new version of DCOS.
-                        pass
-                elif method == "setup":
+
+                try:
+                    os.remove(os.path.join(base_systemd, unit_name))
+                except FileNotFoundError:
+                    # This is going from an old to new version of DCOS.
+                    pass
+
+                if method == "setup":
                     os.symlink(real_path, os.path.join(base_systemd, unit_name))
-                else:
-                    raise Exception("You called manage_systemd_linking wrong.")
 
         if archive:
             # TODO(cmaloney): stop all systemd services in dcos.target.wants

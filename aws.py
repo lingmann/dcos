@@ -287,9 +287,7 @@ def do_make_candidate(options):
             {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 3},
             gen_options)
 
-    sys.exit(1)
     button_page = gen_buttons(release_name, "RC for " + options.release_name)
-
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.

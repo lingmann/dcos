@@ -537,7 +537,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
         # TODO(cmaloney): Updating / filling last_build should be moved out of
         # the build function.
-        check_call(["mkdir","-p","cache"])
+        check_call(["mkdir", "-p", "cache"])
         write_string("cache/last_build", str(pkg_id))
 
         return pkg_path

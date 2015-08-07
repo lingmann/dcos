@@ -583,6 +583,9 @@ class Install:
                 os.path.join(self._make_abs(self.__systemd_dir), ".."))
             wants_path = self._make_abs(self.__systemd_dir)
 
+            if not os.path.exists(wants_path):
+                return
+
             for unit_name in os.listdir(wants_path):
                 real_path = os.path.realpath(
                     os.path.join(wants_path, unit_name))

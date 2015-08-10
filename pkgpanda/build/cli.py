@@ -355,13 +355,13 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
         try:
             sources = expand_single_source_alias(name, override_buildinfo)
         except ValidationError as ex:
-            print("ERROR: Invalid override buildinfo:", ex.what)
+            print("ERROR: Invalid override buildinfo:", str(ex))
             sys.ext(1)
 
     try:
         pkg_sources = expand_single_source_alias(name, buildinfo)
     except ValidationError as ex:
-        print("ERROR: Invalid buildinfo.json for package: ", ex.what)
+        print("ERROR: Invalid buildinfo.json for package:", str(ex))
         sys.exit(1)
 
     # If an override buildinfo is given, make sure it overrides the package

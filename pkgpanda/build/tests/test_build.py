@@ -21,3 +21,7 @@ def test_single_source(tmpdir):
 
 def test_url_extract(tmpdir):
     package("resources/url_extract", "a", tmpdir)
+
+
+def test_no_buildinfo(tmpdir):
+    package("resources/no_buildinfo", "a", tmpdir)

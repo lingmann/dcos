@@ -312,9 +312,8 @@ def expand_single_source_alias(pkg_name, buildinfo):
     elif "single_source" in buildinfo:
         return {pkg_name: buildinfo["single_source"]}
     else:
-        raise ValidationError("Must specify at least one source to build " +
-                              "package from using 'sources' or 'single_source'." +
-                              "May be specified in buildinfo.json or passed in.")
+        print("NOTICE: No sources specified")
+        return {}
 
 
 def assert_no_duplicate_keys(lhs, rhs):
@@ -635,6 +634,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     print("Building package tarball")
 
+    # TODO(cmaloney): Updating / filling last_build should be moved out of
+    # the build function.
+    check_call(["mkdir", "-p", "cache"])
     write_string("cache/last_build", str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package

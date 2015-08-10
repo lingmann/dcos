@@ -10,3 +10,7 @@ which are currently active.
 ## Documentation
 
 See the `docs/` folder for current documentaiton.
+
+## Running the Tests
+
+Run `tox` in the top level directory.

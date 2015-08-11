@@ -310,6 +310,10 @@ def do_gen_package(config, package_filename):
             with open(path, 'w') as f:
                 f.write(file_info['content'])
 
+            # the file has special mode defined, handle that.
+            if 'mode' in file_info:
+                os.chmod(path, int(str(file_info['mode']), 8))
+
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
             os.makedirs(os.path.dirname(package_filename), exist_ok=True)

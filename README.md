@@ -15,6 +15,20 @@ The DCOS Image is made up of two major components. The first is a set of pkgpand
 
 Each provider has it's own top-level utility script which contains helpers for doing various deployment, updating, testing actions for that provider.
 
+## Launching a cluster for development (Vagrant, AWS)
+
+See: https://mesosphere.atlassian.net/wiki/display/DCOS/Development+Clusters
+
+## Integrating your component:
+
+See: https://mesosphere.atlassian.net/wiki/display/DCOS/Custom+DCOS+Builds
+
+## Building locally
+
+NOTE: This does not work on OSX, requires a linux machine. It is HIGHLY recommended that you just let TeamCity build
+DCOS for you as setting up a local environment changes without much documentation update / these instructions are likely
+to be broken but TeamCity is always kept functional.
+
 ## Getting Started
 
 General requirements: Python3, pkgpanda, everything in requirements.txt, docker relatively new (1.5+ probably)
@@ -61,11 +75,3 @@ The AWS tooling makes heavy use of boto3. It requires that you setup two [profil
 - `aws.py make_candidate`: Make a new candidate for a release. Performs a build, then generates the single-master, multi-master, and button page templates. Uploads them all to a testing bucket for internal testing.
 
 TODO(cmaloney): More AWS commands
-
-### Vagrant (TODO)
-
-`vagrant.py`: Performs a DCOS build and generates a self-contained script to create a Vagrantfile to launch a DCOS cluster.
-
-Uploads all the packages, bootstrap, config package automatically, as well as the script to generate the Vagrantfile.
-
-To use simply download the script from the provided url, run the script, then run `vagrant up`.

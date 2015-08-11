@@ -53,5 +53,6 @@ write_files:
     content: |
       {
         "PATH": "/usr/bin",
-        "SHELL": "/usr/bin/bash"
+        "SHELL": "/usr/bin/bash",
+        "LD_LIBRARY_PATH": "/opt/mesosphere/lib"
       }

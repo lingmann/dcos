@@ -1,0 +1,3 @@
+write_files:
+  - path: /opt/mesosphere/bin/detect_ip
+    content: {{ ip_detect_contents }}

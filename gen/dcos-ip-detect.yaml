@@ -1,0 +1,3 @@
+write_files:
+  - path: /bin/detect_ip
+    content: {{ ip_detect_script_contents }}

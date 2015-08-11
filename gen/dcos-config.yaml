@@ -27,6 +27,7 @@ write_files:
       MESOS_ROLES={{ roles }}
       MESOS_WEIGHTS={{ weights }}
       MESOS_QUORUM={{ master_quorum }}
+      MESOS_IP_DISCOVERY_SCRIPT=/opt/mesosphere/bin/detect_ip
   - path: /etc/mesos-slave-common
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
@@ -39,6 +40,7 @@ write_files:
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json
       MESOS_DOCKER_REMOVE_DELAY=1hrs
       MESOS_GC_DELAY=2days
+      MESOS_IP_DISCOVERY_SCRIPT=/opt/mesosphere/bin/detect_ip
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]

@@ -13,7 +13,7 @@ NOTE:
     - Not all combos make sense / would be used. Only whitelist / enable ones we
       have people on.
 """
-import ipdb
+
 import collections
 import importlib
 import jinja2
@@ -661,7 +661,6 @@ def do_generate(
 
     cluster_package_info = {}
 
-    ipdb.set_trace()
     # Render all the cluster packages
     for package_name in cluster_packages:
         package_id = get_package_id(package_name)

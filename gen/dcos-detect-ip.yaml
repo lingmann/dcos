@@ -1,3 +1,4 @@
 write_files:
-  - path: /opt/mesosphere/bin/detect_ip
+  - path: /bin/detect_ip
+    mode: 755
     content: {{ ip_detect_contents }}

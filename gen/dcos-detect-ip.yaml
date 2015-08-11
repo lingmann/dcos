@@ -1,4 +1,8 @@
 write_files:
+  - path: /pkginfo.json
+    content: |
+      {
+      }
   - path: /bin/detect_ip
     mode: 755
     content: {{ ip_detect_contents }}

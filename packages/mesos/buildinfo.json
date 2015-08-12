@@ -4,8 +4,8 @@
   "single_source" : {
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
-    "ref": "80e6bde27f4161d7ba20fc3e25e10bf6af955f70",
-    "ref_origin" : "kartic/DCOS-2260-ip-detect"
+    "ref": "332b164f011b998085e8207fc0d51264833447cb",
+    "ref_origin" : "for-dcos-0.23.0-rc1"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

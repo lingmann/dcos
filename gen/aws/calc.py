@@ -5,7 +5,8 @@ defaults = {
   "master_instance_type": "m3.xlarge",
   "slave_instance_type": "m3.xlarge",
   "public_slave_instance_type": "m3.xlarge",
-  "nat_instance_type": "m3.medium"
+  "nat_instance_type": "m3.medium",
+  "ip_detect_filename": "scripts/aws/ip-detector.sh",
 }
 
 arguments = {

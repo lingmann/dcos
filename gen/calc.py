@@ -1,6 +1,7 @@
 import json
 import os
 import urllib.request
+import yaml
 from math import floor
 from subprocess import check_output
 
@@ -39,10 +40,15 @@ def calculate_fallback_dns(arguments):
     return resolvers[0]
 
 
+def calculate_ip_detect_contents(arguments):
+    return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
+
+
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
     'fallback_dns': calculate_fallback_dns,
-    'dcos_image_commit': calulate_dcos_image_commit
+    'dcos_image_commit': calulate_dcos_image_commit,
+    'ip_detect_contents': calculate_ip_detect_contents
 }
 
 can = {
@@ -68,4 +74,4 @@ defaults = {
   "weights": "slave_public=1"
 }
 
-parameters = ["release_name", "repository_url"]
+parameters = ["release_name", "repository_url", "ip_detect_filename"]

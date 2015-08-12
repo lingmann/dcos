@@ -172,7 +172,7 @@ def get_parameters(template_dict):
                 template_parameters = jinja2.meta.find_undeclared_variables(ast)
                 parameters |= set(template_parameters)
             except FileNotFoundError as ex:
-                print("NOTICE: not found:", ex)
+                print("NOTICE: template not found:", ex)
 
     return parameters
 
@@ -310,6 +310,10 @@ def do_gen_package(config, package_filename):
             with open(path, 'w') as f:
                 f.write(file_info['content'])
 
+            # the file has special mode defined, handle that.
+            if 'mode' in file_info:
+                os.chmod(path, int(str(file_info['mode']), 8))
+
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
             os.makedirs(os.path.dirname(package_filename), exist_ok=True)
@@ -413,7 +417,7 @@ class Mixin:
         try:
             module = importlib.import_module(self.modulename)
         except ImportError as ex:
-            print("NOTICE: not found:".format(self.modulename), ex)
+            print("NOTICE: module not found:".format(self.modulename), ex)
 
         if module:
             try:
@@ -521,7 +525,7 @@ def do_generate(
     assert '' not in mixins
     assert None not in mixins
 
-    cluster_packages = list(sorted(set(['dcos-config'] + extra_cluster_packages)))
+    cluster_packages = list(sorted(set(['dcos-config', 'dcos-detect-ip'] + extra_cluster_packages)))
     core_templates = ['cloud-config', 'dcos-services']
 
     # Add the empty mixin so we pick up top-level config.

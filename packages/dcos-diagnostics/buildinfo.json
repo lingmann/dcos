@@ -1,0 +1,8 @@
+{
+  "docker": "dcos-builder",
+  "single_source": {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-diagnostics.git",
+    "ref": "30615caf0ec058281a6560d4ca49847c87f454d5"
+  }
+}

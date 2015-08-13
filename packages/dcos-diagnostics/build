@@ -1,0 +1,3 @@
+#!/bin/bash
+cd "/pkg/src/dcos-diagnostics"
+cp -r bin "$PKG_PATH"

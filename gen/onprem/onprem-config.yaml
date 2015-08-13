@@ -10,7 +10,6 @@ write_files:
     content: |
       ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
       MASTER_ELB={{ master_lb }}
-      EXTERNAL_ELB={{ external_master_lb }}
       # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
       # the internal IP when doing lookups on AWS public hostnames.
       FALLBACK_DNS={{ fallback_dns }}

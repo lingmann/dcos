@@ -24,6 +24,7 @@ import os.path
 import sys
 import yaml
 from copy import copy, deepcopy
+from itertools import chain
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
@@ -119,21 +120,11 @@ def load_json(filename):
 # Order in a file determines order in which things like services get placed,
 # changing it can break components (Ex: moving dcos-download and dcos-setup
 # too early will break some configurations).
-def get_filenames(mixins, target, sep='/'):
-    return ['gen' + sep + target] + ['gen' + sep + mixin + sep + target for mixin in mixins]
-
-
-# Returns a dictionary of the jinja templates to use
-def get_template_names(mixins, cluster_packages):
-    templates = dict()
-    # dcos-config contains stuff statically known for clusters (ex: mesos slave
-    # configuration parametesr).
-    # cloud-config contains things injected per-cluster by tools such as
-    # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
-    # master loadbalancer DNS name
-    for template in ['cloud-config', 'dcos-services'] + cluster_packages:
-        templates[template] = get_filenames(mixins, template + '.yaml')
-    return templates
+def get_name(mixin_name, target, sep='/'):
+    if mixin_name:
+        return 'gen' + sep + mixin_name + sep + target
+    else:
+        return 'gen' + sep + target
 
 
 # Render the Jinja/YAML into YAML, then load the YAML and merge it to make the
@@ -167,27 +158,21 @@ def render_templates(template_names, arguments):
     return rendered_templates
 
 
-def add_set(lhs, rhs):
-    return set(lhs) | set(rhs)
-
-
 # Load all the un-bound variables in the templates which need to be given values
-# in order to convert the templates to go from jinja -> yaml. These are
-# effectively the set of DCOS parameters.
-def get_parameters(templates):
+# in order to convert the templates to go from jinja -> final template. These
+# are effectively the set of DCOS parameters.
+def get_parameters(template_dict):
     parameters = set()
-    for templates in templates.values():
-        if len(templates) > 1:
-            for template in templates:
-                assert template.endswith('.yaml')
-
-        for template in templates:
+    for template_list in template_dict.values():
+        assert isinstance(template_list, list)
+        for template in template_list:
+            assert isinstance(template, str)
             try:
                 ast = env.parse(open(template).read())
                 template_parameters = jinja2.meta.find_undeclared_variables(ast)
                 parameters |= set(template_parameters)
             except FileNotFoundError as ex:
-                print("NOTICE: not found:", ex)
+                print("NOTICE: template not found:", ex)
 
     return parameters
 
@@ -306,13 +291,12 @@ def do_gen_package(config, package_filename):
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
     with TemporaryDirectory("gen_tmp_pkg") as tmpdir:
-        dcos_setup = config
 
         # Only contains write_files
-        assert len(dcos_setup) == 1
+        assert len(config) == 1
 
         # Write out the individual files
-        for file_info in dcos_setup["write_files"]:
+        for file_info in config["write_files"]:
             if file_info['path'][0] == '/':
                 path = tmpdir + file_info['path']
             else:
@@ -326,6 +310,10 @@ def do_gen_package(config, package_filename):
             with open(path, 'w') as f:
                 f.write(file_info['content'])
 
+            # the file has special mode defined, handle that.
+            if 'mode' in file_info:
+                os.chmod(path, int(str(file_info['mode']), 8))
+
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
             os.makedirs(os.path.dirname(package_filename), exist_ok=True)
@@ -335,98 +323,161 @@ def do_gen_package(config, package_filename):
     print("Package filename: ", package_filename)
 
 
-def load_mixins(mixins):
-    all_names = set()
-    arguments = dict()
-    can_fn = dict()
-    defaults = dict()
-    must_fn = dict()
-    parameters = list()
-    validate_fn = list()
+def prompt_argument(non_interactive, name, can_calc=False, default=None, possible_values=None):
+    if non_interactive:
+        print("ERROR: Unset variable when run in non-interactive mode:", name)
+        sys.exit(1)
 
-    for modulename in get_filenames(mixins, 'calc', sep='.'):
-        # Specifying all these is optional, as is having a module at all so we
-        # wrap them all in try / catches to handle non-existence.
-        try:
-            module = importlib.import_module(modulename)
-        except ImportError as ex:
-            print("NOTICE: not found:".format(modulename), ex)
+    while True:
+        default_str = ''
+        if default is not None:
+            # Validate default
+            if possible_values is not None:
+                assert default in possible_values
+            default_str = ' [{}]'.format(default)
+        elif can_calc:
+            default_str = ' <calculated>'
+
+        value = input('{}{}: '.format(name, default_str))
+
+        # Make sure value is one of the allowed values
+        if possible_values is not None and value not in possible_values:
+            print("ERROR: Value not one of the possible values:", ','.join(possible_values))
             continue
 
-        try:
-            # Can't calculate the same thing twice.
-            names = module.must.keys()
-            for name in names:
-                if name in all_names:
-                    raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
-            all_names |= names
-            must_fn.update(module.must)
-        except AttributeError:
-            pass
+        if value:
+            return value
+        if default:
+            return default
+        if can_calc:
+            return None
 
-        try:
-            # Can't calculate the same thing twice.
-            names = module.can.keys()
-            for name in names:
-                if name in all_names:
-                    raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", modulename)
-            all_names |= names
-            can_fn.update(module.can)
-        except AttributeError:
-            pass
-
-        try:
-            validate_fn.append(module.validate)
-        except AttributeError:
-            pass
-
-        try:
-            parameters += module.parameters
-        except AttributeError:
-            pass
-
-        try:
-            arguments = update_dictionary(arguments, module.arguments)
-        except AttributeError:
-            pass
-
-        try:
-            defaults = update_dictionary(defaults, module.defaults)
-        except AttributeError:
-            pass
-
-    return Bunch({
-        'arguments': arguments,
-        'can_calc': can_fn,
-        'defaults': defaults,
-        'must_calc': must_fn,
-        'validate_fn': validate_fn,
-        'parameters': parameters
-    })
+        print("ERROR: Must provide a value")
 
 
-def prompt_arguments(to_set, defaults, can_calc):
+def prompt_arguments(non_interactive, to_set, defaults, can_calc):
+    if non_interactive and len(to_set) > 0:
+        print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
+        sys.exit(1)
+
     arguments = dict()
     for name in sorted(to_set):
-        while True:
-            default_str = ''
-            if name in defaults:
-                default_str = ' [{}]'.format(defaults[name])
-            elif name in can_calc:
-                default_str = ' <calculated>'
+        result = prompt_argument(non_interactive, name, name in can_calc, defaults.get(name))
 
-            value = input('{}{}: '.format(name, default_str))
-            if value:
-                arguments[name] = value
-                break
-            if name in defaults:
-                arguments[name] = defaults[name]
-                break
-            if name in can_calc:
-                break
-            print("ERROR: Must provide a value")
+        # Only if we got a value (Shouldn't calculate), set the argument.
+        if result is not None:
+            arguments[name] = result
 
     return arguments
+
+
+# Returns a dictionary of the jinja templates to use
+def get_templates(mixin_name, cluster_packages, core_templates):
+    templates = dict()
+    # dcos-config contains stuff statically known for clusters (ex: mesos slave
+    # configuration parameters).
+    # cloud-config contains things injected per-cluster by tools such as
+    # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
+    # master loadbalancer DNS name3
+    for template in chain(cluster_packages, core_templates):
+        # Stored as list for easier later processing / dictionary merging.
+        templates[template] = [get_name(mixin_name, template + '.yaml')]
+
+    return templates
+
+
+class Mixin:
+
+    def __init__(self, name, cluster_packages, core_templates):
+        self.name = name
+        self.templates = get_templates(name, cluster_packages, core_templates)
+        self.parameters = get_parameters(self.templates)
+
+        # Module for loading functions to calculate, validate arguments as well as defaults.
+        self.modulename = get_name(name, 'calc', sep='.')
+        # Merge calc into the base portions.
+
+        # Specifying all these is optional, as is having a module at all so we
+        # wrap them all in try / catches to handle non-existence, and give them all
+        # empty defaults of the right type to handle early-exit.
+        self.arguments = dict()
+        self.can_fn = dict()
+        self.defaults = dict()
+        self.must_fn = dict()
+        self.implies = dict()
+
+        def no_validate(arguments):
+            pass
+
+        self.validate_fn = no_validate
+
+        module = None
+        # Load the library and grab things from it as seperate bits so we don't
+        # catch the wrong exception by mistake.
+        try:
+            module = importlib.import_module(self.modulename)
+        except ImportError as ex:
+            print("NOTICE: module not found:".format(self.modulename), ex)
+
+        if module:
+            try:
+                self.must_fn = module.must
+            except AttributeError:
+                pass
+
+            try:
+                self.can_fn = module.can
+            except AttributeError:
+                pass
+
+            try:
+                self.validate_fn = module.validate
+            except AttributeError:
+                pass
+
+            try:
+                # Updating rather than just assigning since many parameters are
+                # derived from the templates already
+                self.parameters |= set(module.parameters)
+            except AttributeError:
+                pass
+
+            try:
+                self.arguments = module.arguments
+            except AttributeError:
+                pass
+
+            try:
+                self.defaults = module.defaults
+            except AttributeError:
+                pass
+
+            try:
+                self.implies = module.implies
+            except AttributeError:
+                pass
+
+
+# Ensure arguments aren't given repeatedly.
+# Can be once in the set: defaults, can_fn, must_fn
+# Can be once in the set: arguments, must_fn
+def ensure_no_repeated(mixin_objs):
+    check_default_names = set()
+    check_argument_names = set()
+
+    def add_assert_duplicate(base_set, names):
+        for name in names:
+            if name in base_set:
+                raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", mixin.name)
+        base_set |= set(names)
+
+    for mixin in mixin_objs:
+        add_assert_duplicate(check_default_names, mixin.defaults.keys())
+        add_assert_duplicate(check_default_names, mixin.can_fn.keys())
+        add_assert_duplicate(check_default_names, mixin.must_fn.keys())
+
+        add_assert_duplicate(check_argument_names, mixin.arguments.keys())
+        add_assert_duplicate(check_argument_names, mixin.must_fn.keys())
 
 
 def do_generate(
@@ -438,43 +489,108 @@ def do_generate(
     assert isinstance(extra_cluster_packages, list)
     assert not isinstance(extra_cluster_packages, str)
 
-    cluster_packages = ['dcos-config'] + extra_cluster_packages
+    # TODO(cmaloney): Remove flattening and teach lower code to operate on list
+    # of mixins.
+    templates = dict()
+    parameters = set()
+    must_calc = dict()
+    can_calc = dict()
+    validate_fn = list()
+    defaults = dict()
 
-    # Load the templates for the target and calculate the parameters based on
-    # the template variables.
-    templates = get_template_names(mixins, cluster_packages)
+    # Load user specified arguments.
+    # TODO(cmaloney): Repeating a set argument should be a hard error.
+    if options.config:
+        try:
+            user_arguments = load_json(options.config)
+
+            # Make sure there are no overlaps between arguments and user_arguments.
+            # TODO(cmaloney): Switch to a better dictionary diff here which will
+            # show all the errors at once.
+            for k in user_arguments.keys():
+                if k in arguments.keys():
+                    print("ERROR: User config contains option `{}` already ".format(k) +
+                          "provided by caller of gen.generate()")
+
+            # update arguments with the user_arguments
+            arguments.update(user_arguments)
+        except FileNotFoundError:
+            print("ERROR: Specified config file '" + options.config + "' does not exist")
+            sys.exit(1)
+        except ValueError as ex:
+            print("ERROR:", ex.what())
+            sys.exit(1)
+
+    # Empty string (top level directory) is always implicitly included
+    assert '' not in mixins
+    assert None not in mixins
+
+    cluster_packages = list(sorted(set(['dcos-config', 'dcos-detect-ip'] + extra_cluster_packages)))
+    core_templates = ['cloud-config', 'dcos-services']
+
+    # Add the empty mixin so we pick up top-level config.
+    mixins.append('')
+
+    mixin_objs = list()
+    for mixin in mixins:
+        mixin_objs.append(Mixin(mixin, cluster_packages, core_templates))
+
+    # Ask / prompt about "implies", recursively until we've resolved all implies.
+    mixin_set = set(mixins)
+    mixins_to_visit = copy(mixin_objs)
+    while len(mixins_to_visit) > 0:
+        mixin_obj = mixins_to_visit.pop()
+        if not mixin_obj.implies:
+            continue
+
+        # Expand implies, prompt for every choice the user hasn't provided in
+        # user_arguments.
+        for name, value in mixin_obj.implies.items():
+            parameters.add(name)
+            # Prompt if the user hasn't already chosen which option to use.
+            if name not in arguments:
+                arguments[name] = prompt_argument(
+                        options.non_interactive,
+                        name,
+                        can_calc=False,
+                        default=None,
+                        possible_values=value.keys())
+            choice = arguments[name]
+
+            # Add the mixin to the set to be visited
+            new_mixin = Mixin(value[choice], cluster_packages, core_templates)
+            mixin_objs.append(new_mixin)
+            mixins_to_visit.append(new_mixin)
+
+    ensure_no_repeated(mixin_objs)
+
+    for mixin in mixin_objs:
+        templates = merge_dictionaries(templates, mixin.templates)
+        parameters |= mixin.parameters
+        must_calc.update(mixin.must_fn)
+        can_calc.update(mixin.can_fn)
+        validate_fn.append(mixin.validate_fn)
+        arguments.update(mixin.arguments)
+        defaults.update(mixin.defaults)
+
+    # Make sure only yaml templates have more than one mixin providing them / are provided more than once.
+    for name, template_list in templates.items():
+        if len(template_list) > 1:
+            for template in template_list:
+                if not template.endswith('.yaml'):
+                    print("ERROR: Only know how to merge YAML templates at this point in time. Can't merge template",
+                          name, template_list)
+                    sys.exit(1)
+
+    # Inject extra_templates and parameters inside.
     templates.update(extra_templates)
-    parameters = get_parameters(templates)
-
-    # Load information provided by mixins (parametesr that can be calculated,
-    # defaults for some arguments, etc).
-    mixin_helpers = load_mixins(mixins)
-    must_calc = mixin_helpers.must_calc
-    can_calc = mixin_helpers.can_calc
-    validate_fn = mixin_helpers.validate_fn
-    # TODO(cmaloney): Error if overriding.
-    arguments.update(mixin_helpers.arguments)
-    defaults = mixin_helpers.defaults
-    parameters.update(mixin_helpers.parameters)
+    parameters |= get_parameters(extra_templates)
 
     # Validate all arguments passed in actually correspond to parameters to
     # prevent human typo errors.
     for argument in arguments:
         if argument not in parameters:
             print("ERROR: Argument", argument, "given but not in parameters:", ', '.join(parameters))
-            sys.exit(1)
-
-    # Load user specified arguments.
-    # TODO(cmaloney): Repeating a set argument should be a hard error.
-    if options.config:
-        try:
-            new_arguments = load_json(options.config)
-            arguments.update(new_arguments)
-        except FileNotFoundError:
-            print("ERROR: Specified config file '" + options.config + "' does not exist")
-            sys.exit(1)
-        except ValueError as ex:
-            print("ERROR:", ex.what())
             sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.
@@ -499,13 +615,8 @@ def do_generate(
 
     # Prompt user to provide all unset arguments. If a config file was specified
     # output
-    if options.non_interactive:
-        if len(to_set) > 0:
-            print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
-            sys.exit(1)
-    else:
-        user_arguments = prompt_arguments(to_set, defaults, can_calc)
-        arguments = update_dictionary(arguments, user_arguments)
+    user_arguments = prompt_arguments(options.non_interactive, to_set, defaults, can_calc)
+    arguments = update_dictionary(arguments, user_arguments)
 
     # Set arguments from command line flags.
     arguments['mixins'] = mixins

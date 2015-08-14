@@ -590,7 +590,7 @@ def do_generate(
     # prevent human typo errors.
     for argument in arguments:
         if argument not in parameters:
-            print("ERROR: Argument", argument, "given but not in parameters:", ', '.join(parameters))
+            print("ERROR: Argument '", argument, "' given but not in parameters:", ', '.join(parameters))
             sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.

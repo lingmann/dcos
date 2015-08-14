@@ -7,5 +7,6 @@
   "resolvers":"[\"8.8.8.8\"]",
   "exhibitor_storage_backend": "zookeeper",
   "exhibitor_zk_hosts": "zk://%ZK_HOSTS%",
-  "exhibitor_zk_path": "/test-cluster-discovery"
+  "exhibitor_zk_path": "/test-cluster-discovery",
+  "ip_detect_filename": "scripts/vagrant/ip-detector.sh"
 }

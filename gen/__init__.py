@@ -504,6 +504,17 @@ def do_generate(
         try:
             user_arguments = load_json(options.config)
 
+            # Check a value always / only in computed configs to give a cleaner
+            # message to users when they try just feeding a computed config back
+            # into the generation library.
+            if 'dcos_image_commit' in user_arguments:
+                print("ERROR: The configuration saved by --save-config cannot be fed directly back as `--config`. "
+                      "It is the full computed configuration used to flesh out the various templates, and contains "
+                      "multiple derived / calculated values that are asserted to be calculated "
+                      "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
+                      "before the saved config can be used.")
+                sys.exit(1)
+
             # Make sure there are no overlaps between arguments and user_arguments.
             # TODO(cmaloney): Switch to a better dictionary diff here which will
             # show all the errors at once.
@@ -511,6 +522,7 @@ def do_generate(
                 if k in arguments.keys():
                     print("ERROR: User config contains option `{}` already ".format(k) +
                           "provided by caller of gen.generate()")
+                    sys.exit(1)
 
             # update arguments with the user_arguments
             arguments.update(user_arguments)

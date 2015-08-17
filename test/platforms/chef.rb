@@ -11,7 +11,7 @@ def render_installer(name, c)
     curl -L https://www.opscode.com/chef/install.sh | bash
     mkdir -p /var/chef/cookbooks/dcos
     tar -C /var/chef/cookbooks/dcos -xf "$(ls -t /vagrant/chef-*.tar.xz|head -1)"
-    echo '{ "dcos": { "roles": [ #{ c[:roles].to_json } ]} }' > /tmp/node.json
+    echo '{ "dcos": { "roles": #{ c[:roles].to_json } } }' > /tmp/node.json
     chef-solo -j /tmp/node.json -o 'recipe[dcos]'
   EOF
 end

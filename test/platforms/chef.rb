@@ -12,6 +12,7 @@ def render_installer(name, c)
     mkdir -p /var/chef/cookbooks/dcos
     tar -C /var/chef/cookbooks/dcos -xf "$(ls -t /vagrant/chef-*.tar.xz|head -1)"
     echo '{ "dcos": { "roles": #{ c[:roles].to_json } } }' > /tmp/node.json
-    chef-solo -j /tmp/node.json -o 'recipe[dcos]'
+    cp /vagrant/test/platforms/chef/chef-solo.service /etc/systemd/system
+    systemctl --no-block start chef-solo
   EOF
 end

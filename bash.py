@@ -124,10 +124,11 @@ def do_bash_and_build(options):
         extra_cluster_packages=['onprem-config']
         )
     make_bash(gen_out)
-    upload_release(
-        gen_out.arguments['release_name'],
-        bootstrap_id,
-        util.cluster_to_extra_packages(gen_out.cluster_packages)
+    if not options.skip_upload:
+        upload_release(
+            gen_out.arguments['release_name'],
+            bootstrap_id,
+            util.cluster_to_extra_packages(gen_out.cluster_packages)
         )
     print("\n\nDcos install script: dcos_install.sh")
 
@@ -156,6 +157,7 @@ if __name__ == '__main__':
     gen.add_arguments(build)
     build.set_defaults(func=do_bash_and_build)
     build.add_argument('--skip-build', action='store_true')
+    build.add_argument('--skip-upload', action='store_true')
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()

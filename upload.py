@@ -8,6 +8,7 @@ Usage:
 """
 
 import botocore.client
+import os.path
 from docopt import docopt
 from functools import partial
 from pkgpanda import PackageId
@@ -77,7 +78,7 @@ def upload_string(release_name, filename, text, s3_put_args={}):
 
     # Save as a local artifact for TeamCity
     local_path = "artifacts/" + filename
-    check_call(["mkdir", "-p", local_path])
+    check_call(["mkdir", "-p", os.path.dirname(local_path)])
     write_string(local_path, text)
 
     return obj

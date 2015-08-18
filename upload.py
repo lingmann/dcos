@@ -12,6 +12,7 @@ from docopt import docopt
 from functools import partial
 from pkgpanda import PackageId
 from pkgpanda.util import load_json, write_string
+from subprocess import check_call
 
 import util
 
@@ -75,7 +76,9 @@ def upload_string(release_name, filename, text, s3_put_args={}):
     obj.put(Body=text.encode('utf-8'), **s3_put_args)
 
     # Save as a local artifact for TeamCity
-    write_string("artifacts/" + filename, text)
+    local_path = "artifacts/" + filename
+    check_call(["mkdir", "-p", local_path])
+    write_string(local_path, text)
 
     return obj
 

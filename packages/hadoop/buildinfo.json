@@ -1,0 +1,7 @@
+{
+  "version" : "2.5.0",
+  "single_source" : {
+    "kind": "url_extract",
+    "url": "http://archive.cloudera.com/cdh5/cdh/5/hadoop-2.5.0-cdh5.3.3.tar.gz"
+  }
+}

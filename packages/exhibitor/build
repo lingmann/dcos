@@ -51,6 +51,8 @@ set -o errexit -o nounset -o pipefail
 #: \${EXHIBITOR_HOSTNAME:?"ERROR: EXHIBITOR_HOSTNAME must be set"}
 #: \${EXHIBITOR_WEB_UI_PORT:?"ERROR: EXHIBITOR_WEB_UI_PORT must be set"}
 
+EXHIBITOR_HOSTNAME=\${EXHIBITOR_HOSTNAME:-\$(\$MESOS_IP_DISCOVERY_COMMAND)}
+
 exhibitor_defaults=/etc/mesosphere/exhibitor_defaults.conf
 exhibitor_properties=/etc/mesosphere/exhibitor_credentials.properties
 

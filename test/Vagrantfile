@@ -23,13 +23,8 @@ Vagrant.configure("2") do |config|
       name = "%s-%02d" %[ n, i ]
       ip = "#{$network}.#{i+c[:ip_offset]}"
 
-      script = "printf 'EXHIBITOR_HOSTNAME=#{ip}\n' >> /etc/environment &&\n" \
-        + render_installer(n, c) \
-        + "printf 'MARATHON_HOSTNAME=#{ip}\nMESOS_HOSTNAME=#{ip}\nMESOS_IP=#{ip}\n'>> /opt/mesosphere/etc/cloudenv"
-
-      puts "Provisioner script: #{script}"
       config.vm.define name do |instance|
-        instance.vm.provision "shell", inline: script
+        instance.vm.provision "shell", inline: render_installer(n, c)
         instance.vm.box = $box
         instance.vm.hostname = name
         instance.vm.network :private_network, ip: ip, :dev => "virbr0"

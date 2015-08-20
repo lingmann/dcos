@@ -26,7 +26,7 @@ popd
 
 exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"
 mkdir -p $(dirname "$exhibitor_service")
-cat <<- EOF > "$exhibitor_service"
+cat <<EOF > "$exhibitor_service"
 [Unit]
 Description=Exhibitor Zookeeper Supervisor
 [Service]

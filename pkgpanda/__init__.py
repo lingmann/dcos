@@ -329,7 +329,20 @@ class Repository:
         # TODO(cmaloney): Supply a temporary directory to extract to
         # Then swap that into place, preventing partially-extracted things from
         # becoming an issue.
-        fetcher(id, self.package_path(id))
+        pkg_path = self.package_path(id)
+        # Appending _tmp so there is very little chance of us running into the
+        # rm of another package, since all our PackageID strings are SHA-1, so
+        # they never end with `_tmp`. `{sha}_tmp` is still a valid version
+        # number however so other code doing directory scans will be fine with
+        # the temp folders.
+        tmp_path = pkg_path + '_tmp'
+
+        # Cleanup artifacts (if any) laying around from previous partial
+        # package extractions.
+        check_call(['rm', '-rf', tmp_path])
+
+        fetcher(id, tmp_path)
+        os.rename(tmp_path, pkg_path)
         return True
 
     def remove(self, id):

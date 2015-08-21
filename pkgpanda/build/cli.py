@@ -640,7 +640,9 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
     write_string("cache/last_build", str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package
-    make_tar(pkg_path, "result")
+    tmp_name = pkg_path + "-tmp.tar.xz"
+    make_tar(tmp_name, "result")
+    os.rename(tmp_name, pkg_path)
     print("Package built.")
     return pkg_path
 

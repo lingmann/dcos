@@ -42,12 +42,12 @@ mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libpcre.so.3 "$PKG_PATH/lib/libpcre.so.3"
 
 # From: https://projects.archlinux.org/svntogit/packages.git/tree/trunk/service?h=packages/nginx
-systemd_master="$PKG_PATH"/dcos.target.wants_master/nginx.service
+systemd_master="$PKG_PATH"/dcos.target.wants_master/dcos-nginx.service
 mkdir -p "$(dirname "$systemd_master")"
 cat <<EOF > "$systemd_master"
 [Unit]
 Description=A high performance web server and a reverse proxy server
-After=mesos-dns.service
+After=dcos-mesos-dns.service
 
 [Service]
 Restart=always
@@ -65,7 +65,7 @@ KillSignal=SIGQUIT
 KillMode=mixed
 EOF
 
-systemd_master_reload="$PKG_PATH"/dcos.target.wants_master/nginx-reload.service
+systemd_master_reload="$PKG_PATH"/dcos.target.wants_master/dcos-nginx-reload.service
 mkdir -p "$(dirname "$systemd_master_reload")"
 cat <<EOF > "$systemd_master_reload"
 [Unit]
@@ -78,7 +78,7 @@ EnvironmentFile=/opt/mesosphere/environment
 ExecStart=$PKG_PATH/nginx/sbin/nginx -s reload
 EOF
 
-systemd_master_timer="$PKG_PATH"/dcos.target.wants_master/nginx-reload.timer
+systemd_master_timer="$PKG_PATH"/dcos.target.wants_master/dcos-nginx-reload.timer
 mkdir -p "$(dirname "$systemd_master_timer")"
 cat <<EOF > "$systemd_master_timer"
 [Unit]

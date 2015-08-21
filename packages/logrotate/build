@@ -29,7 +29,7 @@ nomail
 EOF
 
 
-logrotate_service="$PKG_PATH/dcos.target.wants/logrotate.service"
+logrotate_service="$PKG_PATH/dcos.target.wants/dcos-logrotate.service"
 mkdir -p "$(dirname "$logrotate_service")"
 cat <<EOF > "$logrotate_service"
 [Unit]
@@ -43,7 +43,7 @@ ExecStartPre=/usr/bin/mkdir -p /var/log/mesos/archive
 ExecStart=$PKG_PATH/sbin/logrotate $config_file
 EOF
 
-logrotate_timer="$PKG_PATH/dcos.target.wants/logrotate.timer"
+logrotate_timer="$PKG_PATH/dcos.target.wants/dcos-logrotate.timer"
 mkdir -p "$(dirname "$logrotate_timer")"
 cat <<'EOF' > "$logrotate_timer"
 [Unit]

@@ -24,7 +24,7 @@ pushd "$exhibitor_path"
 cp /pkg/src/exhibitor/exhibitor-standalone/src/main/resources/buildscripts/standalone/gradle/build/libs/exhibitor-1.5.6-SNAPSHOT-all.jar exhibitor.jar
 popd
 
-exhibitor_service="$PKG_PATH/dcos.target.wants_master/exhibitor.service"
+exhibitor_service="$PKG_PATH/dcos.target.wants_master/dcos-exhibitor.service"
 mkdir -p $(dirname "$exhibitor_service")
 cat <<EOF > "$exhibitor_service"
 [Unit]

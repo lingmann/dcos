@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+PATH=$PATH:/usr/sbin:/sbin
 
 get_defaultish_ip()
 {

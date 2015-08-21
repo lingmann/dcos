@@ -45,7 +45,6 @@ exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.sh"
 cat <<EOFWrapperScript > "$exhibitor_start_wrapper"
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
-PATH=/usr/sbin:/usr/bin:/sbin:/bin
 
 #: \${ZOOKEEPER_CLUSTER_SIZE:?"ERROR: ZOOKEEPER_CLUSTER_SIZE must be set"}
 #: \${FALLBACK_DNS:?"ERROR: FALLBACK_DNS must be set"}

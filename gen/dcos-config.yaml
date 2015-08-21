@@ -28,6 +28,7 @@ write_files:
       MESOS_WEIGHTS={{ weights }}
       MESOS_QUORUM={{ master_quorum }}
       MESOS_IP_DISCOVERY_COMMAND=/opt/mesosphere/bin/detect_ip
+      SASL_PATH=/opt/mesosphere/lib/sasl2
   - path: /etc/mesos-slave-common
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
@@ -54,5 +55,6 @@ write_files:
       {
         "PATH": "/usr/bin",
         "SHELL": "/usr/bin/bash",
-        "LD_LIBRARY_PATH": "/opt/mesosphere/lib"
+        "LD_LIBRARY_PATH": "/opt/mesosphere/lib",
+        "SASL_PATH": "/opt/mesosphere/lib/sasl2"
       }

@@ -8,10 +8,12 @@ Usage:
 """
 
 import botocore.client
+import os.path
 from docopt import docopt
 from functools import partial
 from pkgpanda import PackageId
-from pkgpanda.util import load_json
+from pkgpanda.util import load_json, write_string
+from subprocess import check_call
 
 import util
 
@@ -69,9 +71,16 @@ def upload_packages(bucket, release_name, packages=[]):
 
 
 def upload_string(release_name, filename, text, s3_put_args={}):
+    # Upload to s3
     bucket = get_bucket()
     obj = get_object(bucket, release_name, filename)
     obj.put(Body=text.encode('utf-8'), **s3_put_args)
+
+    # Save as a local artifact for TeamCity
+    local_path = "artifacts/" + filename
+    check_call(["mkdir", "-p", os.path.dirname(local_path)])
+    write_string(local_path, text)
+
     return obj
 
 

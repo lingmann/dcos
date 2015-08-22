@@ -67,7 +67,7 @@ exec "$PKG_PATH/sbin/keepalived" -f "\$conf" \$*
 EOF
 chmod 744 "$keepalived_wrapper"
 
-systemd_master="$PKG_PATH"/dcos.target.wants_master/keepalived.service
+systemd_master="$PKG_PATH"/dcos.target.wants_master/dcos-keepalived.service
 mkdir -p "$(dirname "$systemd_master")"
 cat <<EOF > "$systemd_master"
 [Unit]

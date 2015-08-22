@@ -23,12 +23,12 @@ cp /go/src/github.com/mesosphere/mesos-dns/mesos-dns $PKG_PATH/bin/mesos-dns
 
 
 # Create the service file
-service="$PKG_PATH/dcos.target.wants_master/mesos-dns.service"
+service="$PKG_PATH/dcos.target.wants_master/dcos-mesos-dns.service"
 mkdir -p "$(dirname "$service")"
 cat <<EOF > "$service"
 [Unit]
 Description=Mesos DNS
-After=mesos-master.service
+After=dcos-mesos-master.service
 [Service]
 Restart=always
 StartLimitInterval=0
@@ -38,7 +38,7 @@ EnvironmentFile=/opt/mesosphere/environment
 ExecStart=/opt/mesosphere/bin/mesos-dns --config=/opt/mesosphere/etc/mesos-dns.json -logtostderr=true -v=2
 EOF
 
-resolvconf_service="$PKG_PATH/dcos.target.wants/gen_resolvconf.service"
+resolvconf_service="$PKG_PATH/dcos.target.wants/dcos-gen-resolvconf.service"
 mkdir -p "$(dirname "$resolvconf_service")"
 cat <<'EOF' > "$resolvconf_service"
 [Unit]
@@ -53,7 +53,7 @@ EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStart=/opt/mesosphere/bin/gen_resolvconf.py "${MASTER_ELB}" "${FALLBACK_DNS}" /etc/resolv.conf
 EOF
 
-resolvconf_timer="$PKG_PATH/dcos.target.wants/gen_resolvconf.timer"
+resolvconf_timer="$PKG_PATH/dcos.target.wants/dcos-gen-resolvconf.timer"
 mkdir -p "$(dirname "$resolvconf_timer")"
 cat <<'EOF' > "$resolvconf_timer"
 [Unit]
@@ -61,7 +61,6 @@ Description=Periodically update systemd-resolved for mesos-dns
 [Timer]
 OnBootSec=0min
 OnUnitActiveSec=1min
-Unit=gen_resolvconf.service
 EOF
 
 gen_resolvconf="$PKG_PATH/bin/gen_resolvconf.py"

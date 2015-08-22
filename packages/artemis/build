@@ -11,12 +11,12 @@ pushd /pkg/src/artemis
 python3 setup.py install --root=/ --prefix=$PKG_PATH
 
 # Create the service file
-service="$PKG_PATH/dcos.target.wants_aws_master/artemis.service"
+service="$PKG_PATH/dcos.target.wants_aws_master/dcos-artemis.service"
 mkdir -p "$(dirname "$service")"
 cat <<EOF > "$service"
 [Unit]
 Description=DCOS Resize service (Artemis)
-After=mesos-master.service
+After=dcos-mesos-master.service
 [Service]
 Restart=always
 StartLimitInterval=0

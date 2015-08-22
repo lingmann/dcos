@@ -16,7 +16,7 @@ mkdir -p "$(dirname "$service")"
 cat <<EOF > "$service"
 [Unit]
 Description=DCOS Tracking
-After=mesos-master.service
+After=dcos-mesos-master.service
 [Service]
 Restart=always
 StartLimitInterval=0

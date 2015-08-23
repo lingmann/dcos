@@ -11,14 +11,14 @@ RUN apt-get update && \
 COPY dcos-image /dcos-image
 COPY pkgpanda /pkgpanda
 
-# Retrieve image inside container to avoid excess copying
-RUN wget -nv -P /dcos-image/packages/ "$BOOTSTRAP_TAR"
-
 RUN cd /pkgpanda && python3 setup.py install && rm -rf /pkgpanda
 RUN cd /dcos-image && pip install -r requirements.txt
 
 WORKDIR /dcos-image
 
 VOLUME ["/genconf"]
+
+# Retrieve image inside container to avoid excess copying
+RUN wget -nv -P /dcos-image/packages/ "$BOOTSTRAP_TAR"
 
 CMD ["/dcos-image/bash.py", "--output-dir", "/genconf", "--config", "config.json"]

@@ -140,7 +140,7 @@ def do_bash_only(options):
         extra_cluster_packages=['onprem-config']
         )
     make_bash(gen_out)
-    util.do_bundle_onprem(['dcos_install.sh'], gen_out)
+    util.do_bundle_onprem(['dcos_install.sh'], gen_out, options.output_dir)
     print("\n\nDCOS Install Package: onprem.tar.xz")
 
 
@@ -151,6 +151,9 @@ if __name__ == '__main__':
     # No subcommand
     gen.add_arguments(parser)
     parser.set_defaults(func=do_bash_only)
+    parser.add_argument('--output-dir',
+                        type=str,
+                        help='Directory to write generated config')
 
     # Build subcommand
     build = subparsers.add_parser('build')

@@ -1,6 +1,4 @@
 #!/bin/bash
-
-# Shell lint tool: http://www.shellcheck.net
 set -o errexit -o nounset -o pipefail
 
 function usage {

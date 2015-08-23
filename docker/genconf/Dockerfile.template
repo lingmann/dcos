@@ -1,0 +1,24 @@
+FROM python:3.4.3-slim
+MAINTAINER support+dcos@mesosphere.io
+
+RUN apt-get update && \
+  apt-get install -y \
+    pxz \
+    wget \
+    git && \
+  rm -rf /var/lib/apt/lists/*
+
+COPY dcos-image /dcos-image
+COPY pkgpanda /pkgpanda
+
+# Retrieve image inside container to avoid excess copying
+RUN wget -nv -P /dcos-image/packages/ "$BOOTSTRAP_TAR"
+
+RUN cd /pkgpanda && python3 setup.py install && rm -rf /pkgpanda
+RUN cd /dcos-image && pip install -r requirements.txt
+
+WORKDIR /dcos-image
+
+VOLUME ["/genconf"]
+
+CMD ["/dcos-image/bash.py", "--output-dir", "/genconf", "--config", "config.json"]

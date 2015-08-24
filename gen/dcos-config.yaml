@@ -3,7 +3,8 @@ write_files:
     content: |
       {
         "environment": {
-          "ZOOKEEPER_CLUSTER_SIZE": {{ num_masters }}
+          "ZOOKEEPER_CLUSTER_SIZE": {{ num_masters }},
+          "MESOS_IP_DISCOVERY_COMMAND": "/opt/mesosphere/bin/detect_ip"
         }
       }
   - path: /etc/mesos-dns.json
@@ -27,7 +28,6 @@ write_files:
       MESOS_ROLES={{ roles }}
       MESOS_WEIGHTS={{ weights }}
       MESOS_QUORUM={{ master_quorum }}
-      MESOS_IP_DISCOVERY_COMMAND=/opt/mesosphere/bin/detect_ip
       SASL_PATH=/opt/mesosphere/lib/sasl2
   - path: /etc/mesos-slave-common
     content: |
@@ -41,7 +41,6 @@ write_files:
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json
       MESOS_DOCKER_REMOVE_DELAY=1hrs
       MESOS_GC_DELAY=2days
-      MESOS_IP_DISCOVERY_COMMAND=/opt/mesosphere/bin/detect_ip
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-65535]

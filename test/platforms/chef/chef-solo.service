@@ -1,0 +1,5 @@
+[Unit]
+Description=Install dcos via chef-solo.
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/chef-solo -j /tmp/node.json -o 'recipe[dcos]'

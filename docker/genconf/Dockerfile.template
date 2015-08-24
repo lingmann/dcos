@@ -8,6 +8,7 @@ RUN apt-get update && \
     git && \
   rm -rf /var/lib/apt/lists/*
 
+# Image build is performed in a tmpdir set up by make.sh
 COPY dcos-image /dcos-image
 COPY pkgpanda /pkgpanda
 
@@ -21,4 +22,4 @@ VOLUME ["/genconf"]
 # Retrieve image inside container to avoid excess copying
 RUN wget -nv -P /dcos-image/packages/ "$BOOTSTRAP_TAR"
 
-CMD ["/dcos-image/bash.py", "--output-dir", "/genconf", "--config", "config.json"]
+ENTRYPOINT ["/dcos-image/docker/genconf/genconf.sh"]

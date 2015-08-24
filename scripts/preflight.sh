@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euf -o pipefail
+
 export OVERALL_RC=0
 
 function version_gt()

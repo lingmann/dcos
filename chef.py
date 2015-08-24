@@ -34,6 +34,7 @@ service 'docker' do
   action [:start, :enable]
 end
 # Configure dcos-setup
+directory '/etc/mesosphere'
 directory '/etc/mesosphere/roles'
 node['dcos']['roles'].each do |role|
   file "/etc/mesosphere/roles/#{{role}}" do

@@ -2,6 +2,8 @@
 """Generates a bash script for installing DCOS On-Prem."""
 
 import argparse
+
+from shutil import copy2
 from pkgpanda.util import write_string
 
 import gen
@@ -41,6 +43,15 @@ fi
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root" 1>&2
     exit 1
+fi
+
+if [[ ! -x {preflight_script} ]]; then
+    echo 'Preflight script not found, but proceeding with risk of errors'
+else
+    ./{preflight_script}
+    if [[ $? == 1 ]]; then
+        echo 'Preflight checks failed. Exiting installation. Please consult product documentation'
+    fi
 fi
 
 mkdir -p /etc/mesosphere/roles
@@ -101,13 +112,17 @@ def make_bash(gen_out):
         if service.get('command') == 'start':
             setup_services += "systemctl start {}\n".format(name)
 
+    preflight_script = './preflight.sh'
     # Populate in the bash script template
     bash_script = bash_template.format(
         dcos_image_commit=util.dcos_image_commit,
         generation_date=util.template_generation_date,
         setup_flags=setup_flags,
-        setup_services=setup_services
+        setup_services=setup_services,
+        preflight_script=preflight_script,
         )
+
+    copy2('scripts/{}'.format(preflight_script), preflight_script)
 
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)

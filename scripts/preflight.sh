@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -euf -o pipefail
+set -uf -o pipefail
 
 declare -i OVERALL_RC=0
 
@@ -26,6 +26,7 @@ function check_command()
     $( command -v $COMMAND >/dev/null 2>&1 || exit 1 )
     RC=$?
     print_status $RC
+    (( OVERALL_RC += $RC ))
     return $RC
 }
 
@@ -38,19 +39,18 @@ function check_docker_version()
     version_gt $DOCKER_VERSION $VERSION_ATLEAST 
     RC=$?
     print_status $RC
+    (( OVERALL_RC += $RC ))
     return $RC
 }
 
 
 function check_all()
 {
-    check_command docker || (( OVERALL_RC += $? ))
-    check_docker_version 1.7 || (( OVERALL_RC += $? ))
+    check_command docker
+    check_docker_version 1.7
 
-    check_command wget || (( OVERALL_RC += $? ))
-    check_command bash || (( OVERALL_RC += $? ))
-    
-    check_command python3 || (( OVERALL_RC += $? ))
+    check_command wget
+    check_command bash
     
     return $OVERALL_RC
 }

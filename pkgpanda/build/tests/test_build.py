@@ -11,17 +11,17 @@ def package(resource_dir, name, tmpdir):
 
 
 def test_build(tmpdir):
-    package("resources/base", "b", tmpdir)
+    package("resources/base", "base", tmpdir)
     # TODO(cmaloney): Check the package exists with the right contents.
 
 
 def test_single_source(tmpdir):
-    package("resources/single_source", "a", tmpdir)
+    package("resources/single_source", "single_source", tmpdir)
 
 
 def test_url_extract(tmpdir):
-    package("resources/url_extract", "a", tmpdir)
+    package("resources/url_extract", "url_extract", tmpdir)
 
 
 def test_no_buildinfo(tmpdir):
-    package("resources/no_buildinfo", "a", tmpdir)
+    package("resources/no_buildinfo", "no_buildinfo", tmpdir)

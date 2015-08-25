@@ -8,6 +8,7 @@ declare RED=""
 declare BOLD=""
 declare NORMAL=""
 
+
 # Check if this is a terminal, and if colors are supported, set some basic
 # colors for outputs
 if [ -t 1 ]; then
@@ -19,8 +20,24 @@ if [ -t 1 ]; then
     fi
 fi
 
+
+# check if sort -V works
+declare -i DISABLE_VERSION_CHECK=0
+
+function check_sort_capability()
+{
+    $( echo '1' | sort -V >/dev/null 2>&1 || exit 1 )
+    RC=$?
+    if [[ "$RC" -eq "2" ]]; then
+        echo -e "${RED}Disabling version checking as sort -V is not available${NORMAL}"
+        DISABLE_VERSION_CHECK=1
+    fi
+}
+
+
 function version_gt()
 {
+    # sort -V does version-aware sort
     HIGHEST_VERSION="$(echo "$@" | tr " " "\n" | sort -V | tail -n 1)"
     test $HIGHEST_VERSION == "$1"
 }
@@ -66,13 +83,14 @@ function check()
     # Wrapper to invoke both check_commmand and version check in one go
     check_command $*
     # check_version takes 3 arguments
-    if [[ "$#" -eq 3 ]]; then
+    if [[ "$#" -eq 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
         check_version $*
     fi
 }
 
 function check_all()
 {
+    check_sort_capability
     check docker 1.7 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
 
     check wget

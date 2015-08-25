@@ -35,6 +35,10 @@ bash_template = """#!/bin/bash
 
 set -o errexit -o nounset -o pipefail
 
+SCRIPT_DIR=$( cd "$( dirname "${{BASH_SOURCE[0]}}" )" && pwd )
+
+PREFLIGHT_COMMAND = "${{SCRIPT_DIR}}/{preflight_script}"
+
 if [ "$#" -lt 1 ]; then
     echo "At least one role must be specified"
     exit 1
@@ -45,12 +49,14 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-if [[ ! -x {preflight_script} ]]; then
-    echo 'Preflight script not found, but proceeding with risk of errors'
+if [[ ! -x $PREFLIGHT_COMMAND ]]; then
+    echo 'Preflight script not found in $SCRIPT_DIR. Proceeding with risk of errors'
 else
-    ./{preflight_script}
-    if [[ $? == 1 ]]; then
+    $(PREFLIGHT_COMMAND)
+    RC=$?
+    if [[ $RC != 0 ]]; then
         echo 'Preflight checks failed. Exiting installation. Please consult product documentation'
+        exit $RC
     fi
 fi
 
@@ -112,7 +118,7 @@ def make_bash(gen_out):
         if service.get('command') == 'start':
             setup_services += "systemctl start {}\n".format(name)
 
-    preflight_script = './preflight.sh'
+    preflight_script = 'preflight.sh'
     # Populate in the bash script template
     bash_script = bash_template.format(
         dcos_image_commit=util.dcos_image_commit,

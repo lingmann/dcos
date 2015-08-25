@@ -2,7 +2,7 @@
 
 set -euf -o pipefail
 
-export OVERALL_RC=0
+declare -i OVERALL_RC=0
 
 function version_gt()
 {
@@ -44,13 +44,15 @@ function check_docker_version()
 
 function check_all()
 {
-    check_command docker
-    check_docker_version 1.7
+    check_command docker || (( OVERALL_RC += $? ))
+    check_docker_version 1.7 || (( OVERALL_RC += $? ))
 
-    check_command wget
-    check_command bash
+    check_command wget || (( OVERALL_RC += $? ))
+    check_command bash || (( OVERALL_RC += $? ))
     
-    check_command python3
+    check_command python3 || (( OVERALL_RC += $? ))
+    
+    return $OVERALL_RC
 }
 
 check_all

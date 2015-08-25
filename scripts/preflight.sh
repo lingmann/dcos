@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -uf -o pipefail
+set -o noglob -o nounset -o pipefail
 
 declare -i OVERALL_RC=0
 

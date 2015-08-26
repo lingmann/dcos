@@ -19,7 +19,4 @@ WORKDIR /dcos-image
 
 VOLUME ["/genconf"]
 
-# Retrieve image inside container to avoid excess copying
-RUN wget -nv -P /dcos-image/packages/ "$BOOTSTRAP_TAR"
-
-ENTRYPOINT ["/dcos-image/docker/genconf/genconf.sh"]
+ENTRYPOINT ["/dcos-image/docker/genconf/genconf.py"]

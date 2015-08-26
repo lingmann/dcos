@@ -71,14 +71,14 @@ aws_region_names = [
         'id': 'ap-southeast-2'
     }]
 
-late_services = """- name: cfn-signal.service
+late_services = """- name: dcos-cfn-signal.service
   command: start
   content: |
     [Unit]
     Description=Signal CloudFormation Success
     After=dcos.target
     Requires=dcos.target
-    ConditionPathExists=!/var/lib/cfn-signal
+    ConditionPathExists=!/var/lib/dcos-cfn-signal
     [Service]
     Type=simple
     Restart=on-failure
@@ -91,7 +91,7 @@ late_services = """- name: cfn-signal.service
       --resource {{ report_name }} \\
       --stack { "Ref": "AWS::StackName" } \\
       --region { "Ref" : "AWS::Region" }
-    ExecStart=/usr/bin/touch /var/lib/cfn-signal"""
+    ExecStart=/usr/bin/touch /var/lib/dcos-cfn-signal"""
 
 cf_instance_groups = {
     'master': {
@@ -191,7 +191,7 @@ def gen_templates(arguments, options):
     for variant, params in cf_instance_groups.items():
         cc_variant = deepcopy(cloud_config)
 
-        # Specialize the cfn-signal service
+        # Specialize the dcos-cfn-signal service
         cc_variant = results.utils.add_units(
             cc_variant,
             yaml.load(jinja_env.from_string(late_services).render(params)))

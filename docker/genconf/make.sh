@@ -99,6 +99,7 @@ function main {
 
 # Builds the Docker image located in $1
 function build {
+  check_prereqs
   echo "Building: $1"
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
@@ -108,6 +109,7 @@ function build {
 
 # Push the built image to Docker hub
 function push {
+  check_prereqs
   dest=mesosphere/dcos-genconf:"${DOCKER_TAG}"
   echo "Pushing: ${dest}"
   docker push "$dest"

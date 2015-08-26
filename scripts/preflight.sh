@@ -103,6 +103,3 @@ function check_all()
 
     return $OVERALL_RC
 }
-
-
-check_all

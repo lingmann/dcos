@@ -9,8 +9,8 @@ order:
 
   mesosphere/dcos-genconf:\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
 
-The tag is also written to a file named docker-tag. SHA's may be shortened to an
-unambiguous length.
+The tag is also written to a file named docker-tag in the current working
+directory. SHA's may be shortened to an unambiguous length.
 
  The following environment variables must be set:
    export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda source directory
@@ -104,7 +104,7 @@ function build {
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
   popd
-  echo "$DOCKER_TAG" > "${MY_ROOT}/docker-tag"
+  echo "$DOCKER_TAG" > docker-tag
 }
 
 # Push the built image to Docker hub

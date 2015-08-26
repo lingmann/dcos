@@ -530,7 +530,7 @@ def do_generate(
             print("ERROR: Specified config file '" + options.config + "' does not exist")
             sys.exit(1)
         except ValueError as ex:
-            print("ERROR:", ex.what())
+            print("ERROR:", ex)
             sys.exit(1)
 
     # Empty string (top level directory) is always implicitly included

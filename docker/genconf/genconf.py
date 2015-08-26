@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+"""Generates DCOS packages and configuration."""
 
 import argparse
 import glob
@@ -8,42 +9,6 @@ import subprocess
 import sys
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
-
-
-def main():
-    desc = '''Generates DCOS configuration.
-
-Initial Setup
-  1. Set up a build location for input config and artifacts (e.g.
-     /dcos-config). These instructions will refer to this location as
-     $BUILD_DIR.
-  2. Add ip-detect.sh script to $BUILD_DIR
-  3. Add config-user.json to $BUILD_DIR (optional)
-
-Interactive Configuration
-  1. Build DCOS artifacts:
-     docker run -it -v "$BUILD_DIR":/genconf dcos-genconf interactive
-'''
-    parser = argparse.ArgumentParser(
-        description=desc, formatter_class=RawTextHelpFormatter)
-    subparsers = parser.add_subparsers(title='commands')
-
-    # interactive subcommand
-    interactive = subparsers.add_parser('interactive')
-    interactive.set_defaults(func=do_interactive)
-
-    # Parse the arguments and dispatch.
-    options = parser.parse_args()
-
-    # Use an if rather than try/except since lots of things inside could throw
-    # an AttributeError.
-    if hasattr(options, 'func'):
-        options.func(options)
-        sys.exit(0)
-    else:
-        parser.print_help()
-        print("ERROR: Must use a subcommand")
-        sys.exit(1)
 
 
 def do_interactive(options):
@@ -92,11 +57,13 @@ def fetch_bootstrap(
             sys.exit(1)
 
 
-def symlink_bootstrap():
-    """Create symlinks in /dcos-image/packages/ to the downloaded bootstrap
-    tarballs so that the gen script can find them."""
-    for src in glob.glob('/genconf/*bootstrap.tar.xz'):
-        dest = os.path.join('/dcos-image/packages', os.path.basename(src))
+def symlink_bootstrap(
+        src_glob='/genconf/*bootstrap.tar.xz',
+        dest_dir='/dcos-image/packages'):
+    """Create symlinks to files matched by src_glob in dest_dir. Useful for
+    making the bootstrap tarballs discoverable by the gen scripts."""
+    for src in glob.glob(src_glob):
+        dest = os.path.join(dest_dir, os.path.basename(src))
         try:
             # print("INFO: Creating symlink {} => {}".format(src, dest))
             os.symlink(src, dest)
@@ -122,16 +89,52 @@ def load_config(base_json_path, user_json_path):
 
 def load_json(filename):
     try:
-        with open(filename) as _:
-            return json.load(_)
+        with open(filename) as fname:
+            return json.load(fname)
     except ValueError as ex:
         print("ERROR: Invalid JSON in {0}: {1}".format(filename, ex))
         sys.exit(1)
 
 
 def save_json(dict_in, filename):
-    with open(filename, 'w') as _:
-        json.dump(dict_in, _)
+    with open(filename, 'w') as fname:
+        json.dump(dict_in, fname)
+
+
+def main():
+    desc = '''Generates DCOS configuration.
+
+Initial Setup
+  1. Set up a build location for input config and artifacts (e.g.
+     /dcos-config). These instructions will refer to this location as
+     $BUILD_DIR.
+  2. Add ip-detect.sh script to $BUILD_DIR
+  3. Add config-user.json to $BUILD_DIR (optional)
+
+Interactive Configuration
+  1. Build DCOS artifacts:
+     docker run -it -v "$BUILD_DIR":/genconf dcos-genconf interactive
+'''
+    parser = argparse.ArgumentParser(
+        description=desc, formatter_class=RawTextHelpFormatter)
+    subparsers = parser.add_subparsers(title='commands')
+
+    # interactive subcommand
+    interactive = subparsers.add_parser('interactive')
+    interactive.set_defaults(func=do_interactive)
+
+    # Parse the arguments and dispatch.
+    options = parser.parse_args()
+
+    # Use an if rather than try/except since lots of things inside could throw
+    # an AttributeError.
+    if hasattr(options, 'func'):
+        options.func(options)
+        sys.exit(0)
+    else:
+        parser.print_help()
+        print("ERROR: Must use a subcommand")
+        sys.exit(1)
 
 
 if __name__ == '__main__':

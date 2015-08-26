@@ -3,7 +3,14 @@ set -o errexit -o nounset -o pipefail
 
 function usage {
   cat <<USAGE
-This script builds the mesosphere/dcos-genconf Docker image.
+This script builds the mesosphere/dcos-genconf Docker image. The resulting
+Docker image will be tagged with the SHA of the components, in the following
+order:
+
+  mesosphere/dcos-genconf:\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
+
+The tag is also written to a file named docker-tag. SHA's may be shortened to an
+unambiguous length.
 
  The following environment variables must be set:
    export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda source directory
@@ -20,7 +27,7 @@ This script builds the mesosphere/dcos-genconf Docker image.
  Using image to generate DCOS config tarball:
    BUILD_DIR=/tmp/genconf
    # Place ip-detect.sh script in \$BUILD_DIR and mount in container at /genconf
-   docker run -it -v "\$BUILD_DIR":/genconf mesosphere/dcos-genconf:\$BOOTSTRAP_ID
+   docker run -it -v "\$BUILD_DIR":/genconf mesosphere/dcos-genconf
    # Configuration tarball will be written to \$BUILD_DIR
 
 USAGE
@@ -71,8 +78,16 @@ function check_prereqs {
     exit 1
   fi
 
+  DCOS_IMAGE_SHA=$(git -C "${DCOS_IMAGE_SRC}" rev-parse HEAD || true)
+  : ${DCOS_IMAGE_SHA:?"ERROR: Unable to determine Git SHA of DCOS_IMAGE"}
+
+  PKGPANDA_SHA=$(git -C "${PKGPANDA_SRC}" rev-parse HEAD || true)
+  : ${PKGPANDA_SHA:?"ERROR: Unable to determine Git SHA of PKGPANDA"}
+
   : ${RELEASE_NAME:?"ERROR: RELEASE_NAME env var must be set"}
   : ${BOOTSTRAP_ID:?"ERROR: BOOTSTRAP_ID env var must be set"}
+
+  DOCKER_TAG="${DCOS_IMAGE_SHA:0:12}-${PKGPANDA_SHA:0:12}-${BOOTSTRAP_ID:0:12}"
 }
 
 function main {
@@ -86,13 +101,14 @@ function main {
 function build {
   echo "Building: $1"
   pushd "$1"
-  docker build -t mesosphere/dcos-genconf:"$BOOTSTRAP_ID" .
+  docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
   popd
+  echo "$DOCKER_TAG" > "${MY_ROOT}/docker-tag"
 }
 
 # Push the built image to Docker hub
 function push {
-  dest="mesosphere/dcos-genconf:${BOOTSTRAP_ID}"
+  dest=mesosphere/dcos-genconf:"${DOCKER_TAG}"
   echo "Pushing: ${dest}"
   docker push "$dest"
 }

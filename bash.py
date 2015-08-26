@@ -3,7 +3,8 @@
 
 import argparse
 
-from shutil import copy2
+import jinja2
+
 from pkgpanda.util import write_string
 
 import gen
@@ -28,53 +29,228 @@ bash_template = """#!/bin/bash
 #
 #
 # Metadata:
-#   dcos image commit: {dcos_image_commit}
-#   generation date: {generation_date}
+#   dcos image commit: {{dcos_image_commit}}
+#   generation date: {{generation_date}}
 #
 # TODO(cmaloney): Copyright + License string here
 
 set -o errexit -o nounset -o pipefail
 
-SCRIPT_DIR=$( cd "$( dirname "${{BASH_SOURCE[0]}}" )" && pwd )
+declare -i OVERALL_RC=0
+declare -i PREFLIGHT_ONLY=0
+declare -i DISABLE_PREFLIGHT=0
 
-PREFLIGHT_COMMAND = "${{SCRIPT_DIR}}/{preflight_script}"
+declare ROLES=""
+declare RED=""
+declare BOLD=""
+declare NORMAL=""
 
-if [ "$#" -lt 1 ]; then
-    echo "At least one role must be specified"
-    exit 1
+# Check if this is a terminal, and if colors are supported, set some basic
+# colors for outputs
+if [ -t 1 ]; then
+    colors_supported=$(tput colors)
+    if [[ $colors_supported -ge 8 ]]; then
+        RED='\e[1;31m'
+        BOLD='\e[1m'
+        NORMAL='\e[0m'
+    fi
 fi
+
+# Setup getopt argument parser
+ARGS=$(getopt -o dph --long "disable-preflight,preflight-only,help" -n "$(basename "$0")" -- "$@")
 
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root" 1>&2
     exit 1
 fi
 
-if [[ ! -x $PREFLIGHT_COMMAND ]]; then
-    echo 'Preflight script not found in $SCRIPT_DIR. Proceeding with risk of errors'
-else
-    $(PREFLIGHT_COMMAND)
-    RC=$?
-    if [[ $RC != 0 ]]; then
-        echo 'Preflight checks failed. Exiting installation. Please consult product documentation'
-        exit $RC
-    fi
-fi
+function setup_directories()
+{
+    echo -e "Creating directories under /etc/mesosphere"
+    mkdir -p /etc/mesosphere/roles
+    mkdir -p /etc/mesosphere/setup-flags
+}
 
-mkdir -p /etc/mesosphere/roles
-mkdir -p /etc/mesosphere/setup-flags
-
-# Set DCOS roles
-for role in "$@"
-do
-    touch "/etc/mesosphere/roles/$role"
-done
+function setup_dcos_roles()
+{
+    # Set DCOS roles
+    for role in "$ROLES"
+    do
+        echo "Creating role file for ${role}"
+        touch "/etc/mesosphere/roles/$role"
+    done
+}
 
 # Set DCOS machine configuration
-{setup_flags}
+function configure_dcos()
+{
+echo -e 'Configuring DCOS'
+{{setup_flags}}
+}
 
 # Install the DCOS services, start DCOS
-{setup_services}"""
+function setup_and_start_services()
+{
+echo -e 'Setting and starting DCOS'
+{{setup_services}}
+}
 
+set +e
+
+declare -i DISABLE_VERSION_CHECK=0
+
+# check if sort -V works
+function check_sort_capability()
+{
+    $( echo '1' | sort -V >/dev/null 2>&1 || exit 1 )
+    RC=$?
+    if [[ "$RC" -eq "2" ]]; then
+        echo -e "${RED}Disabling version checking as sort -V is not available${NORMAL}"
+        DISABLE_VERSION_CHECK=1
+    fi
+}
+
+function version_gt()
+{
+    # sort -V does version-aware sort
+    HIGHEST_VERSION="$(echo "$@" | tr " " "\n" | sort -V | tail -n 1)"
+    test $HIGHEST_VERSION == "$1"
+}
+
+function print_status()
+{
+    CODE_TO_TEST=$1
+    EXTRA_TEXT=${2:-}
+    if [[ $CODE_TO_TEST == 0 ]]; then
+        echo -e "${BOLD}PASS $EXTRA_TEXT${NORMAL}"
+    else
+        echo -e "${RED}FAIL $EXTRA_TEXT${NORMAL}"
+    fi
+}
+
+function check_command()
+{
+    COMMAND=$1
+    echo -e -n "Checking if $COMMAND is installed and in PATH: "
+    $( command -v $COMMAND >/dev/null 2>&1 || exit 1 )
+    RC=$?
+    print_status $RC
+    (( OVERALL_RC += $RC ))
+    return $RC
+}
+
+function check_version()
+{
+    COMMAND_NAME=$1
+    VERSION_ATLEAST=$2
+    COMMAND_VERSION=$3
+
+    echo -e -n "Checking $COMMAND_NAME version requirement (>= $VERSION_ATLEAST): "
+    version_gt $COMMAND_VERSION $VERSION_ATLEAST
+    RC=$?
+    print_status $RC "${NORMAL}($COMMAND_VERSION)"
+    (( OVERALL_RC += $RC ))
+    return $RC
+}
+
+function check()
+{
+    # Wrapper to invoke both check_commmand and version check in one go
+    check_command $*
+    # check_version takes 3 arguments
+    if [[ "$#" -eq 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
+        check_version $*
+    fi
+}
+
+function check_all()
+{
+    # Disable errexit because we want the preflight checks to run all the way
+    # through and not bail in the middle, which will happen as it relies on
+    # error exit codes
+    set +e
+    echo -e "${BOLD}Running preflight checks${NORMAL}"
+    check_sort_capability
+    check docker 1.7 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
+
+    check wget
+    check bash
+    check ping
+    check tar 1.27 $(tar --version | head -1 | cut -f4 -d' ')
+    check xz 5.0 $(xz --version | head -1 | cut -f4 -d' ')
+
+    check systemd 215 $(systemd --version | head -1 | cut -f2 -d' ')
+
+    return $OVERALL_RC
+}
+
+function dcos_install()
+{
+    # Enable errexit
+    set -e
+
+    setup_directories
+    setup_dcos_roles
+    configure_dcos
+    setup_and_start_services
+
+}
+
+function usage()
+{
+    echo -e "${BOLD}Usage: $0 [--disable-preflight|--preflight-only] <roles>${NORMAL}"
+}
+
+function main()
+{
+    eval set -- "$ARGS"
+
+    while true ; do
+        case "$1" in
+            -d|--disable-preflight) DISABLE_PREFLIGHT=1;  shift  ;;
+            -p|--preflight-only) PREFLIGHT_ONLY=1 ; shift  ;;
+            -h|--help) usage; exit 1 ;;
+            --) shift ; break ;;
+            *) usage ; exit 1 ;;
+        esac
+    done
+
+    if [[ $DISABLE_PREFLIGHT -eq 1 && $PREFLIGHT_ONLY -eq 1 ]]; then
+        echo -e 'Both --disable-preflight and --preflight-only can not be specified'
+        usage
+        exit 1
+    fi
+
+    shift $(($OPTIND - 1))
+    ROLES=$@
+
+    if [[ $PREFLIGHT_ONLY -eq 1 ]] ; then
+        check_all
+    else
+        if [[ -z $ROLES ]] ; then
+            echo -e 'Atleast one role name must be specified'
+            usage
+            exit 1
+        fi
+        echo -e "${BOLD}Starting DCOS Install Process${NORMAL}"
+        if [[ $DISABLE_PREFLIGHT -eq 0 ]] ; then
+            check_all
+            RC=$?
+            if [[ $RC -ne 0 ]]; then
+                echo 'Preflight checks failed. Exiting installation. Please consult product documentation'
+                exit $RC
+            fi
+        fi
+        # Run actual install
+        dcos_install
+    fi
+
+}
+
+# Run it all
+main
+
+"""
 
 def make_bash(gen_out):
 
@@ -118,17 +294,14 @@ def make_bash(gen_out):
         if service.get('command') == 'start':
             setup_services += "systemctl start {}\n".format(name)
 
-    preflight_script = 'preflight.sh'
     # Populate in the bash script template
-    bash_script = bash_template.format(
+    bash_script = jinja2.Template(bash_template).render(
         dcos_image_commit=util.dcos_image_commit,
         generation_date=util.template_generation_date,
         setup_flags=setup_flags,
         setup_services=setup_services,
-        preflight_script=preflight_script,
         )
 
-    copy2('scripts/{}'.format(preflight_script), preflight_script)
 
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)

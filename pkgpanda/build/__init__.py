@@ -297,14 +297,8 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
     # Activate the packages inside the repository.
     # Do generate dcos.target.wants inside the root so that we don't
     # try messing with /etc/systemd/system.
-    install = pkgpanda.Install(pkgpanda_root, None, True, False, True, True)
+    install = pkgpanda.Install(pkgpanda_root, None, True, False, True, True, True)
     install.activate(repository, repository.load_packages(pkg_ids))
-
-    # Remove dcos.target.wants from the install since it won't be used
-    # on final install systems. Machines should run a `pkgpanda setup`
-    # to activate / start all the systemd services for that specific
-    # machine.
-    shutil.rmtree(make_abs("opt/mesosphere/dcos.target.wants"))
 
     # Mark the tarball as a bootstrap tarball/filesystem so that
     # dcos-setup.service will fire.

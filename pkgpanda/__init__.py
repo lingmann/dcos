@@ -385,15 +385,27 @@ def symlink_tree(src, dest):
 # described in `docs/package_concepts.md`
 class Install:
 
-    def __init__(self, root, config_dir, rooted_systemd, manage_systemd, block_systemd, fake_path=False):
+    # TODO(cmaloney) This is way too many options for thee call points... Most
+    # of these should be made so they can be removed (most are just for testing)
+
+    def __init__(
+            self,
+            root,
+            config_dir,
+            rooted_systemd,
+            manage_systemd,
+            block_systemd,
+            fake_path=False,
+            skip_systemd_dirs=False):
         assert type(rooted_systemd) == bool
         assert type(fake_path) == bool
         self.__root = os.path.abspath(root)
         self.__config_dir = os.path.abspath(config_dir) if config_dir else None
-        if rooted_systemd:
-            self.__systemd_dir = "{}/dcos.target.wants".format(root)
-        else:
-            self.__systemd_dir = "/etc/systemd/system/dcos.target.wants"
+        if not skip_systemd_dirs:
+            if rooted_systemd:
+                self.__systemd_dir = "{}/dcos.target.wants".format(root)
+            else:
+                self.__systemd_dir = "/etc/systemd/system/dcos.target.wants"
         self.__manage_systemd = manage_systemd
         self.__block_systemd = block_systemd
 
@@ -404,9 +416,12 @@ class Install:
             if self.__roles is None:
                 self.__roles = []
 
-        self.__well_known_dirs = ["bin", "etc", "include", "lib", self.__systemd_dir]
+        self.__well_known_dirs = ["bin", "etc", "include", "lib"]
+        if not skip_systemd_dirs:
+            self.__well_known_dirs.append(self.__systemd_dir)
 
         self.__fake_path = fake_path
+        self.__skip_systemd_dirs = skip_systemd_dirs
 
     def get_active(self):
         """the active folder has symlinks to all the active packages.
@@ -572,7 +587,9 @@ class Install:
     def swap_active(self, extension, archive=True):
         active_names = self.get_active_names()
         state_filename = self._make_abs("install_progress")
-        systemd = Systemd(self._make_abs(self.__systemd_dir), self.__manage_systemd, self.__block_systemd)
+        systemd = None
+        if not self.__skip_systemd_dirs:
+            systemd = Systemd(self._make_abs(self.__systemd_dir), self.__manage_systemd, self.__block_systemd)
 
         # Ensure all the new active files exist
         for active in active_names:
@@ -628,9 +645,10 @@ class Install:
             record_state({"stage": "archive"})
 
             # Stop all systemd services
-            systemd.stop_all()
+            if not self.__skip_systemd_dirs:
+                systemd.stop_all()
 
-            manage_systemd_linking("cleanup")
+                manage_systemd_linking("cleanup")
 
             # Archive the current config.
             for active in active_names:
@@ -647,7 +665,8 @@ class Install:
             new_path = active + extension
             os.rename(new_path, active)
 
-        manage_systemd_linking("setup")
+        if not self.__skip_systemd_dirs:
+            manage_systemd_linking("setup")
 
         # All done with what we need to redo if host restarts.
         os.remove(state_filename)

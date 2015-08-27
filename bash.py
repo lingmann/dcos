@@ -131,7 +131,9 @@ function print_status()
 function check_command()
 {
     COMMAND=$1
-    echo -e -n "Checking if $COMMAND is installed and in PATH: "
+    DISPLAY_NAME=${2:-COMMAND}
+    
+    echo -e -n "Checking if $DISPLAY_NAME is installed and in PATH: "
     $( command -v $COMMAND >/dev/null 2>&1 || exit 1 )
     RC=$?
     print_status $RC
@@ -144,8 +146,9 @@ function check_version()
     COMMAND_NAME=$1
     VERSION_ATLEAST=$2
     COMMAND_VERSION=$3
-
-    echo -e -n "Checking $COMMAND_NAME version requirement (>= $VERSION_ATLEAST): "
+    DISPLAY_NAME=${4:-COMMAND}
+    
+    echo -e -n "Checking $DISPLAY_NAME version requirement (>= $VERSION_ATLEAST): "
     version_gt $COMMAND_VERSION $VERSION_ATLEAST
     RC=$?
     print_status $RC "${NORMAL}($COMMAND_VERSION)"
@@ -156,9 +159,16 @@ function check_version()
 function check()
 {
     # Wrapper to invoke both check_commmand and version check in one go
-    check_command $*
-    # check_version takes 3 arguments
-    if [[ "$#" -eq 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
+    if [[ $# -eq 4 ]]; then
+       DISPLAY_NAME=$4
+    elif [[ $# -eq 2 ]]; then
+       DISPLAY_NAME=$2
+    else
+       DISPLAY_NAME=$1
+    fi
+    check_command $1 $DISPLAY_NAME
+    # check_version takes {3,4} arguments
+    if [[ "$#" -ge 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
         check_version $*
     fi
 }
@@ -179,7 +189,7 @@ function check_all()
     check tar 1.27 $(tar --version | head -1 | cut -f4 -d' ')
     check xz 5.0 $(xz --version | head -1 | cut -f4 -d' ')
 
-    check systemd 215 $(systemd --version | head -1 | cut -f2 -d' ')
+    check systemctl 215 $(systemctl --version | head -1 | cut -f2 -d' ') systemd
 
     return $OVERALL_RC
 }

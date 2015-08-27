@@ -131,7 +131,7 @@ function print_status()
 function check_command()
 {
     COMMAND=$1
-    DISPLAY_NAME=${2:-COMMAND}
+    DISPLAY_NAME=${2:-$COMMAND}
     
     echo -e -n "Checking if $DISPLAY_NAME is installed and in PATH: "
     $( command -v $COMMAND >/dev/null 2>&1 || exit 1 )
@@ -146,7 +146,7 @@ function check_version()
     COMMAND_NAME=$1
     VERSION_ATLEAST=$2
     COMMAND_VERSION=$3
-    DISPLAY_NAME=${4:-COMMAND}
+    DISPLAY_NAME=${4:-$COMMAND}
     
     echo -e -n "Checking $DISPLAY_NAME version requirement (>= $VERSION_ATLEAST): "
     version_gt $COMMAND_VERSION $VERSION_ATLEAST
@@ -181,15 +181,20 @@ function check_all()
     set +e
     echo -e "${BOLD}Running preflight checks${NORMAL}"
     check_sort_capability
-    check docker 1.7 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
+    # CoreOS stable as of Aug 2015 has 1.6.2
+    check docker 1.6 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
 
     check wget
     check bash
     check ping
-    check tar 1.27 $(tar --version | head -1 | cut -f4 -d' ')
-    check xz 5.0 $(xz --version | head -1 | cut -f4 -d' ')
-
-    check systemctl 215 $(systemctl --version | head -1 | cut -f2 -d' ') systemd
+    check tar
+    check xz
+    
+    # $ systemctl --version ->
+    # systemd nnn
+    # compiler option string
+    # Pick up just the first line of output and get the version from it
+    check systemctl 200 $(systemctl --version | head -1 | cut -f2 -d' ') systemd
 
     return $OVERALL_RC
 }

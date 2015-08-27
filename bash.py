@@ -64,15 +64,13 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
-function setup_directories()
-{
+function setup_directories() {
     echo -e "Creating directories under /etc/mesosphere"
     mkdir -p /etc/mesosphere/roles
     mkdir -p /etc/mesosphere/setup-flags
 }
 
-function setup_dcos_roles()
-{
+function setup_dcos_roles() {
     # Set DCOS roles
     for role in "$ROLES"
     do
@@ -82,15 +80,13 @@ function setup_dcos_roles()
 }
 
 # Set DCOS machine configuration
-function configure_dcos()
-{
+function configure_dcos() {
 echo -e 'Configuring DCOS'
 {{setup_flags}}
 }
 
 # Install the DCOS services, start DCOS
-function setup_and_start_services()
-{
+function setup_and_start_services() {
 echo -e 'Setting and starting DCOS'
 {{setup_services}}
 }
@@ -100,8 +96,7 @@ set +e
 declare -i DISABLE_VERSION_CHECK=0
 
 # check if sort -V works
-function check_sort_capability()
-{
+function check_sort_capability() {
     $( echo '1' | sort -V >/dev/null 2>&1 || exit 1 )
     RC=$?
     if [[ "$RC" -eq "2" ]]; then
@@ -110,15 +105,13 @@ function check_sort_capability()
     fi
 }
 
-function version_gt()
-{
+function version_gt() {
     # sort -V does version-aware sort
     HIGHEST_VERSION="$(echo "$@" | tr " " "\n" | sort -V | tail -n 1)"
     test $HIGHEST_VERSION == "$1"
 }
 
-function print_status()
-{
+function print_status() {
     CODE_TO_TEST=$1
     EXTRA_TEXT=${2:-}
     if [[ $CODE_TO_TEST == 0 ]]; then
@@ -128,11 +121,10 @@ function print_status()
     fi
 }
 
-function check_command()
-{
+function check_command_exists() {
     COMMAND=$1
     DISPLAY_NAME=${2:-$COMMAND}
-    
+
     echo -e -n "Checking if $DISPLAY_NAME is installed and in PATH: "
     $( command -v $COMMAND >/dev/null 2>&1 || exit 1 )
     RC=$?
@@ -141,13 +133,12 @@ function check_command()
     return $RC
 }
 
-function check_version()
-{
+function check_version() {
     COMMAND_NAME=$1
     VERSION_ATLEAST=$2
     COMMAND_VERSION=$3
     DISPLAY_NAME=${4:-$COMMAND}
-    
+
     echo -e -n "Checking $DISPLAY_NAME version requirement (>= $VERSION_ATLEAST): "
     version_gt $COMMAND_VERSION $VERSION_ATLEAST
     RC=$?
@@ -156,8 +147,7 @@ function check_version()
     return $RC
 }
 
-function check()
-{
+function check() {
     # Wrapper to invoke both check_commmand and version check in one go
     if [[ $# -eq 4 ]]; then
        DISPLAY_NAME=$4
@@ -166,15 +156,14 @@ function check()
     else
        DISPLAY_NAME=$1
     fi
-    check_command $1 $DISPLAY_NAME
+    check_command_exists $1 $DISPLAY_NAME
     # check_version takes {3,4} arguments
     if [[ "$#" -ge 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
         check_version $*
     fi
 }
 
-function check_all()
-{
+function check_all() {
     # Disable errexit because we want the preflight checks to run all the way
     # through and not bail in the middle, which will happen as it relies on
     # error exit codes
@@ -189,7 +178,7 @@ function check_all()
     check ping
     check tar
     check xz
-    
+
     # $ systemctl --version ->
     # systemd nnn
     # compiler option string

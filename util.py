@@ -71,10 +71,11 @@ def do_bundle_onprem(extra_files, gen_out, output_dir=None):
         # Copy the tarball in to the artifacts
         copy_makedirs(local_bootstrap_path, directory + "/bootstrap/{}.bootstrap.tar.xz".format(bootstrap_id))
 
-        # Tar the whole thing up
-        onprem_tar = "onprem.tar.xz"
         if output_dir:
+            # Write contents directly to output_dir
             if not os.path.exists(output_dir):
                 os.makedirs(output_dir)
-            onprem_tar = output_dir + "/" + onprem_tar
-        check_call(["tar", "-czf", onprem_tar, "-C", directory, "."])
+            check_call('/bin/cp -r * "{}"'.format(output_dir), cwd=directory, shell=True)
+        else:
+            # Create a tarball
+            check_call(["tar", "-czf", "onprem.tar.xz", "-C", directory, "."])

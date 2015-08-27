@@ -141,7 +141,6 @@ def do_bash_only(options):
         )
     make_bash(gen_out)
     util.do_bundle_onprem(['dcos_install.sh'], gen_out, options.output_dir)
-    print("\n\nDCOS Install Package: onprem.tar.xz")
 
 
 if __name__ == '__main__':

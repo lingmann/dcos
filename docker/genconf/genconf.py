@@ -18,7 +18,7 @@ def do_interactive(options):
     fetch_bootstrap(conf)
     symlink_bootstrap()
     subprocess.check_call([
-        "/dcos-image/bash.py", "--output-dir", "/genconf", "--config",
+        "/dcos-image/bash.py", "--output-dir", "/genconf/serve", "--config",
         "/genconf/config.json"
     ], cwd='/dcos-image')
 
@@ -38,14 +38,15 @@ def fetch_bootstrap(
     bootstrap_filename = "{}.bootstrap.tar.xz".format(config['bootstrap_id'])
     dl_url = "{}/{}/bootstrap/{}".format(
         bootstrap_root, config['release_name'], bootstrap_filename)
-    save_path = "/genconf/{}".format(bootstrap_filename)
+    save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
+    save_dir = os.path.dirname(save_path)
 
     if not os.path.exists(save_path):
         print("INFO: Downloading bootstrap tarball: {}".format(dl_url))
         wget_out = ""
         try:
             wget_out = subprocess.check_output([
-                "/usr/bin/wget", "-P", "/genconf", "-nv", dl_url])
+                "/usr/bin/wget", "-P", save_dir, "-nv", dl_url])
         except (KeyboardInterrupt, CalledProcessError) as ex:
             print("ERROR: Download failed or interrupted {}".format(ex))
             print(wget_out)
@@ -58,7 +59,7 @@ def fetch_bootstrap(
 
 
 def symlink_bootstrap(
-        src_glob='/genconf/*bootstrap.tar.xz',
+        src_glob='/genconf/serve/bootstrap/*bootstrap.tar.xz',
         dest_dir='/dcos-image/packages'):
     """Create symlinks to files matched by src_glob in dest_dir. Useful for
     making the bootstrap tarballs discoverable by the gen scripts."""

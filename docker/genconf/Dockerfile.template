@@ -1,0 +1,22 @@
+FROM python:3.4.3-slim
+MAINTAINER support+dcos@mesosphere.io
+
+RUN apt-get update && \
+  apt-get install -y \
+    pxz \
+    wget \
+    git && \
+  rm -rf /var/lib/apt/lists/*
+
+# Image build is performed in a tmpdir set up by make.sh
+COPY dcos-image /dcos-image
+COPY pkgpanda /pkgpanda
+
+RUN cd /pkgpanda && python3 setup.py install && rm -rf /pkgpanda
+RUN cd /dcos-image && pip install -r requirements.txt
+
+WORKDIR /dcos-image
+
+VOLUME ["/genconf"]
+
+ENTRYPOINT ["/dcos-image/docker/genconf/genconf.py"]

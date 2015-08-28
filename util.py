@@ -40,7 +40,7 @@ def copy_makedirs(src, dest):
     shutil.copy(src, dest)
 
 
-def do_bundle_onprem(extra_files, gen_out):
+def do_bundle_onprem(extra_files, gen_out, output_dir=None):
     # Make a directory for assembling the output
     with TemporaryDirectory(prefix='dcos_gen') as directory:
 
@@ -71,5 +71,11 @@ def do_bundle_onprem(extra_files, gen_out):
         # Copy the tarball in to the artifacts
         copy_makedirs(local_bootstrap_path, directory + "/bootstrap/{}.bootstrap.tar.xz".format(bootstrap_id))
 
-        # Tar the whole thing up
-        check_call(["tar", "-czf", "onprem.tar.xz", "-C", directory, "."])
+        if output_dir:
+            # Write contents directly to output_dir
+            if not os.path.exists(output_dir):
+                os.makedirs(output_dir)
+            check_call('/bin/cp -r * "{}"'.format(output_dir), cwd=directory, shell=True)
+        else:
+            # Create a tarball
+            check_call(["tar", "-czf", "onprem.tar.xz", "-C", directory, "."])

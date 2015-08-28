@@ -127,11 +127,16 @@ Initial Setup
      /dcos-config). These instructions will refer to this location as
      $BUILD_DIR.
   2. Add ip-detect.sh script to $BUILD_DIR
-  3. Add config-user.json to $BUILD_DIR (optional)
+  3. Add config-user.json to $BUILD_DIR (optional for interactive mode)
 
-Interactive Configuration
+Interactive Mode
   1. Build DCOS artifacts:
-     docker run -it -v "$BUILD_DIR":/genconf dcos-genconf interactive
+     docker run -it -v $BUILD_DIR:/genconf dcos-genconf interactive
+
+Non-Interactive Mode
+  1. Create an appropriate config-user.json in $BUILD_DIR
+  2. Build DCOS artifacts:
+     docker run -it -v $BUILD_DIR:/genconf dcos-genconf non-interactive
 '''
     parser = argparse.ArgumentParser(
         description=desc, formatter_class=RawTextHelpFormatter)

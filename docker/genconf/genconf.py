@@ -12,15 +12,32 @@ from subprocess import CalledProcessError
 
 
 def do_interactive(options):
+    do_bash_py([
+        "--output-dir", "/genconf/serve",
+        "--config", "/genconf/config.json",
+        "--save-config", "/genconf/config-final.json"])
+
+
+def do_non_interactive(options):
+    do_bash_py([
+        "--output-dir", "/genconf/serve",
+        "--config", "/genconf/config.json",
+        "--save-config", "/genconf/config-final.json",
+        "--non-interactive"])
+
+
+def do_bash_py(args):
     conf = load_config('/dcos-image/config.json', '/genconf/config-user.json')
     save_json(conf, '/genconf/config.json')
     check_prereqs()
     fetch_bootstrap(conf)
     symlink_bootstrap()
-    subprocess.check_call([
-        "/dcos-image/bash.py", "--output-dir", "/genconf/serve", "--config",
-        "/genconf/config.json"
-    ], cwd='/dcos-image')
+    try:
+        subprocess.check_call(
+            ["/dcos-image/bash.py"] + args, cwd='/dcos-image')
+    except CalledProcessError:
+        print("ERROR: Config generator exited with an error code")
+        sys.exit(1)
 
 
 def check_prereqs():
@@ -123,6 +140,10 @@ Interactive Configuration
     # interactive subcommand
     interactive = subparsers.add_parser('interactive')
     interactive.set_defaults(func=do_interactive)
+
+    # non-interactive subcommand
+    non_interactive = subparsers.add_parser('non-interactive')
+    non_interactive.set_defaults(func=do_non_interactive)
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()

@@ -2,12 +2,9 @@
 
 Tools for building dcos and launching a cluster with it on {AWS,Azure,GCE,Mesos,Vagrant,Terraform}
 
-The core of DCOS is built automated in TeamCity and pushed to S3. See the TeamCity
-[DCOS Image Builder](https://teamcity.mesosphere.io/project.html?projectId=ClosedSource_Dcos_ImageBuilder&tab=projectOverview)
-project.
+For documentation see the [dcos-image Wiki pages](https://mesosphere.atlassian.net/wiki/display/DCOS/dcos-image)
 
-Every branch of `dcos-image` is automatically built by TeamCity, to make a new
-release candidate simply create a new branch in the `dcos-image` repository.
+Every branch and PR of the repository is automatically built in TeamCity as the project [DCOS Image Builder](https://teamcity.mesosphere.io/project.html?projectId=ClosedSource_Dcos_ImageBuilder&tab=projectOverview).
 
 ## Structure
 
@@ -21,13 +18,17 @@ See: https://mesosphere.atlassian.net/wiki/display/DCOS/Development+Clusters
 
 ## Integrating your component:
 
-See: https://mesosphere.atlassian.net/wiki/display/DCOS/Custom+DCOS+Builds
+ - [Custom Builds](https://mesosphere.atlassian.net/wiki/display/DCOS/Custom+DCOS+Builds) for testing
+ - [Pull Requests](https://mesosphere.atlassian.net/wiki/display/DCOS/Pull+Requests) to land your changes
+ - [Making Changes](https://mesosphere.atlassian.net/wiki/display/DCOS/Making+Changes) guidance on what will / won't land.
+
+ If you have questions, please ask #dcos in slack, make a meeting, or come say hi.
 
 ## Building locally
 
-NOTE: This does not work on OSX, requires a linux machine. It is HIGHLY recommended that you just let TeamCity build
-DCOS for you as setting up a local environment changes without much documentation update / these instructions are likely
-to be broken but TeamCity is always kept functional.
+Doesn't work on OSX, requires Linux. In general it is HIGHLY recommended to just let TeamCity do the build for you.
+
+The instructions below are infrequently updated and likely out of date whereas TeamCity is kept always building.
 
 ## Getting Started
 

@@ -1,0 +1,13 @@
+[Unit]
+Description=DCOS Health Check
+
+[Service]
+EnvironmentFile=/etc/environment
+Type=oneshot
+ExecStart=/opt/mesosphere/bin/python3 /opt/mesosphere/bin/dcos-diagnostics.py
+
+[X-Fleet]
+Global=true
+MachineMetadata=TYPE=CONTROLLER
+MachineMetadata=TYPE=COMPUTE
+MachineMetadata=TYPE=STORAGE

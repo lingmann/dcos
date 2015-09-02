@@ -1,0 +1,12 @@
+[Unit]
+Description=Install DCOS Master / Slave combo
+
+[Service]
+Type=oneshot
+EnvironmentFile=/etc/environment
+ExecStartPre=-/usr/bin/mkdir -p /home/montana/mesosphere/dcos
+ExecStartPre=/usr/bin/wget http://172.31.20.226:4040/dcos_install.sh -O /home/montana/mesosphere/dcos/dcos_install.sh
+ExecStart=/usr/bin/bash /home/montana/mesosphere/dcos/dcos_install.sh master slave
+
+[X-Fleet]
+Global=true

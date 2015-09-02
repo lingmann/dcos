@@ -3,4 +3,4 @@ Description=Reboot the things
 [Service]
 EnvironmentFile=/opt/mesosphere/environment
 Type=oneshot
-ExecStart=/opt/mesosphere/bin/python /home/trampelb/diag/not-loaded.py
+ExecStart=/opt/mesosphere/bin/python /home/trampelb/diag/not_loaded.py

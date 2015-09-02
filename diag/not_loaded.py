@@ -17,6 +17,7 @@ with open("/opt/mesosphere/reboot_count", "r") as fobj:
 with open("/opt/mesosphere/reboot_count", "w") as fobj:
     fobj.write(str(reboot_count + 1))
 
+
 def loaded(unit):
     out = subprocess.check_output(
         "systemctl status {}; exit 0".format(unit),
@@ -26,6 +27,7 @@ def loaded(unit):
         return False
     return True
 
+
 def hook(data):
     client = http.client.HTTPSConnection("hooks.slack.com")
     resp = client.request(
@@ -34,15 +36,17 @@ def hook(data):
             "text": data
         }))
 
+
 def report_fail(problems):
-    hook("not-found ({}): {}".format(socket.gethostname(),
-        ", ".join(problems)))
+    hook("not-found ({}): {}".format(socket.gethostname(), ", ".join(problems)))
+
 
 def report_success():
     hook("all-found: reboot #{}".format(reboot_count))
 
-problems = [u for u in os.listdir("/etc/systemd/system/dcos.target.wants")
-    if not loaded(u)]
+
+problems = filter(lambda x: not loaded(x),
+                  os.listdir("/etc/systemd/system/dcos.target.wants")
 
 if len(problems) > 0:
     logging.debug("not-found: {}".format(", ".join(problems)))
@@ -53,5 +57,3 @@ else:
 
     if reboot_count < 20:
         subprocess.check_output("sudo reboot", shell=True)
-
-

@@ -51,10 +51,10 @@ function get_build_dir {
 {
   "bootstrap_id":"$BOOTSTRAP_ID",
   "ip_detect_filename":"/genconf/ip-detect.sh",
-  "release_name":"${RELEASE_NAME}"
+  "release_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON
-  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${RELEASE_NAME}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz"
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
   out "$tmpdir"
 }
@@ -84,7 +84,7 @@ function check_prereqs {
   PKGPANDA_SHA=$(git -C "${PKGPANDA_SRC}" rev-parse HEAD || true)
   : ${PKGPANDA_SHA:?"ERROR: Unable to determine Git SHA of PKGPANDA"}
 
-  : ${RELEASE_NAME:?"ERROR: RELEASE_NAME env var must be set"}
+  : ${CHANNEL_NAME:?"ERROR: CHANNEL_NAME env var must be set"}
   : ${BOOTSTRAP_ID:?"ERROR: BOOTSTRAP_ID env var must be set"}
 
   DOCKER_TAG="${DCOS_IMAGE_SHA:0:12}-${PKGPANDA_SHA:0:12}-${BOOTSTRAP_ID:0:12}"

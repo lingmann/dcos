@@ -15,7 +15,7 @@ directory. SHA's may be shortened to an unambiguous length.
  The following environment variables must be set:
    export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda source directory
    export DCOS_IMAGE_SRC=dcos-image         # Set to dcos-image source directory
-   export RELEASE_NAME=testing/continuous
+   export CHANNEL_NAME=testing/continuous
    export BOOTSTRAP_ID=0026f44d8574d508104f1e7e7a163e078e69990b
 
  Building an image:

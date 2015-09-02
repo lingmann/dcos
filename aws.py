@@ -27,7 +27,7 @@ from pkgpanda.util import load_json, write_json
 
 import gen
 from aws_config import session_dev, session_prod
-from upload import get_object, upload_release, upload_string
+from upload import upload_release, upload_string
 import util
 
 jinja_env = jinja2.Environment(
@@ -257,83 +257,57 @@ def do_build(options):
         do_launch(gen_default_cluster_name(), cf_url)
 
 
-def gen_buttons(release_name, title):
+def gen_buttons(channel, tag, commit):
     # Generate the button page.
     return jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
-        'regions': aws_region_names,
-        'release_name': release_name,
-        'title': title
+            'channel': channel,
+            'tag': tag,
+            'commit': commit,
+            'regions': aws_region_names
         })
 
 
-def upload_buttons(release_name, content):
-    upload_string(release_name, 'aws.html', content, {
-        'CacheControl': 'no-cache',
-        'ContentType': 'text/html'
-        })
-
-
-def do_make_candidate(options):
-    # Make sure everything is built / up to date.
-    bootstrap_id = util.get_local_build(True)
-    release_name = 'testing/' + options.release_name
-
+def do_create(tag, channel, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
-    single_master = gen_templates(
-            {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 1},
-            gen_options)
-    multi_master = gen_templates(
-            {'bootstrap_id': bootstrap_id, 'release_name': release_name, 'num_masters': 3},
-            gen_options)
-
-    button_page = gen_buttons(release_name, "RC for " + options.release_name)
+    single_args = deepcopy(gen_arguments)
+    multi_args = deepcopy(gen_arguments)
+    single_args['num_masters'] = 1
+    multi_args['num_masters'] = 3
+    single_master = gen_templates(single_args, gen_options)
+    multi_master = gen_templates(multi_args, gen_options)
+    button_page = gen_buttons(channel, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.
-    extra_packages = []
+    extra_packages = list()
     extra_packages += util.cluster_to_extra_packages(multi_master.results.cluster_packages)
     extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
 
-    # Upload the packages.
-    upload_release(release_name, bootstrap_id, extra_packages)
-
-    # Upload the cf templates
-    cf_url = upload_cf(release_name, 'single-master', single_master.cloudformation)
-    print("Uploaded CloudFormation Template:", cf_url)
-    cf_url = upload_cf(release_name, 'multi-master', multi_master.cloudformation)
-    print("Uploaded CloudFormation Template:", cf_url)
-
-    # Upload button page
-    upload_buttons(release_name, button_page)
-
-    print("Candidate available at: https://downloads.mesosphere.com/dcos/" + release_name + "/aws.html")
-
-
-def do_promote_candidate(options):
-    """Steps:
-    1) Generate new landing page
-    2) Download, edit cloudformation templates to point to new url
-    3) s3 copy across individual packages (Discovered through active.json)
-    4) upload modified files, meta files:
-        - active.json
-        - bootstrap.tar.xz
-        - cloudformation template
-        - landing page
-    """
-    raise NotImplementedError()
-    bucket = session_prod.resource('s3').Bucket('downloads.mesosphere.io')
-
-    rc_name = 'testing/' + options.release_name
-
-    def fetch_from_s3(name, target):
-        download_s3(get_object(bucket, rc_name, name), target)
-
-    button_page = gen_buttons(options.release_name, "DCOS " + options.release_name)
-    # Download and modify cloudformation template bootstrap_url
-
-    # TODO(cmaloney): Finish This
-    upload_buttons(options.release_name, button_page)
+    return {
+        'extra_packages': extra_packages,
+        'files': [
+            {
+                'known_path': 'cloudformation/single-master.cloudformation.json',
+                'stable_path': 'cloudformation/{}.single-master.cloudformation.json'.format(
+                    single_master.results.arguments['config_id']),
+                'content': single_master.cloudformation
+            },
+            {
+                'known_path': 'cloudformation/multi-master.cloudformation.json',
+                'stable_path': 'cloudformation/{}.multi-master.cloudformation.json'.format(
+                    multi_master.results.arguments['config_id']),
+                'content': multi_master.cloudformation
+            },
+            {
+                'known_path': 'aws.html',
+                'content': button_page,
+                'upload_args': {
+                    'ContentType': 'text/html; charset=utf-8'
+                }
+            }
+        ]
+    }
 
 
 def do_print_nat_amis(options):
@@ -602,16 +576,6 @@ def main():
     build.add_argument('--skip-build', action='store_true')
     build.add_argument('--testing-name', default='continuous')
     gen.add_arguments(build)
-
-    # make_candidate subcommand.
-    make_candidate = subparsers.add_parser('make-candidate')
-    make_candidate.set_defaults(func=do_make_candidate)
-    make_candidate.add_argument('release_name')
-
-    # promote_candidate subcommand.
-    promote_candidate = subparsers.add_parser('promote-candidate')
-    promote_candidate.set_defaults(func=do_promote_candidate)
-    promote_candidate.add_argument('release_name')
 
     # print_coreos_amis subcommand.
     print_coreos_amis = subparsers.add_parser('print-coreos-amis')

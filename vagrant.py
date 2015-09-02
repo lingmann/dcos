@@ -48,6 +48,31 @@ def upload_vagrant(release_name, name, script_contents):
         })
 
 
+def do_create(tag, channel, commit, gen_arguments):
+    gen_options = gen.get_options_object()
+    gen_out = gen.generate(
+        options=gen_options,
+        mixins=['vagrant', 'coreos'],
+        arguments=gen_arguments
+        )
+
+    vagrant_script = make_vagrant(gen_out)
+
+    return {
+        'extra_packages': util.cluster_to_extra_packages(gen_out.cluster_packages),
+        'files': [
+            {
+                'known_path': 'make_dcos_vagrant.sh',
+                'stable_path': 'make_vagrant/{}.sh'.format(gen_out.arguments['config_id']),
+                'content': vagrant_script,
+                'upload_args': {
+                    'ContentType': 'application/x-sh; charset=utf-8'
+                }
+            }
+        ]
+    }
+
+
 def do_vagrant_and_build(options):
     bootstrap_id = util.get_local_build(options.skip_build)
     gen_out = gen.generate(
@@ -87,35 +112,6 @@ def do_vagrant_only(options):
 
     print("Vagrant available at: https://downloads.mesosphere.com/{}".format(obj.key))
 
-
-def do_vagrant_make_candidate(options):
-    release_name = "testing/" + options.candidate_name
-    bootstrap_id = util.get_local_build(True)
-    gen_out = gen.generate(
-        options=gen.get_options_object(),
-        mixins=['vagrant', 'coreos'],
-        arguments={
-            'release_name': release_name,
-            'bootstrap_id': bootstrap_id}
-        )
-    vagrant_script = make_vagrant(gen_out)
-
-    # Upload the vagrant script
-    obj = upload_vagrant(
-        release_name,
-        'make_dcos_vagrant.sh',
-        vagrant_script
-        )
-
-    # Upload vagrant-specific packages
-    upload_packages(
-        get_bucket(),
-        release_name,
-        util.cluster_to_extra_packages(gen_out.cluster_packages))
-
-    print("Vagrant available at: https://downloads.mesosphere.com/{}".format(obj.key))
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Gen Vagrant single-node DCOS cluster generation script')
     subparsers = parser.add_subparsers(title='commands')
@@ -130,11 +126,6 @@ if __name__ == '__main__':
     gen.add_arguments(build)
     build.set_defaults(func=do_vagrant_and_build)
     build.add_argument('--skip-build', action='store_true')
-
-    # make-candidate subcommand
-    make_candidate = subparsers.add_parser('make-candidate')
-    make_candidate.set_defaults(func=do_vagrant_make_candidate)
-    make_candidate.add_argument('candidate_name')
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()

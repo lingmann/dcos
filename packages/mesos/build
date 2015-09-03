@@ -71,6 +71,7 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
 EnvironmentFile=-/opt/mesosphere/environment.ip
+EnvironmentFile=-/var/lib/dcos/mesos-slave-common
 ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip'
 ExecStart=$PKG_PATH/sbin/mesos-slave
@@ -92,6 +93,7 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
 EnvironmentFile=-/opt/mesosphere/environment.ip
+EnvironmentFile=-/var/lib/dcos/mesos-slave-common
 ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip'
 ExecStart=$PKG_PATH/sbin/mesos-slave

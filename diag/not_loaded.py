@@ -46,7 +46,7 @@ def report_success():
 
 
 problems = filter(lambda x: not loaded(x),
-                  os.listdir("/etc/systemd/system/dcos.target.wants")
+                  os.listdir("/etc/systemd/system/dcos.target.wants"))
 
 if len(problems) > 0:
     logging.debug("not-found: {}".format(", ".join(problems)))

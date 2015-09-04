@@ -163,6 +163,15 @@ function check() {
     fi
 }
 
+function check_service() {
+  PORT=$1
+  NAME=$2
+  echo -e -n "Checking if port $PORT (required by $NAME) is in use: "
+  cat /proc/net/{udp*,tcp*} | cut -d: -f3 | cut -d' ' -f1 | grep -q $(printf "%04x" $PORT) && RC=1
+  print_status $RC
+  (( OVERALL_RC += $RC ))
+}
+
 function check_all() {
     # Disable errexit because we want the preflight checks to run all the way
     # through and not bail in the middle, which will happen as it relies on
@@ -185,6 +194,25 @@ function check_all() {
     # Pick up just the first line of output and get the version from it
     check systemctl 200 $(systemctl --version | head -1 | cut -f2 -d' ') systemd
 
+    echo -e -n "Checking if group 'nogroup' exists: "
+    getent group nogroup > /dev/null
+    RC=$?
+    print_status $RC
+    (( OVERALL_RC += $RC ))
+
+    for service in \
+      "80 mesos-ui" \
+      "53 mesos-dns" \
+      "15055 dcos-history" \
+      "5050 mesos-master" \
+      "2181 zookeeper" \
+      "8080 marathon" \
+      "3888 zookeeper" \
+      "8181 exhibitor" \
+      "8123 mesos-dns"
+    do
+      check_service $service
+    done
     return $OVERALL_RC
 }
 

@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
-    "ref": "eebae743d60ed50f24ce09662da0410a4d653ff6",
+    "ref": "ac929c6a60b3574d85e90e215cbc07d16bd8f72f",
     "ref_origin" : "for-dcos-0.23.0"
   },
   "environment": {

@@ -8,9 +8,6 @@
   "exhibitor_zk_hosts": "zk://%ZK_HOSTS%",
   "exhibitor_zk_path": "/test-cluster-discovery",
   "ip_detect_filename": "test/ip-detector.sh",
-  "master_discovery": "vrrp",
-  "keepalived_interface": "eth0",
-  "keepalived_router_id": "1",
-  "keepalived_pass": "not-so-secret-password",
-  "keepalived_virtual_ipaddress": "172.17.10.5"
+  "master_discovery": "lb",
+  "master_lb": "172.17.10.101"
 }

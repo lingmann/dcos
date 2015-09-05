@@ -56,8 +56,6 @@ can = {
     'bootstrap_id': calculate_bootstrap_id
 }
 
-optional = [ 'docker_remove_delay', 'gc_delay' ]
-
 def validate(arguments):
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
 

@@ -30,43 +30,59 @@ cat <<EOF > "$exhibitor_service"
 [Unit]
 Description=Exhibitor Zookeeper Supervisor
 [Service]
+StandardOutput=journal
+StandardError=journal
 Restart=always
 StartLimitInterval=0
 RestartSec=5
-EnvironmentFile=-/etc/environment
+MountFlags=private
+RuntimeDirectory=dcos_exhibitor
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/cloudenv
+EnvironmentFile=/opt/mesosphere/etc/dns_config
 EnvironmentFile=/opt/mesosphere/etc/exhibitor
 # run in new mount namespace to create custom resolv.conf
-ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.sh
+ExecStart=/usr/bin/unshare --mount $PKG_PATH/usr/exhibitor/start_exhibitor.py
 EOF
 
-exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.sh"
+exhibitor_start_wrapper="$PKG_PATH/usr/exhibitor/start_exhibitor.py"
 cat <<EOFWrapperScript > "$exhibitor_start_wrapper"
-#!/bin/bash
-set -o errexit -o nounset -o pipefail
+#!/opt/mesosphere/bin/python
+import os
+import sys
+from subprocess import check_call, check_output
 
-#: \${ZOOKEEPER_CLUSTER_SIZE:?"ERROR: ZOOKEEPER_CLUSTER_SIZE must be set"}
-#: \${FALLBACK_DNS:?"ERROR: FALLBACK_DNS must be set"}
-#: \${EXHIBITOR_HOSTNAME:?"ERROR: EXHIBITOR_HOSTNAME must be set"}
-#: \${EXHIBITOR_WEB_UI_PORT:?"ERROR: EXHIBITOR_WEB_UI_PORT must be set"}
 
-EXHIBITOR_HOSTNAME=\${EXHIBITOR_HOSTNAME:-\$(\$MESOS_IP_DISCOVERY_COMMAND)}
+def get_var_assert_set(name):
+    if name not in os.environ:
+        print('ERROR: "{}" must be set'.format(name))
+        sys.exit(1)
 
-exhibitor_defaults=/etc/mesosphere/exhibitor_defaults.conf
-exhibitor_properties=/etc/mesosphere/exhibitor_credentials.properties
+    return os.environ[name]
 
-/bin/mkdir -p /var/lib/zookeeper/snapshot
-/bin/mkdir -p /var/lib/zookeeper/transactions
 
-cat <<EOFProperties > \$exhibitor_properties
-com.netflix.exhibitor.s3.access-key-id=\${AWS_ACCESS_KEY_ID:-}
-com.netflix.exhibitor.s3.access-secret-key=\${AWS_SECRET_ACCESS_KEY:-}
-com.netflix.exhibitor.azure.account-name=\${AZURE_ACCOUNT_NAME:-}
-com.netflix.exhibitor.azure.account-key=\${AZURE_ACCOUNT_KEY:-}
-EOFProperties
+def write_str(filename, contents):
+    with open(filename, 'w') as f:
+        f.write(contents)
 
-cat <<EOFDefaults > \$exhibitor_defaults
+# TODO(cmaloney): Move exhibitor_defaults to a temp runtime conf dir.
+# Base for building up the command line
+exhibitor_cmdline = [
+    'java',
+    '-jar', '$PKG_PATH/usr/exhibitor/exhibitor.jar',
+    '--port', '8181',
+    '--defaultconfig', '/run/dcos_exhibitor/exhibitor_defaults.conf',
+    '--hostname', check_output(['/opt/mesosphere/bin/detect_ip']).strip()
+]
+
+# Make necessary exhibitor runtime directories
+check_call(['mkdir', '-p', '/var/lib/zookeeper/snapshot'])
+check_call(['mkdir', '-p', '/var/lib/zookeeper/transactions'])
+
+# Older systemd doesn't support RuntimeDirectory, make one if systemd didn't.
+check_call(['mkdir', '-p', '/run/dcos_exhibitor'])
+
+# Write out base exhibitor configuration
+write_str('/run/dcos_exhibitor/exhibitor_defaults.conf', """
 # These Exhibitor properties are used to first initialize the config stored in
 # an empty shared storage location. Any subsequent invocations of Exhibitor will
 # ignore these properties and use the config found in shared storage.
@@ -86,72 +102,70 @@ election-port=3888
 zoo-cfg-extra=tickTime\=2000&initLimit\=10&syncLimit\=5&quorumListenOnAllIPs\=true&maxClientCnxns\=0&autopurge.snapRetainCount\=5&autopurge.purgeInterval\=6
 auto-manage-instances-settling-period-ms=0
 auto-manage-instances=1
-auto-manage-instances-fixed-ensemble-size=\$ZOOKEEPER_CLUSTER_SIZE
-EOFDefaults
+auto-manage-instances-fixed-ensemble-size={zookeeper_cluster_size}
+""".format(
+        zookeeper_cluster_size=get_var_assert_set('ZOOKEEPER_CLUSTER_SIZE')
+    ))
 
-echo "nameserver \$FALLBACK_DNS" > /etc/resolv.conf.exhibitor
-# do not propagate mounts to the previous namespaces
-mount --make-rprivate /
-# "overwrite" resolv.conf for exhibitor and all its children
-mount --bind /etc/resolv.conf.exhibitor /etc/resolv.conf
+# Make a custom /etc/resolv.conf and mount it for exhibitor
+resolvers = get_var_assert_set('RESOLVERS').split(',')
+resolvconf_text = '# Generated for exhibitor by start_exhibitor.py\n'
+for resolver in resolvers:
+    resolvconf_text += "nameserver {}\n".format(resolver)
+write_str("/run/dcos_exhibitor/resolv.conf", resolvconf_text)
 
-if [[ -n "\${AWS_ACCESS_KEY_ID:-}" && \\
-      -n "\${AWS_SECRET_ACCESS_KEY:-}" && \\
-      -n "\${AWS_S3_BUCKET:-}" && \\
-      -n "\${AWS_S3_PREFIX:-}" && \\
-      -n "\${AWS_REGION:-}" ]]
-then
-  echo "Starting Exhibitor for AWS"
-  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
-    --port \$EXHIBITOR_WEB_UI_PORT \\
-    --defaultconfig \$exhibitor_defaults \\
-    --configtype s3 --s3config "\$AWS_S3_BUCKET:\$AWS_S3_PREFIX" \\
-    --s3credentials \$exhibitor_properties \\
-    --s3region \$AWS_REGION --s3backup false --hostname \$EXHIBITOR_HOSTNAME
-elif [[ -n "\${AZURE_ACCOUNT_NAME:-}" && \\
-        -n "\${AZURE_ACCOUNT_KEY:-}" && \\
-        -n "\${AZURE_PREFIX:-}" && \\
-        -n "\${AZURE_CONTAINER:-}" ]]
-then
-  echo "Starting Exhibitor for Azure"
-  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
-    --port \$EXHIBITOR_WEB_UI_PORT \\
-    --defaultconfig \$exhibitor_defaults \\
-    --configtype=azure --azureconfig="\$AZURE_CONTAINER:\$AZURE_PREFIX" \\
-    --azurecredentials \$exhibitor_properties \\
-    --hostname \$EXHIBITOR_HOSTNAME
-elif [[ -n "\${GCE_BUCKET_NAME:-}" && \\
-        -n "\${GCE_OBJECT_NAME:-}" ]]
-then
-  echo "Starting Exhibitor for GCE"
-  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
-    --port \$EXHIBITOR_WEB_UI_PORT \\
-    --defaultconfig \$exhibitor_defaults \\
-    --configtype=gcs --gcsconfig="\${GCE_BUCKET_NAME}:\${GCE_BUCKET_NAME}" \\
-    --hostname \$EXHIBITOR_HOSTNAME
-elif [[ -n "\${ZK_CONFIG_CONNECT:-}" && \\
-        -n "\${ZK_CONFIG_ZPATH:-}" ]]
-then
-  echo "Starting Exhibitor for Zookeeper"
-  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
-    --port \$EXHIBITOR_WEB_UI_PORT \\
-    --defaultconfig \$exhibitor_defaults \\
-    --configtype=zookeeper --zkconfigconnect="\${ZK_CONFIG_CONNECT}" --zkconfigzpath="\${ZK_CONFIG_ZPATH}" \\
-    --hostname \$EXHIBITOR_HOSTNAME
-elif [[ -n "\${EXHIBITOR_FSCONFIGDIR:-}" ]]
-then
-  echo "Starting Exhibitor for local setup"
-  /bin/mkdir -p \$EXHIBITOR_FSCONFIGDIR
-  exec /opt/mesosphere/bin/java -jar "$PKG_PATH/usr/exhibitor/exhibitor.jar" \\
-    --port \$EXHIBITOR_WEB_UI_PORT \\
-    --defaultconfig \$exhibitor_defaults \\
-    --configtype=file --fsconfigdir \$EXHIBITOR_FSCONFIGDIR \\
-    --hostname \$EXHIBITOR_HOSTNAME
-else
-  echo "ERROR: Missing one or more required environment variables"
-  exit 1
-fi
+# Bind mount the resolv.conf. Do a "--make-rprivate" to guarantee the
+# "/etc/resolv.conf" of the system isn't overriden. The systemd unit running
+# this _should_ have already made the mounts private, but we do this here as an
+# extra bit of safety.
+check_call(['mount', '--make-rprivate', '/'])
+check_call(['mount', '--bind', '/run/dcos_exhibitor/resolv.conf', '/etc/resolv.conf'])
 
+# Add backend specific arguments
+exhibitor_backend = get_var_assert_set('EXHIBITOR_BACKEND')
+if exhibitor_backend == 'AWS_S3':
+    print("Exhibitor configured for AWS S3")
+    exhibitor_cmdline += [
+            '--configtype=s3',
+            '--s3config', get_var_assert_set("AWS_S3_BUCKET") + ':' + get_var_assert_set("AWS_S3_PREFIX"),
+            '--s3credentials', '/opt/mesosphere/etc/exhibitor.properties',
+            '--s3region', get_var_assert_set("AWS_REGION"),
+            '--s3backup', 'false',
+        ]
+elif exhibitor_backend == 'AZURE':
+    print("Exhibitor configured for Azure")
+    exhibitor_cmdline += [
+        '--configtype=azure',
+        '--azureconfig', get_var_assert_set('AZURE_CONTAINER') + ':' + get_var_assert_set('AZURE_PREFIX'),
+        '--azurecredentials', '/opt/mesosphere/etc/exhibitor.properties',
+    ]
+elif exhibitor_backend == 'GCE':
+    print("Exhibitor configured for GCE")
+    exhibitor_cmdline += [
+        '--configtype=gcs',
+        '--gcsconfig={}:{}'.format(get_var_assert_set('GCS_BUCKET_NAME', 'GCE_BUCKET_NAME'))
+    ]
+elif exhibitor_backend == 'ZK':
+    print("Exhibitor configured for Zookeeper")
+    exhibitor_cmdline += [
+        '--configtype=zookeeper',
+        '--zkconfigconnect={}'.format(get_var_assert_set('ZK_CONFIG_CONNECT')),
+        '--zkconfigzpath={}'.format(get_var_assert_set('ZK_CONFIG_ZPATH'))
+    ]
+elif exhibitor_backend == 'SHARED_FS':
+    print("Exhibitor configured for shared filesystem")
+    exhibitor_cmdline += [
+        '--configtype=file',
+        '--fsconfigdir', get_var_assert_set('EXHIBITOR_FSCONFIGDIR')
+    ]
+else:
+    print("ERROR: No known exhibitor backend:", exhibitor_backend)
+    sys.exit(1)
+
+# Start exhibitor
+print("Running exhibitor as command:", exhibitor_cmdline)
+sys.stdout.flush()
+os.execv('/opt/mesosphere/bin/java', exhibitor_cmdline)
 EOFWrapperScript
 chmod +x "$exhibitor_start_wrapper"
 
@@ -164,7 +178,7 @@ import json
 import codecs
 import urllib.request
 
-EXIHIBITOR_STATUS_URL = 'http://localhost:8181/exhibitor/v1/cluster/status'
+EXIHIBITOR_STATUS_URL = 'http://127.0.0.1:8181/exhibitor/v1/cluster/status'
 
 if len(sys.argv) != 2:
     print('Usage: exhibitor_wait.py ZOOKEEPER_CLUSTER_SIZE', file=sys.stderr)

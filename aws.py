@@ -210,6 +210,7 @@ def gen_buttons(channel, tag, commit):
 def do_create(tag, channel, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
+    gen_arguments['master_discovery'] = 'cloud_dynamic'
     single_args = deepcopy(gen_arguments)
     multi_args = deepcopy(gen_arguments)
     single_args['num_masters'] = 1

@@ -1,0 +1,11 @@
+write_files:
+  - path: /etc_master/dns_config_master
+    content: |
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=master_list
+      RESOLVERS={{ resolvers_str }}
+  - path: /etc/master_list
+    content: |
+      {{ master_list }}

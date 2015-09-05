@@ -1,6 +1,6 @@
 write_files:
   - path: /etc/exhibitor
     content: |
+      EXHIBITOR_BACKEND=ZK
       ZK_CONFIG_CONNECT={{ exhibitor_zk_hosts }}
       ZK_CONFIG_ZPATH={{ exhibitor_zk_path }}
-      EXHIBITOR_WEB_UI_PORT=8181

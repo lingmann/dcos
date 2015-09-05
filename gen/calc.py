@@ -56,7 +56,6 @@ can = {
     'bootstrap_id': calculate_bootstrap_id
 }
 
-
 def validate(arguments):
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
 
@@ -71,7 +70,9 @@ defaults = {
   "release_name": "testing/continuous",
   "repository_url": "https://downloads.mesosphere.com/dcos/{release_name}",
   "roles": "slave_public",
-  "weights": "slave_public=1"
+  "weights": "slave_public=1",
+  "docker_remove_delay": "1hrs",
+  "gc_delay": "2days"
 }
 
 parameters = ["release_name", "repository_url", "ip_detect_filename"]

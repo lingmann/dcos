@@ -11,7 +11,6 @@ TODO:
 import argparse
 import botocore.exceptions
 import getpass
-import jinja2
 import json
 import re
 import requests
@@ -23,9 +22,6 @@ from copy import deepcopy
 import gen
 from aws_config import session_dev, session_prod
 import util
-
-jinja_env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined)
 
 aws_region_names = [
     {
@@ -133,7 +129,7 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     print(cf_template)
-    template_str = jinja_env.from_string(cf_template).render({
+    template_str = util.jinja_env.from_string(cf_template).render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
@@ -169,7 +165,7 @@ def gen_templates(arguments, options):
         # Specialize the dcos-cfn-signal service
         cc_variant = results.utils.add_units(
             cc_variant,
-            yaml.load(jinja_env.from_string(late_services).render(params)))
+            yaml.load(util.jinja_env.from_string(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['aws'])
@@ -203,7 +199,7 @@ def gen_default_cluster_name():
 
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
-    return jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
+    return util.jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
             'channel': channel,
             'tag': tag,
             'commit': commit,

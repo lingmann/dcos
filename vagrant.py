@@ -9,13 +9,8 @@ Use cases:
 2) Generate a make_vagrant script which can be shipped to customers to launch
    basic vagrant clusters"""
 
-import jinja2
-
 import gen
 import util
-
-jinja_env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined)
 
 
 def make_vagrant(gen_out):
@@ -23,7 +18,7 @@ def make_vagrant(gen_out):
     cloud_config = gen_out.utils.add_services(cloud_config)
     cloud_config = gen_out.utils.add_roles(cloud_config, ['master', 'slave', 'vagrant'])
 
-    vagrant_script = jinja_env.from_string(open('gen/vagrant/make_vagrant').read()).render({
+    vagrant_script = util.jinja_env.from_string(open('gen/vagrant/make_vagrant').read()).render({
         'user_data_body': gen_out.utils.render_cloudconfig(cloud_config),
         'vagrantfile_body': open('gen/vagrant/Vagrantfile').read(),
         'config_body': open('gen/vagrant/config.rb').read(),

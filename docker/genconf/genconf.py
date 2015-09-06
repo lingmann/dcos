@@ -55,7 +55,7 @@ def fetch_bootstrap(
 
     bootstrap_filename = "{}.bootstrap.tar.xz".format(config['bootstrap_id'])
     dl_url = "{}/{}/bootstrap/{}".format(
-        bootstrap_root, config['release_name'], bootstrap_filename)
+        bootstrap_root, config['channel_name'], bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
     save_dir = os.path.dirname(save_path)
 

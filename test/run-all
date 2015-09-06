@@ -23,7 +23,7 @@ fi
 . build/pkgpanda-env/bin/activate
 TMP=$(mktemp /tmp/onprem-vagrant.XXXXXX)
 HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
-sed "s|%RELEASE_NAME%|testing/$NAME|;s|zk://%ZK_HOSTS%|$HOST_IP:2181|" test/config.json.in > "$TMP"
+sed "s|%CHANNEL_NAME%|testing/$NAME|;s|zk://%ZK_HOSTS%|$HOST_IP:2181|" test/config.json.in > "$TMP"
 
 echo "Downloading zookeeper"
 if [ ! -e "build/zookeeper" ]; then

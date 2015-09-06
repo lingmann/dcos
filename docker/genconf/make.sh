@@ -51,7 +51,7 @@ function get_build_dir {
 {
   "bootstrap_id":"$BOOTSTRAP_ID",
   "ip_detect_filename":"/genconf/ip-detect.sh",
-  "release_name":"${CHANNEL_NAME}"
+  "channel_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON
   export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz"

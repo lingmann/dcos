@@ -67,7 +67,7 @@ def do_bundle_onprem(extra_files, gen_out, output_dir=None):
                     "-O",
                     local_bootstrap_path,
                     "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}.bootstrap.tar.xz".format(
-                        gen_out.arguments['release_name'],
+                        gen_out.arguments['channel_name'],
                         gen_out.arguments['bootstrap_id'])
                     ])
             except:

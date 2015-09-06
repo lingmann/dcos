@@ -127,7 +127,7 @@ def do_chef_and_build(options):
         )
     chef_tarball = make_chef(gen_out)
     upload_release(
-        gen_out.arguments['release_name'],
+        gen_out.arguments['channel_name'],
         bootstrap_id,
         util.cluster_to_extra_packages(gen_out.cluster_packages))
     print("Chef tarball:", chef_tarball)

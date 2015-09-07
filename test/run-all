@@ -2,6 +2,8 @@
 # We can't use -u since we source the virtualenv activate script which
 # uses undefined variables.
 set -eo pipefail
+export MASTER_IP=172.17.10.101
+export DCOS_DNS_ADDRESS=http://$MASTER_IP
 
 [ -z "${HOME+x}" ] && export HOME=/root
 if [ "$#" -lt 2 ]; then
@@ -46,10 +48,15 @@ for platform in $PLATFORMS; do
   PLATFORM=$platform vagrant up
   popd
 
-  while ! [ -n "$(dig +short leader.mesos @172.17.10.101)" ]; do sleep 1; done # Wait for elected leader
-  while ! curl -Lfso /dev/null http://172.17.10.101; do sleep 1; done # Wait for web ui
+  while ! [ -n "$(dig +short leader.mesos @$MASTER_IP)" ]; do sleep 1; done # Wait for elected leader
+  while ! curl -Lfso /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
 
-  DCOS_DNS_ADDRESS=http://172.17.10.101 py.test integration_test.py
+  if ! py.test integration_test.py; then
+    cd test/
+    for n in `seq 1 3`; do vagrant ssh -c 'sudo journalctl -n 500' "master-$n"; done
+    for n in `seq 1 2`; do vagrant ssh -c 'sudo journalctl -n 500' "slave-$n"; done
+    exit 1
+  fi
 
   pushd test/
   vagrant destroy -f

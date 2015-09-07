@@ -23,6 +23,7 @@ def do_non_interactive(options):
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
         "--save-config", "/genconf/config-final.json",
+        "--assume-defaults",
         "--non-interactive"])
 
 

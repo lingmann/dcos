@@ -49,7 +49,9 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
 EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
+EnvironmentFile=-/opt/mesosphere/environment.ip
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py \$ZOOKEEPER_CLUSTER_SIZE
+ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "HOST_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip'
 ExecStart=$PKG_PATH/sbin/mesos-master
 EOF
 
@@ -68,7 +70,9 @@ LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
+EnvironmentFile=-/opt/mesosphere/environment.ip
 ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip'
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
 
@@ -87,7 +91,9 @@ LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
+EnvironmentFile=-/opt/mesosphere/environment.ip
 ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip'
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
 

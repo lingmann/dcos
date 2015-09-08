@@ -182,7 +182,7 @@ function check_all() {
     # CoreOS stable as of Aug 2015 has 1.6.2
     check docker 1.6 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
 
-    check wget
+    check curl
     check bash
     check ping
     check tar

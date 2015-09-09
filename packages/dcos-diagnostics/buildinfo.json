@@ -3,6 +3,6 @@
   "single_source": {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-diagnostics.git",
-    "ref": "30615caf0ec058281a6560d4ca49847c87f454d5"
+    "ref": "f60ab83b3cc4a6d638780b303327d3cf476fedb0"
   }
 }

@@ -12,8 +12,7 @@ import os
 import re
 
 def dcos_units():
-    units = ["config-writer.service",
-            "dcos-setup.service",
+    units = ["dcos-setup.service",
             "link-env.service",
             "dcos-download.service"]
     for u in os.listdir("/etc/systemd/system/dcos.target.wants"):

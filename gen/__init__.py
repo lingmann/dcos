@@ -31,7 +31,7 @@ from pkgpanda.util import make_tar
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
-role_names = {"master", "slave", "public_slave", "master_slave"}
+role_names = {"master", "slave", "slave_public", "master_slave"}
 
 role_template = '/etc/mesosphere/roles/{}'
 

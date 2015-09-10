@@ -3,8 +3,6 @@
 
 import argparse
 
-import jinja2
-
 from pkgpanda.util import write_string
 
 import gen
@@ -327,13 +325,12 @@ def make_bash(gen_out):
             setup_services += "systemctl start {}\n".format(name)
 
     # Populate in the bash script template
-    bash_script = jinja2.Template(bash_template).render(
+    bash_script = util.jinja_env.from_string(bash_template).render(
         dcos_image_commit=util.dcos_image_commit,
         generation_date=util.template_generation_date,
         setup_flags=setup_flags,
         setup_services=setup_services,
         )
-
 
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)

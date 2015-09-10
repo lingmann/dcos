@@ -474,7 +474,6 @@ def ensure_no_repeated(mixin_objs):
     for mixin in mixin_objs:
         add_assert_duplicate(check_default_names, mixin.defaults.keys())
         add_assert_duplicate(check_default_names, mixin.can_fn.keys())
-        add_assert_duplicate(check_default_names, mixin.must_fn.keys())
 
         add_assert_duplicate(check_argument_names, mixin.arguments.keys())
         add_assert_duplicate(check_argument_names, mixin.must_fn.keys())
@@ -548,7 +547,6 @@ def do_generate(
         mixin_objs.append(Mixin(mixin, cluster_packages, core_templates))
 
     # Ask / prompt about "implies", recursively until we've resolved all implies.
-    mixin_set = set(mixins)
     mixins_to_visit = copy(mixin_objs)
     while len(mixins_to_visit) > 0:
         mixin_obj = mixins_to_visit.pop()
@@ -569,8 +567,15 @@ def do_generate(
                         possible_values=value.keys())
             choice = arguments[name]
 
+            # If there is no mixin for the choice or the mixin has already been
+            # loaded, skip it.
+            mixin_name = value[choice]
+            if mixin_name is None or mixin_name in mixins:
+                continue
+
             # Add the mixin to the set to be visited
-            new_mixin = Mixin(value[choice], cluster_packages, core_templates)
+            mixins.append(mixin_name)
+            new_mixin = Mixin(mixin_name, cluster_packages, core_templates)
             mixin_objs.append(new_mixin)
             mixins_to_visit.append(new_mixin)
 

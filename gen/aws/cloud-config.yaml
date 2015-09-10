@@ -27,16 +27,3 @@ write_files:
       AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
       AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
       EXHIBITOR_WEB_UI_PORT=8181
-
-coreos:
-  units:
-  - name: config-writer.service
-    command: start
-    content: |
-      [Unit]
-      Description=Write out dynamic config values
-      [Service]
-      Type=oneshot
-      # TODO(cmaloney): Remove these and get rid of the bits that require them.
-      ExecStart=/usr/bin/bash -c "echo EXHIBITOR_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/cloudenv"
-      ExecStart=/usr/bin/bash -c "echo MARATHON_HOSTNAME=$(curl -s http://169.254.169.254/latest/meta-data/hostname) >> /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/cloudenv"

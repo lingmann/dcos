@@ -9,29 +9,19 @@ TODO:
 """
 
 import argparse
-import binascii
 import botocore.exceptions
 import getpass
-import hashlib
-import jinja2
 import json
-import os
 import re
 import requests
 import sys
-import time
 import uuid
 import yaml
 from copy import deepcopy
-from pkgpanda.util import load_json, write_json
 
 import gen
 from aws_config import session_dev, session_prod
-from upload import upload_release, upload_string
 import util
-
-jinja_env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined)
 
 aws_region_names = [
     {
@@ -108,14 +98,6 @@ cf_instance_groups = {
     }
 }
 
-
-def download_s3(obj, out_file):
-    body = obj.get()['Body']
-    with open(out_file, 'wb') as dest:
-        for chunk in iter(lambda: body.read(4096), b''):
-            dest.write(chunk)
-
-
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
 
@@ -147,7 +129,7 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     print(cf_template)
-    template_str = jinja_env.from_string(cf_template).render({
+    template_str = util.jinja_env.from_string(cf_template).render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
@@ -160,17 +142,6 @@ def render_cloudformation(
     template_json['Metadata']['TemplateGenerationDate'] = util.template_generation_date
 
     return json.dumps(template_json)
-
-
-def upload_cf(release_name, cf_id, text):
-    cf_obj = upload_string(
-            release_name,
-            'cloudformation/{}.cloudformation.json'.format(cf_id),
-            text,
-            {
-                'CacheControl': 'no-cache'
-            })
-    return 'https://s3.amazonaws.com/downloads.mesosphere.io/{}'.format(cf_obj.key)
 
 
 def gen_templates(arguments, options):
@@ -194,7 +165,7 @@ def gen_templates(arguments, options):
         # Specialize the dcos-cfn-signal service
         cc_variant = results.utils.add_units(
             cc_variant,
-            yaml.load(jinja_env.from_string(late_services).render(params)))
+            yaml.load(util.jinja_env.from_string(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['aws'])
@@ -226,40 +197,9 @@ def gen_default_cluster_name():
     return 'dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex
 
 
-def do_build(options):
-
-    # Can only laucnch if uploaded
-    if options.launch and not options.upload:
-        print("ERROR: Must upload in order to launch cluster")
-        sys.exit(1)
-
-    # TODO(cmaloney): don't shell out to mkpanda
-    bootstrap_id = util.get_local_build(options.skip_build)
-
-    release_name = 'testing/' + options.testing_name
-
-    templates = gen_templates({'bootstrap_id': bootstrap_id, 'release_name': release_name}, options)
-
-    # TODO(cmaloney): print out the final cloudformation s3 path.
-    if options.upload:
-        cf_bytes = templates.cloudformation.encode('utf-8')
-        hasher = hashlib.sha1()
-        hasher.update(cf_bytes)
-        cf_id = binascii.hexlify(hasher.digest()).decode('ascii')
-        upload_release(
-            release_name,
-            bootstrap_id,
-            util.cluster_to_extra_packages(templates.results.cluster_packages))
-        cf_url = upload_cf(release_name, cf_id, templates.cloudformation)
-        print("CloudFormation to launch: ", cf_url)
-
-    if options.launch:
-        do_launch(gen_default_cluster_name(), cf_url)
-
-
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
-    return jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
+    return util.jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
             'channel': channel,
             'tag': tag,
             'commit': commit,
@@ -342,111 +282,6 @@ def do_print_coreos_amis(options):
     # here, but it isn't real JSON so that is hard.
 
 
-def do_launch(name, template_url):
-    stack = session_dev.resource('cloudformation').create_stack(
-        DisableRollback=True,
-        TimeoutInMinutes=20,
-        Capabilities=['CAPABILITY_IAM'],
-        Parameters=[{
-            'ParameterKey': 'AcceptEULA',
-            'ParameterValue': 'Yes'
-        }, {
-            'ParameterKey': 'KeyName',
-            'ParameterValue': 'default'
-        }],
-        StackName=name,
-        TemplateURL=template_url
-        )
-    print('StackId:', stack.stack_id)
-
-    save_launched_clusters([name] + get_launched_clusters())
-
-    do_wait_for_up(stack)
-    return stack
-
-
-def do_wait_for_up(stack):
-    shown_events = set()
-    # Watch for the stack to come up. Error if steps take too long.
-    print("Waiting for stack to come up")
-    while(True):
-        stack.reload()
-        if stack.stack_status == 'CREATE_COMPLETE':
-            break
-
-        events = reversed(list(stack.events.all()))
-
-        for event in events:
-            if event.event_id in shown_events:
-                continue
-
-            shown_events.add(event.event_id)
-
-            status = event.resource_status_reason
-            if status is None:
-                status = ""
-
-            # TODO(cmaloney): Watch for Master, Slave scaling groups. When they
-            # come into existence watch them for IP addresses, print the IP
-            # addresses.
-            # if event.logical_resource_id in ['SlaveServerGroup', 'MasterServerGroup', 'PublicSlaveServerGroup']:
-
-            print(event.resource_status,
-                  event.logical_resource_id,
-                  event.resource_type,
-                  status)
-        time.sleep(10)
-
-    # TODO (cmaloney): Print DnsAddress once cluster is up
-    print("")
-    print("")
-    print("Cluster Up!")
-    stack.load()  # Force the stack to update since events have happened
-    for item in stack.outputs:
-        if item['OutputKey'] == 'DnsAddress':
-            print("DnsAddress:", item['OutputValue'])
-
-
-def get_launched_clusters():
-    try:
-        return load_json(os.path.expanduser("~/.config/dcos-image-clusters"))
-    except FileNotFoundError:
-        return []
-
-
-def save_launched_clusters(cluster_list):
-    write_json(os.path.expanduser("~/.config/dcos-image-clusters"), cluster_list)
-
-
-def do_list_clusters(options):
-    print("\n".join(get_launched_clusters()))
-
-
-def do_cluster_launch(options):
-    template_url = None
-    if options.cloudformation_url:
-        template_url = options.cloudformation_url
-    elif options.release_name:
-        template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
-                options.release_name + '/cloudformation/single-master.cloudformation.json'
-    else:
-        template_url = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + \
-                'testing/continuous/cloudformation/single-master.cloudformation.json'
-
-    print("Launching cluster with template:", template_url)
-    do_launch(options.name, template_url)
-
-
-def get_cluster_name_if_unset(name):
-    if not name:
-        clusters = get_launched_clusters()
-        if len(clusters) < 1:
-            print("ERROR: No launched clusters to operate on")
-            sys.exit(1)
-        name = clusters[0]
-    return name
-
-
 def delete_s3_nonempty(bucket):
     # This is an exhibitor bucket, should only have one item in it. Die hard rather
     # than accidentally doing the wrong thing if there is more.
@@ -472,13 +307,6 @@ def delete_s3_nonempty(bucket):
     region_bucket.delete()
 
 
-def do_cluster_resume(options):
-    name = get_cluster_name_if_unset(options.name)
-    stack = session_dev.resource('cloudformation').Stack(name)
-    print("Resuming cluster", name)
-    do_wait_for_up(stack)
-
-
 def delete_stack(stack):
     # Delete the s3 bucket
     stack_resource = stack.Resource('ExhibitorS3Bucket')
@@ -490,17 +318,6 @@ def delete_stack(stack):
 
     # Delete the stack
     stack.delete()
-
-
-def do_cluster_delete(options):
-    name = get_cluster_name_if_unset(options.name)
-    stack = session_dev.resource('cloudformation').Stack(name)
-
-    delete_stack(stack)
-
-    launched = set(get_launched_clusters())
-    launched.remove(name)
-    save_launched_clusters(list(launched))
 
 
 def do_clean_stacks(options):
@@ -568,15 +385,6 @@ def main():
     parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')
     subparsers = parser.add_subparsers(title='commands')
 
-    # build subcommand.
-    build = subparsers.add_parser('build')
-    build.set_defaults(func=do_build)
-    build.add_argument('--upload', action='store_true')
-    build.add_argument('--launch', action='store_true')
-    build.add_argument('--skip-build', action='store_true')
-    build.add_argument('--testing-name', default='continuous')
-    gen.add_arguments(build)
-
     # print_coreos_amis subcommand.
     print_coreos_amis = subparsers.add_parser('print-coreos-amis')
     print_coreos_amis.set_defaults(func=do_print_coreos_amis)
@@ -592,23 +400,6 @@ def main():
     # cleanup s3 buckets
     clean_stacks = subparsers.add_parser('clean_buckets')
     clean_stacks.set_defaults(func=do_clean_buckets)
-
-    # cluster subcommand.
-    cluster = subparsers.add_parser('cluster')
-    cluster_subparsers = cluster.add_subparsers(title='actions')
-    cluster.set_defaults(func=do_list_clusters)
-    launch = cluster_subparsers.add_parser('launch')
-    release_cf_url = launch.add_mutually_exclusive_group()
-    release_cf_url.add_argument('--cloudformation-url', type=str)
-    release_cf_url.add_argument('--release-name', type=str)
-    launch.add_argument('name', nargs='?', default=gen_default_cluster_name())
-    launch.set_defaults(func=do_cluster_launch)
-    resume = cluster_subparsers.add_parser('resume')
-    resume.add_argument('name', nargs='?', default=None)
-    resume.set_defaults(func=do_cluster_resume)
-    delete = cluster_subparsers.add_parser('delete')
-    delete.add_argument('name', nargs='?', default=None)
-    delete.set_defaults(func=do_cluster_delete)
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()

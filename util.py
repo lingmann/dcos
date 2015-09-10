@@ -1,9 +1,14 @@
+import jinja2
 import os
 import shutil
 from datetime import datetime
 from pkgpanda.util import load_string
 from subprocess import check_call, check_output
 from tempfile import TemporaryDirectory
+
+
+jinja_env = jinja2.Environment(
+        undefined=jinja2.StrictUndefined)
 
 dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 

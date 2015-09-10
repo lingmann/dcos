@@ -24,15 +24,3 @@ write_files:
       EXHIBITOR_HOSTNAME=$private_ipv4
   - path: /etc/resolv.conf
     content: 'nameserver 8.8.8.8'
-coreos:
-  units:
-    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        Type=oneshot
-        EnvironmentFile=/etc/environment
-        # Marathon depends on `hostname` resolution working
-        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) > /etc/hosts"

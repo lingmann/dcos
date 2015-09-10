@@ -2,7 +2,6 @@
 """Generates a chef cookbook for installing DCOS On-Prem"""
 
 import argparse
-import jinja2
 import yaml
 from pkgpanda.util import load_string
 
@@ -10,8 +9,6 @@ import gen
 import util
 from upload import upload_release
 
-jinja_env = jinja2.Environment(
-        undefined=jinja2.StrictUndefined)
 
 chef_file_template = """file '{filename}' do
     atomic_update true
@@ -97,7 +94,7 @@ def make_chef(gen_out):
             chef_services += "execute 'systemctl start {}'\n".format(name)
 
     # Get the general chef files
-    chef_files = yaml.load(jinja_env.from_string(load_string('gen/chef/chef.yaml')).render({
+    chef_files = yaml.load(util.jinja_env.from_string(load_string('gen/chef/chef.yaml')).render({
         'dcos_image_commit': util.dcos_image_commit,
         'generation_date': util.template_generation_date,
         'distro': 'centos'

@@ -165,6 +165,7 @@ function check_service() {
   PORT=$1
   NAME=$2
   echo -e -n "Checking if port $PORT (required by $NAME) is in use: "
+  RC=0
   cat /proc/net/{udp*,tcp*} | cut -d: -f3 | cut -d' ' -f1 | grep -q $(printf "%04x" $PORT) && RC=1
   print_status $RC
   (( OVERALL_RC += $RC ))

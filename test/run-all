@@ -62,8 +62,8 @@ for platform in $PLATFORMS; do
   echo "Running integration test"
   if ! py.test integration_test.py; then
     cd test/
-    for n in `seq 1 3`; do vagrant ssh -c 'sudo journalctl -n 500' "master-$n"; done
-    for n in `seq 1 2`; do vagrant ssh -c 'sudo journalctl -n 500' "slave-$n"; done
+    for n in `seq 1 3`; do vagrant ssh -c 'sudo journalctl -n 500' "master-0$n"; done
+    for n in `seq 1 2`; do vagrant ssh -c 'sudo journalctl -n 500' "slave-0$n"; done
     exit 1
   fi
 

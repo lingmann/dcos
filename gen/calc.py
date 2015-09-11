@@ -70,6 +70,7 @@ must = {
     'dcos_image_commit': calulate_dcos_image_commit,
     'ip_detect_contents': calculate_ip_detect_contents,
     'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
+    'dcos_version': lambda arguments: "1.3"
 }
 
 can = {

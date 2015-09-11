@@ -542,7 +542,9 @@ def do_generate(
     assert '' not in mixins
     assert None not in mixins
 
-    cluster_packages = list(sorted(set(['dcos-config', 'dcos-detect-ip'] + extra_cluster_packages)))
+    cluster_packages = list(sorted(set(
+        ['dcos-config', 'dcos-detect-ip', 'dcos-metadata']
+        + extra_cluster_packages)))
     core_templates = ['cloud-config', 'dcos-services']
 
     # Add the empty mixin so we pick up top-level config.

@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
-"""AWS Image Creation, Management, Testing
-
-TODO:
-    # promote_candidate <release_name> instead?
-    aws.py make_candidate <release_name>
-    aws.py promote_candidate <release_name>
-    aws.py promote <from_release> <to_release>
-"""
+"""AWS Image Creation, Management, Testing"""
 
 import argparse
 import botocore.exceptions

@@ -349,7 +349,7 @@ def do_bash_and_build(options):
     make_bash(gen_out)
     if not options.skip_upload:
         upload_release(
-            gen_out.arguments['release_name'],
+            gen_out.arguments['channel_name'],
             bootstrap_id,
             util.cluster_to_extra_packages(gen_out.cluster_packages)
         )

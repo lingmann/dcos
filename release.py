@@ -209,8 +209,7 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
             commit=commit,
             gen_arguments=copy.deepcopy({
                 'bootstrap_id': bootstrap_id,
-                'release_name': tag,
-                'repository_url': repository_url,
+                'channel_name': tag,
                 'bootstrap_url': repository_url
             }))
 

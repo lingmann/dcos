@@ -18,8 +18,8 @@ def calulate_dcos_image_commit(arguments):
     return dcos_image_commit
 
 
-def calculate_bootstrap(arguments):
-    return arguments['repository_url'].format(release_name=arguments['release_name'])
+def calculate_bootstrap_url(arguments):
+    return "https://downloads.mesosphere.com/dcos/" + arguments['channel_name']
 
 
 def calculate_bootstrap_id(arguments):
@@ -27,7 +27,7 @@ def calculate_bootstrap_id(arguments):
     # bootstrap_id because it has all the bootstraps. For on-prem customers who
     # change the bootstrap_url to point to a local cluster, they still need
     # to be shipped our canoncial bootstrap for the selected release.
-    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(arguments['release_name'])
+    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(arguments['channel_name'])
     return urllib.request.urlopen(url).read().decode('utf-8')
 
 
@@ -73,31 +73,30 @@ must = {
 }
 
 can = {
-    'bootstrap_url': calculate_bootstrap,
+    'bootstrap_url': calculate_bootstrap_url,
     'bootstrap_id': calculate_bootstrap_id
 }
+
 
 def validate(arguments):
     assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
 
     assert arguments['bootstrap_url'][-1] != '/'
 
-    if len(arguments['release_name']):
-        assert arguments['release_name'][0] != '/'
-        assert arguments['release_name'][-1] != '/'
+    if len(arguments['channel_name']):
+        assert arguments['channel_name'][0] != '/'
+        assert arguments['channel_name'][-1] != '/'
 
 defaults = {
   "num_masters": 3,
-  "release_name": "testing/continuous",
-  "repository_url": "https://downloads.mesosphere.com/dcos/{release_name}",
+  "channel_name": "testing/continuous",
   "roles": "slave_public",
   "weights": "slave_public=1",
   "docker_remove_delay": "1hrs",
   "gc_delay": "2days"
 }
 
-parameters = ["release_name", "repository_url", "ip_detect_filename", "resolvers"]
-
+parameters = ["channel_name", "ip_detect_filename", "resolvers"]
 
 implies = {
     "master_discovery": {

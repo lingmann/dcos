@@ -11,32 +11,30 @@ from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
 
-def do_interactive(options):
-    do_bash_py([
+def do_genconf(options):
+    args = [
+        "/dcos-image/bash.py",
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
-        "--save-final-config", "/genconf/config-final.json",
-        "--save-user-config", "/genconf/config-user-output.json"])
+        "--save-final-config", "/genconf/config-final.json"]
+
+    if not options.is_interactive:
+        args += [
+            "--assume-defaults",
+            "--non-interactive",
+            "--save-user-config", "/genconf/config-user-output.json"]
+
+    do_gen_wrapper(args)
 
 
-def do_non_interactive(options):
-    do_bash_py([
-        "--output-dir", "/genconf/serve",
-        "--config", "/genconf/config.json",
-        "--save-final-config", "/genconf/config-final.json",
-        "--assume-defaults",
-        "--non-interactive"])
-
-
-def do_bash_py(args):
+def do_gen_wrapper(args):
     conf = load_config('/dcos-image/config.json', '/genconf/config-user.json')
     save_json(conf, '/genconf/config.json')
     check_prereqs()
     fetch_bootstrap(conf)
     symlink_bootstrap()
     try:
-        subprocess.check_call(
-            ["/dcos-image/bash.py"] + args, cwd='/dcos-image')
+        subprocess.check_call(args, cwd='/dcos-image')
     except CalledProcessError:
         print("ERROR: Config generator exited with an error code")
         sys.exit(1)
@@ -153,19 +151,19 @@ parameters that the input paramters were expanded to as DCOS configuration.
 
     # interactive subcommand
     interactive = subparsers.add_parser('interactive')
-    interactive.set_defaults(func=do_interactive)
+    interactive.set_defaults(is_interactive=True)
 
     # non-interactive subcommand
     non_interactive = subparsers.add_parser('non-interactive')
-    non_interactive.set_defaults(func=do_non_interactive)
+    non_interactive.set_defaults(is_interactive=False)
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()
 
     # Use an if rather than try/except since lots of things inside could throw
     # an AttributeError.
-    if hasattr(options, 'func'):
-        options.func(options)
+    if hasattr(options, 'is_interactive'):
+        do_genconf(options)
         sys.exit(0)
     else:
         parser.print_help()

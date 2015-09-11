@@ -12,8 +12,16 @@ from subprocess import CalledProcessError
 
 
 def do_genconf(options):
-    args = [
-        "/dcos-image/bash.py",
+    args = []
+    if options.installer_format == 'bash':
+        args += ["/dcos-image/bash.py"]
+    elif options.installer_format == 'chef':
+        args += ["/dcos-image/chef.py"]
+    else:
+        print("ERROR: No such installer format:", options.installer_format)
+        sys.exit(1)
+
+    args += [
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
         "--save-final-config", "/genconf/config-final.json"]
@@ -147,6 +155,11 @@ parameters that the input paramters were expanded to as DCOS configuration.
 '''
     parser = argparse.ArgumentParser(
         description=desc, formatter_class=RawTextHelpFormatter)
+
+    # Whether to output chef or bash
+    parser.add_argument('--installer-format', default='bash', type=str, choices=['bash', 'chef'])
+
+    # Setup subparsers
     subparsers = parser.add_subparsers(title='commands')
 
     # interactive subcommand

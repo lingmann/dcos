@@ -272,7 +272,8 @@ def add_arguments(parser):
                         type=str,
                         help='JSON configuration file to load')
     parser.add_argument('--assume-defaults', action='store_true')
-    parser.add_argument('--save-config', type=str)
+    parser.add_argument('--save-final-config', type=str)
+    parser.add_argument('--save-user-config', type=str)
     parser.add_argument('--non-interactive', action='store_true')
 
     return parser
@@ -282,7 +283,8 @@ def get_options_object():
     return Bunch({
         'config': None,
         'assume_defaults': True,
-        'save_config': None,
+        'save_user_config': None,
+        'save_final_config': None,
         'non_interactive': True
         })
 
@@ -635,6 +637,14 @@ def do_generate(
     user_arguments = prompt_arguments(options.non_interactive, to_set, defaults, can_calc)
     arguments = update_dictionary(arguments, user_arguments)
 
+    if options.save_user_config:
+        # TODO(cmaloney): Add a test user config can be looped around
+        # NOTE: We write arguments here, not the user_arguments which wer prompted for just now
+        # because we want to include all input arguments. After this point there are calculated /
+        # default arguments set.
+        write_json(options.save_user_config, arguments)
+        print("User Config saved to:", options.save_user_config)
+
     # Set arguments from command line flags.
     arguments['mixins'] = mixins
 
@@ -673,9 +683,9 @@ def do_generate(
     arguments['cluster_packages'] = json.dumps(cluster_package_ids)
 
     # Save config parameters
-    if options.save_config:
-        write_json(options.save_config, arguments)
-        print("Config saved to:", options.save_config)
+    if options.save_final_config:
+        write_json(options.save_final_config, arguments)
+        print("Fully expanded configuration saved to:", options.save_final_config)
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)

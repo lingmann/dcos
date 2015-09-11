@@ -58,17 +58,16 @@ def fetch_bootstrap(
     dl_url = "{}/{}/bootstrap/{}".format(
         bootstrap_root, config['channel_name'], bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
-    save_dir = os.path.dirname(save_path)
 
     if not os.path.exists(save_path):
         print("INFO: Downloading bootstrap tarball: {}".format(dl_url))
-        wget_out = ""
+        curl_out = ""
         try:
-            wget_out = subprocess.check_output([
-                "/usr/bin/wget", "-P", save_dir, "-nv", dl_url])
+            curl_out = subprocess.check_output([
+                "/usr/bin/curl", "-sSL", "-o", save_path, dl_url])
         except (KeyboardInterrupt, CalledProcessError) as ex:
             print("ERROR: Download failed or interrupted {}".format(ex))
-            print(wget_out)
+            print(curl_out)
             if os.path.exists(save_path):
                 try:
                     os.remove(save_path)

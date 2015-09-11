@@ -8,7 +8,6 @@ from pkgpanda.util import load_string
 
 import gen
 import util
-from upload import upload_release
 
 
 chef_file_template = """file '{filename}' do
@@ -119,22 +118,6 @@ def make_chef(gen_out, options):
     return chef_tarball
 
 
-def do_chef_and_build(options):
-    bootstrap_id = util.get_local_build(options.skip_build)
-    gen_out = gen.generate(
-        options=options,
-        mixins=['chef', 'centos', 'onprem'],
-        arguments={'bootstrap_id': bootstrap_id},
-        extra_cluster_packages=['onprem-config']
-        )
-    chef_tarball = make_chef(gen_out)
-    upload_release(
-        gen_out.arguments['channel_name'],
-        bootstrap_id,
-        util.cluster_to_extra_packages(gen_out.cluster_packages))
-    print("Chef tarball:", chef_tarball)
-
-
 def do_chef_only(options):
     gen_out = gen.generate(
         options=options,
@@ -148,21 +131,10 @@ def do_chef_only(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Gen Chef templates to use to install a DCOS cluster')
-    subparsers = parser.add_subparsers(title='commands')
 
     # No subcommand
     gen.add_arguments(parser)
-    parser.set_defaults(func=do_chef_only)
     parser.add_argument('--output-dir',
                         type=str,
                         help='Directory to write generated config')
-
-    # Build subcommand
-    build = subparsers.add_parser('build')
-    gen.add_arguments(build)
-    build.set_defaults(func=do_chef_and_build)
-    build.add_argument('--skip-build', action='store_true')
-
-    # Parse the arguments and dispatch.
-    options = parser.parse_args()
-    options.func(options)
+    do_chef_only(parser.parse_args())

@@ -7,7 +7,6 @@ from pkgpanda.util import write_string
 
 import gen
 import util
-from upload import upload_release
 
 file_template = """mkdir -p `dirname {filename}`
 cat <<'EOF' > "{filename}"
@@ -283,6 +282,7 @@ main
 
 """
 
+
 def make_bash(gen_out):
 
     # Reformat the cloud-config into bash heredocs
@@ -339,24 +339,6 @@ def make_bash(gen_out):
     return 'dcos_install.sh'
 
 
-def do_bash_and_build(options):
-    bootstrap_id = util.get_local_build(options.skip_build)
-    gen_out = gen.generate(
-        options=options,
-        mixins=['bash', 'centos', 'onprem'],
-        arguments={'bootstrap_id': bootstrap_id},
-        extra_cluster_packages=['onprem-config']
-        )
-    make_bash(gen_out)
-    if not options.skip_upload:
-        upload_release(
-            gen_out.arguments['channel_name'],
-            bootstrap_id,
-            util.cluster_to_extra_packages(gen_out.cluster_packages)
-        )
-    print("\n\nDcos install script: dcos_install.sh")
-
-
 def do_bash_only(options):
     gen_out = gen.generate(
         options=options,
@@ -369,22 +351,8 @@ def do_bash_only(options):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Gen BASH templates to use to install a DCOS cluster')
-    subparsers = parser.add_subparsers(title='commands')
-
-    # No subcommand
     gen.add_arguments(parser)
-    parser.set_defaults(func=do_bash_only)
     parser.add_argument('--output-dir',
                         type=str,
                         help='Directory to write generated config')
-
-    # Build subcommand
-    build = subparsers.add_parser('build')
-    gen.add_arguments(build)
-    build.set_defaults(func=do_bash_and_build)
-    build.add_argument('--skip-build', action='store_true')
-    build.add_argument('--skip-upload', action='store_true')
-
-    # Parse the arguments and dispatch.
-    options = parser.parse_args()
-    options.func(options)
+    do_bash_only(parser.parse_args())

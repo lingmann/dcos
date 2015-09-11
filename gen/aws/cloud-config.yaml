@@ -14,16 +14,21 @@ write_files:
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
       ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
-      MASTER_ELB={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
-      EXTERNAL_ELB={ "Fn::GetAtt" : [ "ElasticLoadBalancer", "DNSName" ] }
-      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
-      # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS={{ fallback_dns }}
   - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={ "Ref" : "AWS::StackName" }
   - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/exhibitor
     content: |
+      EXHIBITOR_BACKEND=AWS_S3
+      AWS_REGION={ "Ref" : "AWS::Region" }
       AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
       AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
-      EXHIBITOR_WEB_UI_PORT=8181
+  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/exhibitor.properties
+    content: |
+      com.netflix.exhibitor.s3.access-key-id={ "Ref" : "HostKeys" }
+      com.netflix.exhibitor.s3.access-secret-key={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
+  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
+      RESOLVERS={{ resolvers_str }}

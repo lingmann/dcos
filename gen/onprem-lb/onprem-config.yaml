@@ -1,8 +1,0 @@
-write_files:
-  - path: /etc/cloudenv
-    content: |
-      MASTER_ELB={{ master_lb }}
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
-      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
-      # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS={{ fallback_dns }}

@@ -8,9 +8,5 @@ implies = {
         "aws_s3": "onprem-exhibitor-aws",
         "zookeeper": "onprem-exhibitor-zk",
         "shared_filesystem": "onprem-exhibitor-fs"
-    },
-    "master_discovery": {
-      "lb": "onprem-lb",
-      "vrrp": "onprem-keepalived"
     }
 }

@@ -10,7 +10,6 @@ write_files:
     content: |
       # TODO(cmaloney): This needs to become an internal load balancer between the masters.
       MASTER_ELB=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
-      FALLBACK_DNS=168.63.129.16
       MARATHON_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-slave-provider
     content: |
@@ -28,7 +27,6 @@ write_files:
       AZURE_PREFIX=[[[variables('uniqueName')]]]
       AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
       AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
-      EXHIBITOR_WEB_UI_PORT=8181
       EXHIBITOR_HOSTNAME=$private_ipv4
 
 coreos:

@@ -5,10 +5,11 @@ write_files:
       KEEPALIVED_INTERFACE={{ keepalived_interface }}
       KEEPALIVED_ROUTER_ID={{ keepalived_router_id }}
       KEEPALIVED_PASS={{ keepalived_pass }}
-  - path: /etc/cloudenv
+  - path: /etc_master/dns_config_master
     content: |
-      MASTER_ELB={{ keepalived_virtual_ipaddress }}
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
-      # Must set FALLBACK_DNS to an AWS region-specific DNS server which returns
-      # the internal IP when doing lookups on AWS public hostnames.
-      FALLBACK_DNS={{ fallback_dns }}
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS={{ keepalived_virtual_ipaddress }}
+      RESOLVERS={{ resolvers_str }}

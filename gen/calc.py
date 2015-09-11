@@ -31,13 +31,33 @@ def calculate_bootstrap_id(arguments):
     return urllib.request.urlopen(url).read().decode('utf-8')
 
 
-def calculate_fallback_dns(arguments):
+def calculate_resolvers_str(arguments):
     # Validation because accidentally slicing a string instead of indexing a
     # list of resolvers then finding out at cluster launch is painful.
     assert isinstance(arguments['resolvers'], str)
     resolvers = json.loads(arguments['resolvers'])
     assert isinstance(resolvers, list)
-    return resolvers[0]
+    return ",".join(resolvers)
+
+
+def calculate_mesos_dns_resolvers_str(arguments):
+    assert isinstance(arguments['resolvers'], str)
+    resolvers = json.loads(arguments['resolvers'])
+
+    # Mesos-DNS unfortunately requires completley different config parameters
+    # for saying "Don't resolve / reject non-Mesos-DNS requests" than "there are
+    # no upstream resolvers". As such, if resolvers is given output that.
+    # Otherwise output the option externalOn which means "don't try resolving
+    # external queries / just fail fast without an error."
+    # This logic _should_ live in the Jinja template but it unfortunately can't
+    # because the "unset argument detection" in Jinja doesn't work around using
+    # jinja functions (the function names show up as unset arguments...).
+    # As such, generate the full JSON line and replace it in the manner given
+    # above.
+    if len(resolvers) > 0:
+        return '"resolvers": ' + arguments['resolvers']
+    else:
+        return '"externalOn": false'
 
 
 def calculate_ip_detect_contents(arguments):
@@ -46,9 +66,10 @@ def calculate_ip_detect_contents(arguments):
 
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
-    'fallback_dns': calculate_fallback_dns,
+    'resolvers_str': calculate_resolvers_str,
     'dcos_image_commit': calulate_dcos_image_commit,
-    'ip_detect_contents': calculate_ip_detect_contents
+    'ip_detect_contents': calculate_ip_detect_contents,
+    'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
 }
 
 can = {
@@ -75,4 +96,13 @@ defaults = {
   "gc_delay": "2days"
 }
 
-parameters = ["release_name", "repository_url", "ip_detect_filename"]
+parameters = ["release_name", "repository_url", "ip_detect_filename", "resolvers"]
+
+
+implies = {
+    "master_discovery": {
+        "cloud_dynamic": None,
+        "static": "dns-master-list",
+        "vrrp": "onprem-keepalived"
+    }
+}

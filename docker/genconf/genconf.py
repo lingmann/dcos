@@ -15,14 +15,15 @@ def do_interactive(options):
     do_bash_py([
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
-        "--save-config", "/genconf/config-final.json"])
+        "--save-final-config", "/genconf/config-final.json",
+        "--save-user-config", "/genconf/config-user-output.json"])
 
 
 def do_non_interactive(options):
     do_bash_py([
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
-        "--save-config", "/genconf/config-final.json",
+        "--save-final-config", "/genconf/config-final.json",
         "--assume-defaults",
         "--non-interactive"])
 
@@ -134,10 +135,17 @@ Interactive Mode
   1. Build DCOS artifacts:
      docker run -it -v $BUILD_DIR:/genconf dcos-genconf interactive
 
+  All the user-input parameters will be saved to config-user-output.json. That
+  file can be used as the config-user.json for either an interactive or
+  non-interactive run.
+
 Non-Interactive Mode
   1. Create an appropriate config-user.json in $BUILD_DIR
   2. Build DCOS artifacts:
      docker run -it -v $BUILD_DIR:/genconf dcos-genconf non-interactive
+
+In both modes a file config-final.json will be output which contains all the
+parameters that the input paramters were expanded to as DCOS configuration.
 '''
     parser = argparse.ArgumentParser(
         description=desc, formatter_class=RawTextHelpFormatter)

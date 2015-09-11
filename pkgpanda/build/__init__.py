@@ -5,7 +5,7 @@ import shutil
 import sys
 import tempfile
 import urllib.request
-from subprocess import check_call, check_output
+from subprocess import CalledProcessError, check_call, check_output
 from urllib.parse import urlparse
 
 import pkgpanda
@@ -185,12 +185,15 @@ def fetch_sources(sources):
                 print("WARNING: Use of 'branch' field is deprecated. Please replace with 'ref'.")
 
             def get_sha1(git_ref):
-                return check_output([
-                    "git",
-                    "--git-dir",
-                    bare_folder,
-                    "rev-parse",
-                    git_ref + "^{commit}"]).decode('ascii').strip()
+                try:
+                    return check_output([
+                        "git",
+                        "--git-dir",
+                        bare_folder,
+                        "rev-parse",
+                        git_ref + "^{commit}"]).decode('ascii').strip()
+                except CalledProcessError as ex:
+                    print("ERROR: Unable to get sha-1 of source {}: ".format(src, ex))
 
             commit = get_sha1(ref)
 

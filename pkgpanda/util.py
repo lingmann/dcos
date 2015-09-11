@@ -38,7 +38,7 @@ def make_file(name):
 
 def write_json(filename, data):
     with open(filename, "w+") as f:
-        return json.dump(data, f)
+        return json.dump(data, f, indent=2, sort_keys=True)
 
 
 def write_string(filename, data):

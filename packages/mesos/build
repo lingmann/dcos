@@ -51,8 +51,7 @@ EnvironmentFile=/opt/mesosphere/etc/mesos-master
 EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py \$ZOOKEEPER_CLUSTER_SIZE
-ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-master'
-ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-master'
+ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-master'
 ExecStartPre=/bin/bash -c 'echo "LIBPROCESS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-master'
 ExecStart=$PKG_PATH/sbin/mesos-master
 EOF
@@ -75,8 +74,7 @@ EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
 EnvironmentFile=-/var/lib/dcos/mesos-slave-common
 ExecStartPre=/bin/ping -c1 leader.mesos
-ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-slave'
-ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-slave'
+ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-slave'
 ExecStartPre=/bin/bash -c 'echo "LIBPROCESS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-slave'
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF
@@ -99,8 +97,7 @@ EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
 EnvironmentFile=-/var/lib/dcos/mesos-slave-common
 ExecStartPre=/bin/ping -c1 leader.mesos
-ExecStartPre=/bin/bash -c 'test -n \$MESOS_IP_DISCOVERY_COMMAND && echo "MESOS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-slave-public'
-ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-slave-public'
+ExecStartPre=/bin/bash -c 'echo "MESOS_HOSTNAME=\$(\$MESOS_IP_DISCOVERY_COMMAND)" > /opt/mesosphere/environment.ip.mesos-slave-public'
 ExecStartPre=/bin/bash -c 'echo "LIBPROCESS_IP=\$(\$MESOS_IP_DISCOVERY_COMMAND)" >> /opt/mesosphere/environment.ip.mesos-slave-public'
 ExecStart=$PKG_PATH/sbin/mesos-slave
 EOF

@@ -1,4 +1,4 @@
-- name: link-env.service
+- name: dcos-link-env.service
   command: start
   content: |
     [Unit]

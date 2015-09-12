@@ -63,8 +63,9 @@ def do_bundle_onprem(extra_files, gen_out, output_dir=None):
         if not os.path.exists(local_bootstrap_path):
             try:
                 check_call([
-                    "wget",
-                    "-O",
+                    "curl",
+                    "-sSL",
+                    "-o",
                     local_bootstrap_path,
                     "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}.bootstrap.tar.xz".format(
                         gen_out.arguments['channel_name'],

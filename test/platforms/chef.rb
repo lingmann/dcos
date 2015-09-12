@@ -1,4 +1,4 @@
-# wget and nogroup don't exist in the centos-7 image but are required,
+# docker and nogroup don't exist in the centos-7 image but are required,
 # so we need to add them here.
 
 require "json"
@@ -6,7 +6,7 @@ require "json"
 def render_installer(name, c)
   return <<-"EOF"
     source /etc/environment
-    yum install -y wget docker
+    yum install -y docker
     echo nogroup:x:65500: >> /etc/group
     curl -L https://www.opscode.com/chef/install.sh | bash
     mkdir -p /var/chef/cookbooks/dcos

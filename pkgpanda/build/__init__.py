@@ -193,7 +193,8 @@ def fetch_sources(sources):
                         "rev-parse",
                         git_ref + "^{commit}"]).decode('ascii').strip()
                 except CalledProcessError as ex:
-                    print("ERROR: Unable to get sha-1 of source {}: ".format(src, ex))
+                    raise ValidationError(
+                        "ERROR: Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
 
             commit = get_sha1(ref)
 

@@ -2,6 +2,7 @@
 """Generates a chef cookbook for installing DCOS On-Prem"""
 
 import argparse
+import os.path
 import yaml
 from pkgpanda.util import load_string
 
@@ -55,7 +56,7 @@ end
 """
 
 
-def make_chef(gen_out):
+def make_chef(gen_out, options):
     # Reformat the cloud-config into chef_cloud_config_files.
     # Assert the cloud-config is only write_files
     chef_cloud_config_files = ""
@@ -112,6 +113,7 @@ def make_chef(gen_out):
 
     # Turn the chef files into a tarball to email to customers
     chef_tarball = 'chef-{}.tar.xz'.format(gen_out.arguments['config_id'])
+
     gen.do_gen_package(chef_files, chef_tarball)
 
     return chef_tarball
@@ -139,7 +141,8 @@ def do_chef_only(options):
         mixins=['chef', 'centos', 'onprem'],
         extra_cluster_packages=['onprem-config']
         )
-    chef_tarball = make_chef(gen_out)
+    chef_tarball = make_chef(gen_out, options)
+    util.do_bundle_onprem([chef_tarball], gen_out, options.output_dir)
     print("Chef tarball:", chef_tarball)
 
 
@@ -150,6 +153,9 @@ if __name__ == '__main__':
     # No subcommand
     gen.add_arguments(parser)
     parser.set_defaults(func=do_chef_only)
+    parser.add_argument('--output-dir',
+                        type=str,
+                        help='Directory to write generated config')
 
     # Build subcommand
     build = subparsers.add_parser('build')

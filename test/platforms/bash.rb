@@ -4,6 +4,9 @@ def render_installer(name, c)
   return <<-"EOF"
     yum install -y docker &&
     echo nogroup:x:65500: >> /etc/group &&
-    bash /vagrant/dcos_install.sh #{ c[:roles].join(" ") }
+    cp /test_platforms/bash/install-oneshot.service /etc/systemd/system
+    echo #{ c[:roles].join(" ") } > /setup_roles
+    systemctl --no-block start install-oneshot
+    bash
   EOF
 end

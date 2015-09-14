@@ -63,6 +63,7 @@ def fetch_bootstrap(
         print("INFO: Downloading bootstrap tarball: {}".format(dl_url))
         curl_out = ""
         try:
+            subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
             curl_out = subprocess.check_output([
                 "/usr/bin/curl", "-sSL", "-o", save_path, dl_url])
         except (KeyboardInterrupt, CalledProcessError) as ex:

@@ -16,6 +16,10 @@ export DCOS_DNS_ADDRESS=http://$MASTER_IP
 export HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
 export PLATFORMS="$@"
 
+# Flag used so TeamCity can tell if the build passed or failed. On failure,
+# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
+rm -rf PASSED
+
 mkdir -p build
 
 cp ip-detector.sh build/ip-detect.sh
@@ -75,15 +79,12 @@ for platform in $PLATFORMS; do
 
   echo "Running integration test"
   if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS --net=host py.test py.test /integration_test.py; then
-    echo "Gathering logs"
-    for n in `seq 1 3`; do vagrant ssh -c 'sudo journalctl -n 500' "master-0$n"; done
-    for n in `seq 1 2`; do vagrant ssh -c 'sudo journalctl -n 500' "slave-0$n"; done
-
-    echo "Cleaning up vagrant"
-    vagrant destroy -f
+    echo "TEST FAILED"
     exit 1
   fi
 
   echo "Cleaning up vagrant"
   vagrant destroy -f
 done
+
+touch PASSED

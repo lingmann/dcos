@@ -1,57 +1,75 @@
 #!/bin/bash
-# We can't use -u since we source the virtualenv activate script which
-# uses undefined variables.
-set -eo pipefail
+set -euo pipefail
+
+# Make sure we're running inside the test directory which contains the Vagrantfile
+if [ ! -f Vagrantfile ]
+then
+  echo "run-all must be run with it's current working directory as the test folder"
+  exit 1
+fi
+
+# Build a docker container for running py.test inside of.
+docker build -t py.test - < py.test.Dockerfile
+
 export MASTER_IP=172.17.10.101
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
+export HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
+export PLATFORMS="$@"
 
-[ -z "${HOME+x}" ] && export HOME=/root
-if [ "$#" -lt 2 ]; then
-  echo "$0 name platform [platform...]"
-  exit 1
-fi
+# Flag used so TeamCity can tell if the build passed or failed. On failure,
+# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
+rm -rf PASSED
 
-NAME=$1
-shift
-PLATFORMS="$@"
+mkdir -p build
 
-if [ ! -f "build/pkgpanda-env/bin/activate" ]; then
-  echo "Couldn't find virtualenv in build/pkgpanda-env" 2>&1
-  exit 1
-fi
-
-. build/pkgpanda-env/bin/activate
-TMP=$(mktemp /tmp/onprem-vagrant.XXXXXX)
-HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
-sed "s|%CHANNEL_NAME%|testing/$NAME|;s|zk://%ZK_HOSTS%|$HOST_IP:2181|" test/config.json.in > "$TMP"
-
-echo "Downloading zookeeper"
-if [ ! -e "build/zookeeper" ]; then
-  curl -L https://www.apache.org/dist/zookeeper/zookeeper-3.4.6/zookeeper-3.4.6.tar.gz | tar -C build -xzf -
-  mv build/zookeeper-* build/zookeeper
-  cp build/zookeeper/conf/zoo_sample.cfg build/zookeeper/conf/zoo.cfg
-fi
+cp ip-detector.sh build/ip-detect.sh
+cat <<EOF > "build/config-user.json"
+{
+  "cluster_name":"test_cluster",
+  "channel_name":"$CHANNEL_NAME",
+  "bootstrap_url":"http://$HOST_IP:8080",
+  "resolvers":"[\"8.8.8.8\"]",
+  "exhibitor_storage_backend": "zookeeper",
+  "exhibitor_zk_hosts": "$HOST_IP:2181",
+  "exhibitor_zk_path": "/test-cluster-discovery",
+  "master_discovery": "static",
+  "master_list": "[\"172.17.10.101\", \"172.17.10.102\", \"172.17.10.103\"]"
+}
+EOF
 
 cleanup() {
-  rm "$TMP"
+  echo "Cleaning up zookeeper and nginx Docker containers"
+  set +e
+  docker kill dcos_int_zk
+  docker rm dcos_int_zk
+  docker kill dcos_int_nginx
+  docker rm dcos_int_nginx
+  set -e
 }
 
-trap cleanup EXIT
 
 for platform in $PLATFORMS; do
-  # We need to run 'build' again to make sure bash.py uploads config packages
-  echo "Generating and uploading packages"
-  ./${platform}.py build --config "$TMP" --assume-defaults --non-interactive
 
-  # Starting zookeeper
+  # Cleanup zk, nginx containers to be safe
+  cleanup
+
+  # Generate the config packages
+  echo "Generating config packages"
+  docker run -v $PWD/build:/genconf mesosphere/dcos-genconf:$GEN_DOCKER_TAG --installer-format $platform non-interactive
+
+  trap cleanup EXIT
+
+  # Start zookeeper
   echo "Starting Zookeeper"
-  ./build/zookeeper/bin/zkServer.sh start
-  [ -e "exhibitor/" ] && rm -rf "exhibitor/"
+  docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
 
+  # Start nginx
+  echo "Starting Nginx"
+  docker run -d -v $PWD/build/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
+
+  # Launch the vagrant
   echo "Starting Vagrant VMs"
-  pushd test/
   PLATFORM=$platform vagrant up
-  popd
 
   echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
   while ! [ -n "$(dig +short leader.mesos @$MASTER_IP)" ]; do sleep 1; done # Wait for elected leader
@@ -60,19 +78,13 @@ for platform in $PLATFORMS; do
   while ! curl -Lfso /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
 
   echo "Running integration test"
-  if ! py.test integration_test.py; then
-    cd test/
-    for n in `seq 1 3`; do vagrant ssh -c 'sudo journalctl -n 500' "master-0$n"; done
-    for n in `seq 1 2`; do vagrant ssh -c 'sudo journalctl -n 500' "slave-0$n"; done
+  if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS --net=host py.test py.test /integration_test.py; then
+    echo "TEST FAILED"
     exit 1
   fi
 
   echo "Cleaning up vagrant"
-  pushd test/
   vagrant destroy -f
-  popd
-
-  echo "Stopping Zookeeper"
-  ./build/zookeeper/bin/zkServer.sh stop
-  rm -rf /tmp/zookeeper
 done
+
+touch PASSED

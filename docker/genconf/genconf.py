@@ -11,32 +11,38 @@ from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
 
-def do_interactive(options):
-    do_bash_py([
+def do_genconf(options):
+    args = []
+    if options.installer_format == 'bash':
+        args += ["/dcos-image/bash.py"]
+    elif options.installer_format == 'chef':
+        args += ["/dcos-image/chef.py"]
+    else:
+        print("ERROR: No such installer format:", options.installer_format)
+        sys.exit(1)
+
+    args += [
         "--output-dir", "/genconf/serve",
         "--config", "/genconf/config.json",
-        "--save-final-config", "/genconf/config-final.json",
-        "--save-user-config", "/genconf/config-user-output.json"])
+        "--save-final-config", "/genconf/config-final.json"]
+
+    if not options.is_interactive:
+        args += [
+            "--assume-defaults",
+            "--non-interactive",
+            "--save-user-config", "/genconf/config-user-output.json"]
+
+    do_gen_wrapper(args)
 
 
-def do_non_interactive(options):
-    do_bash_py([
-        "--output-dir", "/genconf/serve",
-        "--config", "/genconf/config.json",
-        "--save-final-config", "/genconf/config-final.json",
-        "--assume-defaults",
-        "--non-interactive"])
-
-
-def do_bash_py(args):
+def do_gen_wrapper(args):
     conf = load_config('/dcos-image/config.json', '/genconf/config-user.json')
     save_json(conf, '/genconf/config.json')
     check_prereqs()
     fetch_bootstrap(conf)
     symlink_bootstrap()
     try:
-        subprocess.check_call(
-            ["/dcos-image/bash.py"] + args, cwd='/dcos-image')
+        subprocess.check_call(args, cwd='/dcos-image')
     except CalledProcessError:
         print("ERROR: Config generator exited with an error code")
         sys.exit(1)
@@ -63,6 +69,7 @@ def fetch_bootstrap(
         print("INFO: Downloading bootstrap tarball: {}".format(dl_url))
         curl_out = ""
         try:
+            subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
             curl_out = subprocess.check_output([
                 "/usr/bin/curl", "-sSL", "-o", save_path, dl_url])
         except (KeyboardInterrupt, CalledProcessError) as ex:
@@ -148,23 +155,28 @@ parameters that the input paramters were expanded to as DCOS configuration.
 '''
     parser = argparse.ArgumentParser(
         description=desc, formatter_class=RawTextHelpFormatter)
+
+    # Whether to output chef or bash
+    parser.add_argument('--installer-format', default='bash', type=str, choices=['bash', 'chef'])
+
+    # Setup subparsers
     subparsers = parser.add_subparsers(title='commands')
 
     # interactive subcommand
     interactive = subparsers.add_parser('interactive')
-    interactive.set_defaults(func=do_interactive)
+    interactive.set_defaults(is_interactive=True)
 
     # non-interactive subcommand
     non_interactive = subparsers.add_parser('non-interactive')
-    non_interactive.set_defaults(func=do_non_interactive)
+    non_interactive.set_defaults(is_interactive=False)
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()
 
     # Use an if rather than try/except since lots of things inside could throw
     # an AttributeError.
-    if hasattr(options, 'func'):
-        options.func(options)
+    if hasattr(options, 'is_interactive'):
+        do_genconf(options)
         sys.exit(0)
     else:
         parser.print_help()

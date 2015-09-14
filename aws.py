@@ -200,6 +200,13 @@ def gen_buttons(channel, tag, commit):
         })
 
 
+def get_spot_args(base_args):
+    spot_args = deepcopy(base_args)
+    spot_args['slave_spot_price'] = "0.26"
+    spot_args['slave_public_spot_price'] = "0.26"
+    return spot_args
+
+
 def do_create(tag, channel, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
@@ -210,6 +217,8 @@ def do_create(tag, channel, commit, gen_arguments):
     multi_args['num_masters'] = 3
     single_master = gen_templates(single_args, gen_options)
     multi_master = gen_templates(multi_args, gen_options)
+    single_master_spot = gen_templates(get_spot_args(single_args), gen_options)
+    multi_master_spot = gen_templates(get_spot_args(single_args), gen_options)
     button_page = gen_buttons(channel, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well
@@ -217,6 +226,8 @@ def do_create(tag, channel, commit, gen_arguments):
     extra_packages = list()
     extra_packages += util.cluster_to_extra_packages(multi_master.results.cluster_packages)
     extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
+    extra_packages += util.cluster_to_extra_packages(multi_master_spot.results.cluster_packages)
+    extra_packages += util.cluster_to_extra_packages(single_master_spot.results.cluster_packages)
 
     return {
         'extra_packages': extra_packages,
@@ -232,6 +243,18 @@ def do_create(tag, channel, commit, gen_arguments):
                 'stable_path': 'cloudformation/{}.multi-master.cloudformation.json'.format(
                     multi_master.results.arguments['config_id']),
                 'content': multi_master.cloudformation
+            },
+            {
+                'known_path': 'cloudformation/single-master-spot.cloudformation.json',
+                'stable_path': 'cloudformation/{}.single-master-spot.cloudformation.json'.format(
+                    single_master_spot.results.arguments['config_id']),
+                'content': single_master_spot.cloudformation
+            },
+            {
+                'known_path': 'cloudformation/multi-master-spot.cloudformation.json',
+                'stable_path': 'cloudformation/{}.multi-master-spot.cloudformation.json'.format(
+                    multi_master_spot.results.arguments['config_id']),
+                'content': multi_master_spot.cloudformation
             },
             {
                 'known_path': 'aws.html',

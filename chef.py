@@ -123,7 +123,7 @@ def do_chef_only(options):
         mixins=['chef', 'centos', 'onprem'],
         extra_cluster_packages=['onprem-config']
         )
-    chef_tarball = make_chef(gen_out, options)
+    chef_tarball = make_chef(gen_out)
     util.do_bundle_onprem([chef_tarball], gen_out, options.output_dir)
     print("Chef tarball:", chef_tarball)
 

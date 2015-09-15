@@ -9,6 +9,7 @@ Usage:
   pkgpanda list [options]
   pkgpanda remove <id>... [options]
   pkgpanda setup [options]
+  pkgpanda uninstall [options]
 
 Options:
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
@@ -215,6 +216,34 @@ def do_activate(install, repository, ids, no_systemd, noblock_systemd):
         print("Package Error: {0}".format(ex))
 
 
+def uninstall(install, repository):
+    print("Uninstalling DCOS")
+    # Remove dcos.target
+    # TODO(cmaloney): Make this not quite so magical
+    print("Removing dcos.target")
+    print(os.path.dirname(install.systemd_dir) + "/dcos.target")
+    check_call(['rm', '-f', os.path.dirname(install.systemd_dir) + "/dcos.target"])
+
+    # Cleanup all systemd units
+    # TODO(cmaloney): This is much more work than we need to do the job
+    print("Deactivating all packages")
+    install.activate(repository, [])
+
+    # NOTE: All python libs need to be loaded before this so they are in-memory before we do the delete
+    # Remove all well known files, directories
+    # TODO(cmaloney): This should be a method of Install.
+    print("Removing all runtime / activation directories")
+    active_names = install.get_active_names()
+    new_names = [name + '.new' for name in active_names]
+    old_names = [name + '.old' for name in active_names]
+
+    all_names = active_names + new_names + old_names
+
+    assert len(all_names) > 0
+
+    check_call(['rm', '-rf'] + all_names)
+
+
 def main():
     arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
     umask(0o022)
@@ -314,6 +343,10 @@ def main():
                 sys.exit(1)
             sys.stdout.write("\rRemoved: {0}\n".format(pkg_id))
             sys.stdout.flush()
+        sys.exit(0)
+
+    if arguments['uninstall']:
+        uninstall(install, repository)
         sys.exit(0)
 
     print("unknown command")

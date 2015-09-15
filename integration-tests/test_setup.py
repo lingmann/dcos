@@ -111,6 +111,33 @@ def test_setup(tmpdir):
         ]).decode('utf-8').split())
     assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
+    # Touch some .new files so we can be sure that deactivate cleans those up as well.
+    tmpdir.mkdir("root/bin.new")
+    tmpdir.mkdir("root/lib.new")
+    tmpdir.mkdir("root/etc.new")
+    tmpdir.mkdir("root/foo.new")
+    tmpdir.mkdir("root/baz")
+    tmpdir.mkdir("root/foobar.old")
+    tmpdir.mkdir("root/packages")
+
+    # Uninstall / deactivate everything,
+    check_call(["pkgpanda",
+                "uninstall",
+                "--root={0}/root".format(tmpdir),
+                "--rooted-systemd",
+                "--repository={}".format(repo_path),
+                "--config-dir=resources/etc-active",
+                "--no-systemd"
+                ])
+
+    expect_fs(
+        "{0}/root".format(tmpdir),
+        {
+            "foo.new": None,
+            "baz": None,
+            "foobar.old": None,
+            "packages": None})
+
 
 def test_activate(tmpdir):
     repo_path = tmp_repository(tmpdir)

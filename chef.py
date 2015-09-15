@@ -2,7 +2,6 @@
 """Generates a chef cookbook for installing DCOS On-Prem"""
 
 import argparse
-import os.path
 import yaml
 from pkgpanda.util import load_string
 
@@ -55,7 +54,7 @@ end
 """
 
 
-def make_chef(gen_out, options):
+def make_chef(gen_out):
     # Reformat the cloud-config into chef_cloud_config_files.
     # Assert the cloud-config is only write_files
     chef_cloud_config_files = ""

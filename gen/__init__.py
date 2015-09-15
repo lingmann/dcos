@@ -28,6 +28,7 @@ from itertools import chain
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
+from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
@@ -319,6 +320,9 @@ def do_gen_package(config, package_filename):
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
             os.makedirs(os.path.dirname(package_filename), exist_ok=True)
+
+        # Make the package top level directory readable by users other than the owner (root).
+        check_call(['chmod', 'go+rx', tmpdir])
 
         make_tar(package_filename, tmpdir)
 

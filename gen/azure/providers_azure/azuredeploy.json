@@ -25,8 +25,6 @@
   },
   "variables": {
     "adminUsername": "core",
-    "vmStorageAccountContainerName": "vhd",
-    "vmSourceImageName": "2b171e93f07c4903bcad35bda10acf22__CoreOS-Stable-681.0.0",
     "subnet1Name": "Data",
     "uniqueName": "[resourceGroup().name]",
     "storageAccountName": "[concat(variables('uniqueName'), 'dcsan')]",
@@ -34,14 +32,14 @@
     "networkSecurityGroupName": "[concat(variables('uniqueName'), 'dcnsg')]",
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
-    "sourceImageName": "[concat('/', subscription().subscriptionId,'/services/images/',variables('vmSourceImageName'))]",
     "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
     "mesosQuorum": "1",
     "numberOfMasters": 1,
     "numberOfSlaves": 5,
     "subnet1Prefix": "10.0.0.0/24",
     "addressPrefix": "10.0.0.0/16",
-    "vmSize": "Standard_A5"
+    "vmSize": "Standard_A5",
+    "coreosVersion": "723.3.0"
   },
   "resources": [
     {
@@ -189,10 +187,20 @@
           }
         },
         "storageProfile": {
-          "sourceImage": {
-            "id": "[variables('sourceImageName')]"
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "stable",
+            "version": "[variables('coreosVersion')]"
           },
-          "destinationVhdsContainer": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/')]"
+          "osDisk": {
+            "name": "[concat('slaveNodeVhd', copyindex())]",
+            "vhd": {
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','slaveNodeVhd', copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
         },
         "networkProfile": {
           "networkInterfaces": [
@@ -271,10 +279,20 @@
           }
         },
         "storageProfile": {
-          "sourceImage": {
-            "id": "[variables('sourceImageName')]"
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "stable",
+            "version": "[variables('coreosVersion')]"
           },
-          "destinationVhdsContainer": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/',variables('vmStorageAccountContainerName'),'/')]"
+          "osDisk": {
+            "name": "[concat('masterNodeVhd', copyindex())]",
+            "vhd": {
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','masterNodeVhd', copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
         },
         "networkProfile": {
           "networkInterfaces": [

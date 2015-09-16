@@ -35,7 +35,7 @@
     "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
     "mesosQuorum": "1",
     "numberOfMasters": 1,
-    "numberOfSlaves": 5,
+    "numberOfSlaves": 1,
     "subnet1Prefix": "10.0.0.0/24",
     "addressPrefix": "10.0.0.0/16",
     "vmSize": "Standard_A5",

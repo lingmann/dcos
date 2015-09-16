@@ -28,6 +28,7 @@ from itertools import chain
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
+from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
@@ -320,6 +321,9 @@ def do_gen_package(config, package_filename):
         if os.path.dirname(package_filename):
             os.makedirs(os.path.dirname(package_filename), exist_ok=True)
 
+        # Make the package top level directory readable by users other than the owner (root).
+        check_call(['chmod', 'go+rx', tmpdir])
+
         make_tar(package_filename, tmpdir)
 
     print("Package filename: ", package_filename)
@@ -538,7 +542,9 @@ def do_generate(
     assert '' not in mixins
     assert None not in mixins
 
-    cluster_packages = list(sorted(set(['dcos-config', 'dcos-detect-ip'] + extra_cluster_packages)))
+    cluster_packages = list(sorted(set(
+        ['dcos-config', 'dcos-detect-ip', 'dcos-metadata']
+        + extra_cluster_packages)))
     core_templates = ['cloud-config', 'dcos-services']
 
     # Add the empty mixin so we pick up top-level config.

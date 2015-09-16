@@ -3,12 +3,10 @@
 
 import argparse
 import botocore.exceptions
-import getpass
 import json
 import re
 import requests
 import sys
-import uuid
 import yaml
 from copy import deepcopy
 
@@ -184,10 +182,6 @@ def gen_templates(arguments, options):
         'cloudformation': cloudformation,
         'results': results
     })
-
-
-def gen_default_cluster_name():
-    return 'dcos-' + getpass.getuser() + '-' + uuid.uuid4().hex
 
 
 def gen_buttons(channel, tag, commit):

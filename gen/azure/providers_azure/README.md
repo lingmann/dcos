@@ -1,31 +1,25 @@
 ## Quick Start
 
-- Update all instances of `REPLACEME` in `azuredeploy-parameters.json` with a
-  globally unique UUID in the Azure namespace (must be between 3-24 characters
-  and use numbers and lower-case letters only). Something like `mspherejtl`
-  would likely work (msphere + your initials).
-
-- Stack must be created in the "West US" region
-
 - Create the stack
 
   ```
-  # Create the stack, using your globally unique UUID
-  ./create.sh REPLACEME
+  # Create the stack, MY_STACK_ID must be 3-24 chars and consist of numbers and
+  # lower case letters only.
+  ./create.sh $MY_STACK_ID $NUM_SLAVES
   ```
 
 - SSH to stack. You will need the [Mesosphere shared SSH key]
   (https://mesosphere.onelogin.com/notes/13282).
 
   ```
-  ssh core@master0-REPLACEME.westus.cloudapp.azure.com
+  ssh core@master0-${MY_STACK_ID}.westus.cloudapp.azure.com
   ```
 
 - Delete the stack
 
   ```
   # Delete the stack, using your globally unique UUID
-  ./delete.sh REPLACEME
+  ./delete.sh $MY_STACK_ID
   ```
 
 ## Cloud Config
@@ -38,17 +32,17 @@ was generated with `gen_azure_custom_data.py`. For example:
   ./gen_azure_custom_data.py azure-slave.yaml
   ```
 
-## Azure Resource Manager Template Language (ARM)
-
-Template language reference:
-https://msdn.microsoft.com/en-us/library/azure/dn835138.aspx
-
-## Azure Web Portal
-
-Special link to see portal with data from the new resource API:
-
-https://ms.portal.azure.com/?Microsoft_Azure_Compute=true&Microsoft_Azure_Storage=true&Microsoft_Azure_Network=true#blade/HubsExtension/BrowseResourceGroupBlade/resourceType/Microsoft.Resources%2Fsubscriptions%2FresourceGroups?journeyId=5D94E383-E5A4-4DC4-A736-419A062A1175
-
 ## Azure Resource Browser
 
-https://resources.azure.com
+https://resources.azure.com/
+
+## Azure Resource Manager (ARM) Reference Material
+
+[Authoring ARM Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/)
+[ARM Template Functions](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-functions/)
+[ARM Schema Definitions](https://github.com/Azure/azure-resource-manager-schemas/tree/master/schemas)
+
+# TODO
+
+* Validate uniquename input, must be between 3-24 char in length and use numbers
+  and lower-case letters only.

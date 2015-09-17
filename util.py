@@ -2,7 +2,6 @@ import jinja2
 import os
 import shutil
 from datetime import datetime
-from pkgpanda.util import load_string
 from subprocess import check_call, check_output
 from tempfile import TemporaryDirectory
 
@@ -23,14 +22,6 @@ template_generation_date = str(datetime.utcnow())
 
 def cluster_to_extra_packages(cluster_packages):
     return [pkg['id'] for pkg in cluster_packages.values()]
-
-
-def get_local_build(skip_build):
-    if not skip_build:
-        check_call(['mkpanda', 'tree', '--mkbootstrap'], cwd='packages', env=os.environ)
-        return load_string('packages/bootstrap.latest')
-
-    return load_string('packages/bootstrap.latest')
 
 
 def try_makedirs(path):

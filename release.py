@@ -16,8 +16,9 @@ import os.path
 import sys
 from functools import partial, partialmethod
 from pkgpanda import PackageId
-from pkgpanda.util import load_json, write_string
-from subprocess import check_call
+from pkgpanda.build import sha1
+from pkgpanda.util import load_json, load_string, write_string
+from subprocess import check_call, CalledProcessError
 
 import util
 
@@ -266,6 +267,72 @@ def do_promote(options):
     print("Channel {} now at tag {}".format(options.destination_channel, metadata['tag']))
 
 
+def get_local_build(skip_build, repository_url):
+    if not skip_build:
+        check_call(
+            ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + repository_url],
+            cwd='packages',
+            env=os.environ)
+        return load_string('packages/bootstrap.latest')
+
+    return load_string('packages/bootstrap.latest')
+
+
+def do_build_packages(repository_url, skip_build):
+    dockerfile = "docker/builder/Dockerfile"
+    container_name = 'mesosphere/dcos-builder:dockerfile-' + sha1(dockerfile)
+    print("Attempting to pull dcos-builder docker:", container_name)
+    pulled = False
+    try:
+        check_call(['docker', 'pull', container_name])
+        pulled = True
+        # TODO(cmaloney): Differentiate different failures of running the process better here
+    except CalledProcessError:
+        pulled = False
+
+    if not pulled:
+        print("Pull failed, building instead:", container_name)
+        # Pull failed, build it
+        check_call(
+            ['docker', 'build', '-t', container_name, '-'],
+            stdin=open("docker/builder/Dockerfile"))
+
+        # TODO(cmaloney): Push the built docker image on successful package build to both
+        # 1) commit-<commit_id>
+        # 2) Dockerfile-<file_contents_sha1>
+        # 3) bootstrap-<bootstrap_id>
+        # So we can track back the builder id for a given commit or bootstrap id, and reproduce whatever
+        # we need. The  Dockerfile-<sha1> is useful for making sure we don't rebuild more than
+        # necessary.
+        check_call(['docker', 'push', container_name])
+
+    # mark as latest so it will be used when building packages
+    check_call(['docker', 'tag', '-f', container_name, 'dcos-builder:latest'])
+
+    bootstrap_id = get_local_build(skip_build, repository_url)
+
+    return bootstrap_id
+
+
+def do_variable_set_or_exists(env_var, path):
+    # Get out the environment variable if needed
+    path = os.environ.get(env_var, default=path)
+
+    # If we're all set exit
+    if os.path.exists(path):
+        return path
+
+    # Error appropriately
+    if path in os.environ:
+        print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
+    else:
+        print(("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
+               "or ensure there is a checkout at the default path {path}.").format(
+                    var=env_var,
+                    path=path))
+    sys.exit(1)
+
+
 def do_create(options):
     channel_name = 'testing/' + options.destination_channel
     channel = ChannelManager(get_bucket(), channel_name)
@@ -273,9 +340,17 @@ def do_create(options):
     print("Creating release on channel:", channel_name)
     print("version tag:", options.tag)
 
+    # Check needed configuration is set
+    pkgpanda_src = do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda')
+    dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
+
     # Build packages and generate bootstrap
     print("Building packages")
-    bootstrap_id = util.get_local_build(options.skip_build)
+    # Build the standard docker build container, then build all the packages and bootstrap with it
+    bootstrap_id = do_build_packages(channel.repository_url, options.skip_build)
+
+    # Build all the per-provider templates
+    print("Gathering per-provider additional files")
     provider_data, cleaned_provider_data = get_provider_data(
         channel.repository_url,
         bootstrap_id,
@@ -283,13 +358,24 @@ def do_create(options):
         channel_name,
         commit)
 
+    # TODO(cmaloney): Do a git clone depth 1 from these source directories to guarantee tha the
+    # checkout is always clean.
+    print("Building dcos_genconf docker container")
+    check_call(['docker/genconf/make.sh'], env={
+        'PKGPANDA_SRC': pkgpanda_src,
+        'DCOS_IMAGE_SRC': dcos_image_src,
+        'CHANNEL_NAME': channel_name,
+        'BOOTSTRAP_ID': bootstrap_id
+        })
+
     metadata_json = to_json({
             'active_package': list(get_bootstrap_packages(bootstrap_id)),
             'bootstrap_id': bootstrap_id,
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
-            'tag': options.tag
+            'tag': options.tag,
+            'genconf_docker_tag': open('docker-tag').read()
         })
 
     # Upload packages, bootstrap.
@@ -298,6 +384,15 @@ def do_create(options):
         return
     channel.upload_packages(get_bootstrap_packages(bootstrap_id))
     channel.upload_bootstrap(bootstrap_id)
+
+    # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
+    # to have the channel name as a tag.
+    check_call(['docker/genconf/make.sh', 'push'], env={
+        'PKGPANDA_SRC': pkgpanda_src,
+        'DCOS_IMAGE_SRC': dcos_image_src,
+        'CHANNEL_NAME': channel_name,
+        'BOOTSTRAP_ID': bootstrap_id
+        })
 
     # Upload provider artifacts, mark as active
     channel.upload_providers_and_activate(bootstrap_id, commit, metadata_json, provider_data)

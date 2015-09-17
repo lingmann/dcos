@@ -38,9 +38,9 @@ https://resources.azure.com/
 
 ## Azure Resource Manager (ARM) Reference Material
 
-[Authoring ARM Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/)
-[ARM Template Functions](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-functions/)
-[ARM Schema Definitions](https://github.com/Azure/azure-resource-manager-schemas/tree/master/schemas)
+* [Authoring ARM Templates](https://azure.microsoft.com/en-us/documentation/articles/resource-group-authoring-templates/)
+* [ARM Template Functions](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-functions/)
+* [ARM Schema Definitions](https://github.com/Azure/azure-resource-manager-schemas/tree/master/schemas)
 
 # TODO
 

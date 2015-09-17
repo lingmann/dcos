@@ -42,7 +42,12 @@ https://resources.azure.com/
 * [ARM Template Functions](https://azure.microsoft.com/en-us/documentation/articles/resource-group-template-functions/)
 * [ARM Schema Definitions](https://github.com/Azure/azure-resource-manager-schemas/tree/master/schemas)
 
-# TODO
+## Microsoft Contacts
+
+* Primary: Ross.Gardler@microsoft.com
+* Secondary: mahesh.thiagarajan@microsoft.com, kasing@microsoft.com
+
+## TODO
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers
   and lower-case letters only.

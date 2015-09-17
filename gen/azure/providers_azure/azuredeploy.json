@@ -18,9 +18,15 @@
       }
     },
     "region": {
-        "type": "string",
-        "defaultValue": "West US",
-        "allowedValues": ["East US", "West US", "West Europe", "East Asia", "Southeast Asia"]
+      "type": "string",
+      "defaultValue": "West US",
+      "allowedValues": [
+        "East US",
+        "West US",
+        "West Europe",
+        "East Asia",
+        "Southeast Asia"
+      ]
     }
   },
   "variables": {
@@ -58,39 +64,37 @@
       "location": "[parameters('region')]",
       "properties": {}
     },
-
-  {
-        "apiVersion": "2015-06-15",
-        "type": "Microsoft.Network/networkSecurityGroups",
-        "name": "[variables('networkSecurityGroupName')]",
-        "location": "[parameters('region')]",
-
-        "properties": {
-            "securityRules": [{
-                "name": "Allow_Subnet",
-                "properties": {
-                    "description": "Allow Subnet",
-                    "protocol": "*",
-                    "sourcePortRange": "*",
-                    "destinationPortRange": "*",
-                    "sourceAddressPrefix": "[parameters('authorizedSubnet')]",
-                    "destinationAddressPrefix": "*",
-                    "access": "Allow",
-                    "priority": 100,
-                    "direction": "Inbound"
-                }
-            }]
-        }
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('region')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow_Subnet",
+            "properties": {
+              "description": "Allow Subnet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('authorizedSubnet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
     },
-
-
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[parameters('region')]",
       "dependsOn": [
-          "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
       ],
       "properties": {
         "addressSpace": {
@@ -103,8 +107,8 @@
             "name": "[variables('subnet1Name')]",
             "properties": {
               "addressPrefix": "[variables('subnet1Prefix')]",
-              "networkSecurityGroup" : {
-                  "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
               }
             }
           }
@@ -304,12 +308,10 @@
       }
     }
   ],
-  "outputs":
-  {
-      "masterURL0":
-      {
-          "value": "[reference('masterPublicIP0').dnsSettings.fqdn]",
-          "type": "string"
-      }
+  "outputs": {
+    "masterURL0": {
+      "value": "[reference('masterPublicIP0').dnsSettings.fqdn]",
+      "type": "string"
+    }
   }
 }

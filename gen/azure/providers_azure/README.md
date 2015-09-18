@@ -57,6 +57,16 @@ with the following versions:
 * apiVersions (all but Storage): 2015-06-15
 * Storage apiVersions: 2015-05-01-preview
 
+## Virtual Machine Scale Sets
+
+virtualMachineScaleSets is a new feature that Microsoft is developing similar
+to autoscale groups. It is not generally available yet but will be made
+available to an early access group on Oct. 1. There is an example of how this
+will work in Ross' [azure-myriad](https://github.com/gbowerman/azure-myriad/)
+and
+[mesos-swarm-marathon](https://github.com/gbowerman/azure-quickstart-templates/tree/master/mesos-swarm-marathon)
+examples.
+
 ## TODO
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers

@@ -71,3 +71,8 @@ examples.
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers
   and lower-case letters only.
+* Support or protect against single-quote characters in cloud config templates.
+  Currently, a single quote character will break the ARM template when injected.
+  The only approach that seems possible at this point (without some additional
+  help from Microsoft) is referencing a single quote character with an ARM
+  template variable, i.e. variables('singleQuote').

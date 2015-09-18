@@ -1,3 +1,13 @@
+## Initialization
+- Ask Jeremy or jswartz for an Azure account
+
+- Install the Azure CLI
+https://azure.microsoft.com/en-us/documentation/articles/xplat-cli/#configure
+
+- Login to your account on the Azure CLI
+https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/
+
+
 ## Quick Start
 
 - Create the stack

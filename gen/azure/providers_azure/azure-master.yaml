@@ -1,57 +1,69 @@
-#cloud-config
-
 write_files:
-  - path: /etc/resolv.conf
-    content: 'nameserver 168.63.129.16'
-  - path: /etc/mesosphere/setup-flags/repository-url
-    permissions: 0644
-    owner: root
-    content: 'http://s3.amazonaws.com/downloads.mesosphere.io/dcos/ea5-rc5'
-  - path: /etc/mesosphere/roles/master
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/pkginfo.json
-    content: '{}'
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-dns.json
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/pkginfo.json
     content: |
       {
-        "zk": "zk://127.0.0.1:2181/mesos",
-        "refreshSeconds": 30,
-        "ttl": 60,
-        "domain": "mesos",
-        "port": 53,
-        "resolvers": ["168.63.129.16"],
-        "timeout": 5,
-        "listener": "0.0.0.0",
-        "email": "root.mesos-dns.mesos"
+        "environment": {
+          "PROVIDER": "azure"
+        }
       }
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/mesos-master
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/cloudenv
     content: |
-      MESOS_LOG_DIR=/var/log/mesos
-      MESOS_WORK_DIR=/var/lib/mesos/master
-      MESOS_ZK=zk://127.0.0.1:2181/mesos
-      MESOS_QUORUM=[[[variables('mesosQuorum')]]]
+      ZOOKEEPER_CLUSTER_SIZE=[[[parameters('numberOfMasters')]]]
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-master-provider
+    content: |
       MESOS_CLUSTER=[[[variables('uniqueName')]]]
-      MESOS_ROLES=slave_public
-      MESOS_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
-      MESOS_IP=$private_ipv4
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/cloudenv
-    content: |
-      MASTER_ELB=127.0.0.1
-      ZOOKEEPER_CLUSTER_SIZE=[[[variables('numberOfMasters')]]]
-      FALLBACK_DNS=168.63.129.16
-      MARATHON_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
-  - path: /etc/mesosphere/setup-packages/dcos-config--setup/etc/exhibitor
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor
     content: |
       AZURE_CONTAINER=apollo-exhibitor
       AZURE_PREFIX=[[[variables('uniqueName')]]]
       AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
-      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
+      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
+      EXHIBITOR_BACKEND=AZURE
       EXHIBITOR_WEB_UI_PORT=8181
-      EXHIBITOR_HOSTNAME=$private_ipv4
+  # Unsure if these exhibitor.properties keys or values are set correctly, key names
+  # were guessed based on the format used for S3.
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor.properties
+    content: |
+        com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
+        com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/dns_config
+    content: |-
+        MASTER_SOURCE=exhibitor
+        EXHIBITOR_ADDRESS=$private_ipv4
+        RESOLVERS=168.63.129.16
+  - path: /etc/mesosphere/setup-flags/repository-url
+    content: "https://downloads.mesosphere.com/dcos/testing/continuous\n"
+    owner: root
+    permissions: 420
+  - path: /etc/mesosphere/setup-flags/bootstrap-id
+    content: "BOOTSTRAP_ID=7f1b6eaa4c10ccdd31b92a29aacec9b19ff0e4b7\n"
+    owner: root
+    permissions: 420
+  - path: /etc/mesosphere/setup-flags/cluster-packages.json
+    content: "[\"dcos-config--setup_b71605db34ba635fb3aac297e8eb24028b9256a8\", \"dcos-detect-ip--setup_b71605db34ba635fb3aac297e8eb24028b9256a8\"]"
+    owner: root
+    permissions: 420
+  - path: /etc/mesosphere/roles/master
+    content: ""
+  - path: /etc/mesosphere/roles/azure_master
+    content: ""
+  - path: /etc/mesosphere/roles/azure
+    content: ""
 
 coreos:
   update:
     reboot-strategy: "off"
   units:
+    - name: format-var-lib-ephemeral.service
+      command: start
+      content: |
+        [Unit]
+        Description=Formats the /var/lib ephemeral drive
+        Before=var-lib.mount dbus.service
+        [Service]
+        Type=oneshot
+        RemainAfterExit=yes
+        ExecStart=/bin/bash -c "(blkid -t TYPE=ext4 | grep sdb1) || (/usr/sbin/mkfs.ext4 -F /dev/sdb1)"
     - name: var-lib.mount
       command: start
       content: |
@@ -62,8 +74,6 @@ coreos:
         What=/dev/sdb1
         Where=/var/lib
         Type=ext4
-    - name: systemd-resolved.service
-      command: stop
     - name: etcd.service
       mask: true
       command: stop
@@ -73,17 +83,9 @@ coreos:
     - name: locksmithd.service
       mask: true
       command: stop
-    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        Type=oneshot
-        EnvironmentFile=/etc/environment
-        # Marathon depends on `hostname` resolution working
-        ExecStart=/usr/bin/bash -c "echo ${COREOS_PRIVATE_IPV4} $(hostname) [[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]] > /etc/hosts"
-    - name: link-env.service
+    - name: systemd-resolved.service
+      command: stop
+    - name: dcos-link-env.service
       command: start
       content: |
         [Unit]
@@ -100,10 +102,12 @@ coreos:
         Wants=network-online.target
         ConditionPathExists=!/opt/mesosphere/
         [Service]
+        EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
         Type=oneshot
-        ExecStartPre=/usr/bin/bash -c "until wget --progress=dot -e dotbytes=10M --continue http://s3.amazonaws.com/downloads.mesosphere.io/dcos/EarlyAccess/bootstrap.tar.xz -O /tmp/bootstrap.tar.xz; do echo failed to download; sleep 5; done"
+        ExecStartPre=/usr/bin/bash -c "until curl -C - -o /tmp/bootstrap.tar.xz https://downloads.mesosphere.com/dcos/testing/continuous/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz; do echo failed to download; sleep 5; done"
         ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
-        ExecStart=/usr/bin/tar -xf /tmp/bootstrap.tar.xz -C /opt/mesosphere
+        ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
+        ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz
     - name: dcos-setup.service
       command: start
       enable: true

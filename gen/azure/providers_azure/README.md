@@ -13,33 +13,23 @@ https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/
 - Create the stack
 
   ```
-  # Create the stack, MY_STACK_ID must be 3-24 chars and consist of numbers and
-  # lower case letters only.
-  ./create.sh $MY_STACK_ID $NUM_SLAVES
+  # Create the stack, <cluster-name> must be 3-24 chars and consist of numbers
+  # and lower case letters only.
+  ./create <cluster-name> <num-masters> <num-private-slaves>
   ```
 
 - SSH to stack. You will need the [Mesosphere shared SSH key]
   (https://mesosphere.onelogin.com/notes/13282).
 
   ```
-  ssh core@master0-${MY_STACK_ID}.westus.cloudapp.azure.com
+  ssh core@master0-<cluster-name>.westus.cloudapp.azure.com
   ```
 
 - Delete the stack
 
   ```
   # Delete the stack, using your globally unique UUID
-  ./delete.sh $MY_STACK_ID
-  ```
-
-## Cloud Config
-
-The `slaveCustomData` and `masterCustomData` in the `azuredeploy.json` template
-was generated with `gen_azure_custom_data.py`. For example:
-
-  ```
-  ./gen_azure_custom_data.py azure-master.yaml
-  ./gen_azure_custom_data.py azure-slave.yaml
+  ./delete.sh <cluster-name>
   ```
 
 ## Azure Resource Browser

@@ -19,16 +19,13 @@ with open(sys.argv[1]) as f:
 
 j = json.dumps(config, sort_keys=True)
 
-print("[base64(concat('#cloud-config\\n\\n', ", end='')
-
-def json_escape(str):
-    return str.replace('\\', '\\\\').replace('"', '\\"')
+print("[base64(concat('#cloud-config\n\n', ", end='')
 
 prevend = 0
 for m in re.finditer('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]', j):
-    before = json_escape(m.group('pre'))
+    before = m.group('pre')
     param = m.group('inject')
     print("'{}', {},".format(before, param), end='')
     prevend = m.end()
 
-print("'{}'))]".format(json_escape(j[prevend:])), end='')
+print("'{}'))]".format(j[prevend:]), end='')

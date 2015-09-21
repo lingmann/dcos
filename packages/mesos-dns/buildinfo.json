@@ -3,7 +3,7 @@
   "sources": {
     "go": {
       "kind": "url_extract",
-      "url": "https://storage.googleapis.com/golang/go1.4.2.linux-amd64.tar.gz"
+      "url": "https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz"
     },
     "mesos-dns": {
       "kind": "git",

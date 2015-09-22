@@ -8,12 +8,14 @@ write_files:
       }
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/cloudenv
     content: |
+      COREOS_PRIVATE_IPV4=$private_ipv4
       ZOOKEEPER_CLUSTER_SIZE=[[[parameters('numberOfMasters')]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-master-provider
     content: |
       MESOS_CLUSTER=[[[variables('uniqueName')]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor
     content: |
+      COREOS_PRIVATE_IPV4=$private_ipv4
       AZURE_CONTAINER=apollo-exhibitor
       AZURE_PREFIX=[[[variables('uniqueName')]]]
       AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
@@ -28,9 +30,10 @@ write_files:
         com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/dns_config
     content: |-
-        MASTER_SOURCE=exhibitor
-        EXHIBITOR_ADDRESS=$private_ipv4
-        RESOLVERS=168.63.129.16
+      COREOS_PRIVATE_IPV4=$private_ipv4
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS=$private_ipv4
+      RESOLVERS=168.63.129.16
   - path: /etc/mesosphere/setup-flags/repository-url
     content: "https://downloads.mesosphere.com/dcos/testing/continuous\n"
     owner: root

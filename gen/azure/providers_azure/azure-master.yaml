@@ -26,8 +26,8 @@ write_files:
   # were guessed based on the format used for S3.
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor.properties
     content: |
-        com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
-        com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
+      com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
+      com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/dns_config
     content: |-
       COREOS_PRIVATE_IPV4=$private_ipv4

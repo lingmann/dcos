@@ -39,11 +39,11 @@ write_files:
     owner: root
     permissions: 420
   - path: /etc/mesosphere/setup-flags/bootstrap-id
-    content: "BOOTSTRAP_ID=7f1b6eaa4c10ccdd31b92a29aacec9b19ff0e4b7\n"
+    content: "BOOTSTRAP_ID=f739a118600862eeff61dd7ab0c2375a3dd7b01f\n"
     owner: root
     permissions: 420
   - path: /etc/mesosphere/setup-flags/cluster-packages.json
-    content: "[\"dcos-config--setup_b71605db34ba635fb3aac297e8eb24028b9256a8\", \"dcos-detect-ip--setup_b71605db34ba635fb3aac297e8eb24028b9256a8\"]"
+    content: "[\"dcos-config--setup_7b443061a9490632f949121a4ff998a7cc6f9f0d\", \"dcos-detect-ip--setup_7b443061a9490632f949121a4ff998a7cc6f9f0d\"]"
     owner: root
     permissions: 420
   - path: /etc/mesosphere/roles/master

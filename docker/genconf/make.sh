@@ -8,6 +8,7 @@ Docker image will be tagged with the SHA of the components, in the following
 order:
 
   mesosphere/dcos-genconf:\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
+  mesosphere/dcos-genconf:with-bootstrap-\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
 
 The tag is also written to a file named docker-tag in the current working
 directory. SHA's may be shortened to an unambiguous length.
@@ -56,8 +57,14 @@ function get_build_dir {
   "channel_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON
-  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export DOCKER_TAG="$DOCKER_TAG"
+  export BOOTSTRAP_FILENAME="${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/$BOOTSTRAP_FILENAME"
+  export GENCONF_TAR="$GENCONF_TAR"
+  # TODO(cmaloney): I don't think this is used anymore. Remove it?
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
+  envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/Dockerfile-bootstrap
+  envsubst '$DOCKER_TAG:$GENCONF_TAR' < "${MY_ROOT}"/dcos_generate_config.sh.in > dcos_generate_config.sh
   out "$tmpdir"
 }
 
@@ -90,6 +97,7 @@ function check_prereqs {
   : ${BOOTSTRAP_ID:?"ERROR: BOOTSTRAP_ID env var must be set"}
 
   DOCKER_TAG="${DCOS_IMAGE_SHA:0:12}-${PKGPANDA_SHA:0:12}-${BOOTSTRAP_ID:0:12}"
+  GENCONF_TAR="dcos-genconf.${DOCKER_TAG}.tar"
 }
 
 function main {
@@ -105,8 +113,14 @@ function build {
   echo "Building: $1"
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
+  docker build -t mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" - < Dockerfile-bootstrap
   popd
   echo "$DOCKER_TAG" > docker-tag
+
+  echo "Building dcos_genergate_config.sh"
+  docker save mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" > "$GENCONF_TAR"
+  tar cvf - "$GENCONF_TAR" >> dcos_generate_config.sh
+  chmod +x dcos_generate_config.sh
 }
 
 # Push the built image to Docker hub

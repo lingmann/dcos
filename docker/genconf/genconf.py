@@ -65,7 +65,26 @@ def fetch_bootstrap(
         bootstrap_root, config['channel_name'], bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
 
+    def cleanup_and_exit():
+        if os.path.exists(save_path):
+            try:
+                os.remove(save_path)
+            except OSError as ex:
+                print("ERROR: {} - {}".format(ex.filename, ex.strerror))
+        sys.exit(1)
+
     if not os.path.exists(save_path):
+        # Check if there is an in-container copy of the bootstrap tarball, and
+        # if so copy it across
+        local_cache_filename = "/artifacts/" + bootstrap_filename
+        if os.path.exists(local_cache_filename):
+            print("INFO: Copying bootstrap out of cache")
+            try:
+                subprocess.check_call(['cp', local_cache_filename, save_path])
+            except (KeyboardInterrupt, CalledProcessError) as ex:
+                print("ERROR: Copy failed or interrupted {}".format(ex))
+                cleanup_and_exit()
+
         print("INFO: Downloading bootstrap tarball: {}".format(dl_url))
         curl_out = ""
         try:
@@ -75,12 +94,7 @@ def fetch_bootstrap(
         except (KeyboardInterrupt, CalledProcessError) as ex:
             print("ERROR: Download failed or interrupted {}".format(ex))
             print(curl_out)
-            if os.path.exists(save_path):
-                try:
-                    os.remove(save_path)
-                except OSError as ex:
-                    print("ERROR: {} - {}".format(ex.filename, ex.strerror))
-            sys.exit(1)
+            cleanup_and_exit()
 
 
 def symlink_bootstrap(

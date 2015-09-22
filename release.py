@@ -175,10 +175,16 @@ class ChannelManager():
         # - bootstrap.latest
         # - metadata.latest.json
         # - provider templates to known_paths
+        # - dcos_generate_config.sh
         print("Marking new build as the latest")
         self.put_text('bootstrap.latest', bootstrap_id)
         self.put_json('metadata.json', metadata_json)
         self.upload_provider_files(provider_data, 'known_path', prefix=False)
+        # TODO(cmaloney): Make a stable location version of this like
+        # provider_files does. Not extending provider_files currently because
+        # those are all in-memory, and this one is a couple hundred MB of data.
+        # TODO(cmaloney): Make at a reliable name so caching can be enabled.
+        self.upload_local_file('dcos_generate_config.sh', no_cache=True)
 
     @property
     def repository_url(self):

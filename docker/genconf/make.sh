@@ -13,8 +13,8 @@ The tag is also written to a file named docker-tag in the current working
 directory. SHA's may be shortened to an unambiguous length.
 
  The following environment variables must be set:
-   export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda source directory
-   export DCOS_IMAGE_SRC=dcos-image         # Set to dcos-image source directory
+   export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda git checkout
+   export DCOS_IMAGE_SRC=dcos-image         # Set to dcos-image git checkout
    export CHANNEL_NAME=testing/continuous
    export BOOTSTRAP_ID=0026f44d8574d508104f1e7e7a163e078e69990b
 
@@ -44,9 +44,11 @@ function globals {
 function get_build_dir {
   tmpdir=`mktemp -d 2>/dev/null || mktemp -d -t 'genconf'`
   mkdir -p "${tmpdir}"/pkgpanda "${tmpdir}"/dcos-image
-  # Copy everything include dotfiles to retain git commit info
-  cp -r "${PKGPANDA_SRC}"/. "${tmpdir}"/pkgpanda
-  cp -r "${DCOS_IMAGE_SRC}"/. "${tmpdir}"/dcos-image
+  # clone the repository dropping git history other than last commit so that it
+  # is still a valid git checkout but we lose any local modifications, and don't
+  # capture any temporary files in the filesystem (package builds, etc).
+  git clone --depth=1 "file://${PKGPANDA_SRC}" "${tmpdir}"/pkgpanda
+  git clone --depth=1 "file://${DCOS_IMAGE_SRC}" "${tmpdir}"/dcos-image
   cat <<CONFIG_JSON > "${tmpdir}"/dcos-image/config.json
 {
   "bootstrap_id":"$BOOTSTRAP_ID",

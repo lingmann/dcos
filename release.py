@@ -21,7 +21,7 @@ from subprocess import check_call
 
 import util
 
-provider_names = ['aws', 'vagrant']
+provider_names = ['azure']
 
 
 def to_json(data):

@@ -119,14 +119,12 @@ def render_cloudformation(
     def transform_lines(text):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
-    print(cf_template)
     template_str = util.jinja_env.from_string(cf_template).render({
         'master_cloud_config': transform_lines(master_cloudconfig),
         'slave_cloud_config': transform_lines(slave_cloudconfig),
         'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
     })
 
-    print(template_str)
     template_json = json.loads(template_str)
 
     template_json['Metadata']['DcosImageCommit'] = util.dcos_image_commit

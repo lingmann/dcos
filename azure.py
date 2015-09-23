@@ -59,8 +59,8 @@ def transform(cloud_config_yaml_str):
     validate_cloud_config(cc_json[prevend:])
     arm_list_str += "'{}'))]".format(cc_json[prevend:])
 
-    # Return the generated string
-    return arm_list_str
+    # We're embedding this as a json string, so json encode it and return.
+    return json.dumps(arm_list_str)
 
 
 def render_arm(

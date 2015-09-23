@@ -17,7 +17,7 @@
     [Service]
     EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
     Type=oneshot
-    ExecStartPre=/usr/bin/bash -c "until curl -C - -o /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz; do echo 'failed to download'; sleep 5; done"
+    ExecStartPre=/usr/bin/bash -c "until curl -C - -o /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz; do echo failed to download; sleep 5; done"
     ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
     ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz

@@ -558,6 +558,7 @@
         "SecurityGroups" : [ { "Ref" : "MasterSecurityGroup" }, { "Ref" : "AdminSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "MasterInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
+        {{ aws_master_spot_price }}
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "MasterInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join": ["", [
           {{ master_cloud_config }}
@@ -736,6 +737,7 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "false",
+        {{ aws_slave_spot_price }}
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ slave_cloud_config }}
@@ -777,6 +779,7 @@
         "BlockDeviceMappings" : [ { "DeviceName" : "/dev/sdb", "VirtualName" : "ephemeral0" } ],
         "SecurityGroups" : [ { "Ref" : "PublicSlaveSecurityGroup" } ],
         "AssociatePublicIpAddress" : "true",
+        {{ aws_slave_public_spot_price }}
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "PublicSlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
           {{ slave_public_cloud_config }}

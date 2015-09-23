@@ -186,7 +186,7 @@
         "osProfile": {
           "computername": "[concat('slave', copyIndex())]",
           "adminUsername": "[variables('adminUsername')]",
-          "customData": "PRIVATE_SLAVE_CLOUD_CONFIG",
+          "customData": "{{ slave_cloud_config }}",
           "linuxConfiguration": {
             "disablePasswordAuthentication": "true",
             "ssh": {
@@ -278,7 +278,7 @@
         "osProfile": {
           "computername": "[concat('master', copyIndex())]",
           "adminUsername": "[variables('adminUsername')]",
-          "customData": "MASTER_CLOUD_CONFIG",
+          "customData": "{{ master_cloud_config }}",
           "linuxConfiguration": {
             "disablePasswordAuthentication": "true",
             "ssh": {

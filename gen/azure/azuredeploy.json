@@ -363,13 +363,13 @@
           {
             "properties": {
               "frontendIPConfiguration": {
-                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalMasterLoadBalancerName')), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/frontendIpConfigurations/LoadBalancerFrontend')]"
               },
               "backendAddressPool": {
-                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalMasterLoadBalancerName')), '/backendAddressPools/BackendPool1')]"
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/backendAddressPools/BackendPool1')]"
               },
               "probe": {
-                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', parameters('internalMasterLoadBalancerName')), '/probes/lbprobe')]"
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/probes/lbprobe')]"
               },
               "protocol": "Tcp",
               "frontendPort": 80,

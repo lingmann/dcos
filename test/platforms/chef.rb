@@ -8,7 +8,7 @@ def render_installer(name, c)
     source /etc/environment
     yum install -y docker
     echo nogroup:x:65500: >> /etc/group
-    curl -L https://www.opscode.com/chef/install.sh | bash
+    curl -fsSL https://www.opscode.com/chef/install.sh | bash
     mkdir -p /var/chef/cookbooks/dcos
     tar -C /var/chef/cookbooks/dcos -xf "$(ls -t /vagrant/chef-*.tar.xz|head -1)"
     echo '{ "dcos": { "roles": #{ c[:roles].to_json } } }' > /tmp/node.json

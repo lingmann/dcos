@@ -5,14 +5,9 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps]
-  mkpanda tree [--mkbootstrap] [<name>] [options]
+  mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps] [--repository-url=<repository_url>]
+  mkpanda tree [--mkbootstrap] [<name>] [--repository-url=<repository_url>]
   mkpanda clean
-
-Options:
-  --repository-path=<path>  Path to pkgpanda repository containing all the
-                            dependencies. If not specified will build a new one
-                            for each build.
 """
 
 import copy
@@ -90,17 +85,14 @@ def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
     umask(0o022)
 
-    # Load the repository
-    if arguments['--repository-path']:
-        repository_path = arguments['--repository-path']
-    else:
-        tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
-        repository_path = tmpdir.name
+    # Make a local repository for build dependencies
+    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
+    repository_path = tmpdir.name
 
     repository = Repository(normpath(expanduser(repository_path)))
 
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'])
+        build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'], arguments['--repository-url'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -117,7 +109,13 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(repository, name, arguments['--override-buildinfo'], arguments['--no-deps'])
+    pkg_path = build(
+        repository,
+        name,
+        arguments['--override-buildinfo'],
+        arguments['--no-deps'],
+        arguments['--repository-url'])
+
     print("Package available at: {}".format(pkg_path))
 
     sys.exit(0)
@@ -210,7 +208,7 @@ def load_treeinfo(name, working_on=set()):
     return treeinfo
 
 
-def build_tree(repository, mkbootstrap, tree_name):
+def build_tree(repository, mkbootstrap, tree_name, repository_url):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         print("Repository path: {}".format(repository.path))
@@ -274,6 +272,11 @@ def build_tree(repository, mkbootstrap, tree_name):
     for name in build_order:
         print("Building: {}".format(name))
         build_cmd = ["mkpanda"]
+
+        # Forward the repository url to the actual build run.
+        if repository_url:
+            build_cmd += ['--repository-url=' + repository_url]
+
         override_buildinfo = None
         if 'single_source' in packages[name] or 'sources' in packages[name]:
             # Get the sources
@@ -322,7 +325,7 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(repository, name, override_buildinfo_file, no_auto_deps):
+def build(repository, name, override_buildinfo_file, no_auto_deps, repository_url):
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
@@ -531,6 +534,8 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
 
     # If the package is already built, don't do anything.
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
+
+    # Done if it exists locally
     if exists(pkg_path):
         print("Package up to date. Not re-building.")
 
@@ -540,6 +545,33 @@ def build(repository, name, override_buildinfo_file, no_auto_deps):
         write_string("cache/last_build", str(pkg_id))
 
         return pkg_path
+
+    # Try downloading.
+    if repository_url:
+        tmp_filename = pkg_path + '.tmp'
+        try:
+            print("Attempting to download", pkg_id, "from repository-url", repository_url)
+            # Normalize to no trailing slash for repository_url
+            repository_url = repository_url.rstrip('/')
+            check_call([
+                'curl',
+                '-fsSL',
+                '-o', tmp_filename,
+                repository_url + '/packages/{0}/{1}.tar.xz'.format(pkg_id.name, str(pkg_id))])
+            os.rename(tmp_filename, pkg_path)
+
+            print("Package up to date. Not re-building. Downloaded from repository-url.")
+            # TODO(cmaloney): Updating / filling last_build should be moved out of
+            # the build function.
+            check_call(["mkdir", "-p", "cache"])
+            write_string("cache/last_build", str(pkg_id))
+            return pkg_path
+        except CalledProcessError as ex:
+            try:
+                os.remove(tmp_filename)
+            except:
+                pass
+            # Fall out and do the build since the command errored.
 
     # Clean out src, result so later steps can use them freely for building.
     clean()

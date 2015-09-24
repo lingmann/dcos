@@ -348,8 +348,7 @@
               "subnet": {
                 "Id": "[variables('subnet1Ref')]"
               },
-              "privateIPAddress": "10.0.0.2",
-              "privateIPAllocationMethod": "Static"
+              "privateIPAllocationMethod": "Dynamic"
             },
             "name": "LoadBalancerFrontend"
           }

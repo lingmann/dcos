@@ -22,7 +22,7 @@ write_files:
   - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/exhibitor.properties
     content: |
       com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
-      com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
+      com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/dns_config
     content: |
       MASTER_SOURCE=exhibitor

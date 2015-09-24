@@ -1,4 +1,13 @@
 #!/bin/sh
+set -o nounset -o errexit
+
+# Get COREOS COREOS_PRIVATE_IPV4
+if [ -e /etc/environment ]
+then
+  set -o allexport
+  source /etc/environment
+  set +o allexport
+fi
 
 get_private_ip_from_metaserver()
 {

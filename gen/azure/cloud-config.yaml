@@ -19,11 +19,11 @@ write_files:
       EXHIBITOR_BACKEND=AZURE
       AZURE_CONTAINER=dcos-exhibitor
       AZURE_PREFIX=[[[variables('uniqueName')]]]
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/exhibitor.properties
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor.properties
     content: |
       com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
       com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
-  - path: /etc/mesosphere/setup-packages/dcos-provider-aws--setup/etc/dns_config
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/dns_config
     content: |
       MASTER_SOURCE=exhibitor
       # TODO(cmaloney): Switch to VRRP or an internal master load balancer

@@ -75,7 +75,7 @@ for platform in $PLATFORMS; do
   while ! [ -n "$(dig +short leader.mesos @$MASTER_IP)" ]; do sleep 1; done # Wait for elected leader
 
   echo "Waiting for WebUI to come up"
-  while ! curl -Lfso /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
+  while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
 
   echo "Running integration test"
   if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS --net=host py.test py.test /integration_test.py; then

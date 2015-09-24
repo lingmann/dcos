@@ -71,7 +71,7 @@ def fetch_bootstrap(
         try:
             subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
             curl_out = subprocess.check_output([
-                "/usr/bin/curl", "-sSL", "-o", save_path, dl_url])
+                "/usr/bin/curl", "-fsSL", "-o", save_path, dl_url])
         except (KeyboardInterrupt, CalledProcessError) as ex:
             print("ERROR: Download failed or interrupted {}".format(ex))
             print(curl_out)

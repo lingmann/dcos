@@ -15,7 +15,7 @@ import os.path
 import sys
 import tempfile
 from os import getcwd, mkdir, umask
-from os.path import abspath, basename, exists, expanduser, normpath
+from os.path import abspath, basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
@@ -87,13 +87,8 @@ def main():
     umask(0o022)
 
     # Make a local repository for build dependencies
-    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
-    repository_path = tmpdir.name
-
-    repository = Repository(normpath(expanduser(repository_path)))
-
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'], arguments['--repository-url'])
+        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -111,7 +106,6 @@ def main():
 
     # No command -> build package.
     pkg_path = build(
-        repository,
         name,
         arguments['--no-deps'],
         arguments['--repository-url'])
@@ -182,13 +176,7 @@ def load_treeinfo(name, working_on=set()):
     return treeinfo
 
 
-def build_tree(repository, mkbootstrap, repository_url):
-    if len(repository.list()) > 0:
-        print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
-        print("Repository path: {}".format(repository.path))
-        print("Often the correct fix is to `rm -rf` the repository")
-        sys.exit(1)
-
+def build_tree(mkbootstrap, repository_url):
     packages = find_packages_fs()
 
     # Check the requires and figure out a feasible build order
@@ -279,7 +267,9 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(repository, name, no_auto_deps, repository_url):
+def build(name, no_auto_deps, repository_url):
+    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
+    repository = Repository(tmpdir.name)
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}

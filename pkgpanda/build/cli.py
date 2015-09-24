@@ -552,8 +552,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps, repository_ur
         try:
             print("Attempting to download", pkg_id, "from repository-url", repository_url)
             # Normalize to no trailing slash for repository_url
-            if repository_url[-1] == '/':
-                repository_url = repository_url[:-1]
+            repository_url = repository_url.rstrip('/')
             check_call([
                 'curl',
                 '-fsSL',

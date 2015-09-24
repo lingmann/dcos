@@ -223,8 +223,7 @@ def urllib_fetcher(base_url, id_str, target):
     # TODO(cmaloney): That file:// urls are allowed in base_url is likely a security hole.
     # TODO(cmaloney): Switch to mesos-fetcher or aci or something so
     # all the logic can go away, we gain integrity checking, etc.
-    if base_url[-1] == '/':
-        base_url = base_url[:-1]
+    base_url = base_url.rstrip('/')
     url = base_url + "/packages/{0}/{1}.tar.xz".format(id.name, id_str)
     # TODO(cmaloney): Use a private tmp directory so there is no chance of a user
     # intercepting the tarball + other validation data locally.

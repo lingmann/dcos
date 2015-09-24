@@ -8,11 +8,6 @@ Usage:
   mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps]
   mkpanda tree [--mkbootstrap] [<name>] [options]
   mkpanda clean
-
-Options:
-  --repository-path=<path>  Path to pkgpanda repository containing all the
-                            dependencies. If not specified will build a new one
-                            for each build.
 """
 
 import copy
@@ -90,12 +85,9 @@ def main():
     arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
     umask(0o022)
 
-    # Load the repository
-    if arguments['--repository-path']:
-        repository_path = arguments['--repository-path']
-    else:
-        tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
-        repository_path = tmpdir.name
+    # Make a local repository for build dependencies
+    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
+    repository_path = tmpdir.name
 
     repository = Repository(normpath(expanduser(repository_path)))
 

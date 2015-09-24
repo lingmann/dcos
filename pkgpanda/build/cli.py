@@ -5,8 +5,8 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps] [--repository-url=<repository_url>]
-  mkpanda tree [--mkbootstrap] [<name>] [--repository-url=<repository_url>]
+  mkpanda [options] [--no-deps] [--repository-url=<repository_url>]
+  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """
 
@@ -93,7 +93,7 @@ def main():
     repository = Repository(normpath(expanduser(repository_path)))
 
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'], arguments['--repository-url'])
+        build_tree(repository, arguments['--mkbootstrap'], arguments['--repository-url'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -113,7 +113,6 @@ def main():
     pkg_path = build(
         repository,
         name,
-        arguments['--override-buildinfo'],
         arguments['--no-deps'],
         arguments['--repository-url'])
 
@@ -146,32 +145,6 @@ def find_packages_fs():
                 continue
             buildinfo = load_buildinfo(name)
             packages[name] = {'requires': buildinfo.get('requires', list())}
-    return packages
-
-
-def read_packages(name):
-    treeinfo = load_treeinfo(name)
-
-    if 'packages' not in treeinfo:
-        print(treeinfo)
-        print("ERROR: No 'packages' found in treeinfo stack.")
-        sys.exit(1)
-
-    packages = treeinfo['packages']
-
-    for name in packages.keys():
-        if packages[name] is None:
-            packages[name] = dict()
-        elif type(packages[name]) == dict:
-            if len(packages[name].keys()) > 1:
-                print("ERROR: Package {} has can only have the key 'sources' ".format(name) +
-                      "or 'single_source' in a treeinfo. Has fields {}".format(",".join(packages[name].keys())))
-                sys.exit(1)
-        else:
-            print("A package may either be given 'null' or a dictionary containing one of sources, source.")
-            sys.exit(1)
-
-        packages[name]['requires'] = load_buildinfo(name).get('requires', list())
     return packages
 
 
@@ -209,19 +182,14 @@ def load_treeinfo(name, working_on=set()):
     return treeinfo
 
 
-def build_tree(repository, mkbootstrap, tree_name, repository_url):
+def build_tree(repository, mkbootstrap, repository_url):
     if len(repository.list()) > 0:
         print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
         print("Repository path: {}".format(repository.path))
         print("Often the correct fix is to `rm -rf` the repository")
         sys.exit(1)
 
-    # If a name was given, use name.treeinfo.json as the repository to use. If
-    # no name is given, search for packages in the current folder.
-    if tree_name:
-        packages = read_packages(tree_name)
-    else:
-        packages = find_packages_fs()
+    packages = find_packages_fs()
 
     # Check the requires and figure out a feasible build order
     # depth-first traverse the dependency tree, yielding when we reach a
@@ -278,23 +246,8 @@ def build_tree(repository, mkbootstrap, tree_name, repository_url):
         if repository_url:
             build_cmd += ['--repository-url=' + repository_url]
 
-        override_buildinfo = None
-        if 'single_source' in packages[name] or 'sources' in packages[name]:
-            # Get the sources
-            sources = expand_single_source_alias(name, packages[name])
-
-            # Write to an override buildinfo file, providing the options to the build.
-            fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
-            os.close(fd)  # TODO(cmaloney): Should really write to the fd...
-            write_json(override_buildinfo, {"sources": sources})
-            build_cmd += ['--override-buildinfo', override_buildinfo]
-
         # Run the build
         check_call(build_cmd, cwd=abspath(name))
-
-        # Clean up temporary files
-        if override_buildinfo:
-            os.remove(override_buildinfo)
 
         # Add the package to the set of built packages.
         # Don't auto-add since 'mkpanda' will add as needed.
@@ -307,7 +260,7 @@ def build_tree(repository, mkbootstrap, tree_name, repository_url):
         # TODO(cmaloney): This does a ton of excess repeated work...
         # use the repository built during package building instead of
         # building a new one for the package tarball (just mv it).
-        make_bootstrap_tarball(tree_name, list(sorted(built_package_paths)))
+        make_bootstrap_tarball('', list(sorted(built_package_paths)))
 
 
 def expand_single_source_alias(pkg_name, buildinfo):
@@ -326,7 +279,7 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(repository, name, override_buildinfo_file, no_auto_deps, repository_url):
+def build(repository, name, no_auto_deps, repository_url):
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
@@ -342,25 +295,8 @@ def build(repository, name, override_buildinfo_file, no_auto_deps, repository_ur
             print("ERROR: buildinfo name '{0}' needs to match folder name '{1}'".format(buildinfo['name'], name))
             sys.exit(1)
 
-    # TODO(cmaloney): one buildinfo -> multiple packages builds.
-    override_buildinfo = None
-    if override_buildinfo_file:
-        override_buildinfo = load_json(override_buildinfo_file)
-
     # Convert single_source -> sources
     sources = None
-    if override_buildinfo:
-        # Only sources may be overriden (single_source or sources)
-        if len(override_buildinfo.keys()) > 1:
-            print("ERROR: Override buildinfo may only contain single_source/sources.")
-            print("Current keys: {}".format(" ".join(override_buildinfo.keys())))
-            sys.exit(1)
-
-        try:
-            sources = expand_single_source_alias(name, override_buildinfo)
-        except ValidationError as ex:
-            print("ERROR: Invalid override buildinfo:", ex)
-            sys.ext(1)
 
     try:
         pkg_sources = expand_single_source_alias(name, buildinfo)

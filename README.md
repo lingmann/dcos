@@ -34,11 +34,11 @@ To deploy on ovh use
 ## Environment Variables
 
 - `MASTER_URLS`: comma separated list of all masters. Default: http://master.mesos:5050
-- `PORT`: the http port to bind to. Default: 5055
+- `PORT`: the http port to bind to. Default: 15055
 - `FETCH_FREQUENCY`: the frequency to fetch leader state [0..60]. Default: 2
 ```
 MASTER_URLS=http://srv1:5050,http://srv2:5050,...,http://srvn:5050
-PORT=5055 
+PORT=15055 
 FETCH_FREQUENCY=2
 ```
 

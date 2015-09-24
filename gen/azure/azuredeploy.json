@@ -15,7 +15,8 @@
       "type": "string",
       "metadata": {
         "Description": "Subnet allowed to talk to masters"
-      }
+      },
+      "defaultValue": "0.0.0.0/0"
     },
     "region": {
       "type": "string",
@@ -32,13 +33,19 @@
       "type": "int",
       "metadata": {
         "Description": "Number of Master nodes"
-      }
+      },
+      "defaultValue": 3,
+      "allowedValues": [
+        1,
+        3
+      ]
     },
     "numberOfPrivateSlaves": {
       "type": "int",
       "metadata": {
         "Description": "Number of Private Slave nodes"
-      }
+      },
+      "defaultValue": 5
     }
   },
   "variables": {

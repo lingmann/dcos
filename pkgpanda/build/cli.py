@@ -5,7 +5,7 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--no-deps] [--repository-url=<repository_url>]
+  mkpanda [options] [--repository-url=<repository_url>]
   mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """
@@ -52,17 +52,13 @@ def get_docker_id(docker_name):
 
 
 # package {id, name} + repo -> package id
-def get_package_id(repository, pkg_str, error_if_not_exist=True):
+def get_package_id(repository, pkg_str):
     if PackageId.is_id(pkg_str):
         return pkg_str
     else:
         ids = repository.get_ids(pkg_str)
         if len(ids) == 0:
-            if error_if_not_exist:
-                print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
-                sys.exit(1)
-            else:
-                return None
+            return None
         elif len(ids) > 1:
             print(
                 "Multiple packages for name {} in repository ".format(pkg_str) +
@@ -107,7 +103,6 @@ def main():
     # No command -> build package.
     pkg_path = build(
         name,
-        arguments['--no-deps'],
         arguments['--repository-url'])
 
     print("Package available at: {}".format(pkg_path))
@@ -267,7 +262,7 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(name, no_auto_deps, repository_url):
+def build(name, repository_url):
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)
 
@@ -376,7 +371,7 @@ def build(name, no_auto_deps, repository_url):
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id_str = get_package_id(repository, pkg_str, no_auto_deps)
+                pkg_id_str = get_package_id(repository, pkg_str)
 
                 pkg_name = None
                 pkg_requires = None

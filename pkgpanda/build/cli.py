@@ -135,40 +135,6 @@ def find_packages_fs():
     return packages
 
 
-def load_treeinfo(name, working_on=set()):
-    # Open the treeinfo, read out the packages that will make up the tree.
-    # For each of those packages, load the requires out of the buildinfo.json in
-    # folder if one exists.
-    working_on.add(name)
-
-    treeinfo = load_json('{}.treeinfo.json'.format(name))
-    if 'packages' not in treeinfo:
-        treeinfo['packages'] = dict()
-
-    def merge_treeinfo_packages(parent_name):
-        if parent_name in working_on:
-            # The parent instance will add all the things, so just skip it.
-            return
-
-        parent_info = load_treeinfo(parent_name, working_on)
-
-        for name, sources in parent_info['packages'].items():
-            if name in treeinfo['packages']:
-                continue
-            treeinfo['packages'][name] = sources
-
-    if 'from' in treeinfo:
-        from_trees = treeinfo['from']
-
-        if type(from_trees) is str:
-            merge_treeinfo_packages(from_trees)
-        elif type(from_trees) is list:
-            for tree in from_trees:
-                merge_treeinfo_packages(tree)
-
-    return treeinfo
-
-
 def build_tree(mkbootstrap, repository_url):
     packages = find_packages_fs()
 

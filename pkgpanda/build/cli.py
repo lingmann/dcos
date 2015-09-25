@@ -225,13 +225,10 @@ def build_tree(mkbootstrap, repository_url):
 
         # Run the build
         os.chdir(start_dir + '/' + name)
-        build(name, repository_url)
+        pkg_path = build(name, repository_url)
         os.chdir(start_dir)
 
         # Add the package to the set of built packages.
-        # Don't auto-add since 'mkpanda' will add as needed.
-        package_id = load_string(os.path.join(name, "cache/last_build"))
-        pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
         built_package_paths.add(pkg_path)
 
     # Build the tarball if requested, along with a "active.json"

@@ -5,8 +5,8 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--override-buildinfo=<buildinfo>] [--no-deps] [--repository-url=<repository_url>]
-  mkpanda tree [--mkbootstrap] [<name>] [--repository-url=<repository_url>]
+  mkpanda [--repository-url=<repository_url>]
+  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """
 
@@ -15,7 +15,7 @@ import os.path
 import sys
 import tempfile
 from os import getcwd, mkdir, umask
-from os.path import abspath, basename, exists, expanduser, normpath
+from os.path import abspath, basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
@@ -29,9 +29,10 @@ from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, wr
 
 class DockerCmd:
 
-    volumes = dict()
-    environment = dict()
-    container = str()
+    def __init__(self):
+        self.volumes = dict()
+        self.environment = dict()
+        self.container = str()
 
     def run(self, cmd):
         docker = ["docker", "run"]
@@ -51,17 +52,13 @@ def get_docker_id(docker_name):
 
 
 # package {id, name} + repo -> package id
-def get_package_id(repository, pkg_str, error_if_not_exist=True):
+def get_package_id(repository, pkg_str):
     if PackageId.is_id(pkg_str):
         return pkg_str
     else:
         ids = repository.get_ids(pkg_str)
         if len(ids) == 0:
-            if error_if_not_exist:
-                print("No package with name {0} in repository {1}".format(pkg_str, repository.path))
-                sys.exit(1)
-            else:
-                return None
+            return None
         elif len(ids) > 1:
             print(
                 "Multiple packages for name {} in repository ".format(pkg_str) +
@@ -86,13 +83,8 @@ def main():
     umask(0o022)
 
     # Make a local repository for build dependencies
-    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
-    repository_path = tmpdir.name
-
-    repository = Repository(normpath(expanduser(repository_path)))
-
     if arguments['tree']:
-        build_tree(repository, arguments['--mkbootstrap'], arguments['<name>'], arguments['--repository-url'])
+        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -109,19 +101,14 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(
-        repository,
-        name,
-        arguments['--override-buildinfo'],
-        arguments['--no-deps'],
-        arguments['--repository-url'])
+    pkg_path = build(name, arguments['--repository-url'])
 
     print("Package available at: {}".format(pkg_path))
 
     sys.exit(0)
 
 
-def load_buildinfo(path=os.getcwd()):
+def load_buildinfo(path):
     # Load the package build info.
     try:
         return load_json(os.path.join(path, "buildinfo.json"))
@@ -145,32 +132,6 @@ def find_packages_fs():
                 continue
             buildinfo = load_buildinfo(name)
             packages[name] = {'requires': buildinfo.get('requires', list())}
-    return packages
-
-
-def read_packages(name):
-    treeinfo = load_treeinfo(name)
-
-    if 'packages' not in treeinfo:
-        print(treeinfo)
-        print("ERROR: No 'packages' found in treeinfo stack.")
-        sys.exit(1)
-
-    packages = treeinfo['packages']
-
-    for name in packages.keys():
-        if packages[name] is None:
-            packages[name] = dict()
-        elif type(packages[name]) == dict:
-            if len(packages[name].keys()) > 1:
-                print("ERROR: Package {} has can only have the key 'sources' ".format(name) +
-                      "or 'single_source' in a treeinfo. Has fields {}".format(",".join(packages[name].keys())))
-                sys.exit(1)
-        else:
-            print("A package may either be given 'null' or a dictionary containing one of sources, source.")
-            sys.exit(1)
-
-        packages[name]['requires'] = load_buildinfo(name).get('requires', list())
     return packages
 
 
@@ -208,19 +169,8 @@ def load_treeinfo(name, working_on=set()):
     return treeinfo
 
 
-def build_tree(repository, mkbootstrap, tree_name, repository_url):
-    if len(repository.list()) > 0:
-        print("ERROR: Repository must be empty before 'mkpanda tree' can be used")
-        print("Repository path: {}".format(repository.path))
-        print("Often the correct fix is to `rm -rf` the repository")
-        sys.exit(1)
-
-    # If a name was given, use name.treeinfo.json as the repository to use. If
-    # no name is given, search for packages in the current folder.
-    if tree_name:
-        packages = read_packages(tree_name)
-    else:
-        packages = find_packages_fs()
+def build_tree(mkbootstrap, repository_url):
+    packages = find_packages_fs()
 
     # Check the requires and figure out a feasible build order
     # depth-first traverse the dependency tree, yielding when we reach a
@@ -269,36 +219,16 @@ def build_tree(repository, mkbootstrap, tree_name, repository_url):
         visit(name)
 
     built_package_paths = set()
+    start_dir = os.getcwd()
     for name in build_order:
         print("Building: {}".format(name))
-        build_cmd = ["mkpanda"]
-
-        # Forward the repository url to the actual build run.
-        if repository_url:
-            build_cmd += ['--repository-url=' + repository_url]
-
-        override_buildinfo = None
-        if 'single_source' in packages[name] or 'sources' in packages[name]:
-            # Get the sources
-            sources = expand_single_source_alias(name, packages[name])
-
-            # Write to an override buildinfo file, providing the options to the build.
-            fd, override_buildinfo = tempfile.mkstemp(prefix='{}'.format(name), suffix='.override.buildinfo.json')
-            os.close(fd)  # TODO(cmaloney): Should really write to the fd...
-            write_json(override_buildinfo, {"sources": sources})
-            build_cmd += ['--override-buildinfo', override_buildinfo]
 
         # Run the build
-        check_call(build_cmd, cwd=abspath(name))
-
-        # Clean up temporary files
-        if override_buildinfo:
-            os.remove(override_buildinfo)
+        os.chdir(start_dir + '/' + name)
+        pkg_path = build(name, repository_url)
+        os.chdir(start_dir)
 
         # Add the package to the set of built packages.
-        # Don't auto-add since 'mkpanda' will add as needed.
-        package_id = load_string(os.path.join(name, "cache/last_build"))
-        pkg_path = "{0}/{1}.tar.xz".format(name, package_id)
         built_package_paths.add(pkg_path)
 
     # Build the tarball if requested, along with a "active.json"
@@ -306,7 +236,7 @@ def build_tree(repository, mkbootstrap, tree_name, repository_url):
         # TODO(cmaloney): This does a ton of excess repeated work...
         # use the repository built during package building instead of
         # building a new one for the package tarball (just mv it).
-        make_bootstrap_tarball(tree_name, list(sorted(built_package_paths)))
+        make_bootstrap_tarball('', list(sorted(built_package_paths)))
 
 
 def expand_single_source_alias(pkg_name, buildinfo):
@@ -325,7 +255,9 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(repository, name, override_buildinfo_file, no_auto_deps, repository_url):
+def build(name, repository_url):
+    tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
+    repository = Repository(tmpdir.name)
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
@@ -333,7 +265,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps, repository_ur
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo()
+    buildinfo = load_buildinfo(os.getcwd())
 
     if 'name' in buildinfo:
         print("WARNING: 'name' in buildinfo is deprecated.")
@@ -341,25 +273,8 @@ def build(repository, name, override_buildinfo_file, no_auto_deps, repository_ur
             print("ERROR: buildinfo name '{0}' needs to match folder name '{1}'".format(buildinfo['name'], name))
             sys.exit(1)
 
-    # TODO(cmaloney): one buildinfo -> multiple packages builds.
-    override_buildinfo = None
-    if override_buildinfo_file:
-        override_buildinfo = load_json(override_buildinfo_file)
-
     # Convert single_source -> sources
     sources = None
-    if override_buildinfo:
-        # Only sources may be overriden (single_source or sources)
-        if len(override_buildinfo.keys()) > 1:
-            print("ERROR: Override buildinfo may only contain single_source/sources.")
-            print("Current keys: {}".format(" ".join(override_buildinfo.keys())))
-            sys.exit(1)
-
-        try:
-            sources = expand_single_source_alias(name, override_buildinfo)
-        except ValidationError as ex:
-            print("ERROR: Invalid override buildinfo:", ex)
-            sys.ext(1)
 
     try:
         pkg_sources = expand_single_source_alias(name, buildinfo)
@@ -449,7 +364,7 @@ def build(repository, name, override_buildinfo_file, no_auto_deps, repository_ur
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id_str = get_package_id(repository, pkg_str, no_auto_deps)
+                pkg_id_str = get_package_id(repository, pkg_str)
 
                 pkg_name = None
                 pkg_requires = None

@@ -5,7 +5,7 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [options] [--repository-url=<repository_url>]
+  mkpanda [--repository-url=<repository_url>]
   mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """

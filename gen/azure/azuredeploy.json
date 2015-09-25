@@ -101,7 +101,7 @@
               "sourceAddressPrefix": "[parameters('authorizedSubnet')]",
               "destinationAddressPrefix": "*",
               "access": "Allow",
-              "priority": 100,
+              "priority": 200,
               "direction": "Inbound"
             }
           },
@@ -115,7 +115,7 @@
               "sourceAddressPrefix": "168.63.129.16/32",
               "destinationAddressPrefix": "*",
               "access": "Allow",
-              "priority": 50,
+              "priority": 100,
               "direction": "Inbound"
             }
           }

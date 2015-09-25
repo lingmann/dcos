@@ -101,9 +101,7 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(
-        name,
-        arguments['--repository-url'])
+    pkg_path = build(name, arguments['--repository-url'])
 
     print("Package available at: {}".format(pkg_path))
 

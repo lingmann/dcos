@@ -15,7 +15,10 @@ https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/
   ```
   # Create the stack, <cluster-name> must be 3-24 chars and consist of numbers
   # and lower case letters only.
-  ./create <cluster-name> <num-masters> <num-private-slaves>
+  ./create <cluster-name> <num-masters> <num-private-slaves> <arm-template-uri>
+
+  # Example:
+  ./create jeremyfri1130 1 1 https://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/jeremy/dcos-3172-arm-updates/azure/single-master.azuredeploy.json
   ```
 
 - SSH to stack. You will need the [Mesosphere shared SSH key]

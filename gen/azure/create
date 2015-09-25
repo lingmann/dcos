@@ -1,0 +1,49 @@
+#!/usr/bin/env python3
+
+import json
+import os
+import subprocess
+import sys
+
+
+if len(sys.argv) != 5:
+    print("Usage: {} <cluster-name> <num-masters> <num-private-slaves> <arm-template-uri>".format(sys.argv[0]))
+    sys.exit(1)
+
+my_dir = os.path.dirname(sys.argv[0])
+cluster_name = sys.argv[1]
+num_masters = sys.argv[2]
+num_private_slaves = sys.argv[3]
+arm_template_uri = sys.argv[4]
+region = "West US"
+arm_params = "{}/azuredeploy-parameters.json".format(my_dir)
+
+
+def load_json(filename):
+    try:
+        with open(filename) as fname:
+            return json.load(fname)
+    except ValueError as ex:
+        print("ERROR: Invalid JSON in {0}: {1}".format(filename, ex))
+        sys.exit(1)
+
+
+def save_json(dict_in, filename):
+    with open(filename, 'w') as fname:
+        json.dump(dict_in, fname)
+
+params = load_json(arm_params)
+params.setdefault('numberOfMasters', {}).setdefault(
+    'value', int(num_masters))
+params.setdefault('numberOfPrivateSlaves', {}).setdefault(
+    'value', int(num_private_slaves))
+save_json(params, '/tmp/params.json')
+
+cmd = [
+    "azure", "group", "create", cluster_name, region,
+    "--template-uri", arm_template_uri, "-d", cluster_name,
+    "-e", "/tmp/params.json"]
+p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+for line in iter(p.stdout.readline, b''):
+    print(">>> " + line.decode('utf-8').rstrip())

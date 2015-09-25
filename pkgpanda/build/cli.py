@@ -221,16 +221,14 @@ def build_tree(mkbootstrap, repository_url):
         visit(name)
 
     built_package_paths = set()
+    start_dir = os.getcwd()
     for name in build_order:
         print("Building: {}".format(name))
-        build_cmd = ["mkpanda"]
-
-        # Forward the repository url to the actual build run.
-        if repository_url:
-            build_cmd += ['--repository-url=' + repository_url]
 
         # Run the build
-        check_call(build_cmd, cwd=abspath(name))
+        os.chdir(start_dir + '/' + name)
+        build(name, repository_url)
+        os.chdir(start_dir)
 
         # Add the package to the set of built packages.
         # Don't auto-add since 'mkpanda' will add as needed.

@@ -273,26 +273,11 @@ def build(name, repository_url):
         sys.exit(1)
 
     # Convert single_source -> sources
-    sources = None
-
     try:
-        pkg_sources = expand_single_source_alias(name, buildinfo)
+        sources = expand_single_source_alias(name, buildinfo)
     except ValidationError as ex:
         print("ERROR: Invalid buildinfo.json for package:", ex)
         sys.exit(1)
-
-    # If an override buildinfo is given, make sure it overrides the package
-    # buildinfo sources. If no override is given, use the package buildinfo
-    # sources.
-    if sources:
-        if sources.keys() != pkg_sources.keys():
-            print("ERROR: Override buildinfo must provide the same sources as original package buildinfo")
-            print("Package  buildinfo sources: {}".format(",".join(pkg_sources.keys())))
-            print("Override buildinfo sources: {}".format(",".join(sources.keys())))
-            sys.exit(1)
-        print("Package sources overrridden as requested")
-    else:
-        sources = pkg_sources
 
     # Save the final sources back into buildinfo so it gets written into
     # buildinfo.json. This also means buildinfo.json is always expanded form.

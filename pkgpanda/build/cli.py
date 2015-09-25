@@ -29,9 +29,10 @@ from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, wr
 
 class DockerCmd:
 
-    volumes = dict()
-    environment = dict()
-    container = str()
+    def __init__(self):
+        self.volumes = dict()
+        self.environment = dict()
+        self.container = str()
 
     def run(self, cmd):
         docker = ["docker", "run"]

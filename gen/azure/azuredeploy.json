@@ -104,6 +104,20 @@
               "priority": 100,
               "direction": "Inbound"
             }
+          },
+          {
+            "name": "Allow_Azure_Management",
+            "properties": {
+              "description": "Allow Azure Internal Management Traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "168.63.129.16/32",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
           }
         ]
       }

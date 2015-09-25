@@ -6,7 +6,7 @@
 <body>
 <h1>DCOS {{ channel }} channel ARM Template</h1>
 
-<a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ urlencode("https://s3.amazonaws.com/downloads.mesosphere.io/dcos/" ~ channel "/azure/single-master.azuredeploy.json") }}' target="_blank">
+<a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ template_url }}' target="_blank">
   <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
 

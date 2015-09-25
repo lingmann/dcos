@@ -4,6 +4,7 @@
 import json
 import re
 import sys
+import urllib
 import yaml
 from copy import deepcopy
 
@@ -144,8 +145,8 @@ def do_create(tag, channel, commit, gen_arguments):
     single_master = gen_templates(single_args, gen_options)
     button_page = gen_buttons(channel, tag, commit)
 
-    # Make sure we upload the packages for both the multi-master templates as well
-    # as the single-master templates.
+    # Make sure we upload the packages for both the multi-master templates as
+    # well as the single-master templates.
     extra_packages = list()
     extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
 
@@ -168,10 +169,19 @@ def do_create(tag, channel, commit, gen_arguments):
         ]
     }
 
+
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
+    template_url = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/azure/single-master.azuredeploy.json".format(channel)
     return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
             'channel': channel,
             'tag': tag,
-            'commit': commit
+            'commit': commit,
+            'template_url': urlencode(template_url)
         })
+
+
+def urlencode(s):
+    s = s.encode('utf8')
+    s = urllib.parse.quote_plus(s)
+    return s

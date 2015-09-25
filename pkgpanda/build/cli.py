@@ -268,10 +268,9 @@ def build(name, repository_url):
     buildinfo = load_buildinfo(os.getcwd())
 
     if 'name' in buildinfo:
-        print("WARNING: 'name' in buildinfo is deprecated.")
-        if buildinfo['name'] != name:
-            print("ERROR: buildinfo name '{0}' needs to match folder name '{1}'".format(buildinfo['name'], name))
-            sys.exit(1)
+        print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
+              "implicitly the name of the folder containing the buildinfo.json")
+        sys.exit(1)
 
     # Convert single_source -> sources
     sources = None

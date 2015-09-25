@@ -51,23 +51,6 @@ def get_docker_id(docker_name):
     return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
 
 
-# package {id, name} + repo -> package id
-def get_package_id(repository, pkg_str):
-    if PackageId.is_id(pkg_str):
-        return pkg_str
-    else:
-        ids = repository.get_ids(pkg_str)
-        if len(ids) == 0:
-            return None
-        elif len(ids) > 1:
-            print(
-                "Multiple packages for name {} in repository ".format(pkg_str) +
-                "Only one package of a name may be present when " +
-                "using a name rather than id.")
-            sys.exit(1)
-        return str(ids[0])
-
-
 def clean():
     # Run a docker container to remove src/ and result/
     cmd = DockerCmd()
@@ -314,44 +297,28 @@ def build(name, repository_url):
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id_str = get_package_id(repository, pkg_str)
+                if PackageId.is_id(pkg_str):
+                    # Package names only ATM.
+                    raise NotImplementedError()
 
-                pkg_name = None
-                pkg_requires = None
+                # Try and add the package automatically
+                last_build = '../{}/cache/last_build'.format(pkg_str)
+                if not os.path.exists(last_build):
+                    print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
+                    sys.exit(1)
+                pkg_name = pkg_str
+                pkg_id_str = load_string(last_build)
+                auto_deps.add(pkg_id_str)
+                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
+                pkg_requires = pkg_buildinfo.get('requires', list())
+                pkg_path = repository.package_path(pkg_id_str)
+                if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
+                    print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
+                          " Rebuild the dependency.")
+                    sys.exit(1)
 
-                if pkg_id_str is None:
-                    if PackageId.is_id(pkg_str):
-                        # Package names only ATM.
-                        raise NotImplementedError()
-
-                    # Try and add the package automatically
-                    last_build = '../{}/cache/last_build'.format(pkg_str)
-                    if not os.path.exists(last_build):
-                        print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
-                        sys.exit(1)
-                    pkg_name = pkg_str
-                    pkg_id_str = load_string(last_build)
-                    auto_deps.add(pkg_id_str)
-                    pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
-                    pkg_requires = pkg_buildinfo.get('requires', list())
-                    pkg_path = repository.package_path(pkg_id_str)
-                    if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
-                        print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
-                              " Rebuild the dependency.")
-                        sys.exit(1)
-
-                    if PackageId(pkg_id_str).name in active_package_names:
-                        continue
-                else:
-
-                    package = repository.load(pkg_id_str)
-                    pkg_name = package.name
-                    pkg_id = package.id
-                    pkg_requires = package.requires
-                    pkg_path = package.path
-                    if PackageId(pkg_id_str).name in active_package_names:
-                        continue
-                    active_packages.append(package)
+                if PackageId(pkg_id_str).name in active_package_names:
+                    continue
 
                 active_package_ids.add(pkg_id_str)
 

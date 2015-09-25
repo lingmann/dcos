@@ -376,25 +376,25 @@
                 "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/backendAddressPools/BackendPool1')]"
               },
               "probe": {
-                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/probes/lbprobe')]"
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/probes/exhibitor')]"
               },
               "protocol": "Tcp",
-              "frontendPort": 80,
-              "backendPort": 80,
+              "frontendPort": 8181,
+              "backendPort": 8181,
               "idleTimeoutInMinutes": 15
             },
-            "Name": "lbrule"
+            "Name": "exhibitor"
           }
         ],
         "probes": [
           {
             "properties": {
               "protocol": "Tcp",
-              "port": 80,
+              "port": 8181,
               "intervalInSeconds": 15,
               "numberOfProbes": 2
             },
-            "name": "lbprobe"
+            "name": "exhibitor"
           }
         ]
       }

@@ -142,6 +142,7 @@ def do_create(tag, channel, commit, gen_arguments):
     single_args = deepcopy(gen_arguments)
     single_args['num_masters'] = 1
     single_master = gen_templates(single_args, gen_options)
+    button_page = gen_buttons(channel, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.
@@ -156,6 +157,21 @@ def do_create(tag, channel, commit, gen_arguments):
                 'stable_path': 'azure/{}.single-master.azuredeploy.json'.format(
                     single_master.results.arguments['config_id']),
                 'content': single_master.arm
+            },
+            {
+                'known_path': 'azure.html',
+                'content': button_page,
+                'upload_args': {
+                    'ContentType': 'text/html; charset=utf-8'
+                }
             }
         ]
     }
+
+def gen_buttons(channel, tag, commit):
+    # Generate the button page.
+    return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
+            'channel': channel,
+            'tag': tag,
+            'commit': commit
+        })

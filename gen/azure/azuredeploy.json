@@ -115,7 +115,7 @@
               "sourceAddressPrefix": "168.63.129.16/32",
               "destinationAddressPrefix": "*",
               "access": "Allow",
-              "priority": 100,
+              "priority": 50,
               "direction": "Inbound"
             }
           }

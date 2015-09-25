@@ -110,7 +110,7 @@ def main():
     sys.exit(0)
 
 
-def load_buildinfo(path=os.getcwd()):
+def load_buildinfo(path):
     # Load the package build info.
     try:
         return load_json(os.path.join(path, "buildinfo.json"))
@@ -272,7 +272,7 @@ def build(name, repository_url):
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo()
+    buildinfo = load_buildinfo(os.getcwd())
 
     if 'name' in buildinfo:
         print("WARNING: 'name' in buildinfo is deprecated.")

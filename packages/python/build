@@ -11,6 +11,13 @@ export CXXFLAGS=-I/opt/mesosphere/include
 make -j8
 make install
 
+# Remove some big things we don't use at all
+rm -rf "$PKG_PATH/lib/python3.4/test"
+
+# TODO(cmaloney): This sort of stripping static libraries should be a generic
+# mkpanda option to apply to any package.
+find "$PKG_PATH/lib/" ! -type d -name "*.a" -exec rm -f -- '{}' +
+
 # Setup helper symlinks
 ln -s "$PKG_PATH/bin/python3" "$PKG_PATH/bin/python"
 ln -s "$PKG_PATH/bin/easy_install-3.4" "$PKG_PATH/bin/easy_install-3"

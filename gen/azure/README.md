@@ -21,11 +21,11 @@ https://azure.microsoft.com/en-us/documentation/articles/xplat-cli-connect/
   ./create jeremyfri1130 1 1 https://s3.amazonaws.com/downloads.mesosphere.io/dcos/testing/jeremy/dcos-3172-arm-updates/azure/single-master.azuredeploy.json
   ```
 
-- SSH to stack. You will need the [Mesosphere shared SSH key]
-  (https://mesosphere.onelogin.com/notes/13282).
+- SSH to stack. You will need the [Mesosphere demo shared SSH key]
+  (https://mesosphere.onelogin.com/notes/18444).
 
   ```
-  ssh core@master0-<cluster-name>.westus.cloudapp.azure.com
+  ssh -i mesosphere-demo-key core@master0-<cluster-name>.westus.cloudapp.azure.com
   ```
 
 - Delete the stack

@@ -3,7 +3,11 @@ set -o errexit -o nounset -o pipefail
 
 mkdir -p $PKG_PATH/usr
 rm -rf /pkg/src/hadoop/share/doc
+rm -rf /pkg/src/hadoop/src
+rm -rf /pkg/src/hadoop/share/hadoop/{httpfs,kms,mapreduce1,mapreduce2,yarn}
+rm -rf /pkg/src/hadoop/share/hadoop/common/sources
 cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
+
 
 #remove HDFS and CORE site so hdfs FW can use its own
 rm $PKG_PATH/usr/etc/hadoop/hdfs-site.xml

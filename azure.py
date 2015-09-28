@@ -2,14 +2,16 @@
 """Azure Image Creation, Management, Testing"""
 
 import json
+import os
 import re
+import requests
 import sys
 import urllib
 import yaml
+
 from copy import deepcopy
 
 import gen
-import os
 import util
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.

@@ -142,7 +142,7 @@ def gen_templates(arguments, options):
         "numberOfPrivateSlaves": {"value": 5}
         }
 
-    client.verify(template_body_json=arm, template_parameters=template_parameters)
+    client.verify(template_body_json=json.loads(arm), template_parameters=template_parameters)
     print("Template OK")
 
     return gen.Bunch({

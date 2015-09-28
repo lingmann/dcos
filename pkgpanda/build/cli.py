@@ -51,23 +51,6 @@ def get_docker_id(docker_name):
     return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
 
 
-# package {id, name} + repo -> package id
-def get_package_id(repository, pkg_str):
-    if PackageId.is_id(pkg_str):
-        return pkg_str
-    else:
-        ids = repository.get_ids(pkg_str)
-        if len(ids) == 0:
-            return None
-        elif len(ids) > 1:
-            print(
-                "Multiple packages for name {} in repository ".format(pkg_str) +
-                "Only one package of a name may be present when " +
-                "using a name rather than id.")
-            sys.exit(1)
-        return str(ids[0])
-
-
 def clean():
     # Run a docker container to remove src/ and result/
     cmd = DockerCmd()
@@ -133,40 +116,6 @@ def find_packages_fs():
             buildinfo = load_buildinfo(name)
             packages[name] = {'requires': buildinfo.get('requires', list())}
     return packages
-
-
-def load_treeinfo(name, working_on=set()):
-    # Open the treeinfo, read out the packages that will make up the tree.
-    # For each of those packages, load the requires out of the buildinfo.json in
-    # folder if one exists.
-    working_on.add(name)
-
-    treeinfo = load_json('{}.treeinfo.json'.format(name))
-    if 'packages' not in treeinfo:
-        treeinfo['packages'] = dict()
-
-    def merge_treeinfo_packages(parent_name):
-        if parent_name in working_on:
-            # The parent instance will add all the things, so just skip it.
-            return
-
-        parent_info = load_treeinfo(parent_name, working_on)
-
-        for name, sources in parent_info['packages'].items():
-            if name in treeinfo['packages']:
-                continue
-            treeinfo['packages'][name] = sources
-
-    if 'from' in treeinfo:
-        from_trees = treeinfo['from']
-
-        if type(from_trees) is str:
-            merge_treeinfo_packages(from_trees)
-        elif type(from_trees) is list:
-            for tree in from_trees:
-                merge_treeinfo_packages(tree)
-
-    return treeinfo
 
 
 def build_tree(mkbootstrap, repository_url):
@@ -268,32 +217,16 @@ def build(name, repository_url):
     buildinfo = load_buildinfo(os.getcwd())
 
     if 'name' in buildinfo:
-        print("WARNING: 'name' in buildinfo is deprecated.")
-        if buildinfo['name'] != name:
-            print("ERROR: buildinfo name '{0}' needs to match folder name '{1}'".format(buildinfo['name'], name))
-            sys.exit(1)
+        print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
+              "implicitly the name of the folder containing the buildinfo.json")
+        sys.exit(1)
 
     # Convert single_source -> sources
-    sources = None
-
     try:
-        pkg_sources = expand_single_source_alias(name, buildinfo)
+        sources = expand_single_source_alias(name, buildinfo)
     except ValidationError as ex:
         print("ERROR: Invalid buildinfo.json for package:", ex)
         sys.exit(1)
-
-    # If an override buildinfo is given, make sure it overrides the package
-    # buildinfo sources. If no override is given, use the package buildinfo
-    # sources.
-    if sources:
-        if sources.keys() != pkg_sources.keys():
-            print("ERROR: Override buildinfo must provide the same sources as original package buildinfo")
-            print("Package  buildinfo sources: {}".format(",".join(pkg_sources.keys())))
-            print("Override buildinfo sources: {}".format(",".join(sources.keys())))
-            sys.exit(1)
-        print("Package sources overrridden as requested")
-    else:
-        sources = pkg_sources
 
     # Save the final sources back into buildinfo so it gets written into
     # buildinfo.json. This also means buildinfo.json is always expanded form.
@@ -364,44 +297,28 @@ def build(name, repository_url):
         while to_check:
             pkg_str = to_check.pop(0)
             try:
-                pkg_id_str = get_package_id(repository, pkg_str)
+                if PackageId.is_id(pkg_str):
+                    # Package names only ATM.
+                    raise NotImplementedError()
 
-                pkg_name = None
-                pkg_requires = None
+                # Try and add the package automatically
+                last_build = '../{}/cache/last_build'.format(pkg_str)
+                if not os.path.exists(last_build):
+                    print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
+                    sys.exit(1)
+                pkg_name = pkg_str
+                pkg_id_str = load_string(last_build)
+                auto_deps.add(pkg_id_str)
+                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
+                pkg_requires = pkg_buildinfo.get('requires', list())
+                pkg_path = repository.package_path(pkg_id_str)
+                if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
+                    print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
+                          " Rebuild the dependency.")
+                    sys.exit(1)
 
-                if pkg_id_str is None:
-                    if PackageId.is_id(pkg_str):
-                        # Package names only ATM.
-                        raise NotImplementedError()
-
-                    # Try and add the package automatically
-                    last_build = '../{}/cache/last_build'.format(pkg_str)
-                    if not os.path.exists(last_build):
-                        print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
-                        sys.exit(1)
-                    pkg_name = pkg_str
-                    pkg_id_str = load_string(last_build)
-                    auto_deps.add(pkg_id_str)
-                    pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
-                    pkg_requires = pkg_buildinfo.get('requires', list())
-                    pkg_path = repository.package_path(pkg_id_str)
-                    if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
-                        print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
-                              " Rebuild the dependency.")
-                        sys.exit(1)
-
-                    if PackageId(pkg_id_str).name in active_package_names:
-                        continue
-                else:
-
-                    package = repository.load(pkg_id_str)
-                    pkg_name = package.name
-                    pkg_id = package.id
-                    pkg_requires = package.requires
-                    pkg_path = package.path
-                    if PackageId(pkg_id_str).name in active_package_names:
-                        continue
-                    active_packages.append(package)
+                if PackageId(pkg_id_str).name in active_package_names:
+                    continue
 
                 active_package_ids.add(pkg_id_str)
 

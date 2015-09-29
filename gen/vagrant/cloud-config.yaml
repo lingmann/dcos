@@ -9,9 +9,6 @@ write_files:
   - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/cloudenv
     content: |
       ZOOKEEPER_CLUSTER_SIZE=1
-      MARATHON_HOSTNAME=$private_ipv4
-      MESOS_HOSTNAME=$private_ipv4
-      MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}
@@ -20,5 +17,3 @@ write_files:
       EXHIBITOR_BACKEND=SHARED_FS
       ZOOKEEPER_CLUSTER_SIZE=1
       EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor
-  - path: /etc/resolv.conf
-    content: 'nameserver 8.8.8.8'

@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
-    "ref": "6f7e9d124a20395ac30e0b3e831c27344d5a6628",
+    "ref": "3a833bd6c1ba7e8d7dbe21fdb56734c041b79c41",
     "ref_origin" : "0.24.1+systemd+webui"
   },
   "environment": {

@@ -239,6 +239,7 @@ class AzureClient(object):
         return response['access_token']
 
     def get_auth_token(self):
+        #TODO(mj): Make this cache the token
         return self.get_token_from_client_credentials(
             endpoint=self._oauth_endpoint,
             client_id=self._client_id,
@@ -263,8 +264,6 @@ class AzureClient(object):
         if errors:
             raise Exception('Failed verification: %s' % errors)
 
-        #print(r.json())
-
     def get_template_deployment_status(self):
         endpoint = 'https://management.azure.com/subscriptions/%s/resourcegroups/%s/providers/microsoft.resources/deployments/%s' % (self._subscription_id, self._resource_group_name, self._deployment_name)
 
@@ -282,7 +281,6 @@ class AzureClient(object):
         provisioning_state = response_properties.get('provisioningState')
 
         return provisioning_state
-
 
     def create_template_deployment(self, template_body_json, template_parameters):
 
@@ -305,7 +303,6 @@ class AzureClient(object):
         provisioning_state = response_properties.get('provisioningState')
 
         return provisioning_state
-
 
     def get_template_json(self, template_body_json, template_parameters):
         return {"properties":

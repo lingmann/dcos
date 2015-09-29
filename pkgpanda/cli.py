@@ -10,6 +10,7 @@ Usage:
   pkgpanda remove <id>... [options]
   pkgpanda setup [options]
   pkgpanda uninstall [options]
+  pkgpanda check [--list] [options]
 
 Options:
     --config-dir=<conf-dir>     Use an alternate directory for finding machine
@@ -28,7 +29,7 @@ import sys
 from functools import partial
 from itertools import groupby
 from os import umask
-from subprocess import check_call
+from subprocess import CalledProcessError, check_call
 from urllib.error import URLError
 
 from docopt import docopt
@@ -244,6 +245,45 @@ def uninstall(install, repository):
     check_call(['rm', '-rf'] + all_names)
 
 
+def find_checks(install, repository):
+    checks = {}
+    for active_package in install.get_active():
+        tmp_checks = {}
+        tmp_checks[active_package] = []
+        package_check_dir = repository.load(active_package).check_dir
+        if not os.path.isdir(package_check_dir):
+            continue
+        for check_file in sorted(os.listdir(package_check_dir)):
+            if not os.access(os.path.join(package_check_dir, check_file), os.X_OK):
+                print('WARNING: `{}` is not executable'.format(check_file),
+                      file=sys.stderr)
+                continue
+            tmp_checks[active_package].append(check_file)
+        if tmp_checks[active_package]:
+            checks.update(tmp_checks)
+    return checks
+
+
+def list_checks(checks):
+    for check_dir, check_files in sorted(checks.items()):
+        print('{}'.format(check_dir))
+        for check_file in check_files:
+            print(' - {}'.format(check_file))
+
+
+def run_checks(checks, install, repository):
+    exit_code = 0
+    for pkg_id, check_files in sorted(checks.items()):
+        check_dir = repository.load(pkg_id).check_dir
+        for check_file in check_files:
+            try:
+                check_call([os.path.join(check_dir, check_file)])
+            except CalledProcessError:
+                print('Check failed: {}'.format(check_file))
+                exit_code = 1
+    return exit_code
+
+
 def main():
     arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
     umask(0o022)
@@ -348,6 +388,14 @@ def main():
     if arguments['uninstall']:
         uninstall(install, repository)
         sys.exit(0)
+
+    if arguments['check']:
+        checks = find_checks(install, repository)
+        if arguments['--list']:
+            list_checks(checks)
+            sys.exit(0)
+        # Run all checks
+        sys.exit(run_checks(checks, install, repository))
 
     print("unknown command")
     sys.exit(1)

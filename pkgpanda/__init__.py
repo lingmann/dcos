@@ -136,6 +136,10 @@ class Package:
         return self.__pkginfo.get('environment', dict())
 
     @property
+    def check_dir(self):
+        return self.__path + '/check'
+
+    @property
     def id(self):
         return self.__id
 
@@ -452,11 +456,14 @@ class Install:
         self.__fake_path = fake_path
         self.__skip_systemd_dirs = skip_systemd_dirs
 
+    def get_active_dir(self):
+        return os.path.join(self.__root, "active")
+
     def get_active(self):
         """the active folder has symlinks to all the active packages.
 
         Return the full package ids (The targets of the symlinks)."""
-        active_dir = os.path.join(self.__root, "active")
+        active_dir = self.get_active_dir()
 
         if not os.path.exists(active_dir):
             if os.path.exists(active_dir + ".old") or os.path.exists(active_dir + ".new"):

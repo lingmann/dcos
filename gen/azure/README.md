@@ -70,6 +70,13 @@ and
 [mesos-swarm-marathon](https://github.com/gbowerman/azure-quickstart-templates/tree/master/mesos-swarm-marathon)
 examples.
 
+## Azure Portal UI Generation
+
+Information on how to write a CreateUiDefinition, which is used by the Azure
+Portal to generate UI for creating multi-virtual machine deployments.
+
+[azure-portal-createuidefinition](https://github.com/mesosphere/azure-portal-createuidefinition)
+
 ## TODO
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers

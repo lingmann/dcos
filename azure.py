@@ -177,11 +177,13 @@ def gen_buttons(channel, tag, commit):
             'channel': channel,
             'tag': tag,
             'commit': commit,
-            'template_url': urlencode(template_url)
+            'template_url': encode_url_as_param(template_url)
         })
 
 
-def urlencode(s):
+# Escape URL characters like '/' and ':' so that it can be used with the Azure
+# web endpoint of https://portal.azure.com/#create/Microsoft.Template/uri/
+def encode_url_as_param(s):
     s = s.encode('utf8')
     s = urllib.parse.quote_plus(s)
     return s

@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
-PATH=$PATH:/usr/sbin:/sbin
+set -o nounset -o errexit
+
+# Get COREOS COREOS_PRIVATE_IPV4
+if [ -e /etc/environment ]
+then
+  set -o allexport
+  source /etc/environment
+  set +o allexport
+fi
+
 
 get_defaultish_ip()
 {

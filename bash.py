@@ -185,6 +185,7 @@ function check_all() {
     check ping
     check tar
     check xz
+    check unzip
 
     # $ systemctl --version ->
     # systemd nnn

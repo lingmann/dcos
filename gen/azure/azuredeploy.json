@@ -1,0 +1,417 @@
+{
+  "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "metadata": {
+    "eula": "http://docs.mesosphere.com/community-edition-eula/"
+  },
+  "parameters": {
+    "sshKeyData": {
+      "type": "string",
+      "metadata": {
+        "Description": "Public key for SSH authentication"
+      },
+      "defaultValue": "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDmg2uuk5tta2sC//1uPYkRIRnekIEj7hA+oElyJgUNPQhzAIC7aspnYa/ChI/o6pEk4LdacXL2rW6twg8Dnd+n+AUpNfFOWe5yG8oTGhBVpvhr9c0NYgbTCzAEJaFHBeA8JfjpXpwDzDIsSa0wY3dfsu3BATReOVh9J9L9gEr3uj076avbXase/C6IYZndWwZbPXnTUEQiDsdh6kWWp2yuRJ2WVqnImvBk15bZBGI7EhadPuai87ZziG1A/6k2dgRV3nOQXPrUAwrdVG6vLig8k8lHnmpMs/QAqHQD+7BnnlUicMSJutvPB0SbeNVT0yY1eRc62NdFqu7e+w9VrcGh"
+    },
+    "authorizedSubnet": {
+      "type": "string",
+      "metadata": {
+        "Description": "Subnet allowed to talk to masters"
+      },
+      "defaultValue": "0.0.0.0/0"
+    },
+    "region": {
+      "type": "string",
+      "defaultValue": "West US",
+      "allowedValues": [
+        "East US",
+        "West US",
+        "West Europe",
+        "East Asia",
+        "Southeast Asia"
+      ]
+    },
+    "numberOfMasters": {
+      "type": "int",
+      "metadata": {
+        "Description": "Number of Master nodes"
+      },
+      "defaultValue": 1,
+      "allowedValues": [
+        1,
+        3,
+        5,
+        7
+      ]
+    },
+    "numberOfPrivateSlaves": {
+      "type": "int",
+      "metadata": {
+        "Description": "Number of Private Slave nodes"
+      },
+      "defaultValue": 5,
+      "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
+    }
+  },
+  "variables": {
+    "adminUsername": "core",
+    "uniqueName": "[resourceGroup().name]",
+    "storageAccountName": "[concat(variables('uniqueName'), 'dcsan')]",
+    "virtualNetworkName": "[concat(variables('uniqueName'), 'dcvn')]",
+    "networkSecurityGroupName": "[concat(variables('uniqueName'), 'dcnsg')]",
+    "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
+    "subnet1Name": "Data",
+    "subnet1Ref": "[concat(variables('vnetID'),'/subnets/',variables('subnet1Name'))]",
+    "sshKeyPath": "[concat('/home/',variables('adminUsername'),'/.ssh/authorized_keys')]",
+    "subnet1Prefix": "10.0.0.0/24",
+    "addressPrefix": "10.0.0.0/16",
+    "vmSize": "Standard_A5",
+    "coreosVersion": "766.3.0",
+    "internalMasterLoadBalancerName": "internalMasterLoadBalancer",
+    "internalMasterLoadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('internalMasterLoadBalancerName'))]"
+  },
+  "resources": [
+    {
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "apiVersion": "2015-05-01-preview",
+      "location": "[parameters('region')]",
+      "properties": {
+        "accountType": "Standard_LRS"
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "masters",
+      "location": "[parameters('region')]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[variables('networkSecurityGroupName')]",
+      "location": "[parameters('region')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow_Subnet",
+            "properties": {
+              "description": "Allow Subnet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "[parameters('authorizedSubnet')]",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 200,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Allow_Azure_Management",
+            "properties": {
+              "description": "Allow Azure Internal Management Traffic",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "168.63.129.16/32",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[variables('virtualNetworkName')]",
+      "location": "[parameters('region')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', variables('networkSecurityGroupName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[variables('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "[variables('subnet1Name')]",
+            "properties": {
+              "addressPrefix": "[variables('subnet1Prefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('networkSecurityGroupName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Microsoft.Network/publicIPAddresses",
+      "name": "[concat('masterPublicIP', copyindex())]",
+      "copy": {
+        "name": "ipLoop",
+        "count": "[parameters('numberOfMasters')]"
+      },
+      "location": "[parameters('region')]",
+      "apiVersion": "2015-06-15",
+      "properties": {
+        "publicIPAllocationMethod": "Dynamic",
+        "dnsSettings": {
+          "domainNameLabel": "[concat('master', copyindex(), '-', variables('uniqueName'))]"
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat('slaveNodeNic', copyindex())]",
+      "location": "[parameters('region')]",
+      "copy": {
+        "name": "slaveNodesNicLoop",
+        "count": "[parameters('numberOfPrivateSlaves')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat('slave', copyindex())]",
+      "location": "[parameters('region')]",
+      "copy": {
+        "name": "slaveVmLoop",
+        "count": "[parameters('numberOfPrivateSlaves')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'slaveNodeNic', copyindex())]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat('slave', copyIndex())]",
+          "adminUsername": "[variables('adminUsername')]",
+          "customData": {{ slave_cloud_config }},
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "true",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[variables('sshKeyPath')]",
+                  "keyData": "[parameters('sshKeyData')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "stable",
+            "version": "[variables('coreosVersion')]"
+          },
+          "osDisk": {
+            "name": "[concat('slaveNodeVhd', copyindex())]",
+            "vhd": {
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','slaveNodeVhd', copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('slaveNodeNic', copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/networkInterfaces",
+      "name": "[concat('masterNodeNic', copyindex())]",
+      "location": "[parameters('region')]",
+      "copy": {
+        "name": "masterNicLoop",
+        "count": "[parameters('numberOfMasters')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[concat('Microsoft.Network/publicIPAddresses/', 'masterPublicIP', copyindex())]",
+        "[concat('Microsoft.Network/loadBalancers/', variables('internalMasterLoadBalancerName'))]"
+      ],
+      "properties": {
+        "ipConfigurations": [
+          {
+            "name": "ipconfig1",
+            "properties": {
+              "privateIPAllocationMethod": "Dynamic",
+              "publicIPAddress": {
+                "id": "[resourceId('Microsoft.Network/publicIpAddresses', concat('masterPublicIP', copyindex()))]"
+              },
+              "subnet": {
+                "id": "[variables('subnet1Ref')]"
+              },
+              "loadBalancerBackendAddressPools": [
+                {
+                  "id": "[concat(variables('internalMasterLoadBalancerID'), '/backendAddressPools/BackendPool1')]"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/virtualMachines",
+      "name": "[concat('master', copyindex())]",
+      "location": "[parameters('region')]",
+      "copy": {
+        "name": "masterVmLoop",
+        "count": "[parameters('numberOfMasters')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
+      ],
+      "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
+        },
+        "hardwareProfile": {
+          "vmSize": "[variables('vmSize')]"
+        },
+        "osProfile": {
+          "computername": "[concat('master', copyIndex())]",
+          "adminUsername": "[variables('adminUsername')]",
+          "customData": {{ master_cloud_config }},
+          "linuxConfiguration": {
+            "disablePasswordAuthentication": "true",
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[variables('sshKeyPath')]",
+                  "keyData": "[parameters('sshKeyData')]"
+                }
+              ]
+            }
+          }
+        },
+        "storageProfile": {
+          "imageReference": {
+            "publisher": "CoreOS",
+            "offer": "CoreOS",
+            "sku": "stable",
+            "version": "[variables('coreosVersion')]"
+          },
+          "osDisk": {
+            "name": "[concat('masterNodeVhd', copyindex())]",
+            "vhd": {
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','masterNodeVhd', copyindex(),'.vhd')]"
+            },
+            "caching": "ReadWrite",
+            "createOption": "FromImage"
+          }
+        },
+        "networkProfile": {
+          "networkInterfaces": [
+            {
+              "id": "[resourceId('Microsoft.Network/networkInterfaces',concat('masterNodeNic', copyindex()))]"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Network/loadBalancers",
+      "name": "[variables('internalMasterLoadBalancerName')]",
+      "location": "[parameters('region')]",
+      "dependsOn": [
+        "[variables('vnetID')]"
+      ],
+      "properties": {
+        "frontendIpConfigurations": [
+          {
+            "properties": {
+              "subnet": {
+                "Id": "[variables('subnet1Ref')]"
+              },
+              "privateIPAllocationMethod": "Dynamic"
+            },
+            "name": "LoadBalancerFrontend"
+          }
+        ],
+        "backendAddressPools": [
+          {
+            "name": "BackendPool1"
+          }
+        ],
+        "loadBalancingRules": [
+          {
+            "properties": {
+              "frontendIPConfiguration": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/frontendIpConfigurations/LoadBalancerFrontend')]"
+              },
+              "backendAddressPool": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/backendAddressPools/BackendPool1')]"
+              },
+              "probe": {
+                "Id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('internalMasterLoadBalancerName')), '/probes/exhibitor')]"
+              },
+              "protocol": "Tcp",
+              "frontendPort": 8181,
+              "backendPort": 8181,
+              "idleTimeoutInMinutes": 15
+            },
+            "Name": "exhibitor"
+          }
+        ],
+        "probes": [
+          {
+            "properties": {
+              "protocol": "Tcp",
+              "port": 8181,
+              "intervalInSeconds": 15,
+              "numberOfProbes": 2
+            },
+            "name": "exhibitor"
+          }
+        ]
+      }
+    }
+  ],
+  "outputs": {
+    "masterURL0": {
+      "value": "[reference('masterPublicIP0').dnsSettings.fqdn]",
+      "type": "string"
+    }
+  }
+}

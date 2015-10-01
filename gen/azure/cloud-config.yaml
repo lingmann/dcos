@@ -8,27 +8,27 @@ write_files:
       }
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/cloudenv
     content: |
-      # TODO(cmaloney): This needs to become an internal load balancer between the masters.
-      MASTER_ELB=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
-      MARATHON_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
-  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-slave-provider
-    content: |
-      MESOS_HOSTNAME=$private_ipv4
-      MESOS_IP=$private_ipv4
+      # TODO(cmaloney): Add cluster general info for analytics here
+      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-master-provider
     # TODO(cmaloney): MESOS_HOSTNAME, MESOS_IP break upgrade paths
     content: |
       MESOS_CLUSTER=[[[variables('uniqueName')]]]
-      MESOS_HOSTNAME=[[[reference(concat('masterPublicIP', copyIndex())).dnsSettings.fqdn]]]
-      MESOS_IP=$private_ipv4
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor
     content: |
-      AZURE_CONTAINER=apollo-exhibitor
+      EXHIBITOR_BACKEND=AZURE
+      AZURE_CONTAINER=dcos-exhibitor
       AZURE_PREFIX=[[[variables('uniqueName')]]]
-      AZURE_ACCOUNT_NAME=[[[variables('storageAccountName')]]]
-      AZURE_ACCOUNT_KEY=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2014-12-01-preview').key1]]]
-      EXHIBITOR_HOSTNAME=$private_ipv4
-
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor.properties
+    content: |
+      com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
+      com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
+  - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      # TODO(cmaloney): Switch to VRRP or an internal master load balancer
+      EXHIBITOR_ADDRESS=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
+      RESOLVERS={{ resolvers_str }}
 coreos:
   units:
     - name: var-lib.mount

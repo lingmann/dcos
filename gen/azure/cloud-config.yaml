@@ -27,7 +27,7 @@ write_files:
     content: |
       MASTER_SOURCE=exhibitor
       # TODO(cmaloney): Switch to VRRP or an internal master load balancer
-      EXHIBITOR_ADDRESS=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
+      EXHIBITOR_ADDRESS=[[[reference('internalMasterLoadBalancer').frontendIPConfigurations[0].properties.privateIPAddress]]]
       RESOLVERS={{ resolvers_str }}
 coreos:
   units:

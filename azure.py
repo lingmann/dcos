@@ -12,8 +12,6 @@ from copy import deepcopy
 import gen
 import util
 
-from gen.azure.azure_client import AzureClient
-
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
 late_services = ""
 
@@ -130,20 +128,6 @@ def gen_templates(arguments, options):
         variant_cloudconfig['master'],
         variant_cloudconfig['slave']
         )
-
-    client = AzureClient.createFromEnvCreds()
-
-    template_parameters = {
-        "sshKeyData": {"value": "parametervalue1"},
-        "authorizedSubnet": {"value": "10.0.0.0"},
-        "region": {"value": "West US"},
-        "numberOfMasters": {"value": 1},
-        "numberOfPrivateSlaves": {"value": 5}
-        }
-
-    # Use RPC against azure to validate the ARM template is well-formed
-    client.verify(template_body_json=json.loads(arm), template_parameters=template_parameters)
-    print("Template OK")
 
     return gen.Bunch({
         'arm': arm,

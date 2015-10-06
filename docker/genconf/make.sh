@@ -112,9 +112,13 @@ function build {
 # Push the built image to Docker hub
 function push {
   check_prereqs
-  dest=mesosphere/dcos-genconf:"${DOCKER_TAG}"
-  echo "Pushing: ${dest}"
-  docker push "$dest"
+  CHANNEL_NAME_SANITIZED=$(echo $CHANNEL_NAME | tr '/' '_')
+  dest_id=mesosphere/dcos-genconf:"${DOCKER_TAG}"
+  dest_channel=mesosphere/dcos-genconf:"${CHANNEL_NAME_SANITIZED}"
+  echo "Pushing: ${dest_id} and ${dest_channel}"
+  docker push "$dest_id"
+  docker tag -f "$dest_id" "$dest_channel"
+  docker push "$dest_channel"
 }
 
 # Removes the directory specified by $1

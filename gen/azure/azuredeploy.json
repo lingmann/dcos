@@ -266,7 +266,7 @@
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
-          "domainNameLabel": "[concat('publicslave', copyindex(), '-', variables('uniqueName'))]"
+          "domainNameLabel": "[concat('slavepublic', copyindex(), '-', variables('uniqueName'))]"
         }
       }
     },
@@ -394,7 +394,7 @@
     {
       "apiversion": "2015-06-15",
       "type": "microsoft.compute/virtualmachines",
-      "name": "[concat('slaveprivate', copyindex())]",
+      "name": "[concat('slavePrivate', copyindex())]",
       "location": "[parameters('region')]",
       "copy": {
         "name": "slaveprivatevmloop",
@@ -627,8 +627,12 @@
     }
   ],
   "outputs": {
-    "masterURL0": {
+    "masterFQDN0": {
       "value": "[reference('masterPublicIP0').dnsSettings.fqdn]",
+      "type": "string"
+    },
+    "slavePublicFQDN0": {
+      "value": "[reference('slavePublicIP0').dnsSettings.fqdn]",
       "type": "string"
     }
   }

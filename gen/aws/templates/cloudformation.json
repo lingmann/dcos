@@ -40,36 +40,36 @@
   },
   "Mappings": {
     "RegionToAmi": {
-        "ap-northeast-1": {
-          "stable": "ami-f2338ff2"
-        },
-        "ap-southeast-1": {
-          "stable": "ami-b6d8d4e4"
-        },
-        "ap-southeast-2": {
-          "stable": "ami-8f88c8b5"
-        },
-        "eu-central-1": {
-          "stable": "ami-bececaa3"
-        },
-        "eu-west-1": {
-          "stable": "ami-0e104179"
-        },
-        "sa-east-1": {
-          "stable": "ami-11e9600c"
-        },
-        "us-east-1": {
-          "stable": "ami-3d73d356"
-        },
-        "us-gov-west-1": {
-          "stable": "ami-c75033e4"
-        },
-        "us-west-1": {
-          "stable": "ami-1db04f59"
-        },
-        "us-west-2": {
-          "stable": "ami-85ada4b5"
-        }
+      "ap-northeast-1": {
+        "stable": "ami-6c5ac56c"
+      },
+      "ap-southeast-1": {
+        "stable": "ami-46819614"
+      },
+      "ap-southeast-2": {
+        "stable": "ami-f5ace5cf"
+      },
+      "eu-central-1": {
+        "stable": "ami-840a0899"
+      },
+      "eu-west-1": {
+        "stable": "ami-eb97bc9c"
+      },
+      "sa-east-1": {
+        "stable": "ami-3396012e"
+      },
+      "us-east-1": {
+        "stable": "ami-05783d60"
+      },
+      "us-gov-west-1": {
+        "stable": "ami-796a085a"
+      },
+      "us-west-1": {
+        "stable": "ami-2b29ee6f"
+      },
+      "us-west-2": {
+        "stable": "ami-ed8b90dd"
+      }
     },
     "NATAmi" : {
       "ap-northeast-1": {

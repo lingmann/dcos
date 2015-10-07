@@ -82,10 +82,19 @@
   },
   "resources": [
     {
+       "location" : "[parameters('region')]",
+       "properties" : {
+          "accountType" : "Standard_LRS"
+       },
+       "name" : "[variables('storageAccountName')]",
+       "type" : "Microsoft.Storage/storageAccounts",
+       "apiVersion" : "2015-05-01-preview"
+    },
+    {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),copyIndex(1))]",
       "apiVersion": "2015-05-01-preview",
-      "location": "[resourceGroup().location]",
+      "location" : "[parameters('region')]",
       "copy": {
         "name": "vmLoopNode",
         "count": "[variables('storageAccountsCount')]"
@@ -218,7 +227,8 @@
         "count": "[parameters('numberOfPrivateSlaves')]"
       },
       "dependsOn": [
-        "[concat('Microsoft.Network/networkInterfaces/', 'slaveNodeNic', copyindex())]"
+        "[concat('Microsoft.Network/networkInterfaces/', 'slaveNodeNic', copyindex())]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "hardwareProfile": {
@@ -312,7 +322,8 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
-        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]"
+        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]",
+        "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "availabilitySet": {
@@ -347,7 +358,7 @@
           "osDisk": {
             "name": "[concat('masterNodeVhd', copyindex())]",
             "vhd": {
-              "uri": "[concat('http://',concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('newStorageAccountNamePrefix'),copyIndex(1)),'.blob.core.windows.net/vhds/','masterNodeVhd', copyindex(),'.vhd')]"
+              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','masterNodeVhd', copyindex(),'.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"

@@ -141,7 +141,7 @@ def find_packages_fs():
 
 
 def make_bootstrap_tarball(packages):
-    # Convert filenames to package ids
+    # Convert filenames to package ids.
     pkg_ids = list()
     for pkg_path in packages:
         # Get the package id from the given package path
@@ -289,9 +289,6 @@ def build_tree(mkbootstrap, repository_url):
 
     # Build the tarball if requested, along with a "active.json"
     if mkbootstrap:
-        # TODO(cmaloney): This does a ton of excess repeated work...
-        # use the repository built during package building instead of
-        # building a new one for the package tarball (just mv it).
         make_bootstrap_tarball(list(sorted(built_package_paths)))
 
 

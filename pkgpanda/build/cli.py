@@ -100,19 +100,28 @@ def last_build_filename(variant):
     return "cache/last_build" + (("_" + variant) if variant else "")
 
 
-def load_buildinfo(path, variant):
+def load_optional_json(filename):
     # Load the package build info.
     try:
-        filename = 'buildinfo.json'
-        if variant:
-            filename = variant + '.' + filename
-        return load_json(os.path.join(path, filename))
+        return load_json(filename)
     except FileNotFoundError:
-        # All fields in buildinfo are optional.
+        # not existing -> empty dictionary / no specified values.
         return {}
     except ValueError as ex:
         print("ERROR:", ex)
         sys.exit(1)
+
+
+def load_config_variant(directory, variant, extension):
+    assert directory[-1] != '/'
+    filename = extension
+    if variant:
+        filename = variant + '.' + filename
+    return load_optional_json(directory + '/' + filename)
+
+
+def load_buildinfo(path, variant):
+    return load_config_variant(path, variant, 'buildinfo.json')
 
 
 def find_packages_fs():

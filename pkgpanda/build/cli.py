@@ -5,12 +5,13 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [--repository-url=<repository_url>] [--variant=<variant_name>]
+  mkpanda [--repository-url=<repository_url>]
   mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """
 
 import copy
+import glob
 import os.path
 import sys
 import tempfile
@@ -84,9 +85,13 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(name, arguments['--repository-url'], arguments['--variant'])
+    pkg_dict = build_all_variants(name, arguments['--repository-url'])
 
-    print("Package available at: {}".format(pkg_path))
+    print("Package variants available as:")
+    for k, v in pkg_dict.items():
+        if k is None:
+            k = "<default>"
+        print(k + ':' + v)
 
     sys.exit(0)
 
@@ -181,9 +186,12 @@ def build_tree(mkbootstrap, repository_url):
 
         # Run the build
         os.chdir(start_dir + '/' + name)
-        # TODO(cmaloney): Currently we only build the "default" variant of a
-        # package. Should build all variants.
-        pkg_path = build(name, repository_url, None)
+        built_packages = build_all_variants(name, repository_url)
+
+        # built_packages[None] is guaranteed to exist since we always build the
+        # default variant.
+        pkg_path = built_packages[None]
+
         os.chdir(start_dir)
 
         # Add the package to the set of built packages.
@@ -213,7 +221,25 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
+# Find all build variants and build them
+def build_all_variants(name, repository_url):
+
+    builds = dict()
+
+    # Find and build all buildinfo variants.
+    for filename in glob.glob("*.buildinfo.json"):
+        variant = filename[:-len(".buildinfo.json")]
+
+        builds[variant] = build(name, repository_url, variant)
+
+    # Always build the core variant
+    builds[None] = build(name, repository_url, None)
+
+    return builds
+
+
 def build(name, repository_url, variant):
+    print("Building package {} variant {}".format(name, variant or "<default>"))
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)
 

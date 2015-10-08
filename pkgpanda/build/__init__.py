@@ -234,5 +234,3 @@ def fetch_sources(sources):
             raise ValidationError("Currently only packages from url and git sources are supported")
 
     return ids
-
-

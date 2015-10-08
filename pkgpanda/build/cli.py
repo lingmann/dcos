@@ -140,10 +140,7 @@ def find_packages_fs():
     return packages
 
 
-# If work_dir is None, makes a temp folder in the current directory, deletes after.
-# NOTE: NOT A LIBRARY FUNCTION. ASSUMES CLI.
-def make_bootstrap_tarball(output_name, packages, work_dir=None):
-
+def make_bootstrap_tarball(packages):
     # Convert filenames to package ids
     pkg_ids = list()
     for pkg_path in packages:
@@ -157,15 +154,9 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
 
     # Filename is output_name.<sha-1>.{active.json|.bootstrap.tar.xz}
     bootstrap_id = hash_checkout(pkg_ids)
-    if output_name and len(output_name):
-        output_name = output_name + '.'
-    else:
-        # Just for type safety
-        output_name = ''
+    latest_name = "bootstrap.latest"
 
-    latest_name = "{}bootstrap.latest".format(output_name)
-
-    output_name += bootstrap_id + '.'
+    output_name = bootstrap_id + '.'
 
     # bootstrap tarball = <sha1 of packages in tarball>.bootstrap.tar.xz
     bootstrap_name = "{}bootstrap.tar.xz".format(output_name)
@@ -182,9 +173,7 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
 
     print("Building bootstrap tarball")
 
-    work_dir_set = work_dir is not None
-    if work_dir is None:
-        work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
+    work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
 
     def make_abs(path):
         return os.path.join(work_dir, path)
@@ -219,8 +208,7 @@ def make_bootstrap_tarball(output_name, packages, work_dir=None):
 
     make_tar(bootstrap_name, pkgpanda_root)
 
-    if not work_dir_set:
-        shutil.rmtree(work_dir)
+    shutil.rmtree(work_dir)
 
     # Update latest last so that we don't ever use partially-built things.
     write_string(latest_name, bootstrap_id)
@@ -304,7 +292,7 @@ def build_tree(mkbootstrap, repository_url):
         # TODO(cmaloney): This does a ton of excess repeated work...
         # use the repository built during package building instead of
         # building a new one for the package tarball (just mv it).
-        make_bootstrap_tarball('', list(sorted(built_package_paths)))
+        make_bootstrap_tarball(list(sorted(built_package_paths)))
 
 
 def expand_single_source_alias(pkg_name, buildinfo):

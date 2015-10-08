@@ -13,6 +13,7 @@ Usage:
 import copy
 import glob
 import os.path
+import shutil
 import sys
 import tempfile
 from os import getcwd, mkdir, umask
@@ -22,10 +23,10 @@ from subprocess import CalledProcessError, check_call, check_output
 import pkgpanda.build.constants
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository
-from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, make_bootstrap_tarball, sha1
+from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
+from pkgpanda.util import load_json, load_string, make_file, make_tar, rewrite_symlinks, write_json, write_string
 
 
 class DockerCmd:
@@ -137,6 +138,98 @@ def find_packages_fs():
             buildinfo = load_buildinfo(name, None)
             packages[name] = {'requires': buildinfo.get('requires', list())}
     return packages
+
+
+# If work_dir is None, makes a temp folder in the current directory, deletes after.
+# NOTE: NOT A LIBRARY FUNCTION. ASSUMES CLI.
+def make_bootstrap_tarball(output_name, packages, work_dir=None):
+
+    # Convert filenames to package ids
+    pkg_ids = list()
+    for pkg_path in packages:
+        # Get the package id from the given package path
+        filename = os.path.basename(pkg_path)
+        if not filename.endswith(".tar.xz"):
+            print("ERROR: Packages must be packaged / end with .tar.xz")
+            sys.exit(1)
+        pkg_id = filename[:-len(".tar.xz")]
+        pkg_ids.append(pkg_id)
+
+    # Filename is output_name.<sha-1>.{active.json|.bootstrap.tar.xz}
+    bootstrap_id = hash_checkout(pkg_ids)
+    if output_name and len(output_name):
+        output_name = output_name + '.'
+    else:
+        # Just for type safety
+        output_name = ''
+
+    latest_name = "{}bootstrap.latest".format(output_name)
+
+    output_name += bootstrap_id + '.'
+
+    # bootstrap tarball = <sha1 of packages in tarball>.bootstrap.tar.xz
+    bootstrap_name = "{}bootstrap.tar.xz".format(output_name)
+    active_name = "{}active.json".format(output_name)
+    if (os.path.exists(bootstrap_name)):
+        # Ensure latest is always written
+        write_string(latest_name, bootstrap_id)
+
+        print("Bootstrap already up to date, not recreating")
+        print("bootstrap: {}".format(bootstrap_name))
+        print("active: {}".format(active_name))
+        print("latest: {}".format(latest_name))
+        return bootstrap_name
+
+    print("Building bootstrap tarball")
+
+    work_dir_set = work_dir is not None
+    if work_dir is None:
+        work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
+
+    def make_abs(path):
+        return os.path.join(work_dir, path)
+
+    pkgpanda_root = make_abs("opt/mesosphere")
+    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
+
+    # Fetch all the packages to the root
+    for pkg_path in packages:
+        filename = os.path.basename(pkg_path)
+        pkg_id = filename[:-len(".tar.xz")]
+
+        def local_fetcher(id, target):
+            shutil.unpack_archive(pkg_path, target, "gztar")
+        repository.add(local_fetcher, pkg_id, False)
+
+    # Activate the packages inside the repository.
+    # Do generate dcos.target.wants inside the root so that we don't
+    # try messing with /etc/systemd/system.
+    install = pkgpanda.Install(pkgpanda_root, None, True, False, True, True, True)
+    install.activate(repository, repository.load_packages(pkg_ids))
+
+    # Mark the tarball as a bootstrap tarball/filesystem so that
+    # dcos-setup.service will fire.
+    make_file(make_abs("opt/mesosphere/bootstrap"))
+
+    # Write out an active.json for the bootstrap tarball
+    write_json(active_name, pkg_ids)
+
+    # Rewrite all the symlinks to point to /opt/mesosphere
+    rewrite_symlinks(work_dir, work_dir, "/")
+
+    make_tar(bootstrap_name, pkgpanda_root)
+
+    if not work_dir_set:
+        shutil.rmtree(work_dir)
+
+    # Update latest last so that we don't ever use partially-built things.
+    write_string(latest_name, bootstrap_id)
+
+    print("Built bootstrap")
+    print("bootstrap: {}".format(bootstrap_name))
+    print("active: {}".format(active_name))
+    print("latest: {}".format(latest_name))
+    return bootstrap_name
 
 
 def build_tree(mkbootstrap, repository_url):

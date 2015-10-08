@@ -85,7 +85,7 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_dict = build_all_variants(name, arguments['--repository-url'])
+    pkg_dict = build_package_variants(name, arguments['--repository-url'])
 
     print("Package variants available as:")
     for k, v in pkg_dict.items():
@@ -195,7 +195,7 @@ def build_tree(mkbootstrap, repository_url):
 
         # Run the build
         os.chdir(start_dir + '/' + name)
-        built_packages = build_all_variants(name, repository_url)
+        built_packages = build_package_variants(name, repository_url)
 
         # built_packages[None] is guaranteed to exist since we always build the
         # default variant.
@@ -230,24 +230,24 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
+def for_each_variant(fn, extension, extra_args):
+    results = dict()
+    for filename in glob.glob("*." + extension):
+        variant = filename[:-len("." + extension)]
+        results[variant] = fn(variant, *extra_args)
+
+    # Always do the base variant
+    results[None] = fn(None, *extra_args)
+
+    return results
+
+
 # Find all build variants and build them
-def build_all_variants(name, repository_url):
-
-    builds = dict()
-
-    # Find and build all buildinfo variants.
-    for filename in glob.glob("*.buildinfo.json"):
-        variant = filename[:-len(".buildinfo.json")]
-
-        builds[variant] = build(name, repository_url, variant)
-
-    # Always build the core variant
-    builds[None] = build(name, repository_url, None)
-
-    return builds
+def build_package_variants(name, repository_url):
+    return for_each_variant(build, "buildinfo.json", [name, repository_url])
 
 
-def build(name, repository_url, variant):
+def build(variant, name, repository_url):
     print("Building package {} variant {}".format(name, variant or "<default>"))
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)

@@ -5,7 +5,7 @@ package version, then builds the package in an isolated environment along with
 the necessary dependencies.
 
 Usage:
-  mkpanda [--repository-url=<repository_url>]
+  mkpanda [--repository-url=<repository_url>] [--variant=<variant_name>]
   mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
   mkpanda clean
 """
@@ -84,17 +84,24 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(name, arguments['--repository-url'])
+    pkg_path = build(name, arguments['--repository-url'], arguments['--variant'])
 
     print("Package available at: {}".format(pkg_path))
 
     sys.exit(0)
 
 
-def load_buildinfo(path):
+def last_build_filename(variant):
+    return "cache/last_build" + (("_" + variant) if variant else "")
+
+
+def load_buildinfo(path, variant):
     # Load the package build info.
     try:
-        return load_json(os.path.join(path, "buildinfo.json"))
+        filename = 'buildinfo.json'
+        if variant:
+            filename = variant + '.' + filename
+        return load_json(os.path.join(path, filename))
     except FileNotFoundError:
         # All fields in buildinfo are optional.
         return {}
@@ -113,7 +120,7 @@ def find_packages_fs():
         if os.path.isdir(name):
             if not os.path.exists(os.path.join(name, "build")):
                 continue
-            buildinfo = load_buildinfo(name)
+            buildinfo = load_buildinfo(name, None)
             packages[name] = {'requires': buildinfo.get('requires', list())}
     return packages
 
@@ -174,7 +181,9 @@ def build_tree(mkbootstrap, repository_url):
 
         # Run the build
         os.chdir(start_dir + '/' + name)
-        pkg_path = build(name, repository_url)
+        # TODO(cmaloney): Currently we only build the "default" variant of a
+        # package. Should build all variants.
+        pkg_path = build(name, repository_url, None)
         os.chdir(start_dir)
 
         # Add the package to the set of built packages.
@@ -204,7 +213,7 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(name, repository_url):
+def build(name, repository_url, variant):
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)
 
@@ -214,7 +223,7 @@ def build(name, repository_url):
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo(os.getcwd())
+    buildinfo = load_buildinfo(os.getcwd(), variant)
 
     if 'name' in buildinfo:
         print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
@@ -297,14 +306,16 @@ def build(name, repository_url):
                     raise NotImplementedError()
 
                 # Try and add the package automatically
-                last_build = '../{}/cache/last_build'.format(pkg_str)
+                last_build = '../' + pkg_str + '/' + last_build_filename(None)
                 if not os.path.exists(last_build):
                     print("ERROR: No last build for dependency {}. Build it then build this package.".format(pkg_str))
                     sys.exit(1)
                 pkg_name = pkg_str
                 pkg_id_str = load_string(last_build)
                 auto_deps.add(pkg_id_str)
-                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
+                # By default depend on the "base" variant / buildinfo of a package.
+                # TODO(cmaloney): Allow depending on variants of packages.
+                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str), None)
                 pkg_requires = pkg_buildinfo.get('requires', list())
                 pkg_path = repository.package_path(pkg_id_str)
                 if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
@@ -369,7 +380,7 @@ def build(name, repository_url):
         # TODO(cmaloney): Updating / filling last_build should be moved out of
         # the build function.
         check_call(["mkdir", "-p", "cache"])
-        write_string("cache/last_build", str(pkg_id))
+        write_string(last_build_filename(variant), str(pkg_id))
 
         return pkg_path
 
@@ -391,7 +402,7 @@ def build(name, repository_url):
             # TODO(cmaloney): Updating / filling last_build should be moved out of
             # the build function.
             check_call(["mkdir", "-p", "cache"])
-            write_string("cache/last_build", str(pkg_id))
+            write_string(last_build_filename(variant), str(pkg_id))
             return pkg_path
         except CalledProcessError as ex:
             try:
@@ -469,7 +480,8 @@ def build(name, repository_url):
         "PKG_VERSION": version,
         "PKG_NAME": name,
         "PKG_ID": pkg_id,
-        "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id)
+        "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id),
+        "PKG_VARIANT": variant if variant is not None else "<default>"
     }
 
     try:
@@ -496,7 +508,7 @@ def build(name, repository_url):
     # TODO(cmaloney): Updating / filling last_build should be moved out of
     # the build function.
     check_call(["mkdir", "-p", "cache"])
-    write_string("cache/last_build", str(pkg_id))
+    write_string(last_build_filename(variant), str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package
     tmp_name = pkg_path + "-tmp.tar.xz"

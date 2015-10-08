@@ -304,7 +304,7 @@ def build(name, repository_url):
                 # Try and add the package automatically
                 last_build = '../{}/cache/last_build'.format(pkg_str)
                 if not os.path.exists(last_build):
-                    print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
+                    print("ERROR: No last build for dependency {}. Build it then build this package.".format(pkg_str))
                     sys.exit(1)
                 pkg_name = pkg_str
                 pkg_id_str = load_string(last_build)

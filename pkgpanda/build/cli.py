@@ -230,6 +230,11 @@ def build(name, repository_url, variant):
               "implicitly the name of the folder containing the buildinfo.json")
         sys.exit(1)
 
+    # Make sure build_script is only set on variants
+    if 'build_script' in buildinfo and variant is None:
+        print("ERROR: build_script can only be set on package variants")
+        sys.exit(1)
+
     # Convert single_source -> sources
     try:
         sources = expand_single_source_alias(name, buildinfo)
@@ -471,7 +476,7 @@ def build(name, repository_url, variant):
         # TODO(cmaloney): src should be read only...
         abspath("src"): "/pkg/src:rw",
         # The build script
-        abspath("build"): "/pkg/build:ro",
+        abspath(buildinfo.get('build_script', 'build')): "/pkg/build:ro",
         # Getting the result out
         abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"

@@ -50,6 +50,14 @@
       },
       "defaultValue": 5,
       "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
+    },
+    "vmsPerStorageAccount": {
+      "type": "int",
+      "metadata": {
+        "Description": "Number of VMs per Storage Account"
+      },
+      "defaultValue": 10,
+      "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
     }
   },
   "variables": {
@@ -68,9 +76,7 @@
     "coreosVersion": "766.4.0",
     "internalMasterLoadBalancerName": "internalMasterLoadBalancer",
     "internalMasterLoadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('internalMasterLoadBalancerName'))]",
-    "newStorageAccountNamePrefix": "anhowe921e",
-    "vmsPerStorageAccount": 10,
-    "storageAccountsCount" : "[add(div(parameters('numberOfPrivateSlaves'),variables('vmsPerStorageAccount')),mod(add(mod(parameters('numberOfPrivateSlaves'), variables('vmsPerStorageAccount')),2), add(mod(parameters('numberOfPrivateSlaves'), variables('vmsPerStorageAccount')),1)))]",
+    "storageAccountsCount" : "[add(div(parameters('numberOfPrivateSlaves'),parameters('vmsPerStorageAccount')),mod(add(mod(parameters('numberOfPrivateSlaves'), parameters('vmsPerStorageAccount')),2), add(mod(parameters('numberOfPrivateSlaves'), parameters('vmsPerStorageAccount')),1)))]",
     "storageAccountType": "Standard_LRS",
     "storageAccountPrefix": [
         "0","6","c","i","o","u","1","7","d","j","p","v",

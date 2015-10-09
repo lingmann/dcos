@@ -90,6 +90,13 @@ Key resource limitations for a DCOS stack on Azure:
 | Local networks per subscription | 10 | 500 |
 | Reserved IPs per subscription | 20 | 100 |
 
+## VMs per Storage Account
+
+We use logic to spread out VMs across Storage Accounts to prevent I/O limitation
+per Storage Account. Parameter `vmsPerStorageAccount` lets you adjust number
+of Private Slaves per Storage Acount. Currently there is a limit of 36*36 = 1296
+Storage Accounts per Subscription.
+
 ## TODO
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers

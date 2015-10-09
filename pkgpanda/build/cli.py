@@ -402,8 +402,8 @@ def build(variant, name, repository_url):
     install_dir = tempfile.mkdtemp(prefix="pkgpanda-")
 
     active_packages = list()
-    active_package_names = set()
     active_package_ids = set()
+    active_package_variants = dict()
     auto_deps = set()
     # Verify all requires are in the repository.
     if 'requires' in buildinfo:
@@ -417,43 +417,78 @@ def build(variant, name, repository_url):
             print("`requires` in buildinfo.json must be an array of dependencies.")
             sys.exit(1)
         while to_check:
-            pkg_str = to_check.pop(0)
-            try:
-                if PackageId.is_id(pkg_str):
-                    # Package names only ATM.
-                    raise NotImplementedError()
-
-                # Try and add the package automatically
-                last_build = '../' + pkg_str + '/' + last_build_filename(None)
-                if not os.path.exists(last_build):
-                    print("ERROR: No last build for dependency {}. Build it then build this package.".format(pkg_str))
+            requires_info = to_check.pop(0)
+            requires_name = None
+            requires_variant = None
+            if isinstance(str, requires_info):
+                requires_name = requires_info
+            elif isinstance(dict, requires_info):
+                if 'name' not in requires_info or 'variant' not in requires_info:
+                    print("ERROR: When specifying a dependency in requires by",
+                          "dictionary to depend on a variant both the name of",
+                          "the package and the variant name must always be",
+                          "specified")
                     sys.exit(1)
-                pkg_name = pkg_str
+                requires_name = requires_info['name']
+                requires_variant = requires_info['variant']
+
+            if PackageId.is_id(requires_name):
+                print("ERROR: Specifying a dependency on a exact package id",
+                      "isn't allowed. Dependencies may be specified by package",
+                      "name alone or package name + variant (to change the",
+                      "package variant)")
+                sys.exit(1)
+
+            if requires_name in active_package_variants:
+                # TODO(cmaloney): If one package depends on the <default>
+                # variant of a package and 1+ others depends on a non-<default>
+                # variant then update the dependency to the non-default variant
+                # rather than erroring.
+                if requires_variant != active_package_variants[requires_name]:
+                    # TODO(cmaloney): Make this contain the chains of
+                    # dependencies which contain the conflicting packages.
+                    # a -> b -> c -> d {foo}
+                    # e {bar} -> d {baz}
+                    print("ERROR: Dependncy on multiple variants of the same",
+                          "package", requires_name, ". variants:", requires_variant,
+                          active_package_variants[requires_name])
+                    sys.exit(1)
+
+                # The variant has package {requires_name, variant} already is a
+                # dependency, don't process it again / move on to the next.
+                continue
+
+            active_package_variants[requires_name] = requires_variant
+
+            # Figure out the last build of the dependency, add that as the
+            # fully expanded dependency.
+            pkg_dir = '../' + requires_name
+            last_build = pkg_dir + '/' + last_build_filename(requires_variant)
+            if not os.path.exists(last_build):
+                print("ERROR: No last build file found for dependency",
+                      requires_name, "variant", requires_variant,
+                      "Rebuild the dependency")
+                sys.exit(1)
+
+            try:
                 pkg_id_str = load_string(last_build)
                 auto_deps.add(pkg_id_str)
-                # By default depend on the "base" variant / buildinfo of a package.
-                # TODO(cmaloney): Allow depending on variants of packages.
-                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str), None)
+                pkg_buildinfo = load_buildinfo(pkg_dir, requires_variant)
                 pkg_requires = pkg_buildinfo.get('requires', list())
                 pkg_path = repository.package_path(pkg_id_str)
-                if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
-                    print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
-                          " Rebuild the dependency.")
+                pkg_tar = '{1}.tar.xz'.format(pkg_id_str)
+                if not os.path.exists(pkg_dir + '/' + pkg_tar):
+                    print("ERROR: The build tarball", pkg_tar, "refered to by",
+                          "the last_build file of the dependency",
+                          requires_name, "variant", requires_variant, "doesn't",
+                          "exist. Rebuild the dependency.")
                     sys.exit(1)
-
-                if PackageId(pkg_id_str).name in active_package_names:
-                    continue
 
                 active_package_ids.add(pkg_id_str)
 
                 # Mount the package into the docker container.
                 cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id_str)
-
                 os.makedirs(os.path.join(install_dir, "packages/{}".format(pkg_id_str)))
-
-                # Mark the package as active so we don't check it again and
-                # infinite loop on cycles.
-                active_package_names.add(pkg_name)
 
                 # Add the dependencies of the package to the set which will be
                 # activated.
@@ -462,10 +497,10 @@ def build(variant, name, repository_url):
                 # them directly.
                 to_check += pkg_requires
             except ValidationError as ex:
-                print("ERROR validating package needed as dependency {0}: {1}".format(pkg_str, ex))
+                print("ERROR validating package needed as dependency {0}: {1}".format(requires_name, ex))
                 bad_requires = True
             except PackageError as ex:
-                print("ERROR loading package needed as dependency {0}: {1}".format(pkg_str, ex))
+                print("ERROR loading package needed as dependency {0}: {1}".format(requires_name, ex))
                 bad_requires = True
 
         if bad_requires:

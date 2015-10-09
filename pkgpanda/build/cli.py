@@ -253,11 +253,6 @@ def build(name, repository_url):
 
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
-    if 'docker' in buildinfo:
-        print("WARNING: Specifying docker explicitly should be avoided.")
-        print("This option will be removed once enough of the dependencies " +
-              "are in pkgpanda form that everything can just use pkgpanda " +
-              "dependencies.")
     cmd.container = docker_name
 
     # Add the id of the docker build environment to the build_ids.

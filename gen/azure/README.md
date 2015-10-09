@@ -77,6 +77,26 @@ Portal to generate UI for creating multi-virtual machine deployments.
 
 [azure-portal-createuidefinition](https://github.com/mesosphere/azure-portal-createuidefinition)
 
+## Azure Subscription and Service Limits
+
+[Azure Subscription and Service Limits, Quotas, and Constraints](https://azure.microsoft.com/en-us/documentation/articles/azure-subscription-service-limits/)
+
+Key resource limitations for a DCOS stack on Azure:
+
+| RESOURCE | DEFAULT LIMIT | MAXIMUM LIMIT |
+| -------- | ------------- | ------------- |
+| Cores per subscription | 20 | 10000 |
+| Storage accounts per subscription | 100 | 100 |
+| Local networks per subscription | 10 | 500 |
+| Reserved IPs per subscription | 20 | 100 |
+
+## VMs per Storage Account
+
+We use logic to spread out VMs across Storage Accounts to prevent I/O limitation
+per Storage Account. Parameter `vmsPerStorageAccount` lets you adjust number
+of Private Slaves per Storage Acount. Currently there is a limit of 36*36 = 1296
+Storage Accounts per Subscription.
+
 ## TODO
 
 * Validate uniquename input, must be between 3-24 char in length and use numbers

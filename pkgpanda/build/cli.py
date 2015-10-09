@@ -253,11 +253,6 @@ def build(name, repository_url):
 
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
-    if 'docker' in buildinfo:
-        print("WARNING: Specifying docker explicitly should be avoided.")
-        print("This option will be removed once enough of the dependencies " +
-              "are in pkgpanda form that everything can just use pkgpanda " +
-              "dependencies.")
     cmd.container = docker_name
 
     # Add the id of the docker build environment to the build_ids.
@@ -304,7 +299,7 @@ def build(name, repository_url):
                 # Try and add the package automatically
                 last_build = '../{}/cache/last_build'.format(pkg_str)
                 if not os.path.exists(last_build):
-                    print("ERROR: No last build for dependency {}. Can't auto-add.".format(pkg_str))
+                    print("ERROR: No last build for dependency {}. Build it then build this package.".format(pkg_str))
                     sys.exit(1)
                 pkg_name = pkg_str
                 pkg_id_str = load_string(last_build)

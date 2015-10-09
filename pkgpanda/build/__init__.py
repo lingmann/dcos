@@ -179,10 +179,13 @@ def fetch_sources(sources):
                     "-t",
                     "+refs/heads/*:refs/heads/*"])
 
-            ref = info.get('ref', None)
-            if ref is None:
-                ref = info['branch']
-                print("WARNING: Use of 'branch' field is deprecated. Please replace with 'ref'.")
+            if 'branch' in info:
+                raise ValidationError("Use of 'branch' field has been removed. Please replace with 'ref'")
+
+            if 'ref' not in info:
+                raise ValidationError("Must specify ref inside fo the buildinfo")
+
+            ref = info['ref']
 
             def get_sha1(git_ref):
                 try:

@@ -128,15 +128,25 @@ def load_buildinfo(path, variant):
 def find_packages_fs():
     # Treat the current directory as the base of a repository of packages.
     # The packages are in folders, each containing a buildinfo.json, build.
-    # Load all the buildinfos, topo-sort the dependencies, then build if/when
-    # needed (Check build_ids.json vs. new pull).
+    # Load all the requires out of all the buildinfo.json variants and return
+    # them.
+
     packages = dict()
     for name in os.listdir():
         if os.path.isdir(name):
             if not os.path.exists(os.path.join(name, "build")):
                 continue
-            buildinfo = load_buildinfo(name, None)
-            packages[name] = {'requires': buildinfo.get('requires', list())}
+
+            def get_requires(variant):
+                buildinfo = load_buildinfo(name, variant)
+                return {
+                    'requires': buildinfo.get('requires', list())
+                }
+
+            variant_requires = for_each_variant(get_requires, "buildinfo.json", [])
+
+            for variant, requires in variant_requires.items():
+                packages[(name, variant)] = requires
     return packages
 
 
@@ -235,39 +245,47 @@ def build_tree(mkbootstrap, repository_url):
     visited = set()
     built = set()
 
-    def visit(name):
+    def visit(pkg_tuple):
         # Visit the node for the first (and only time). Finding a node again
         # means a cycle and should be detected at caller.
-        assert name not in visited
-        visited.add(name)
+
+        assert isinstance(pkg_tuple, tuple)
+
+        assert pkg_tuple not in visited
+        visited.add(pkg_tuple)
+
+        name = pkg_tuple[0]
 
         # Ensure all dependencies are built
-        for require in sorted(packages[name].get("requires", list())):
-            if require in built:
+        for require in sorted(packages[pkg_tuple].get("requires", list())):
+            require_tuple = expand_require(require)
+            if require_tuple in built:
                 continue
-            if require in visited:
+            if require_tuple in visited:
                 print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require))
                 sys.exit(1)
 
             # TODO(cmaloney): Add support for id requires
             if PackageId.is_id(require):
-                raise NotImplementedError("Requires of specific ids")
-
-            if require not in packages:
-                print("ERROR: Package {0} Require {1} not buildable from tree.".format(name, require))
+                print("ERROR: Depending on a specific package id is not "
+                      "supported. Package", name, "depends on", require_tuple)
                 sys.exit(1)
 
-            visit(require)
+            if require not in packages:
+                print("ERROR: Package {0} require {1} not buildable from tree.".format(name, require_tuple))
+                sys.exit(1)
+
+            visit(require_tuple)
 
         build_order.append(name)
         built.add(name)
 
     # Since there may be multiple isolated dependency trees, iterate through
     # all packages to find them all.
-    for name in sorted(packages.keys()):
-        if name in visited:
+    for pkg_tuple in sorted(packages.keys()):
+        if pkg_tuple in visited:
             continue
-        visit(name)
+        visit(pkg_tuple)
 
     built_package_paths = set()
     start_dir = os.getcwd()
@@ -318,6 +336,31 @@ def for_each_variant(fn, extension, extra_args):
     results[None] = fn(None, *extra_args)
 
     return results
+
+
+def expand_require(require):
+    name = None
+    variant = None
+    if isinstance(str, require):
+        name = require
+    elif isinstance(dict, require):
+        if 'name' not in require or 'variant' not in require:
+            print("ERROR: When specifying a dependency in requires by",
+                  "dictionary to depend on a variant both the name of",
+                  "the package and the variant name must always be",
+                  "specified")
+            sys.exit(1)
+        name = require['name']
+        variant = require['variant']
+
+    if PackageId.is_id(name):
+        print("ERROR: Specifying a dependency on a exact package id",
+              "isn't allowed. Dependencies may be specified by package",
+              "name alone or package name + variant (to change the",
+              "package variant)")
+        sys.exit(1)
+
+    return (name, variant)
 
 
 # Find all build variants and build them
@@ -418,26 +461,7 @@ def build(variant, name, repository_url):
             sys.exit(1)
         while to_check:
             requires_info = to_check.pop(0)
-            requires_name = None
-            requires_variant = None
-            if isinstance(str, requires_info):
-                requires_name = requires_info
-            elif isinstance(dict, requires_info):
-                if 'name' not in requires_info or 'variant' not in requires_info:
-                    print("ERROR: When specifying a dependency in requires by",
-                          "dictionary to depend on a variant both the name of",
-                          "the package and the variant name must always be",
-                          "specified")
-                    sys.exit(1)
-                requires_name = requires_info['name']
-                requires_variant = requires_info['variant']
-
-            if PackageId.is_id(requires_name):
-                print("ERROR: Specifying a dependency on a exact package id",
-                      "isn't allowed. Dependencies may be specified by package",
-                      "name alone or package name + variant (to change the",
-                      "package variant)")
-                sys.exit(1)
+            requires_name, requires_variant = expand_require(requires_info)
 
             if requires_name in active_package_variants:
                 # TODO(cmaloney): If one package depends on the <default>

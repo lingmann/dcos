@@ -153,6 +153,10 @@ class Package:
         return self.__path
 
     @property
+    def variant(self):
+        return self.__pkginfo.get('variant', None)
+
+    @property
     def requires(self):
         return frozenset(self.__pkginfo.get('requires', list()))
 
@@ -193,6 +197,7 @@ def validate_compatible(packages, roles):
     # Every package name appears only once.
     names = set()
     ids = set()
+    tuples = set()
     for package in packages:
         if package.name in names:
             raise ValidationError(
@@ -200,6 +205,7 @@ def validate_compatible(packages, roles):
                     package.name, ' '.join(map(lambda x: str(x.id), packages))))
         names.add(package.name)
         ids.add(str(package.id))
+        tuples.add((package.name, package.variant))
 
     # All requires are met.
     # NOTE: Requires are given just to make it harder to accidentally
@@ -213,11 +219,16 @@ def validate_compatible(packages, roles):
         # Check that all requirements of the package are met.
         # Requirements can be specified on a package name or full version string.
         for requirement in package.requires:
-            if requirement not in names and requirement not in ids:
-                raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}".format(
-                    package.id,
-                    requirement,
-                    ', '.join(str(x.id) for x in packages)))
+            name, variant = expand_require(requirement)
+            if name not in names:
+                raise ValidationError(
+                    ("Package {} variant {} requires {} variant {} but that " +
+                     "is not in the set of packages {}").format(
+                        package.id,
+                        package.variant,
+                        name,
+                        variant,
+                        ', '.join(str(x.id) for x in packages)))
 
         # No repeated/conflicting environment variables with other packages as
         # well as magic system enviornment variables.

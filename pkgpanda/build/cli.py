@@ -598,6 +598,11 @@ def build(variant, name, repository_url):
     buildinfo['build_ids'] = build_ids
     buildinfo['package_version'] = version
 
+    # Save the package name and variant. The variant is used when installing
+    # packages to validate dependencies.
+    buildinfo['name'] = name
+    buildinfo['variant'] = variant
+
     # If the package is already built, don't do anything.
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
 

@@ -164,6 +164,30 @@ class Package:
         return str(self.__id)
 
 
+def expand_require(require):
+    name = None
+    variant = None
+    if isinstance(require, str):
+        name = require
+    elif isinstance(require, dict):
+        if 'name' not in require or 'variant' not in require:
+            raise ValidationError(
+                "When specifying a dependency in requires by dictionary to " +
+                "depend on a variant both the name of the package and the " +
+                "variant name must always be specified")
+        name = require['name']
+        variant = require['variant']
+
+    if PackageId.is_id(name):
+        raise ValidationError(
+            "ERROR: Specifying a dependency on '" + name + "', an exact" +
+            "package id isn't allowed. Dependencies may be specified by" +
+            "package name alone or package name + variant (to change the" +
+            "package variant).")
+
+    return (name, variant)
+
+
 # Check that a set of packages is reasonable.
 def validate_compatible(packages, roles):
     # Every package name appears only once.

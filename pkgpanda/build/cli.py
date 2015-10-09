@@ -22,6 +22,7 @@ from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
 from docopt import docopt
+from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
@@ -47,6 +48,14 @@ class DockerCmd:
         docker.append(self.container)
         docker += cmd
         check_call(docker)
+
+
+def expand_require(require):
+    try:
+        return expand_require_exceptions(require)
+    except ValidationError as ex:
+        print("ERROR:", ex)
+        sys.exit(1)
 
 
 def get_docker_id(docker_name):
@@ -403,31 +412,6 @@ def for_each_variant(fn, extension, extra_args):
     results[None] = fn(None, *extra_args)
 
     return results
-
-
-def expand_require(require):
-    name = None
-    variant = None
-    if isinstance(str, require):
-        name = require
-    elif isinstance(dict, require):
-        if 'name' not in require or 'variant' not in require:
-            print("ERROR: When specifying a dependency in requires by",
-                  "dictionary to depend on a variant both the name of",
-                  "the package and the variant name must always be",
-                  "specified")
-            sys.exit(1)
-        name = require['name']
-        variant = require['variant']
-
-    if PackageId.is_id(name):
-        print("ERROR: Specifying a dependency on a exact package id",
-              "isn't allowed. Dependencies may be specified by package",
-              "name alone or package name + variant (to change the",
-              "package variant)")
-        sys.exit(1)
-
-    return (name, variant)
 
 
 # Find all build variants and build them

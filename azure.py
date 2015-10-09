@@ -23,6 +23,10 @@ instance_groups = {
     'slave': {
         'report_name': 'SlaveServerGroup',
         'roles': ['slave']
+    },
+    'slave_public': {
+        'report_name': 'PublicSlaveServerGroup',
+        'roles': ['slave_public']
     }
 }
 
@@ -68,11 +72,13 @@ def transform(cloud_config_yaml_str):
 def render_arm(
         arm_template_json_str,
         master_cloudconfig_yaml_str,
-        slave_cloudconfig_yaml_str):
+        slave_cloudconfig_yaml_str,
+        slave_public_cloudconfig_yaml_str):
 
     template_str = util.jinja_env.from_string(arm_template_json_str).render({
         'master_cloud_config': transform(master_cloudconfig_yaml_str),
-        'slave_cloud_config': transform(slave_cloudconfig_yaml_str)
+        'slave_cloud_config': transform(slave_cloudconfig_yaml_str),
+        'slave_public_cloud_config': transform(slave_public_cloudconfig_yaml_str)
     })
 
     # Add in some metadata to help support engineers
@@ -126,7 +132,8 @@ def gen_templates(arguments, options):
     arm = render_arm(
         open('gen/azure/azuredeploy.json').read(),
         variant_cloudconfig['master'],
-        variant_cloudconfig['slave']
+        variant_cloudconfig['slave'],
+        variant_cloudconfig['slave_public']
         )
 
     return gen.Bunch({

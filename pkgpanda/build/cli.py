@@ -341,22 +341,23 @@ def build_tree(mkbootstrap, repository_url):
             if require_tuple in built:
                 continue
             if require_tuple in visited:
-                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require))
+                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require_tuple))
+                raise ValueError
                 sys.exit(1)
 
-            if PackageId.is_id(require):
+            if PackageId.is_id(require_tuple[0]):
                 print("ERROR: Depending on a specific package id is not "
                       "supported. Package", name, "depends on", require_tuple)
                 sys.exit(1)
 
-            if require not in packages:
+            if require_tuple not in packages:
                 print("ERROR: Package {0} require {1} not buildable from tree.".format(name, require_tuple))
                 sys.exit(1)
 
             visit(require_tuple)
 
         build_order.append(name)
-        built.add(name)
+        built.add(pkg_tuple)
 
     # Since there may be multiple isolated dependency trees, iterate through
     # all packages to find them all.
@@ -551,7 +552,7 @@ def build(variant, name, repository_url):
                 pkg_buildinfo = load_buildinfo(pkg_dir, requires_variant)
                 pkg_requires = pkg_buildinfo.get('requires', list())
                 pkg_path = repository.package_path(pkg_id_str)
-                pkg_tar = '{1}.tar.xz'.format(pkg_id_str)
+                pkg_tar = pkg_id_str + '.tar.xz'
                 if not os.path.exists(pkg_dir + '/' + pkg_tar):
                     print("ERROR: The build tarball", pkg_tar, "refered to by",
                           "the last_build file of the dependency",

@@ -3,14 +3,18 @@ set -o errexit -o nounset -o pipefail
 
 function usage {
   cat <<USAGE
-This script builds the mesosphere/dcos-genconf Docker image. The resulting
-Docker image will be tagged with the SHA of the components, in the following
-order:
+This script builds and publishes the mesosphere/dcos-genconf Docker image. At
+build time, a "with-bootstrap" version of the image is also built containing the
+bootstrap tarball and embedded into an installer script.
 
-  mesosphere/dcos-genconf:\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
+The Docker images will include the SHA of the components, as follows:
 
-The tag is also written to a file named docker-tag in the current working
-directory. SHA's may be shortened to an unambiguous length.
+mesosphere/dcos-genconf:\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
+mesosphere/dcos-genconf:with-bootstrap-\${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID}
+
+A tag in the format: \${DCOS_IMAGE_SHA}-\${PKGPANDA_SHA}-\${BOOTSTRAP_ID} is
+written to a file name docker-tag in the current working directory. SHA's may
+be shortened to an unambiguous length.
 
  The following environment variables must be set:
    export PKGPANDA_SRC=pkgpanda               # Set to pkgpanda git checkout
@@ -56,8 +60,13 @@ function get_build_dir {
   "channel_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON
-  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export DOCKER_TAG="$DOCKER_TAG"
+  export BOOTSTRAP_FILENAME="${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/$BOOTSTRAP_FILENAME"
+  export GENCONF_TAR="$GENCONF_TAR"
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
+  envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/Dockerfile-bootstrap
+  envsubst '$DOCKER_TAG:$GENCONF_TAR' < "${MY_ROOT}"/dcos_generate_config.sh.in > dcos_generate_config.sh
   out "$tmpdir"
 }
 
@@ -90,6 +99,7 @@ function check_prereqs {
   : ${BOOTSTRAP_ID:?"ERROR: BOOTSTRAP_ID env var must be set"}
 
   DOCKER_TAG="${DCOS_IMAGE_SHA:0:12}-${PKGPANDA_SHA:0:12}-${BOOTSTRAP_ID:0:12}"
+  GENCONF_TAR="dcos-genconf.${DOCKER_TAG}.tar"
 }
 
 function main {
@@ -105,8 +115,14 @@ function build {
   echo "Building: $1"
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
+  docker build -t mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" - < Dockerfile-bootstrap
   popd
   echo "$DOCKER_TAG" > docker-tag
+
+  echo "Building dcos_genergate_config.sh"
+  docker save mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" > "$GENCONF_TAR"
+  tar cvf - "$GENCONF_TAR" >> dcos_generate_config.sh
+  chmod +x dcos_generate_config.sh
 }
 
 # Push the built image to Docker hub
@@ -131,6 +147,7 @@ function cleanup {
     msg "No such directory: $1"
     exit 1
   fi
+  rm -rf "$GENCONF_TAR"
 }
 
 function msg { out "$*" >&2 ;}

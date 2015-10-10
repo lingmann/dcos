@@ -1,0 +1,5 @@
+FROM mesosphere/dcos-genconf:$DOCKER_TAG
+MAINTAINER support+dcos@mesosphere.io
+
+
+RUN mkdir -p /artifacts && curl -fsSL -o /artifacts/${BOOTSTRAP_FILENAME} ${BOOTSTRAP_TAR}

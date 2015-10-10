@@ -10,3 +10,4 @@ dcos_install.sh
 onprem.tar.xz
 *~
 *backups
+docker-tag

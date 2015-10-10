@@ -107,7 +107,7 @@ def main():
 
 
 def last_build_filename(variant):
-    return "cache/last_build" + (("_" + variant) if variant else "")
+    return "cache/" + ((variant + '.') if variant else "") + "latest"
 
 
 def load_optional_json(filename):

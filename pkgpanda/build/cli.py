@@ -139,6 +139,7 @@ def find_packages_fs():
     # The packages are in folders, each containing a buildinfo.json, build.
     # Load all the requires out of all the buildinfo.json variants and return
     # them.
+    start_dir = os.getcwd()
 
     packages = dict()
     for name in os.listdir():
@@ -152,10 +153,13 @@ def find_packages_fs():
                     'requires': buildinfo.get('requires', list())
                 }
 
+            os.chdir(start_dir + '/' + name)
             variant_requires = for_each_variant(get_requires, "buildinfo.json", [])
+            os.chdir(start_dir)
 
             for variant, requires in variant_requires.items():
                 packages[(name, variant)] = requires
+
     return packages
 
 
@@ -292,8 +296,8 @@ def get_tree_packages(tree_variant, built_packages, package_requires):
     # because we iterate over the list of packages once so only one variant
     # could get included. If another variant is asked for in the requires,
     # then that variant won't be included and we'll error.
-    for name, variant in variants:
-        requires = package_requires[name]
+    for name, variant in variants.items():
+        requires = package_requires[(name, variant)]['requires']
         for require in requires:
             require_tuple = expand_require(require)
             if require_tuple not in package_tuples:
@@ -359,9 +363,14 @@ def build_tree(mkbootstrap, repository_url):
         build_order.append(name)
         built.add(pkg_tuple)
 
+    # Can't compare none to string, so expand none -> "true" / "false", then put
+    # the string in a field after "" if none, the string if not.
+    def key_func(elem):
+        return elem[0], elem[1] is None,  elem[1] or ""
+
     # Since there may be multiple isolated dependency trees, iterate through
     # all packages to find them all.
-    for pkg_tuple in sorted(packages.keys()):
+    for pkg_tuple in sorted(packages.keys(), key=key_func):
         if pkg_tuple in visited:
             continue
         visit(pkg_tuple)
@@ -377,6 +386,7 @@ def build_tree(mkbootstrap, repository_url):
         os.chdir(start_dir)
 
     def make_bootstrap(variant):
+        print("Making bootstrap variant:", variant or "<default>")
         package_paths = get_tree_packages(variant, built_packages, packages)
 
         if mkbootstrap:
@@ -384,7 +394,7 @@ def build_tree(mkbootstrap, repository_url):
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.
-    for_each_variant(make_bootstrap, "treeinfo", [])
+    for_each_variant(make_bootstrap, "treeinfo.json", [])
 
 
 def expand_single_source_alias(pkg_name, buildinfo):
@@ -461,7 +471,6 @@ def build(variant, name, repository_url):
     for src_name, checkout_id in checkout_ids.items():
         # NOTE: single_source buildinfo was expanded above so the src_name is
         # always correct here.
-
         # Make sure we never accidentally overwrite something which might be
         # important. Fields should match if specified (And that should be
         # tested at some point). For now disallowing identical saves hassle.

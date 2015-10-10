@@ -11,7 +11,9 @@ Usage:
 """
 
 import copy
+import glob
 import os.path
+import shutil
 import sys
 import tempfile
 from os import getcwd, mkdir, umask
@@ -20,11 +22,12 @@ from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
 from docopt import docopt
+from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
-from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, make_bootstrap_tarball, sha1
+from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, load_string, make_tar, rewrite_symlinks, write_json, write_string
+from pkgpanda.util import load_json, load_string, make_file, make_tar, rewrite_symlinks, write_json, write_string
 
 
 class DockerCmd:
@@ -45,6 +48,14 @@ class DockerCmd:
         docker.append(self.container)
         docker += cmd
         check_call(docker)
+
+
+def expand_require(require):
+    try:
+        return expand_require_exceptions(require)
+    except ValidationError as ex:
+        print("ERROR:", ex)
+        sys.exit(1)
 
 
 def get_docker_id(docker_name):
@@ -84,38 +95,222 @@ def main():
         sys.exit(0)
 
     # No command -> build package.
-    pkg_path = build(name, arguments['--repository-url'])
+    pkg_dict = build_package_variants(name, arguments['--repository-url'])
 
-    print("Package available at: {}".format(pkg_path))
+    print("Package variants available as:")
+    for k, v in pkg_dict.items():
+        if k is None:
+            k = "<default>"
+        print(k + ':' + v)
 
     sys.exit(0)
 
 
-def load_buildinfo(path):
+def last_build_filename(variant):
+    return "cache/" + ((variant + '.') if variant else "") + "latest"
+
+
+def load_optional_json(filename):
     # Load the package build info.
     try:
-        return load_json(os.path.join(path, "buildinfo.json"))
+        return load_json(filename)
     except FileNotFoundError:
-        # All fields in buildinfo are optional.
+        # not existing -> empty dictionary / no specified values.
         return {}
     except ValueError as ex:
         print("ERROR:", ex)
         sys.exit(1)
 
 
+def load_config_variant(directory, variant, extension):
+    assert directory[-1] != '/'
+    filename = extension
+    if variant:
+        filename = variant + '.' + filename
+    return load_optional_json(directory + '/' + filename)
+
+
+def load_buildinfo(path, variant):
+    return load_config_variant(path, variant, 'buildinfo.json')
+
+
 def find_packages_fs():
     # Treat the current directory as the base of a repository of packages.
     # The packages are in folders, each containing a buildinfo.json, build.
-    # Load all the buildinfos, topo-sort the dependencies, then build if/when
-    # needed (Check build_ids.json vs. new pull).
+    # Load all the requires out of all the buildinfo.json variants and return
+    # them.
+    start_dir = os.getcwd()
+
     packages = dict()
     for name in os.listdir():
         if os.path.isdir(name):
             if not os.path.exists(os.path.join(name, "build")):
                 continue
-            buildinfo = load_buildinfo(name)
-            packages[name] = {'requires': buildinfo.get('requires', list())}
+
+            def get_requires(variant):
+                buildinfo = load_buildinfo(name, variant)
+                return {
+                    'requires': buildinfo.get('requires', list())
+                }
+
+            os.chdir(start_dir + '/' + name)
+            variant_requires = for_each_variant(get_requires, "buildinfo.json", [])
+            os.chdir(start_dir)
+
+            for variant, requires in variant_requires.items():
+                packages[(name, variant)] = requires
+
     return packages
+
+
+def make_bootstrap_tarball(packages):
+    # Convert filenames to package ids
+    pkg_ids = list()
+    for pkg_path in packages:
+        # Get the package id from the given package path
+        filename = os.path.basename(pkg_path)
+        if not filename.endswith(".tar.xz"):
+            print("ERROR: Packages must be packaged / end with .tar.xz")
+            sys.exit(1)
+        pkg_id = filename[:-len(".tar.xz")]
+        pkg_ids.append(pkg_id)
+
+    # Filename is output_name.<sha-1>.{active.json|.bootstrap.tar.xz}
+    bootstrap_id = hash_checkout(pkg_ids)
+    latest_name = "bootstrap.latest"
+
+    output_name = bootstrap_id + '.'
+
+    # bootstrap tarball = <sha1 of packages in tarball>.bootstrap.tar.xz
+    bootstrap_name = "{}bootstrap.tar.xz".format(output_name)
+    active_name = "{}active.json".format(output_name)
+    if (os.path.exists(bootstrap_name)):
+        # Ensure latest is always written
+        write_string(latest_name, bootstrap_id)
+
+        print("Bootstrap already up to date, not recreating")
+        print("bootstrap: {}".format(bootstrap_name))
+        print("active: {}".format(active_name))
+        print("latest: {}".format(latest_name))
+        return bootstrap_name
+
+    print("Building bootstrap tarball")
+
+    work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
+
+    def make_abs(path):
+        return os.path.join(work_dir, path)
+
+    pkgpanda_root = make_abs("opt/mesosphere")
+    repository = pkgpanda.Repository(os.path.join(pkgpanda_root, "packages"))
+
+    # Fetch all the packages to the root
+    for pkg_path in packages:
+        filename = os.path.basename(pkg_path)
+        pkg_id = filename[:-len(".tar.xz")]
+
+        def local_fetcher(id, target):
+            shutil.unpack_archive(pkg_path, target, "gztar")
+        repository.add(local_fetcher, pkg_id, False)
+
+    # Activate the packages inside the repository.
+    # Do generate dcos.target.wants inside the root so that we don't
+    # try messing with /etc/systemd/system.
+    install = pkgpanda.Install(pkgpanda_root, None, True, False, True, True, True)
+    install.activate(repository, repository.load_packages(pkg_ids))
+
+    # Mark the tarball as a bootstrap tarball/filesystem so that
+    # dcos-setup.service will fire.
+    make_file(make_abs("opt/mesosphere/bootstrap"))
+
+    # Write out an active.json for the bootstrap tarball
+    write_json(active_name, pkg_ids)
+
+    # Rewrite all the symlinks to point to /opt/mesosphere
+    rewrite_symlinks(work_dir, work_dir, "/")
+
+    make_tar(bootstrap_name, pkgpanda_root)
+
+    shutil.rmtree(work_dir)
+
+    # Update latest last so that we don't ever use partially-built things.
+    write_string(latest_name, bootstrap_id)
+
+    print("Built bootstrap")
+    print("bootstrap: {}".format(bootstrap_name))
+    print("active: {}".format(active_name))
+    print("latest: {}".format(latest_name))
+    return bootstrap_name
+
+
+def get_tree_packages(tree_variant, built_packages, package_requires):
+    treeinfo = load_config_variant(os.getcwd(), tree_variant, 'treeinfo.json')
+
+    excludes = treeinfo.get('exclude', list())
+    if not isinstance(excludes, list):
+        print("ERROR: treeinfo exclude must be a list of packages to exclude.")
+        sys.exit(1)
+
+    for exclude in excludes:
+        if not isinstance(exclude, str):
+            print("ERROR: Excludes should be a list of strings of package names.",
+                  "Found a", type(exclude), "with the value: {}".format(exclude))
+            sys.exit(1)
+
+    # List of mandatory package variants to include in the buildinfo.
+    variants = treeinfo.get('variants', dict())
+
+    if not isinstance(variants, dict):
+        print("ERROR: treeinfo variants must be a dictionary of package name to variant name.")
+        sys.exit(1)
+
+    # Generate the list of package paths of all packages variants which were
+    # included and excluding those removed.
+    package_paths = list()
+    package_names = set()
+    package_tuples = set()
+    for name, built_variants in built_packages.items():
+        if name in excludes:
+            continue
+
+        # Sanity check
+        assert name not in package_names
+
+        variant = variants.get(name)
+        package_paths.append(built_variants[variant])
+        package_names.add(name)
+        package_tuples.add((name, variant))
+
+    # Validate that all mandatory package variants are included
+    for name, variant in variants.items():
+        if (name, variant) not in package_tuples:
+            print("ERROR: package", name, "is supposed to have variant",
+                  variant, "included in the tree according",
+                  "to the treeinfo.json, but the no such package (let alone",
+                  "variant) was found")
+            sys.exit(1)
+
+    # Validate that all required packages are included. This implicitly
+    # validates that no two packages include conflicting variants. If they
+    # included different variants, only one of the variant could be included
+    # because we iterate over the list of packages once so only one variant
+    # could get included. If another variant is asked for in the requires,
+    # then that variant won't be included and we'll error.
+    for name, variant in variants.items():
+        requires = package_requires[(name, variant)]['requires']
+        for require in requires:
+            require_tuple = expand_require(require)
+            if require_tuple not in package_tuples:
+                print("ERROR: Package", name, "requires", require_tuple[0],
+                      "variant", require_tuple[1], "but that is not in the set",
+                      "of packages listed for the tree", tree_variant, ":", package_tuples)
+                sys.exit(1)
+
+    # Integrity / programming check excludes were all excluded.
+    for exclude in excludes:
+        assert exclude not in package_names
+
+    return package_paths
 
 
 def build_tree(mkbootstrap, repository_url):
@@ -133,59 +328,73 @@ def build_tree(mkbootstrap, repository_url):
     visited = set()
     built = set()
 
-    def visit(name):
+    def visit(pkg_tuple):
         # Visit the node for the first (and only time). Finding a node again
         # means a cycle and should be detected at caller.
-        assert name not in visited
-        visited.add(name)
+
+        assert isinstance(pkg_tuple, tuple)
+
+        assert pkg_tuple not in visited
+        visited.add(pkg_tuple)
+
+        name = pkg_tuple[0]
 
         # Ensure all dependencies are built
-        for require in sorted(packages[name].get("requires", list())):
-            if require in built:
+        for require in sorted(packages[pkg_tuple].get("requires", list())):
+            require_tuple = expand_require(require)
+            if require_tuple in built:
                 continue
-            if require in visited:
-                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require))
+            if require_tuple in visited:
+                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require_tuple))
+                raise ValueError
                 sys.exit(1)
 
-            # TODO(cmaloney): Add support for id requires
-            if PackageId.is_id(require):
-                raise NotImplementedError("Requires of specific ids")
-
-            if require not in packages:
-                print("ERROR: Package {0} Require {1} not buildable from tree.".format(name, require))
+            if PackageId.is_id(require_tuple[0]):
+                print("ERROR: Depending on a specific package id is not "
+                      "supported. Package", name, "depends on", require_tuple)
                 sys.exit(1)
 
-            visit(require)
+            if require_tuple not in packages:
+                print("ERROR: Package {0} require {1} not buildable from tree.".format(name, require_tuple))
+                sys.exit(1)
+
+            visit(require_tuple)
 
         build_order.append(name)
-        built.add(name)
+        built.add(pkg_tuple)
+
+    # Can't compare none to string, so expand none -> "true" / "false", then put
+    # the string in a field after "" if none, the string if not.
+    def key_func(elem):
+        return elem[0], elem[1] is None,  elem[1] or ""
 
     # Since there may be multiple isolated dependency trees, iterate through
     # all packages to find them all.
-    for name in sorted(packages.keys()):
-        if name in visited:
+    for pkg_tuple in sorted(packages.keys(), key=key_func):
+        if pkg_tuple in visited:
             continue
-        visit(name)
+        visit(pkg_tuple)
 
-    built_package_paths = set()
+    built_packages = dict()
     start_dir = os.getcwd()
     for name in build_order:
         print("Building: {}".format(name))
 
-        # Run the build
+        # Run the build, store the built package path for later use.
         os.chdir(start_dir + '/' + name)
-        pkg_path = build(name, repository_url)
+        built_packages[name] = build_package_variants(name, repository_url)
         os.chdir(start_dir)
 
-        # Add the package to the set of built packages.
-        built_package_paths.add(pkg_path)
+    def make_bootstrap(variant):
+        print("Making bootstrap variant:", variant or "<default>")
+        package_paths = get_tree_packages(variant, built_packages, packages)
 
-    # Build the tarball if requested, along with a "active.json"
-    if mkbootstrap:
-        # TODO(cmaloney): This does a ton of excess repeated work...
-        # use the repository built during package building instead of
-        # building a new one for the package tarball (just mv it).
-        make_bootstrap_tarball('', list(sorted(built_package_paths)))
+        if mkbootstrap:
+            return make_bootstrap_tarball(list(sorted(package_paths)))
+
+    # Make sure all treeinfos are satisfied and generate their bootstrap
+    # tarballs if requested.
+    return for_each_variant(make_bootstrap, "treeinfo.json", [])
 
 
 def expand_single_source_alias(pkg_name, buildinfo):
@@ -204,7 +413,25 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def build(name, repository_url):
+def for_each_variant(fn, extension, extra_args):
+    results = dict()
+    for filename in glob.glob("*." + extension):
+        variant = filename[:-len("." + extension)]
+        results[variant] = fn(variant, *extra_args)
+
+    # Always do the base variant
+    results[None] = fn(None, *extra_args)
+
+    return results
+
+
+# Find all build variants and build them
+def build_package_variants(name, repository_url):
+    return for_each_variant(build, "buildinfo.json", [name, repository_url])
+
+
+def build(variant, name, repository_url):
+    print("Building package {} variant {}".format(name, variant or "<default>"))
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)
 
@@ -214,11 +441,16 @@ def build(name, repository_url):
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo(os.getcwd())
+    buildinfo = load_buildinfo(os.getcwd(), variant)
 
     if 'name' in buildinfo:
         print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
               "implicitly the name of the folder containing the buildinfo.json")
+        sys.exit(1)
+
+    # Make sure build_script is only set on variants
+    if 'build_script' in buildinfo and variant is None:
+        print("ERROR: build_script can only be set on package variants")
         sys.exit(1)
 
     # Convert single_source -> sources
@@ -239,7 +471,6 @@ def build(name, repository_url):
     for src_name, checkout_id in checkout_ids.items():
         # NOTE: single_source buildinfo was expanded above so the src_name is
         # always correct here.
-
         # Make sure we never accidentally overwrite something which might be
         # important. Fields should match if specified (And that should be
         # tested at some point). For now disallowing identical saves hassle.
@@ -275,8 +506,8 @@ def build(name, repository_url):
     install_dir = tempfile.mkdtemp(prefix="pkgpanda-")
 
     active_packages = list()
-    active_package_names = set()
     active_package_ids = set()
+    active_package_variants = dict()
     auto_deps = set()
     # Verify all requires are in the repository.
     if 'requires' in buildinfo:
@@ -290,41 +521,59 @@ def build(name, repository_url):
             print("`requires` in buildinfo.json must be an array of dependencies.")
             sys.exit(1)
         while to_check:
-            pkg_str = to_check.pop(0)
-            try:
-                if PackageId.is_id(pkg_str):
-                    # Package names only ATM.
-                    raise NotImplementedError()
+            requires_info = to_check.pop(0)
+            requires_name, requires_variant = expand_require(requires_info)
 
-                # Try and add the package automatically
-                last_build = '../{}/cache/last_build'.format(pkg_str)
-                if not os.path.exists(last_build):
-                    print("ERROR: No last build for dependency {}. Build it then build this package.".format(pkg_str))
+            if requires_name in active_package_variants:
+                # TODO(cmaloney): If one package depends on the <default>
+                # variant of a package and 1+ others depends on a non-<default>
+                # variant then update the dependency to the non-default variant
+                # rather than erroring.
+                if requires_variant != active_package_variants[requires_name]:
+                    # TODO(cmaloney): Make this contain the chains of
+                    # dependencies which contain the conflicting packages.
+                    # a -> b -> c -> d {foo}
+                    # e {bar} -> d {baz}
+                    print("ERROR: Dependncy on multiple variants of the same",
+                          "package", requires_name, ". variants:", requires_variant,
+                          active_package_variants[requires_name])
                     sys.exit(1)
-                pkg_name = pkg_str
+
+                # The variant has package {requires_name, variant} already is a
+                # dependency, don't process it again / move on to the next.
+                continue
+
+            active_package_variants[requires_name] = requires_variant
+
+            # Figure out the last build of the dependency, add that as the
+            # fully expanded dependency.
+            pkg_dir = '../' + requires_name
+            last_build = pkg_dir + '/' + last_build_filename(requires_variant)
+            if not os.path.exists(last_build):
+                print("ERROR: No last build file found for dependency",
+                      requires_name, "variant", requires_variant,
+                      "Rebuild the dependency")
+                sys.exit(1)
+
+            try:
                 pkg_id_str = load_string(last_build)
                 auto_deps.add(pkg_id_str)
-                pkg_buildinfo = load_buildinfo('../{}'.format(pkg_str))
+                pkg_buildinfo = load_buildinfo(pkg_dir, requires_variant)
                 pkg_requires = pkg_buildinfo.get('requires', list())
                 pkg_path = repository.package_path(pkg_id_str)
-                if not os.path.exists('../{0}/{1}.tar.xz'.format(pkg_str, pkg_id_str)):
-                    print("ERROR: Last build for dependency {} doesn't exist.".format(pkg_str) +
-                          " Rebuild the dependency.")
+                pkg_tar = pkg_id_str + '.tar.xz'
+                if not os.path.exists(pkg_dir + '/' + pkg_tar):
+                    print("ERROR: The build tarball", pkg_tar, "refered to by",
+                          "the last_build file of the dependency",
+                          requires_name, "variant", requires_variant, "doesn't",
+                          "exist. Rebuild the dependency.")
                     sys.exit(1)
-
-                if PackageId(pkg_id_str).name in active_package_names:
-                    continue
 
                 active_package_ids.add(pkg_id_str)
 
                 # Mount the package into the docker container.
                 cmd.volumes[pkg_path] = "/opt/mesosphere/packages/{}:ro".format(pkg_id_str)
-
                 os.makedirs(os.path.join(install_dir, "packages/{}".format(pkg_id_str)))
-
-                # Mark the package as active so we don't check it again and
-                # infinite loop on cycles.
-                active_package_names.add(pkg_name)
 
                 # Add the dependencies of the package to the set which will be
                 # activated.
@@ -333,10 +582,10 @@ def build(name, repository_url):
                 # them directly.
                 to_check += pkg_requires
             except ValidationError as ex:
-                print("ERROR validating package needed as dependency {0}: {1}".format(pkg_str, ex))
+                print("ERROR validating package needed as dependency {0}: {1}".format(requires_name, ex))
                 bad_requires = True
             except PackageError as ex:
-                print("ERROR loading package needed as dependency {0}: {1}".format(pkg_str, ex))
+                print("ERROR loading package needed as dependency {0}: {1}".format(requires_name, ex))
                 bad_requires = True
 
         if bad_requires:
@@ -359,6 +608,11 @@ def build(name, repository_url):
     buildinfo['build_ids'] = build_ids
     buildinfo['package_version'] = version
 
+    # Save the package name and variant. The variant is used when installing
+    # packages to validate dependencies.
+    buildinfo['name'] = name
+    buildinfo['variant'] = variant
+
     # If the package is already built, don't do anything.
     pkg_path = abspath("{}.tar.xz".format(pkg_id))
 
@@ -369,7 +623,7 @@ def build(name, repository_url):
         # TODO(cmaloney): Updating / filling last_build should be moved out of
         # the build function.
         check_call(["mkdir", "-p", "cache"])
-        write_string("cache/last_build", str(pkg_id))
+        write_string(last_build_filename(variant), str(pkg_id))
 
         return pkg_path
 
@@ -391,7 +645,7 @@ def build(name, repository_url):
             # TODO(cmaloney): Updating / filling last_build should be moved out of
             # the build function.
             check_call(["mkdir", "-p", "cache"])
-            write_string("cache/last_build", str(pkg_id))
+            write_string(last_build_filename(variant), str(pkg_id))
             return pkg_path
         except CalledProcessError as ex:
             try:
@@ -460,7 +714,7 @@ def build(name, repository_url):
         # TODO(cmaloney): src should be read only...
         abspath("src"): "/pkg/src:rw",
         # The build script
-        abspath("build"): "/pkg/build:ro",
+        abspath(buildinfo.get('build_script', 'build')): "/pkg/build:ro",
         # Getting the result out
         abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"
@@ -469,7 +723,8 @@ def build(name, repository_url):
         "PKG_VERSION": version,
         "PKG_NAME": name,
         "PKG_ID": pkg_id,
-        "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id)
+        "PKG_PATH": "/opt/mesosphere/packages/{}".format(pkg_id),
+        "PKG_VARIANT": variant if variant is not None else "<default>"
     }
 
     try:
@@ -496,7 +751,7 @@ def build(name, repository_url):
     # TODO(cmaloney): Updating / filling last_build should be moved out of
     # the build function.
     check_call(["mkdir", "-p", "cache"])
-    write_string("cache/last_build", str(pkg_id))
+    write_string(last_build_filename(variant), str(pkg_id))
 
     # Bundle the artifacts into the pkgpanda package
     tmp_name = pkg_path + "-tmp.tar.xz"

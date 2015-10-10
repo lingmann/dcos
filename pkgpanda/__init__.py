@@ -153,6 +153,10 @@ class Package:
         return self.__path
 
     @property
+    def variant(self):
+        return self.__pkginfo.get('variant', None)
+
+    @property
     def requires(self):
         return frozenset(self.__pkginfo.get('requires', list()))
 
@@ -164,11 +168,36 @@ class Package:
         return str(self.__id)
 
 
+def expand_require(require):
+    name = None
+    variant = None
+    if isinstance(require, str):
+        name = require
+    elif isinstance(require, dict):
+        if 'name' not in require or 'variant' not in require:
+            raise ValidationError(
+                "When specifying a dependency in requires by dictionary to " +
+                "depend on a variant both the name of the package and the " +
+                "variant name must always be specified")
+        name = require['name']
+        variant = require['variant']
+
+    if PackageId.is_id(name):
+        raise ValidationError(
+            "ERROR: Specifying a dependency on '" + name + "', an exact" +
+            "package id isn't allowed. Dependencies may be specified by" +
+            "package name alone or package name + variant (to change the" +
+            "package variant).")
+
+    return (name, variant)
+
+
 # Check that a set of packages is reasonable.
 def validate_compatible(packages, roles):
     # Every package name appears only once.
     names = set()
     ids = set()
+    tuples = set()
     for package in packages:
         if package.name in names:
             raise ValidationError(
@@ -176,6 +205,7 @@ def validate_compatible(packages, roles):
                     package.name, ' '.join(map(lambda x: str(x.id), packages))))
         names.add(package.name)
         ids.add(str(package.id))
+        tuples.add((package.name, package.variant))
 
     # All requires are met.
     # NOTE: Requires are given just to make it harder to accidentally
@@ -189,11 +219,16 @@ def validate_compatible(packages, roles):
         # Check that all requirements of the package are met.
         # Requirements can be specified on a package name or full version string.
         for requirement in package.requires:
-            if requirement not in names and requirement not in ids:
-                raise ValidationError("Package {0} requires {1} but that is not in the set of packages {2}".format(
-                    package.id,
-                    requirement,
-                    ', '.join(str(x.id) for x in packages)))
+            name, variant = expand_require(requirement)
+            if name not in names:
+                raise ValidationError(
+                    ("Package {} variant {} requires {} variant {} but that " +
+                     "is not in the set of packages {}").format(
+                        package.id,
+                        package.variant,
+                        name,
+                        variant,
+                        ', '.join(str(x.id) for x in packages)))
 
         # No repeated/conflicting environment variables with other packages as
         # well as magic system enviornment variables.

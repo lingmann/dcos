@@ -390,11 +390,11 @@ def build_tree(mkbootstrap, repository_url):
         package_paths = get_tree_packages(variant, built_packages, packages)
 
         if mkbootstrap:
-            make_bootstrap_tarball(list(sorted(package_paths)))
+            return make_bootstrap_tarball(list(sorted(package_paths)))
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.
-    for_each_variant(make_bootstrap, "treeinfo.json", [])
+    return for_each_variant(make_bootstrap, "treeinfo.json", [])
 
 
 def expand_single_source_alias(pkg_name, buildinfo):

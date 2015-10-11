@@ -148,7 +148,7 @@ def find_packages_fs():
                 continue
 
             def get_requires(variant):
-                buildinfo = load_buildinfo(name, variant)
+                buildinfo = load_buildinfo(os.getcwd(), variant)
                 return {
                     'requires': buildinfo.get('requires', list())
                 }

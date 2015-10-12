@@ -11,7 +11,6 @@ write_files:
       # TODO(cmaloney): Add cluster general info for analytics here
       ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/mesos-master-provider
-    # TODO(cmaloney): MESOS_HOSTNAME, MESOS_IP break upgrade paths
     content: |
       MESOS_CLUSTER=[[[variables('uniqueName')]]]
   - path: /etc/mesosphere/setup-packages/dcos-provider-azure--setup/etc/exhibitor

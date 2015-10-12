@@ -1,5 +1,5 @@
 {
-  "requires": ["mesos-buildenv", "exhibitor"],
+  "requires": ["mesos-buildenv", "exhibitor", "openssl", "libevent"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",

@@ -1,0 +1,9 @@
+{
+  "docker": "dcos-builder",
+  "requires": ["openssl"],
+  "single_source": {
+    "kind": "git",
+    "git": "https://github.com/libevent/libevent",
+    "ref": "release-2.0.22-stable"
+  }
+}

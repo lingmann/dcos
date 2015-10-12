@@ -1,0 +1,6 @@
+{
+  "single_source" : {
+    "kind": "url_extract",
+    "url" : "file://foo.zip"
+  }
+}

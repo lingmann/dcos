@@ -57,6 +57,85 @@ def get_filename(out_dir, url_str):
         return os.path.join(out_dir, os.path.basename(url.path))
 
 
+def _identify_archive_type(filename):
+    """Identify archive type basing on extension
+
+    Args:
+        filename: the path to the archive
+
+    Returns:
+        Currently only zip and tar.*/tgz archives are supported. The return values
+        for them are 'tar' and 'zip' respectively
+    """
+    parts = filename.split('.')
+    if len(parts) >= 3 and parts[-2] == 'tar' or len(parts) >= 2 and parts[-1] == 'tgz':
+        return 'tar'
+    elif len(parts) >= 2 and parts[-1] == 'zip':
+        return 'zip'
+    else:
+        return 'unknown'
+
+
+def _check_components_sanity(path):
+    """Check if archive is sane
+
+    Check if there is only one top level component (directory) in the extracted
+    archive's directory.
+
+    Args:
+        path: path to the extracted archive's directory
+
+    Raises:
+        Raise an exception if there is anything else than a single directory
+    """
+    dir_contents = os.listdir(path)
+
+    if len(dir_contents) != 1 or not os.path.isdir(os.path.join(path, dir_contents[0])):
+        raise ValidationError("Extracted archive has more than one top level"
+                              "component, unable to strip it.")
+
+
+def _strip_components_paths(path, components=0):
+    """Simulate tar's --strip-components behaviour using file operations
+
+    Unarchivers like unzip do not support stripping component paths while
+    inflating the archive. This function simulates this behaviour by moving
+    files around and then removing the TLD directory.
+
+    Args:
+        path: path where extracted archive contents can be found
+        components: compontents to strip
+    """
+    if components <= 0:
+        return
+
+    _check_components_sanity(path)
+
+    top_level_dir = os.path.join(path, os.listdir(path)[0])
+
+    contents = os.listdir(top_level_dir)
+
+    for entry in contents:
+        old_path = os.path.join(top_level_dir, entry)
+        new_path = os.path.join(path, entry)
+        os.rename(old_path, new_path)
+
+    os.rmdir(top_level_dir)
+
+
+def extract_archive(archive, dst_dir):
+    archive_type = _identify_archive_type(archive)
+
+    if archive_type == 'tar':
+        check_call(["tar", "-xf", archive, "--strip-components=1", "-C", dst_dir])
+    elif archive_type == 'zip':
+        check_call(["unzip", "-x", archive, "-d", dst_dir])
+        # unzip binary does not support '--strip-components=1',
+        _strip_components_paths(dst_dir, components=1)
+    else:
+        raise ValidationError("Unsupported archive: {}".format(os.path.basename(archive)))
+
+
 def fetch_url(out_filename, url_str):
     url = urlparse(url_str)
 
@@ -134,7 +213,7 @@ def checkout_sources(sources):
         elif info['kind'] == 'url_extract':
             # Extract the files into src.
             cache_filename = get_filename(os.path.abspath("cache"), info['url'])
-            check_call(["tar", "-xf", cache_filename, "--strip-components=1", "-C", root])
+            extract_archive(cache_filename, root)
         else:
             raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
 

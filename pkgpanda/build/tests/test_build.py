@@ -23,8 +23,12 @@ def test_single_source(tmpdir):
     package("resources/single_source", "single_source", tmpdir)
 
 
-def test_url_extract(tmpdir):
-    package("resources/url_extract", "url_extract", tmpdir)
+def test_url_extract_tar(tmpdir):
+    package("resources/url_extract-tar", "url_extract-tar", tmpdir)
+
+
+def test_url_extract_zip(tmpdir):
+    package("resources/url_extract-zip", "url_extract-zip", tmpdir)
 
 
 def test_no_buildinfo(tmpdir):
@@ -72,7 +76,8 @@ def test_bootstrap(tmpdir):
             './environment.export',
             './active/',
             './active/base',
-            './active/url_extract',
+            './active/url_extract-tar',
+            './active/url_extract-zip',
             './active/single_source',
             './active/no_buildinfo',
             './bin/',
@@ -95,7 +100,8 @@ def test_bootstrap(tmpdir):
                 'lib/',
                 'bin/',
                 'lib/no_buildinfo.so']),
-            'url_extract': set(['pkginfo.json', 'buildinfo.full.json']),
+            'url_extract-zip': set(['pkginfo.json', 'buildinfo.full.json']),
+            'url_extract-tar': set(['pkginfo.json', 'buildinfo.full.json']),
             'single_source': set(['pkginfo.json', 'buildinfo.full.json']),
             'base': set([
                 'base',

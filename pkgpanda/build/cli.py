@@ -26,8 +26,10 @@ from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
+from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import load_json, load_string, make_file, make_tar, rewrite_symlinks, write_json, write_string
+from pkgpanda.util import (check_forbidden_services, load_json, load_string, make_file, make_tar, rewrite_symlinks,
+                           write_json, write_string)
 
 
 class DockerCmd:
@@ -752,6 +754,13 @@ def build(variant, name, repository_url):
     # the build function.
     check_call(["mkdir", "-p", "cache"])
     write_string(last_build_filename(variant), str(pkg_id))
+
+    # Check for forbidden services before packaging the tarball:
+    try:
+        check_forbidden_services(abspath("result"), RESERVED_UNIT_NAMES)
+    except ValidationError as e:
+        print("Package validation failed: {}".format(e))
+        sys.exit(1)
 
     # Bundle the artifacts into the pkgpanda package
     tmp_name = pkg_path + "-tmp.tar.xz"

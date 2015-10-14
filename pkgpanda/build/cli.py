@@ -221,7 +221,7 @@ def make_bootstrap_tarball(packages, variant):
     # Do generate dcos.target.wants inside the root so that we don't
     # try messing with /etc/systemd/system.
     install = pkgpanda.Install(pkgpanda_root, None, True, False, True, True, True)
-    install.activate(repository, repository.load_packages(pkg_ids))
+    install.activate(repository.load_packages(pkg_ids))
 
     # Mark the tarball as a bootstrap tarball/filesystem so that
     # dcos-setup.service will fire.
@@ -687,7 +687,7 @@ def build(variant, name, repository_url):
     # TODO(cmaloney): RAII type thing for temproary directory so if we
     # don't get all the way through things will be cleaned up?
     install = Install(install_dir, None, True, False, True)
-    install.activate(repository, active_packages)
+    install.activate(active_packages)
     # Rewrite all the symlinks inside the active path because we will
     # be mounting the folder into a docker container, and the absolute
     # paths to the packages will change.

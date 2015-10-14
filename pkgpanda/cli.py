@@ -158,7 +158,7 @@ def do_bootstrap(install, repository):
     to_activate = list(set(to_activate + setup_packages_to_activate))
 
     print("Activating packages")
-    install.activate(repository, repository.load_packages(to_activate))
+    install.activate(repository.load_packages(to_activate))
 
 
 dcos_target_contents = """[Install]
@@ -207,7 +207,7 @@ def setup(install, repository):
 def do_activate(install, repository, ids, no_systemd, noblock_systemd):
     assert type(ids) == list
     try:
-        install.activate(repository, repository.load_packages(ids))
+        install.activate(repository.load_packages(ids))
         start_dcos_target(no_systemd, noblock_systemd)
 
     except ValidationError as ex:
@@ -228,7 +228,7 @@ def uninstall(install, repository):
     # Cleanup all systemd units
     # TODO(cmaloney): This is much more work than we need to do the job
     print("Deactivating all packages")
-    install.activate(repository, [])
+    install.activate([])
 
     # NOTE: All python libs need to be loaded before this so they are in-memory before we do the delete
     # Remove all well known files, directories

@@ -504,7 +504,7 @@ class Install:
 
     # Builds new working directories for the new active set, then swaps it into
     # place as atomically as possible.
-    def activate(self, repository, packages):
+    def activate(self, packages):
         # Ensure the new set is reasonable.
         validate_compatible(packages, self.__roles)
 

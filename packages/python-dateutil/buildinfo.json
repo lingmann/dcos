@@ -1,0 +1,10 @@
+{
+  "requires": ["python"],
+  "docker": "dcos-builder",
+  "sources": {
+    "python-dateutil": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/any/p/python-dateutil/python_dateutil-2.4.2-py2.py3-none-any.whl"
+     }
+  }
+}

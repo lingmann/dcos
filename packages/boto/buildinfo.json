@@ -1,24 +1,22 @@
 {
-  "requires": ["python", "python-requests"],
+  "requires": ["python", "six", "python-dateutil", "python-requests"],
   "docker": "dcos-builder",
   "sources": {
-    "boto": {
-      "kind": "git",
-      "git": "https://github.com/boto/boto",
-      "ref": "6983c008fe7b9fa840bae23cdbfa06ad7fb8cd3e",
-      "ref_origin": "develop"
+    "boto3": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/py2.py3/b/boto3/boto3-1.1.4-py2.py3-none-any.whl"
     },
-    "rsa": {
-      "kind": "url_extract",
-      "url": "https://pypi.python.org/packages/source/r/rsa/rsa-3.1.4.tar.gz"
+    "jmespath": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/py2.py3/j/jmespath/jmespath-0.9.0-py2.py3-none-any.whl"
     },
-    "pyasn1": {
-      "kind": "url_extract",
-      "url": "https://pypi.python.org/packages/source/p/pyasn1/pyasn1-0.1.7.tar.gz"
+    "futures": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/py2.py3/f/futures/futures-2.2.0-py2.py3-none-any.whl"
     },
-    "simplejson": {
-      "kind": "url_extract",
-      "url": "https://github.com/simplejson/simplejson/archive/v3.6.5.tar.gz"
+    "botocore": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/py2.py3/b/botocore/botocore-1.2.11-py2.py3-none-any.whl"
     }
   }
 }

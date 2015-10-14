@@ -47,7 +47,7 @@ function globals {
 # Returns the build_dir
 function get_build_dir {
   tmpdir=`mktemp -d 2>/dev/null || mktemp -d -t 'genconf'`
-  mkdir -p "${tmpdir}"/pkgpanda "${tmpdir}"/dcos-image
+  mkdir -p "${tmpdir}"/pkgpanda "${tmpdir}"/dcos-image "${tmpdir}"/bootstrap
   # clone the repository dropping git history other than last commit so that it
   # is still a valid git checkout but we lose any local modifications, and don't
   # capture any temporary files in the filesystem (package builds, etc).
@@ -60,12 +60,12 @@ function get_build_dir {
   "channel_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON
-  export DOCKER_TAG="$DOCKER_TAG"
-  export BOOTSTRAP_FILENAME="${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  export BOOTSTRAP_FILENAME="$BOOTSTRAP_FILENAME"
   export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/$BOOTSTRAP_FILENAME"
+  export DOCKER_TAG="$DOCKER_TAG"
   export GENCONF_TAR="$GENCONF_TAR"
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
-  envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/Dockerfile-bootstrap
+  envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/bootstrap/Dockerfile
   envsubst '$DOCKER_TAG:$GENCONF_TAR' < "${MY_ROOT}"/dcos_generate_config.sh.in > dcos_generate_config.sh
   out "$tmpdir"
 }
@@ -100,6 +100,8 @@ function check_prereqs {
 
   DOCKER_TAG="${DCOS_IMAGE_SHA:0:12}-${PKGPANDA_SHA:0:12}-${BOOTSTRAP_ID:0:12}"
   GENCONF_TAR="dcos-genconf.${DOCKER_TAG}.tar"
+  BOOTSTRAP_FILENAME="${BOOTSTRAP_ID}.bootstrap.tar.xz"
+  BOOTSTRAP_PATH="${PROJECT_ROOT}/packages/$BOOTSTRAP_FILENAME"
 }
 
 function main {
@@ -115,7 +117,11 @@ function build {
   echo "Building: $1"
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
-  docker build -t mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" - < Dockerfile-bootstrap
+  popd
+  pushd "$1/bootstrap"
+  cp "${BOOTSTRAP_PATH}" "${BOOTSTRAP_FILENAME}"
+  docker build -t mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" .
+  rm "${BOOTSTRAP_FILENAME}"
   popd
   echo "$DOCKER_TAG" > docker-tag
 

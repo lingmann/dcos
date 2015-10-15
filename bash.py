@@ -177,9 +177,10 @@ function check_preexisting_dcos() {
        ( -d /opt/mesosphere ) ]]; then
         # this will print: Checking if DCOS is already installed: FAIL (Currently installed)
         print_status 1 "${NORMAL}(Currently installed)"
+        echo
         echo 'Found an existing DCOS installation. To clean current installation, run:'
         echo 'curl http://enterprise.mesosphere.com/admin/dcos-cleanup.sh | sudo bash'
-        echo "${RED}Exiting...${NORMAL}"
+        echo
         exit 1
     else
         print_status 0 "${NORMAL}(Not installed)"

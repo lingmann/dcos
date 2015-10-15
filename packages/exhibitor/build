@@ -29,6 +29,7 @@ mkdir -p $(dirname "$exhibitor_service")
 cat <<EOF > "$exhibitor_service"
 [Unit]
 Description=Exhibitor Zookeeper Supervisor
+After=network-online.target
 [Service]
 StandardOutput=journal
 StandardError=journal

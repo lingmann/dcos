@@ -1,8 +1,11 @@
 import json
 import os
+import re
 from itertools import chain
 from shutil import rmtree, which
 from subprocess import check_call
+
+from pkgpanda.exceptions import ValidationError
 
 
 def extract_tarball(path, target):
@@ -101,3 +104,32 @@ def rewrite_symlinks(root, old_prefix, new_prefix):
                     # Remove the old link and write a new one.
                     os.remove(full_path)
                     os.symlink(new_target, full_path)
+
+
+def check_forbidden_services(path, services):
+    """Check if package contains systemd services that may break DCOS
+
+    This functions checks the contents of systemd's unit file dirs and
+    throws the exception if there are reserved services inside.
+
+    Args:
+        path: path where the package contents are
+        services: list of reserved services to look for
+
+    Raises:
+        ValidationError: Reserved serice names were found inside the package
+    """
+    services_dir_regexp = re.compile(r'dcos.target.wants(?:_.+)?')
+    forbidden_srv_set = set(services)
+    pkg_srv_set = set()
+
+    for direntry in os.listdir(path):
+        if not services_dir_regexp.match(direntry):
+            continue
+        pkg_srv_set.update(set(os.listdir(os.path.join(path, direntry))))
+
+    found_units = forbidden_srv_set.intersection(pkg_srv_set)
+
+    if found_units:
+        msg = "Reverved unit names found: " + ','.join(found_units)
+        raise ValidationError(msg)

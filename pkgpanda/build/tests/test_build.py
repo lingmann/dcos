@@ -1,5 +1,7 @@
 from shutil import copytree
-from subprocess import check_call, check_output
+from subprocess import CalledProcessError, check_call, check_output
+
+import pytest
 
 
 def get_tar_contents(filename):
@@ -33,6 +35,11 @@ def test_url_extract_zip(tmpdir):
 
 def test_no_buildinfo(tmpdir):
     package("resources/no_buildinfo", "no_buildinfo", tmpdir)
+
+
+def test_restricted_services(tmpdir):
+    with pytest.raises(CalledProcessError):
+        package("resources-nonbootstrapable/restricted_services", "restricted_services", tmpdir)
 
 
 def test_bootstrap(tmpdir):

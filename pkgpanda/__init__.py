@@ -23,6 +23,7 @@ import urllib.request
 from itertools import chain
 from subprocess import CalledProcessError, check_call
 
+from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
 from pkgpanda.util import extract_tarball, if_exists, load_json, write_json, write_string
 
@@ -39,12 +40,6 @@ export PATH="{0}/bin:$PATH"\n\n"""
 
 name_regex = "^[a-zA-Z0-9@_+][a-zA-Z0-9@._+\-]*$"
 version_regex = "^[a-zA-Z0-9@_+:.]+$"
-
-reserved_unit_names = [
-    "dcos.target",
-    "dcos-download.service",
-    "dcos-setup.service"
-]
 
 
 # Manage starting/stopping all systemd services inside a folder.
@@ -657,7 +652,7 @@ class Install:
                 return
 
             for unit_name in os.listdir(wants_path):
-                if unit_name in reserved_unit_names:
+                if unit_name in RESERVED_UNIT_NAMES:
                     raise Exception(
                         "Stopping install. " +
                         "Reserved name encountered - {}.".format(unit_name))

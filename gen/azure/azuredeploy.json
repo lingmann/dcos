@@ -339,7 +339,12 @@
               },
               "subnet": {
                 "id": "[variables('publicSubnetRef')]"
-              }
+              },
+              "loadBalancerBackendAddressPools" : [
+                {
+                  "id" : "[concat(variables('publicSlaveLoadBalancerID'), '/backendAddressPools/',variables('publicSlavesLBBackEndPoolName'))]"
+                }
+              ]
             }
           }
         ],
@@ -409,10 +414,10 @@
     {
       "apiVersion": "2015-06-15",
       "type": "microsoft.network/networkInterfaces",
-      "name": "[concat('slaveprivatenic', copyindex())]",
+      "name": "[concat('slavePrivateNic', copyindex())]",
       "location": "[parameters('region')]",
       "copy": {
-        "name": "slaveprivatenicloop",
+        "name": "slavePrivateNicloop",
         "count": "[parameters('numberOfPrivateSlaves')]"
       },
       "dependson": [

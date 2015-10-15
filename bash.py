@@ -170,12 +170,31 @@ function check_service() {
   (( OVERALL_RC += $RC ))
 }
 
+function check_preexisting_dcos() {
+    echo -e -n 'Checking if DCOS is already installed: '
+    if [[ ( -d /etc/systemd/system/dcos.target ) || \
+       ( -d /etc/systemd/system/dcos.target.wants ) || \
+       ( -d /opt/mesosphere ) ]]; then
+        # this will print: Checking if DCOS is already installed: FAIL (Currently installed)
+        print_status 1 "${NORMAL}(Currently installed)"
+        echo 'Found an existing DCOS installation. To clean current installation, run:'
+        echo 'curl http://enterprise.mesosphere.com/admin/dcos-cleanup.sh | sudo bash'
+        echo "${RED}Exiting...${NORMAL}"
+        exit 1
+    else
+        print_status 0 "${NORMAL}(Not installed)"
+    fi
+}
+
 function check_all() {
     # Disable errexit because we want the preflight checks to run all the way
     # through and not bail in the middle, which will happen as it relies on
     # error exit codes
     set +e
     echo -e "${BOLD}Running preflight checks${NORMAL}"
+
+    check_preexisting_dcos
+
     check_sort_capability
     # CoreOS stable as of Aug 2015 has 1.6.2
     check docker 1.6 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')

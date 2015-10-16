@@ -165,7 +165,7 @@ def find_packages_fs():
     return packages
 
 
-def make_bootstrap_tarball(packages):
+def make_bootstrap_tarball(packages, variant):
     # Convert filenames to package ids
     pkg_ids = list()
     for pkg_path in packages:
@@ -180,6 +180,8 @@ def make_bootstrap_tarball(packages):
     # Filename is output_name.<sha-1>.{active.json|.bootstrap.tar.xz}
     bootstrap_id = hash_checkout(pkg_ids)
     latest_name = "bootstrap.latest"
+    if variant:
+        latest_name = variant + "." + latest_name
 
     output_name = bootstrap_id + '.'
 
@@ -392,7 +394,7 @@ def build_tree(mkbootstrap, repository_url):
         package_paths = get_tree_packages(variant, built_packages, packages)
 
         if mkbootstrap:
-            return make_bootstrap_tarball(list(sorted(package_paths)))
+            return make_bootstrap_tarball(list(sorted(package_paths)), variant)
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.

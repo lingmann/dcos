@@ -178,8 +178,11 @@ function check_preexisting_dcos() {
         # this will print: Checking if DCOS is already installed: FAIL (Currently installed)
         print_status 1 "${NORMAL}(Currently installed)"
         echo
-        echo 'Found an existing DCOS installation. To clean current installation, run:'
-        echo 'curl http://enterprise.mesosphere.com/admin/dcos-cleanup.sh | sudo bash'
+        cat <<EOM
+Found an existing DCOS installation. To reinstall DCOS on this this machine you must
+first uninstall DCOS then run dcos_install.sh. To uninstall DCOS, follow the product
+documentation provided with DCOS.
+EOM
         echo
         exit 1
     else

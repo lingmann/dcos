@@ -297,6 +297,10 @@ def get_options_object():
 def do_gen_package(config, package_filename):
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
+    # Forcibly set umask so that os.makedirs() always makes directories with
+    # uniform permissions
+    os.umask(0o000)
+
     with TemporaryDirectory("gen_tmp_pkg") as tmpdir:
 
         # Only contains write_files
@@ -320,6 +324,8 @@ def do_gen_package(config, package_filename):
             # the file has special mode defined, handle that.
             if 'mode' in file_info:
                 os.chmod(path, int(str(file_info['mode']), 8))
+            else:
+                os.chmod(path, 0o644)
 
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
@@ -347,14 +353,14 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
             default_str = ' [{}]'.format(default)
         elif can_calc:
             default_str = ' <calculated>'
-        
-        # Print key to desired input with possible defaults and type to be asserted 
+
+        # Print key to desired input with possible defaults and type to be asserted
         possible_values_str = ''
         if possible_values:
           possible_values_str = '{' + ",".join(possible_values) + '}'
-        
+
         descriptions = load_json("gen/descriptions.json")
-        
+
         if name in descriptions:
           print("")
           print("[%s]"% name)
@@ -766,7 +772,7 @@ def generate(
         else:
           log.error("Logging option not available: %s", options.log_level)
           sys.exit(1)
-        
+
         log.info("Generating configuration files from user input:")
         return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:

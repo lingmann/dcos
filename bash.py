@@ -351,6 +351,7 @@ def do_bash_only(options):
 
 
 if __name__ == '__main__':
+    print("Generating configuration files for DCOS")
     parser = argparse.ArgumentParser(description='Gen BASH templates to use to install a DCOS cluster')
     gen.add_arguments(parser)
     parser.add_argument('--output-dir',

@@ -30,7 +30,7 @@ be shortened to an unambiguous length.
 
  Using image to generate DCOS config tarball:
    BUILD_DIR=/tmp/genconf
-   # Place ip-detect.sh script in \$BUILD_DIR and mount in container at /genconf
+   # Place ip-detect script in \$BUILD_DIR and mount in container at /genconf
    docker run -it -v "\$BUILD_DIR":/genconf mesosphere/dcos-genconf
    # Configuration tarball will be written to \$BUILD_DIR
 
@@ -56,7 +56,7 @@ function get_build_dir {
   cat <<CONFIG_JSON > "${tmpdir}"/dcos-image/config.json
 {
   "bootstrap_id":"$BOOTSTRAP_ID",
-  "ip_detect_filename":"/genconf/ip-detect.sh",
+  "ip_detect_filename":"/genconf/ip-detect",
   "channel_name":"${CHANNEL_NAME}"
 }
 CONFIG_JSON

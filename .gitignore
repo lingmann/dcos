@@ -1,4 +1,5 @@
 __pycache__
+this
 .idea/
 dcos-config--setup*.tar.xz
 chef-*.tar.xz

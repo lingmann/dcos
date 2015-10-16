@@ -13,6 +13,10 @@
   "master_list":"[JSON ist of strings]: The list of strings containing your static master IPs. Must be in JSON list format ex: [\"10.0.0.1\"]",
   "resolvers": "[string]: The list of DNS resolvers for your DCOS host nodes.",
   "roles": "[string]: The Mesos role to delegate to this host machine.",
-  "weights":"slave_public=int: I have no idea"
-
+  "weights":"[role=weight,role=weight]: By default, resources in a cluster are shared on a first come first serve basis. However, you can define priorities for given roles (that are then applied to frameworks) that can reserve resources, effectively setting a higher priority for resources for a given role. A comma separated list of role/weight pairs of the form 'role=weight,role=weight'. Weights are used to indicate forms of priority.",
+  "keepalived_router_id": "The unique virtual router ID of the keepalived cluster. This must be the same across your cluster.",
+  "keepalived_interface": "The interface for that keepalived will work off.",
+  "keepalived_pass": "If you've set your auth to PASS, this is the password you set in your configuration file.",
+  "keepalived_virtual_ipaddress": "The VIP in use by your keepalived cluster.",
+  "num_masters": "The number of masters in your DCOS cluster."
 }

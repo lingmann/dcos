@@ -2,6 +2,7 @@ import json
 import os
 import urllib.request
 import yaml
+import logging as log
 from math import floor
 from subprocess import check_output
 
@@ -61,8 +62,11 @@ def calculate_mesos_dns_resolvers_str(arguments):
 
 
 def calculate_ip_detect_contents(arguments):
-    return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
-
+    if os.path.exists(arguments['ip_detect_filename']):
+      return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
+    else:
+      log.error("Ip-detect script: %s. Does not exist.", arguments['ip_detect_filename'])
+      sys.exit(1)
 
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,

@@ -7,6 +7,7 @@ from subprocess import CalledProcessError, check_call, check_output
 from urllib.parse import urlparse
 
 from pkgpanda.exceptions import ValidationError
+from pkgpanda.util import load_string
 
 
 def sha1(filename):
@@ -313,3 +314,24 @@ def fetch_sources(sources):
             raise ValidationError("Currently only packages from url and git sources are supported")
 
     return ids
+
+
+def get_last_bootstrap_set(path):
+    assert path[-1] != '/'
+    last_bootstrap = {}
+
+    # Get all the tree variants. If there is a treeinfo.json for the default
+    # variant this won't catch it because that would be just 'treeinfo.json' /
+    # not have the '.' before treeinfo.json.
+    for filename in os.listdir(path):
+        if filename.endswith('.treeinfo.json'):
+            variant_name = filename[:-len('.treeinfo.json')]
+            bootstrap_id = load_string(path + '/' + variant_name + '.bootstrap.latest')
+            last_bootstrap[variant_name] = bootstrap_id
+
+    # Add in None / the default variant with a python None.
+    # Use a python none so that handling it incorrectly around strings will
+    # result in more visible errors than empty string would.
+    last_bootstrap[None] = load_string(path + '/' + 'bootstrap.latest')
+
+    return last_bootstrap

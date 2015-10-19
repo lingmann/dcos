@@ -69,12 +69,22 @@ def _identify_archive_type(filename):
         for them are 'tar' and 'zip' respectively
     """
     parts = filename.split('.')
-    if len(parts) >= 3 and parts[-2] == 'tar' or len(parts) >= 2 and parts[-1] == 'tgz':
-        return 'tar'
-    elif len(parts) >= 2 and parts[-1] == 'zip':
-        return 'zip'
-    else:
+
+    # no extension
+    if len(parts) < 2:
         return 'unknown'
+
+    # one extension
+    if parts[-1] == 'tgz':
+        return 'tar'
+    if parts[-1] == 'zip':
+        return 'zip'
+
+    # two extensions
+    if len(parts) >= 3 and parts[-2] == 'tar':
+        return 'tar'
+
+    return 'unknown'
 
 
 def _check_components_sanity(path):

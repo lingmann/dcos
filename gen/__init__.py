@@ -33,7 +33,7 @@ from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
-role_names = {"master", "slave", "slave_public", "master_slave"}
+role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
 

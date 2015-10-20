@@ -235,6 +235,16 @@ function check_all() {
     do
       check_service $service
     done
+
+    for role in "$ROLES"
+    do
+        if [ "$role" != "master" -a "$role" != "slave" -a "$role" != "slave_public"]; then
+            echo -e "${RED}FAIL Invalid role $role. Role must be one of {master,slave,slave_public}{NORMAL}"
+            (( OVERALL_RC += 1 ))
+        fi
+    done
+
+
     return $OVERALL_RC
 }
 

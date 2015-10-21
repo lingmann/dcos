@@ -2,7 +2,8 @@ import json
 import os
 import pytest
 import requests
-
+import uuid
+import time
 
 def assertTaskWebPortsUp(cluster, app):
     # app must begin with trailing '/'
@@ -67,6 +68,13 @@ class Cluster:
     def get(self, path=""):
         return requests.get(self.uri + path)
 
+    def post(self, path="", payload=None):
+        if payload == None:
+            payload = {}
+        return requests.post(self.uri + path, json=payload)
+
+    def delete(self, path=""):
+        return requests.delete(self.uri + path)
 
 def test_DCOSUIUp(cluster):
     r = cluster.get('/')
@@ -87,5 +95,80 @@ def test_MesosUp(cluster):
 
 
 def test_ExhibitorUp(cluster):
-    r = cluster.get("exhibitor/exhibitor/v1/cluster/status")
+    r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
     assert r.status_code == 200
+
+
+def test_MarathonAppWorking(cluster):
+    rnd = uuid.uuid4().hex
+    app = '/integrationtest-{}'.format(rnd)
+
+    payload = {
+        'id': app,
+        'container': {
+            'type': 'DOCKER',
+            'docker': {
+                'image': 'nginx',
+                'network': 'BRIDGE',
+                'portMappings': [
+                    { 'containerPort':  80, 'hostPort': 0, 'servicePort': 0, 'protocol': 'tcp' }
+                ]
+            }
+        },
+        'cpus': 0.01,
+        'mem': 64,
+        'instances': 1,
+        'ports': [0],
+        'healthChecks': [
+          {
+            'protocol': 'HTTP',
+            'path': '/',
+            'portIndex': 0,
+            'gracePeriodSeconds': 5,
+            'intervalSeconds': 10,
+            'timeoutSeconds': 10,
+            'maxConsecutiveFailures': 3
+          }
+        ]
+    }
+
+    # create app
+    r = cluster.post('marathon/v2/apps', payload)
+    assert r.ok
+
+
+    # wait for app to run
+    tasksRunning = 0
+    tasksHealthy = 0
+
+    timeout = time.time() + 300
+    while tasksRunning != 1 or tasksHealthy != 1:
+        r = cluster.get('marathon/v2/apps' + app)
+        if r.ok:
+            json = r.json()
+            print('fetched app status {}'.format(json))
+            tasksRunning = json['app']['tasksRunning']
+            tasksHealthy = json['app']['tasksHealthy']
+
+            if tasksHealthy == 1:
+                remote_host = json['app']['tasks'][0]['host']
+                remote_port = json['app']['tasks'][0]['ports'][0]
+                print('running on {}:{} with {}/{} healthy tasks'.format(remote_host, remote_port, tasksHealthy, tasksRunning))
+                break
+
+        if time.time() > timeout:
+            print('timeout while waiting for healthy task')
+            break
+
+        time.sleep(5)
+
+    assert tasksRunning == 1
+    assert tasksHealthy == 1
+
+    # fetch test file from launched app
+    r = requests.get('http://{}:{}/'.format(remote_host, str(remote_port)))
+    assert r.ok
+
+    # delete app
+    r = cluster.delete('marathon/v2/apps' + app)
+    assert r.ok

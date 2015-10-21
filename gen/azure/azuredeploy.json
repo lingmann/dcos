@@ -115,7 +115,7 @@
         "count": "[variables('storageAccountsCount')]"
       },
       "location": "[parameters('region')]",
-      "name": "[concat(variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'),variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountsCount'))])]",
+      "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'),copyIndex(1))]",
       "properties": {
         "accountType": "[variables('storageAccountType')]"
       },
@@ -375,7 +375,7 @@
           "osDisk": {
             "name": "[concat('slavePublicVhd', copyindex())]",
             "vhd": {
-              "uri": "[concat('http://',variables('storageAccountName'),'.blob.core.windows.net/vhds/','slavePublicVhd', copyindex(),'.vhd')]"
+              "uri": "[concat('http://',concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'),copyIndex(1)),'.blob.core.windows.net/vhds/','slavePrivateVhd', copyindex(),'.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -431,7 +431,7 @@
       },
       "dependson": [
         "[concat('microsoft.network/networkInterfaces/', 'slavePrivateNic', copyindex())]",
-        "[concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'),variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountsCount'))])]"
+        "[concat('Microsoft.Storage/storageAccounts/',concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniquename'),copyIndex(1)))]"
       ],
       "properties": {
         "hardwareProfile": {

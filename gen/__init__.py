@@ -229,7 +229,7 @@ def calculate_args(must_fn, can_fn, arguments):
     # Force calculation of all arguments by accessing
     for key in must_fn.keys():
         if key in start_arguments:
-            print(must_fn[key])
+            log.error(must_fn[key])
             raise AssertionError("Argument which must be calculated '", key, "' manually specified in arguments")
 
         arg_calculator[key]
@@ -336,12 +336,12 @@ def do_gen_package(config, package_filename):
 
         make_tar(package_filename, tmpdir)
 
-    print("Package filename: ", package_filename)
+    log.info("Package filename: %s", package_filename)
 
 
 def prompt_argument(non_interactive, name, can_calc=False, default=None, possible_values=None):
     if non_interactive:
-        print("ERROR: Unset variable when run in non-interactive mode:", name)
+        log.error("Unset variable in configuration: %s", name)
         sys.exit(1)
 
     while True:
@@ -357,20 +357,20 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         # Print key to desired input with possible defaults and type to be asserted
         possible_values_str = ''
         if possible_values:
-          possible_values_str = '{' + ",".join(possible_values) + '}'
-
+            possible_values_str = '{' + ",".join(possible_values) + '}'
+        
         descriptions = load_json("gen/descriptions.json")
 
         if name in descriptions:
-          print("")
-          print("[%s]"% name)
-          print(descriptions[name])
+            print("")
+            print("Please provide values for: %s"% name)
+            print(descriptions[name])
 
         value = input('{}{}{}: '.format(name, default_str, possible_values_str))
 
         # Make sure value is one of the allowed values
         if possible_values is not None and value not in possible_values:
-            print("ERROR: Value not one of the possible values:", ','.join(possible_values))
+            log.error("Value not one of the possible values:", ','.join(possible_values))
             continue
 
         if value:
@@ -380,12 +380,12 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         if can_calc:
             return None
 
-        print("ERROR: Must provide a value")
+        log.error("ERROR: Must provide a value")
 
 
 def prompt_arguments(non_interactive, to_set, defaults, can_calc):
     if non_interactive and len(to_set) > 0:
-        print("ERROR: Unset variables when run in interactive mode:", ','.join(to_set))
+        log.error("Unset variables in configuration:", ','.join(to_set))
         sys.exit(1)
 
     arguments = dict()
@@ -535,7 +535,7 @@ def do_generate(
             # message to users when they try just feeding a computed config back
             # into the generation library.
             if 'dcos_image_commit' in user_arguments:
-                print("ERROR: The configuration saved by --save-config cannot be fed directly back as `--config`. "
+                log.error("The configuration saved by --save-config cannot be fed directly back as `--config`. "
                       "It is the full computed configuration used to flesh out the various templates, and contains "
                       "multiple derived / calculated values that are asserted to be calculated "
                       "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
@@ -547,17 +547,17 @@ def do_generate(
             # show all the errors at once.
             for k in user_arguments.keys():
                 if k in arguments.keys():
-                    print("ERROR: User config contains option `{}` already ".format(k) +
+                    log.error("User config contains option `{}` already ".format(k) +
                           "provided by caller of gen.generate()")
                     sys.exit(1)
 
             # update arguments with the user_arguments
             arguments.update(user_arguments)
         except FileNotFoundError:
-            print("ERROR: Specified config file '" + options.config + "' does not exist")
+            log.error("Specified config file '" + options.config + "' does not exist")
             sys.exit(1)
         except ValueError as ex:
-            print("ERROR:", ex)
+            log.error("%s", ex)
             sys.exit(1)
 
     # Empty string (top level directory) is always implicitly included
@@ -625,7 +625,7 @@ def do_generate(
         if len(template_list) > 1:
             for template in template_list:
                 if not template.endswith('.yaml'):
-                    print("ERROR: Only know how to merge YAML templates at this point in time. Can't merge template",
+                    log.error("Only know how to merge YAML templates at this point in time. Can't merge template",
                           name, template_list)
                     sys.exit(1)
 
@@ -637,7 +637,7 @@ def do_generate(
     # prevent human typo errors.
     for argument in arguments:
         if argument not in parameters:
-            print("ERROR: Argument '", argument, "' given but not in parameters:", ', '.join(parameters))
+            log.error("ERROR: Argument '", argument, "' given but not in parameters:", ', '.join(parameters))
             sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.
@@ -671,7 +671,7 @@ def do_generate(
         # because we want to include all input arguments. After this point there are calculated /
         # default arguments set.
         write_json(options.save_user_config, arguments)
-        print("User Config saved to:", options.save_user_config)
+        log.info("User Config saved to: %s", options.save_user_config)
 
     # Set arguments from command line flags.
     arguments['mixins'] = mixins
@@ -685,7 +685,7 @@ def do_generate(
     for fn in validate_fn:
         fn(arguments)
 
-    print("Final arguments:")
+    log.info("Final arguments:")
     print(json.dumps(arguments, **json_prettyprint_args))
 
     # ID of this configuration is a hash of the parameters
@@ -713,7 +713,7 @@ def do_generate(
     # Save config parameters
     if options.save_final_config:
         write_json(options.save_final_config, arguments)
-        print("Fully expanded configuration saved to:", options.save_final_config)
+        log.info("Fully expanded configuration saved to:", options.save_final_config)
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
@@ -764,20 +764,27 @@ def generate(
     try:
         # Set the logging level
         if options.log_level == "debug":
-          log.basicConfig(level=log.DEBUG)
-          log.debug("Log level set to DEBUG")
+            log.basicConfig(level=log.DEBUG)
+        #    log.debug("Log level set to DEBUG")
         elif options.log_level == "info":
-          log.basicConfig(level=log.INFO)
-          log.info("Log level set to INFO")
+            log.basicConfig(level=log.INFO)
+        #    log.info("Log level set to INFO")
         else:
+<<<<<<< HEAD
           log.error("Logging option not available: %s", options.log_level)
           sys.exit(1)
 
         log.info("Generating configuration files from user input:")
+=======
+            log.error("Logging option not available: %s", options.log_level)
+            sys.exit(1)
+        
+        log.info("Generating configuration files...")
+>>>>>>> DCOS-3380
         return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:
-        print("ERROR: Jinja2 TemplateSyntaxError")
-        print("{}:{} - {}".format(
+        log.error("Jinja2 TemplateSyntaxError")
+        log.error("{}:{} - {}".format(
             ex.filename if ex.filename else (ex.name if ex.name else '<>'),
             ex.lineno,
             ex.message))

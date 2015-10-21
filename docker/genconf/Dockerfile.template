@@ -19,4 +19,4 @@ WORKDIR /dcos-image
 
 VOLUME ["/genconf"]
 
-ENTRYPOINT ["/dcos-image/docker/genconf/genconf.py"]
+ENTRYPOINT ["/dcos-image/genconf.py"]

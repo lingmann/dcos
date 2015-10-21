@@ -770,17 +770,10 @@ def generate(
             log.basicConfig(level=log.INFO)
         #    log.info("Log level set to INFO")
         else:
-<<<<<<< HEAD
-          log.error("Logging option not available: %s", options.log_level)
-          sys.exit(1)
-
-        log.info("Generating configuration files from user input:")
-=======
             log.error("Logging option not available: %s", options.log_level)
             sys.exit(1)
         
         log.info("Generating configuration files...")
->>>>>>> DCOS-3380
         return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:
         log.error("Jinja2 TemplateSyntaxError")

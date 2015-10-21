@@ -12,6 +12,8 @@ pushd build
 # TODO(cmaloney): DESTDIR builds so we don't have to build as root?
 "/pkg/src/mesos/configure" \
   --prefix="$PKG_PATH" --enable-optimize --disable-python \
+  --with-ssl=/opt/mesosphere/active/openssl \
+  --with-libevent=/opt/mesosphere/active/libevent \
   --with-glog=/opt/mesosphere/active/mesos-buildenv \
   --with-protobuf=/opt/mesosphere/active/mesos-buildenv \
   --with-boost=/opt/mesosphere/active/mesos-buildenv \
@@ -46,7 +48,6 @@ StartLimitInterval=0
 RestartSec=15
 LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=-/opt/mesosphere/environment.ip.mesos-master
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
 EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
 EnvironmentFile=/opt/mesosphere/etc/cloudenv
@@ -67,7 +68,6 @@ KillMode=control-group
 Delegate=true
 LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=-/opt/mesosphere/environment.ip.mesos-slave
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave
 EnvironmentFile=-/var/lib/dcos/mesos-slave-common
@@ -88,7 +88,6 @@ KillMode=control-group
 Delegate=true
 LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=-/opt/mesosphere/environment.ip.mesos-slave-public
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
 EnvironmentFile=-/var/lib/dcos/mesos-slave-common

@@ -1,10 +1,10 @@
 {
-  "requires": ["mesos-buildenv", "exhibitor"],
+  "requires": ["mesos-buildenv", "exhibitor", "openssl", "libevent"],
   "docker": "dcos-builder",
   "single_source" : {
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
-    "ref": "3a833bd6c1ba7e8d7dbe21fdb56734c041b79c41",
+    "ref": "4ec686c8a350176ba0f319daf094e1146f658cac",
     "ref_origin" : "0.24.1+systemd+webui"
   },
   "environment": {

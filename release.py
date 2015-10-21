@@ -16,7 +16,7 @@ import os.path
 import sys
 from functools import partial, partialmethod
 from pkgpanda import PackageId
-from pkgpanda.build import sha1
+from pkgpanda.build import get_last_bootstrap_set, sha1
 from pkgpanda.util import load_json, load_string, write_string
 from subprocess import check_call, CalledProcessError
 
@@ -51,7 +51,7 @@ class ChannelManager():
         self.__bucket = bucket
         self.__channel = channel
 
-    def copy_across(self, source, bootstrap_id, active_packages):
+    def copy_across(self, source, bootstrap_dict, active_packages):
         def do_copy(path, no_cache=None):
             print("Copying across {}".format(path))
             src_object = source.get_object(path)
@@ -69,8 +69,9 @@ class ChannelManager():
             do_copy('packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str))
 
         # Copy across the bootstrap, active.json
-        do_copy('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-        do_copy('bootstrap/{}.active.json'.format(bootstrap_id))
+        for bootstrap_id in bootstrap_dict.values():
+            do_copy('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
+            do_copy('bootstrap/{}.active.json'.format(bootstrap_id))
 
     def get_object(self, name):
         return self.__bucket.Object('dcos/{}/{}'.format(self.__channel, name))
@@ -119,12 +120,13 @@ class ChannelManager():
         check_call(["mkdir", "-p", os.path.dirname(local_path)])
         write_string(local_path, text)
 
-    def upload_bootstrap(self, bootstrap_id):
+    def upload_bootstrap(self, bootstrap_dict):
         upload = partial(self.upload_local_file, if_not_exists=True)
-        upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
-               'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-        upload('packages/{}.active.json'.format(bootstrap_id),
-               'bootstrap/{}.active.json'.format(bootstrap_id))
+        for bootstrap_id in bootstrap_dict.values():
+            upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
+                   'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
+            upload('packages/{}.active.json'.format(bootstrap_id),
+                   'bootstrap/{}.active.json'.format(bootstrap_id))
 
     def upload_packages(self, packages):
         for id_str in set(packages):
@@ -164,7 +166,7 @@ class ChannelManager():
                     else:
                         self.put_text(path, file_info['content'])
 
-    def upload_providers_and_activate(self, bootstrap_id, commit, metadata_json, provider_data):
+    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
         # Upload provider artifacts to their stable locations
         print("Uploading stable artifacts")
         self.upload_provider_packages(provider_data)
@@ -177,7 +179,12 @@ class ChannelManager():
         # - provider templates to known_paths
         # - dcos_generate_config.sh
         print("Marking new build as the latest")
-        self.put_text('bootstrap.latest', bootstrap_id)
+        self.put_text('bootstrap.latest', bootstrap_dict[None])
+        for variant, bootstrap_id in bootstrap_dict.items():
+            if variant is None:
+                continue
+            self.put_text(variant + '.bootstrap.latest', bootstrap_id)
+
         self.put_json('metadata.json', metadata_json)
         self.upload_provider_files(provider_data, 'known_path', prefix=False)
         # TODO(cmaloney): Make a stable location version of this like
@@ -237,8 +244,14 @@ def do_promote(options):
 
     # Download source channel metadata
     metadata = json.loads(source.read_file('metadata.json').decode('utf-8'))
-    bootstrap_id = metadata['bootstrap_id']
-    active_package = metadata['active_package']
+    bootstrap_dict = metadata['bootstrap_dict']
+
+    # None gets stored as null in the key of the dictionary. Undo that.
+    default_bootstrap_id = bootstrap_dict['null']
+    del bootstrap_dict['null']
+    bootstrap_dict[None] = default_bootstrap_id
+
+    active_packages = metadata['active_packages']
     commit = metadata['commit']
 
     if util.dcos_image_commit != metadata['commit']:
@@ -246,19 +259,21 @@ def do_promote(options):
 
     print("version tag:", metadata['tag'])
 
+    # TODO(cmaloney): Run against all bootstrap variants / allow providers to
+    # make multiple variants for the multiple variants of DCOS available.
     # Run providers against repository_url for destination channel
     print("Running providers to generate new provider config")
     provider_data, cleaned_provider_data = get_provider_data(
         destination.repository_url,
-        bootstrap_id,
+        default_bootstrap_id,
         metadata['tag'],
         options.destination_channel,
         metadata['commit']
         )
 
     metadata_json = to_json({
-            'active_package': active_package,
-            'bootstrap_id': bootstrap_id,
+            'active_packages': active_packages,
+            'bootstrap_dict': bootstrap_dict,
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
@@ -266,10 +281,10 @@ def do_promote(options):
         })
 
     # Copy across packages, bootstrap.
-    destination.copy_across(source, bootstrap_id, active_package)
+    destination.copy_across(source, bootstrap_dict, active_packages)
 
     # Upload provider artifacts, mark as active
-    destination.upload_providers_and_activate(bootstrap_id, commit, metadata_json, provider_data)
+    destination.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
     print("Channel {} now at tag {}".format(options.destination_channel, metadata['tag']))
 
 
@@ -279,9 +294,8 @@ def get_local_build(skip_build, repository_url):
             ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + repository_url],
             cwd='packages',
             env=os.environ)
-        return load_string('packages/bootstrap.latest')
 
-    return load_string('packages/bootstrap.latest')
+    return get_last_bootstrap_set('packages')
 
 
 def do_build_packages(repository_url, skip_build):
@@ -315,9 +329,9 @@ def do_build_packages(repository_url, skip_build):
     # mark as latest so it will be used when building packages
     check_call(['docker', 'tag', '-f', container_name, 'dcos-builder:latest'])
 
-    bootstrap_id = get_local_build(skip_build, repository_url)
+    bootstrap_dict = get_local_build(skip_build, repository_url)
 
-    return bootstrap_id
+    return bootstrap_dict
 
 
 def do_variable_set_or_exists(env_var, path):
@@ -353,30 +367,39 @@ def do_create(options):
     # Build packages and generate bootstrap
     print("Building packages")
     # Build the standard docker build container, then build all the packages and bootstrap with it
-    bootstrap_id = do_build_packages(channel.repository_url, options.skip_build)
+    bootstrap_dict = do_build_packages(channel.repository_url, options.skip_build)
+
+    default_bootstrap_id = bootstrap_dict[None]
 
     # Build all the per-provider templates
+    # TODO(cmaloney): Allow making provider templates with non-default bootstrap
+    # tarballs.
     print("Gathering per-provider additional files")
     provider_data, cleaned_provider_data = get_provider_data(
         channel.repository_url,
-        bootstrap_id,
+        default_bootstrap_id,
         options.tag,
         channel_name,
         commit)
 
-    # TODO(cmaloney): Do a git clone depth 1 from these source directories to guarantee tha the
-    # checkout is always clean.
+    # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
+    # bootstrap tarball inside of it.
     print("Building dcos_genconf docker container")
     check_call(['docker/genconf/make.sh'], env={
         'PKGPANDA_SRC': pkgpanda_src,
         'DCOS_IMAGE_SRC': dcos_image_src,
         'CHANNEL_NAME': channel_name,
-        'BOOTSTRAP_ID': bootstrap_id
+        'BOOTSTRAP_ID': default_bootstrap_id
         })
 
+    # Calculate the active packages merged from all the bootstraps
+    active_packages = set()
+    for bootstrap_id in bootstrap_dict.values():
+        active_packages |= get_bootstrap_packages(bootstrap_id)
+
     metadata_json = to_json({
-            'active_package': list(get_bootstrap_packages(bootstrap_id)),
-            'bootstrap_id': bootstrap_id,
+            'active_packages': list(active_packages),
+            'bootstrap_dict': bootstrap_dict,
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
@@ -388,20 +411,22 @@ def do_create(options):
     print("Uploading packages")
     if options.skip_upload:
         return
-    channel.upload_packages(get_bootstrap_packages(bootstrap_id))
-    channel.upload_bootstrap(bootstrap_id)
 
+    channel.upload_packages(list(active_packages))
+    channel.upload_bootstrap(bootstrap_dict)
+
+    # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
     # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
     # to have the channel name as a tag.
     check_call(['docker/genconf/make.sh', 'push'], env={
         'PKGPANDA_SRC': pkgpanda_src,
         'DCOS_IMAGE_SRC': dcos_image_src,
         'CHANNEL_NAME': channel_name,
-        'BOOTSTRAP_ID': bootstrap_id
+        'BOOTSTRAP_ID': default_bootstrap_id
         })
 
     # Upload provider artifacts, mark as active
-    channel.upload_providers_and_activate(bootstrap_id, commit, metadata_json, provider_data)
+    channel.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
     print("New release created on channel", channel_name)
 
 

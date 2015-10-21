@@ -23,6 +23,7 @@ import os
 import os.path
 import sys
 import yaml
+import logging as log
 from copy import copy, deepcopy
 from itertools import chain
 from pkgpanda import PackageId
@@ -32,7 +33,7 @@ from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 # List of all roles all templates should have.
-role_names = {"master", "slave", "slave_public", "master_slave"}
+role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
 
@@ -173,7 +174,8 @@ def get_parameters(template_dict):
                 template_parameters = jinja2.meta.find_undeclared_variables(ast)
                 parameters |= set(template_parameters)
             except FileNotFoundError as ex:
-                print("NOTICE: template not found:", ex)
+                # Needs to be implemented with a logger
+                log.debug("Template not found: %s", ex)
 
     return parameters
 
@@ -276,6 +278,7 @@ def add_arguments(parser):
     parser.add_argument('--save-final-config', type=str)
     parser.add_argument('--save-user-config', type=str)
     parser.add_argument('--non-interactive', action='store_true')
+    parser.add_argument('-l','--log-level', default='info', choices=['debug', 'info'], help='Logging level. Default: info. Options: info, debug.')
 
     return parser
 
@@ -286,13 +289,18 @@ def get_options_object():
         'assume_defaults': True,
         'save_user_config': None,
         'save_final_config': None,
-        'non_interactive': True
+        'non_interactive': True,
+        'log_level': 'info',
         })
 
 
 def do_gen_package(config, package_filename):
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}
+    # Forcibly set umask so that os.makedirs() always makes directories with
+    # uniform permissions
+    os.umask(0o000)
+
     with TemporaryDirectory("gen_tmp_pkg") as tmpdir:
 
         # Only contains write_files
@@ -316,6 +324,8 @@ def do_gen_package(config, package_filename):
             # the file has special mode defined, handle that.
             if 'mode' in file_info:
                 os.chmod(path, int(str(file_info['mode']), 8))
+            else:
+                os.chmod(path, 0o644)
 
         # Ensure the output directory exists
         if os.path.dirname(package_filename):
@@ -344,7 +354,19 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         elif can_calc:
             default_str = ' <calculated>'
 
-        value = input('{}{}: '.format(name, default_str))
+        # Print key to desired input with possible defaults and type to be asserted
+        possible_values_str = ''
+        if possible_values:
+          possible_values_str = '{' + ",".join(possible_values) + '}'
+
+        descriptions = load_json("gen/descriptions.json")
+
+        if name in descriptions:
+          print("")
+          print("[%s]"% name)
+          print(descriptions[name])
+
+        value = input('{}{}{}: '.format(name, default_str, possible_values_str))
 
         # Make sure value is one of the allowed values
         if possible_values is not None and value not in possible_values:
@@ -423,7 +445,7 @@ class Mixin:
         try:
             module = importlib.import_module(self.modulename)
         except ImportError as ex:
-            print("NOTICE: module not found:".format(self.modulename), ex)
+            log.debug("Module not found: %s", ex)
 
         if module:
             try:
@@ -729,12 +751,29 @@ def do_generate(
 
 
 def generate(
+        # CLI options
         options,
+        # Which template directories to include
         mixins,
+        # Arbitrary jinja template to parse
         extra_templates=dict(),
+        # config.json parameters
         arguments=dict(),
+        # Additional YAML to load and merge into pkgpanda
         extra_cluster_packages=[]):
     try:
+        # Set the logging level
+        if options.log_level == "debug":
+          log.basicConfig(level=log.DEBUG)
+          log.debug("Log level set to DEBUG")
+        elif options.log_level == "info":
+          log.basicConfig(level=log.INFO)
+          log.info("Log level set to INFO")
+        else:
+          log.error("Logging option not available: %s", options.log_level)
+          sys.exit(1)
+
+        log.info("Generating configuration files from user input:")
         return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:
         print("ERROR: Jinja2 TemplateSyntaxError")

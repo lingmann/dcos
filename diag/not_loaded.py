@@ -30,7 +30,7 @@ def loaded(unit):
 
 def hook(data):
     client = http.client.HTTPSConnection("hooks.slack.com")
-    resp = client.request(
+    client.request(
         "POST", "/services/T0252D4NY/B08N4AW12/KN07X7zl6nWquZIfAjqOszGE",
         body=json.dumps({
             "text": data

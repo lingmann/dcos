@@ -1,8 +1,9 @@
+import functools.reduce
+import json
+import sys
 
 import httplib
-import json
 import prettytable
-import sys
 
 
 def fetch_list(master):
@@ -20,7 +21,7 @@ def get_counts(data):
 
     for actor in data:
         yield actor["id"], '', len(actor["events"])
-        for k, v in reduce(acc_names, actor["events"], {}).iteritems():
+        for k, v in functools.reduce(acc_names, actor["events"], {}).iteritems():
             yield [actor["id"], k, v]
 
 

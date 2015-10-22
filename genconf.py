@@ -2,73 +2,70 @@
 """Generates DCOS packages and configuration."""
 
 import argparse
-import glob
-import json
 import os
 import subprocess
 import sys
+import gen
+import providers.bash as bash
+import providers.chef as chef
 import logging as log
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
+
 def do_genconf(options):
-    args = []
+    """
+    Wraps calls to the gen library and instanciates configuration for a given provider.
+    """
+
+    # Make sure to exit if --config is not passed when using non-interactive
+    if not options.is_interactive:
+        if not options.config:
+            log.error("Must pass --config when using non-interactive mode.")
+            sys.exit(1)
+
+    # Interpolate the commands in genconf.py to gen library | i.e., set the args
+    # in gen/__init__.py from our genconf.py commands
+    gen_options = gen.get_options_object()
+    gen_options.log_level = options.log_level
+    gen_options.config = options.config
+    gen_options.output_dir = options.output_dir
+
+    if options.is_interactive:
+        gen_options.assume_defaults = False
+        gen_options.non_interactive = False
+    else:
+        gen_options.assume_defaults = True
+        gen_options.non_interactive = True
+
+    # Generate installation-type specific configuration
     if options.installer_format == 'bash':
-        args += ["/dcos-image/bash.py"]
+        gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'])
     elif options.installer_format == 'chef':
-        args += ["/dcos-image/chef.py"]
+        gen_out = do_provider(gen_options, chef, ['chef', 'centos', 'onprem'])
     else:
         log.error("No such installer format: %s", options.installer_format)
         sys.exit(1)
 
-    args += [
-        "--output-dir", "/genconf/serve",
-        "--config", "/genconf/config.json",
-        "--save-final-config", "/genconf/config-final.json"]
-
-    if not options.is_interactive:
-        args += [
-            "--assume-defaults",
-            "--non-interactive",
-            "--save-user-config", "/genconf/config-user-output.json"]
-
-    do_gen_wrapper(args)
+    # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
+    fetch_bootstrap(gen_out.arguments['channel_name'], gen_out.arguments['bootstrap_id'])
 
 
-def do_gen_wrapper(args):
-    conf = load_config('/dcos-image/config.json', '/genconf/config-user.json')
-    save_json(conf, '/genconf/config.json')
-    check_prereqs()
-    fetch_bootstrap(conf)
-    symlink_bootstrap()
-    try:
-        subprocess.check_call(args, cwd='/dcos-image')
-    except CalledProcessError as e:
-        log.error("Config generator exited with an error code: %s %s", e.exitcode, e.output)
-        sys.exit(1)
+def do_provider(options, provider_module, mixins):
+    gen_out = gen.generate(
+        options=options,
+        mixins=mixins,
+        extra_cluster_packages=['onprem-config']
+        )
+    provider_module.generate(gen_out, options.output_dir)
+    return gen_out
 
 
-def check_prereqs():
-    """
-    Ensure we can ingest an ip-detect script written in an arbitrary language.
-    Pkgpanda will ensure the script outputs a valid IPV4 or 6 address, but we 
-    can't do that here since we're not on the host machine yet.
-    """
-
-    if not os.path.isfile('/genconf/ip-detect'):
-        log.error("Missing /genconf/ip-detect")
-        sys.exit(1)
-
-
-def fetch_bootstrap(
-        config,
-        bootstrap_root="https://downloads.mesosphere.com/dcos"):
-    """Download the DCOS bootstrap tarball to /genconf if it does not already
-    exist."""
-
-    bootstrap_filename = "{}.bootstrap.tar.xz".format(config['bootstrap_id'])
-    dl_url = "{}/{}/bootstrap/{}".format(
-        bootstrap_root, config['channel_name'], bootstrap_filename)
+def fetch_bootstrap(channel_name, bootstrap_id):
+    bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
+    dl_url = "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}".format(
+        channel_name,
+        bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
 
     def cleanup_and_exit():
@@ -91,7 +88,7 @@ def fetch_bootstrap(
                 log.error("Copy failed or interrupted %s", ex.cmd)
                 cleanup_and_exit()
 
-        log.info("Downloading bootstrap tarball:", dl_url)
+        log.info("Downloading bootstrap tarball from %s", dl_url)
         curl_out = ""
         try:
             subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
@@ -100,49 +97,6 @@ def fetch_bootstrap(
         except (KeyboardInterrupt, CalledProcessError) as ex:
             log.error("Download failed or interrupted %s", curl_out)
             cleanup_and_exit()
-
-
-def symlink_bootstrap(
-        src_glob='/genconf/serve/bootstrap/*bootstrap.tar.xz',
-        dest_dir='/dcos-image/packages'):
-    """Create symlinks to files matched by src_glob in dest_dir. Useful for
-    making the bootstrap tarballs discoverable by the gen scripts."""
-    for src in glob.glob(src_glob):
-        dest = os.path.join(dest_dir, os.path.basename(src))
-        try:
-            # print("INFO: Creating symlink {} => {}".format(src, dest))
-            os.symlink(src, dest)
-        except FileExistsError:
-            continue
-
-
-def load_config(base_json_path, user_json_path):
-    """Merges JSON data from base_json_path with user_json_path (if present).
-    and returns the result as a Dict. Anything in user_json_path will override
-    the data in base_json_path."""
-
-    config = load_json(base_json_path)
-    if os.path.isfile(user_json_path):
-        log.info("Merging user configuration:", user_json_path)
-        config.update(load_json(user_json_path))
-    else:
-        log.info("No optional user configuration detected in ", user_json_path)
-
-    return config
-
-
-def load_json(filename):
-    try:
-        with open(filename) as fname:
-            return json.load(fname)
-    except ValueError as ex:
-        log.error("Invalid JSON %s: %s", filename, ex)
-        sys.exit(1)
-
-
-def save_json(dict_in, filename):
-    with open(filename, 'w') as fname:
-        json.dump(dict_in, fname)
 
 
 def main():
@@ -175,7 +129,32 @@ parameters that the input paramters were expanded to as DCOS configuration.
         description=desc, formatter_class=RawTextHelpFormatter)
 
     # Whether to output chef or bash
-    parser.add_argument('--installer-format', default='bash', type=str, choices=['bash', 'chef'])
+    parser.add_argument(
+        '--installer-format',
+        default='bash',
+        type=str,
+        choices=['bash', 'chef'],
+        help='Type of installation. Bash or chef currently supported.')
+
+    # Log level
+    parser.add_argument(
+        '-l',
+        '--log-level',
+        default='info',
+        type=str,
+        choices=['debug', 'info'],
+        help='Log level. Info or debug')
+
+    # Output directory
+    parser.add_argument(
+        '-o',
+        '--output-dir',
+        default='/genconf/serve',
+        type=str,
+        help='Output directory for genconf')
+
+    # Config file override
+    parser.add_argument('-c', '--config', type=str, help='Path to config.json')
 
     # Setup subparsers
     subparsers = parser.add_subparsers(title='commands')
@@ -190,6 +169,15 @@ parameters that the input paramters were expanded to as DCOS configuration.
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()
+    if options.log_level == "debug":
+        log.basicConfig(level=log.DEBUG)
+        log.debug("Log level set to DEBUG")
+    elif options.log_level == "info":
+        log.basicConfig(level=log.INFO)
+        log.info("Log level set to INFO")
+    else:
+        log.error("Logging option not available: %s", options.log_level)
+        sys.exit(1)
 
     # Use an if rather than try/except since lots of things inside could throw
     # an AttributeError.

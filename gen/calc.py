@@ -1,10 +1,12 @@
 import json
-import os
-import urllib.request
-import yaml
 import logging as log
+import os
+import sys
+import urllib.request
 from math import floor
 from subprocess import check_output
+
+import yaml
 
 
 def calulate_dcos_image_commit(arguments):
@@ -63,10 +65,10 @@ def calculate_mesos_dns_resolvers_str(arguments):
 
 def calculate_ip_detect_contents(arguments):
     if os.path.exists(arguments['ip_detect_filename']):
-      return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
+        return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
     else:
-      log.error("Ip-detect script: %s. Does not exist.", arguments['ip_detect_filename'])
-      sys.exit(1)
+        log.error("Ip-detect script: %s. Does not exist.", arguments['ip_detect_filename'])
+        sys.exit(1)
 
 must = {
     'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
@@ -93,12 +95,12 @@ def validate(arguments):
         assert arguments['channel_name'][-1] != '/'
 
 defaults = {
-  "num_masters": 3,
-  "channel_name": "testing/continuous",
-  "roles": "slave_public",
-  "weights": "slave_public=1",
-  "docker_remove_delay": "1hrs",
-  "gc_delay": "2days"
+    "num_masters": 3,
+    "channel_name": "testing/continuous",
+    "roles": "slave_public",
+    "weights": "slave_public=1",
+    "docker_remove_delay": "1hrs",
+    "gc_delay": "2days"
 }
 
 parameters = ["channel_name", "ip_detect_filename", "resolvers"]

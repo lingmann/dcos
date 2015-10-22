@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Azure Image Creation, Management, Testing"""
 
-import json
 import os
+
 import requests
 
 
@@ -43,7 +43,7 @@ class AzureClient(object):
         return response['access_token']
 
     def get_auth_token(self):
-        #TODO(mj): Make this cache the token
+        # TODO(mj): Make this cache the token
         return self.get_token_from_client_credentials(
             endpoint=self._oauth_endpoint,
             client_id=self._client_id,
@@ -51,7 +51,7 @@ class AzureClient(object):
             )
 
     def verify(self, template_body_json, template_parameters):
-        endpoint = 'https://management.azure.com/subscriptions/%s/resourcegroups/%s/providers/microsoft.resources/deployments/%s/validate' % (self._subscription_id, self._resource_group_name, self._deployment_name)
+        endpoint = 'https://management.azure.com/subscriptions/%s/resourcegroups/%s/providers/microsoft.resources/deployments/%s/validate' % (self._subscription_id, self._resource_group_name, self._deployment_name) # flake8: noqa
         params = {'api-version': AzureClient.API_VERSION}
 
         token = self.get_auth_token()
@@ -69,7 +69,7 @@ class AzureClient(object):
             raise Exception('Failed verification: %s' % errors)
 
     def get_template_deployment_status(self):
-        endpoint = 'https://management.azure.com/subscriptions/%s/resourcegroups/%s/providers/microsoft.resources/deployments/%s' % (self._subscription_id, self._resource_group_name, self._deployment_name)
+        endpoint = 'https://management.azure.com/subscriptions/%s/resourcegroups/%s/providers/microsoft.resources/deployments/%s' % (self._subscription_id, self._resource_group_name, self._deployment_name) # flake8: noqa
 
         params = {'api-version': AzureClient.API_VERSION}
 

@@ -470,7 +470,11 @@ def build(variant, name, repository_url):
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities.
-    checkout_ids = fetch_sources(sources)
+    try:
+        checkout_ids = fetch_sources(sources)
+    except ValidationError as ex:
+        print("ERROR: Validation error when fetching sources for package:", ex)
+        sys.exit(1)
 
     for src_name, checkout_id in checkout_ids.items():
         # NOTE: single_source buildinfo was expanded above so the src_name is

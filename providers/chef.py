@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Generates a chef cookbook for installing DCOS On-Prem"""
 
-import argparse
 import yaml
 from pkgpanda.util import load_string
 import logging as log
@@ -53,6 +52,7 @@ log 'dcos-started' do
   message 'DCOS node initialized successfully'
 end
 """
+
 
 def generate(gen_out, output_dir):
     log.info("Generating Chef configuration files...")

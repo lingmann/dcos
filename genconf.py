@@ -2,18 +2,16 @@
 """Generates DCOS packages and configuration."""
 
 import argparse
-import glob
-import json
 import os
 import subprocess
 import sys
-import util
 import gen
 import providers.bash as bash
 import providers.chef as chef
 import logging as log
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
+
 
 def do_genconf(options):
     """
@@ -22,22 +20,23 @@ def do_genconf(options):
 
     # Make sure to exit if --config is not passed when using non-interactive
     if not options.is_interactive:
-      if not options.config:
-        log.error("Must pass --config when using non-interactive mode.")
-        sys.exit(1)
+        if not options.config:
+            log.error("Must pass --config when using non-interactive mode.")
+            sys.exit(1)
 
-    # Interpolate the commands in genconf.py to gen library | i.e., set the args in gen/__init__.py from our genconf.py commands 
+    # Interpolate the commands in genconf.py to gen library | i.e., set the args
+    # in gen/__init__.py from our genconf.py commands
     gen_options = gen.get_options_object()
     gen_options.log_level = options.log_level
     gen_options.config = options.config
     gen_options.output_dir = options.output_dir
 
     if options.is_interactive:
-      gen_options.assume_defaults = False
-      gen_options.non_interactive = False
+        gen_options.assume_defaults = False
+        gen_options.non_interactive = False
     else:
-      gen_options.assume_defaults = True
-      gen_options.non_interactive = True
+        gen_options.assume_defaults = True
+        gen_options.non_interactive = True
 
     # Generate installation-type specific configuration
     if options.installer_format == 'bash':
@@ -47,7 +46,7 @@ def do_genconf(options):
     else:
         log.error("No such installer format: %s", options.installer_format)
         sys.exit(1)
-    
+
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['channel_name'], gen_out.arguments['bootstrap_id'])
 
@@ -65,9 +64,8 @@ def do_provider(options, provider_module, mixins):
 def fetch_bootstrap(channel_name, bootstrap_id):
     bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
     dl_url = "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}".format(
-          channel_name, 
-          bootstrap_filename
-        )
+        channel_name,
+        bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
 
     def cleanup_and_exit():
@@ -131,13 +129,29 @@ parameters that the input paramters were expanded to as DCOS configuration.
         description=desc, formatter_class=RawTextHelpFormatter)
 
     # Whether to output chef or bash
-    parser.add_argument('--installer-format', default='bash', type=str, choices=['bash', 'chef'], help='Type of installation. Bash or chef currently supported.')
+    parser.add_argument(
+        '--installer-format',
+        default='bash',
+        type=str,
+        choices=['bash', 'chef'],
+        help='Type of installation. Bash or chef currently supported.')
 
     # Log level
-    parser.add_argument('-l', '--log-level', default='info', type=str, choices=['debug', 'info'], help='Log level. Info or debug')
+    parser.add_argument(
+        '-l',
+        '--log-level',
+        default='info',
+        type=str,
+        choices=['debug', 'info'],
+        help='Log level. Info or debug')
 
     # Output directory
-    parser.add_argument('-o', '--output-dir', default='/genconf/serve', type=str, help='Output directory for genconf')
+    parser.add_argument(
+        '-o',
+        '--output-dir',
+        default='/genconf/serve',
+        type=str,
+        help='Output directory for genconf')
 
     # Config file override
     parser.add_argument('-c', '--config', type=str, help='Path to config.json')
@@ -164,7 +178,7 @@ parameters that the input paramters were expanded to as DCOS configuration.
     else:
         log.error("Logging option not available: %s", options.log_level)
         sys.exit(1)
-   
+
     # Use an if rather than try/except since lots of things inside could throw
     # an AttributeError.
     if hasattr(options, 'is_interactive'):

@@ -11,3 +11,4 @@ onprem.tar.xz
 *~
 *backups
 docker-tag
+.tox/

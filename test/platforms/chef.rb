@@ -6,7 +6,9 @@ require "json"
 def render_installer(name, c)
   return <<-"EOF"
     source /etc/environment
-    yum install -y docker
+    yum -y install docker unzip &&
+    systemctl enable docker &&
+    systemctl start docker &&
     echo nogroup:x:65500: >> /etc/group
     curl -fsSL https://www.opscode.com/chef/install.sh | bash
     mkdir -p /var/chef/cookbooks/dcos

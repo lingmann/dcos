@@ -87,7 +87,7 @@
     "addressPrefix": "10.0.0.0/16",
     "vmSize": "Standard_A5",
     "coreosVersion": "766.4.0",
-    "storageAccountsCount" : "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),parameters('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),1)))]",
+    "storageAccountsCount": "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),parameters('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),1)))]",
     "storageAccountType": "Standard_LRS",
     "storageAccountPrefix": [
         "0","6","c","i","o","u","1","7","d","j","p","v",
@@ -103,7 +103,6 @@
     "mastersLBBackEndPoolName": "mastersLBBackEndPool",
     "masterFrontEndIPConfigID": "[concat(variables('masterLoadBalancerID'),'/frontendIPConfigurations/loadBalancerFrontEnd')]",
     "masterBackEndIPConfigID": "[concat(variables('masterLoadBalancerID'),'/backendAddressPools/',variables('mastersLBBackEndPoolName'))]",
-
     "publicIPAddress1": "publicSlaveLBPublicIP0",
     "publicSlaveLoadBalancerName": "externalpublicSlaveLoadBalancer",
     "publicSlaveLBNicName": "publicSlaveLBNic",
@@ -340,9 +339,9 @@
               "subnet": {
                 "id": "[variables('publicSubnetRef')]"
               },
-              "loadBalancerBackendAddressPools" : [
+              "loadBalancerBackendAddressPools": [
                 {
-                  "id" : "[concat(variables('publicSlaveLoadBalancerID'), '/backendAddressPools/',variables('publicSlavesLBBackEndPoolName'))]"
+                  "id": "[concat(variables('publicSlaveLoadBalancerID'), '/backendAddressPools/',variables('publicSlavesLBBackEndPoolName'))]"
                 }
               ]
             }
@@ -396,7 +395,7 @@
           "osDisk": {
             "name": "[concat('slavePublicVhd', copyindex())]",
             "vhd": {
-              "uri" : "[concat('http://',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniqueName')),'.blob.core.windows.net/vhds/slavePublicVhd',copyIndex(),'.vhd')]"
+              "uri": "[concat('http://',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniqueName')),'.blob.core.windows.net/vhds/slavePublicVhd',copyIndex(),'.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -484,7 +483,7 @@
           "osDisk": {
             "name": "[concat('slavePrivateVhd', copyindex())]",
             "vhd": {
-              "uri" : "[concat('http://',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')),'.blob.core.windows.net/vhds/','slavePrivateVhd',copyIndex(),'.vhd')]"
+              "uri": "[concat('http://',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')),'.blob.core.windows.net/vhds/','slavePrivateVhd',copyIndex(),'.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -544,7 +543,7 @@
               },
               "loadBalancerBackendAddressPools": [
                 {
-                  "id" : "[concat(variables('masterLoadBalancerID'), '/backendAddressPools/',variables('mastersLBBackEndPoolName'))]"
+                  "id": "[concat(variables('masterLoadBalancerID'), '/backendAddressPools/',variables('mastersLBBackEndPoolName'))]"
                 }
               ]
             }
@@ -650,7 +649,7 @@
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
       "properties": {
-        "networkSecurityGroup" : {
+        "networkSecurityGroup": {
            "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('masterSecurityGroupName'))]"
         },
         "ipConfigurations": [
@@ -685,8 +684,8 @@
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
       "properties": {
-        "networkSecurityGroup" : {
-           "id" : "[resourceId('Microsoft.Network/networkSecurityGroups', variables('slavePublicSecurityGroupName'))]"
+        "networkSecurityGroup": {
+           "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('slavePublicSecurityGroupName'))]"
         },
         "ipConfigurations": [
           {
@@ -753,36 +752,36 @@
           {
             "name": "http",
             "properties": {
-              "frontendPort" : 80,
-              "protocol" : "Tcp",
-              "backendPort" : 80,
-              "idleTimeoutInMinutes" : 15,
-              "probe" : {
-                 "Id" : "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
+              "frontendPort": 80,
+              "protocol": "Tcp",
+              "backendPort": 80,
+              "idleTimeoutInMinutes": 15,
+              "probe": {
+                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
               },
-              "frontendIPConfiguration" : {
-                 "Id" : "[variables('masterFrontEndIPConfigID')]"
+              "frontendIPConfiguration": {
+                 "id": "[variables('masterFrontEndIPConfigID')]"
               },
-              "backendAddressPool" : {
-                 "Id" : "[variables('masterBackEndIPConfigID')]"
+              "backendAddressPool": {
+                 "id": "[variables('masterBackEndIPConfigID')]"
               }
             }
           },
           {
             "name": "https",
             "properties": {
-              "frontendPort" : 443,
-              "protocol" : "Tcp",
-              "backendPort" : 443,
-              "idleTimeoutInMinutes" : 15,
-              "probe" : {
-                "Id" : "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
+              "frontendPort": 443,
+              "protocol": "Tcp",
+              "backendPort": 443,
+              "idleTimeoutInMinutes": 15,
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
               },
-              "frontendIPConfiguration" : {
-                "Id" : "[variables('masterFrontEndIPConfigID')]"
+              "frontendIPConfiguration": {
+                "id": "[variables('masterFrontEndIPConfigID')]"
               },
-              "backendAddressPool" : {
-                "Id" : "[variables('masterBackEndIPConfigID')]"
+              "backendAddressPool": {
+                "id": "[variables('masterBackEndIPConfigID')]"
               }
             }
           }
@@ -831,36 +830,36 @@
           {
             "name": "http",
             "properties": {
-              "frontendPort" : 80,
-              "protocol" : "Tcp",
-              "backendPort" : 80,
-              "idleTimeoutInMinutes" : 15,
-              "probe" : {
-                 "Id" : "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
+              "frontendPort": 80,
+              "protocol": "Tcp",
+              "backendPort": 80,
+              "idleTimeoutInMinutes": 15,
+              "probe": {
+                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
               },
-              "frontendIPConfiguration" : {
-                 "Id" : "[variables('publicSlaveFrontEndIPConfigID')]"
+              "frontendIPConfiguration": {
+                 "id": "[variables('publicSlaveFrontEndIPConfigID')]"
               },
-              "backendAddressPool" : {
-                 "Id" : "[variables('publicSlaveBackEndIPConfigID')]"
+              "backendAddressPool": {
+                 "id": "[variables('publicSlaveBackEndIPConfigID')]"
               }
             }
           },
           {
             "name": "https",
             "properties": {
-              "frontendPort" : 443,
-              "protocol" : "Tcp",
-              "backendPort" : 443,
-              "idleTimeoutInMinutes" : 15,
-              "probe" : {
-                "Id" : "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
+              "frontendPort": 443,
+              "protocol": "Tcp",
+              "backendPort": 443,
+              "idleTimeoutInMinutes": 15,
+              "probe": {
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
               },
-              "frontendIPConfiguration" : {
-                "Id" : "[variables('publicSlaveFrontEndIPConfigID')]"
+              "frontendIPConfiguration": {
+                "id": "[variables('publicSlaveFrontEndIPConfigID')]"
               },
-              "backendAddressPool" : {
-                "Id" : "[variables('publicSlaveBackEndIPConfigID')]"
+              "backendAddressPool": {
+                "id": "[variables('publicSlaveBackEndIPConfigID')]"
               }
             }
           }

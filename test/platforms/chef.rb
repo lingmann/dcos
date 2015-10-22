@@ -9,7 +9,7 @@ def render_installer(name, c)
     yum -y install docker unzip &&
     systemctl enable docker &&
     systemctl start docker &&
-    echo nogroup:x:65500: >> /etc/group
+    groupadd -g 65500 nogroup
     curl -fsSL https://www.opscode.com/chef/install.sh | bash
     mkdir -p /var/chef/cookbooks/dcos
     tar -C /var/chef/cookbooks/dcos -xf "$(ls -t /vagrant/chef-*.tar.xz|head -1)"

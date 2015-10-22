@@ -5,7 +5,7 @@ def render_installer(name, c)
     yum -y install docker unzip &&
     systemctl enable docker &&
     systemctl start docker &&
-    echo nogroup:x:65500: >> /etc/group &&
+    groupadd -g 65500 nogroup &&
     cp /test_platforms/bash/install-oneshot.service /etc/systemd/system
     echo #{ c[:roles].join(" ") } > /setup_roles
     systemctl --no-block start install-oneshot

@@ -83,7 +83,9 @@ def fetch_bootstrap(channel_name, bootstrap_id):
         if os.path.exists(local_cache_filename):
             log.info("Copying bootstrap out of cache")
             try:
+                subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
                 subprocess.check_call(['cp', local_cache_filename, save_path])
+                return
             except (KeyboardInterrupt, CalledProcessError) as ex:
                 log.error("Copy failed or interrupted %s", ex.cmd)
                 cleanup_and_exit()

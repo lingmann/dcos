@@ -19,4 +19,7 @@ WORKDIR /dcos-image
 
 VOLUME ["/genconf"]
 
+ENV CHANNEL_NAME=${CHANNEL_NAME}
+ENV BOOTSTRAP_ID=${BOOTSTRAP_ID}
+
 ENTRYPOINT ["/dcos-image/genconf.py"]

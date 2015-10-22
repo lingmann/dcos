@@ -17,7 +17,6 @@ def do_genconf(options):
     """
     Wraps calls to the gen library and instanciates configuration for a given provider.
     """
-
     # Make sure to exit if --config is not passed when using non-interactive
     if not options.is_interactive:
         if not options.config:
@@ -52,7 +51,25 @@ def do_genconf(options):
 
 
 def do_provider(options, provider_module, mixins):
+    # We set the channel_name, bootstrap_id in env as to not expose it to users but still make it switchable
+    if 'CHANNEL_NAME' in os.environ:
+        channel_name = os.environ['CHANNEL_NAME']
+    else:
+        log.error("CHANNEL_NAME must be set in environment to run.")
+        sys.exit(1)
+
+    if 'BOOTSTRAP_ID' in os.environ:
+        bootstrap_id = os.environ['BOOTSTRAP_ID']
+    else:
+        log.error("BOOTSTRAP_ID must be set in environment to run.")
+        sys.exit(1)
+
     gen_out = gen.generate(
+        arguments={
+            'ip_detect_filename': '/genconf/ip-detect',
+            'channel_name': channel_name,
+            'bootstrap_id': bootstrap_id
+        },
         options=options,
         mixins=mixins,
         extra_cluster_packages=['onprem-config']

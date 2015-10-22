@@ -5,6 +5,7 @@ import requests
 import uuid
 import time
 
+
 def assertTaskWebPortsUp(cluster, app):
     # app must begin with trailing '/'
     assert app.startswith('/')
@@ -69,12 +70,13 @@ class Cluster:
         return requests.get(self.uri + path)
 
     def post(self, path="", payload=None):
-        if payload == None:
+        if payload is None:
             payload = {}
         return requests.post(self.uri + path, json=payload)
 
     def delete(self, path=""):
         return requests.delete(self.uri + path)
+
 
 def test_DCOSUIUp(cluster):
     r = cluster.get('/')
@@ -111,7 +113,7 @@ def test_MarathonAppWorking(cluster):
                 'image': 'nginx',
                 'network': 'BRIDGE',
                 'portMappings': [
-                    { 'containerPort':  80, 'hostPort': 0, 'servicePort': 0, 'protocol': 'tcp' }
+                    {'containerPort':  80, 'hostPort': 0, 'servicePort': 0, 'protocol': 'tcp'}
                 ]
             }
         },
@@ -119,23 +121,23 @@ def test_MarathonAppWorking(cluster):
         'mem': 64,
         'instances': 1,
         'ports': [0],
-        'healthChecks': [
-          {
-            'protocol': 'HTTP',
-            'path': '/',
-            'portIndex': 0,
-            'gracePeriodSeconds': 5,
-            'intervalSeconds': 10,
-            'timeoutSeconds': 10,
-            'maxConsecutiveFailures': 3
-          }
+        'healthChecks':
+        [
+            {
+                'protocol': 'HTTP',
+                'path': '/',
+                'portIndex': 0,
+                'gracePeriodSeconds': 5,
+                'intervalSeconds': 10,
+                'timeoutSeconds': 10,
+                'maxConsecutiveFailures': 3
+            }
         ]
     }
 
     # create app
     r = cluster.post('marathon/v2/apps', payload)
     assert r.ok
-
 
     # wait for app to run
     tasksRunning = 0
@@ -153,7 +155,8 @@ def test_MarathonAppWorking(cluster):
             if tasksHealthy == 1:
                 remote_host = json['app']['tasks'][0]['host']
                 remote_port = json['app']['tasks'][0]['ports'][0]
-                print('running on {}:{} with {}/{} healthy tasks'.format(remote_host, remote_port, tasksHealthy, tasksRunning))
+                print('running on {}:{} with {}/{} healthy tasks'.format(
+                    remote_host, remote_port, tasksHealthy, tasksRunning))
                 break
 
         if time.time() > timeout:

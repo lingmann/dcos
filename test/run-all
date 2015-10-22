@@ -22,7 +22,7 @@ rm -rf PASSED
 
 mkdir -p build
 
-cp ip-detector.sh build/ip-detect
+cp ip-detect build/ip-detect
 cat <<EOF > "build/config.json"
 {
   "cluster_name":"test_cluster",

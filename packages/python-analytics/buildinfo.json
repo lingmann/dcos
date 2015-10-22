@@ -5,7 +5,8 @@
     "python-analytics": {
       "kind": "git",
       "git": "https://github.com/segmentio/analytics-python.git",
-      "ref": "1.0.3"
+      "ref": "627637e2b5de0d423d807320790bde224854923c",
+      "ref_origin": "1.0.3"
     },
     "six" : {
       "kind": "url_extract",

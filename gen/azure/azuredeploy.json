@@ -650,7 +650,7 @@
       ],
       "properties": {
         "networkSecurityGroup": {
-           "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('masterSecurityGroupName'))]"
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('masterSecurityGroupName'))]"
         },
         "ipConfigurations": [
           {
@@ -685,7 +685,7 @@
       ],
       "properties": {
         "networkSecurityGroup": {
-           "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('slavePublicSecurityGroupName'))]"
+          "id": "[resourceId('Microsoft.Network/networkSecurityGroups', variables('slavePublicSecurityGroupName'))]"
         },
         "ipConfigurations": [
           {
@@ -760,10 +760,10 @@
                  "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
               },
               "frontendIPConfiguration": {
-                 "id": "[variables('masterFrontEndIPConfigID')]"
+                "id": "[variables('masterFrontEndIPConfigID')]"
               },
               "backendAddressPool": {
-                 "id": "[variables('masterBackEndIPConfigID')]"
+                "id": "[variables('masterBackEndIPConfigID')]"
               }
             }
           },
@@ -835,13 +835,13 @@
               "backendPort": 80,
               "idleTimeoutInMinutes": 15,
               "probe": {
-                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('publicSlaveLoadBalancerName')), '/probes/http_probe')]"
               },
               "frontendIPConfiguration": {
-                 "id": "[variables('publicSlaveFrontEndIPConfigID')]"
+                "id": "[variables('publicSlaveFrontEndIPConfigID')]"
               },
               "backendAddressPool": {
-                 "id": "[variables('publicSlaveBackEndIPConfigID')]"
+                "id": "[variables('publicSlaveBackEndIPConfigID')]"
               }
             }
           },

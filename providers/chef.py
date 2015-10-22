@@ -4,6 +4,7 @@
 import argparse
 import yaml
 from pkgpanda.util import load_string
+import logging as log
 
 import gen
 import util
@@ -52,6 +53,12 @@ log 'dcos-started' do
   message 'DCOS node initialized successfully'
 end
 """
+
+def generate(gen_out, output_dir):
+    log.info("Generating Chef configuration files...")
+    chef_tarball = make_chef(gen_out)
+    util.do_bundle_onprem([chef_tarball], gen_out, output_dir)
+    log.info("Chef tarball: %s", chef_tarball)
 
 
 def make_chef(gen_out):
@@ -115,25 +122,3 @@ def make_chef(gen_out):
     gen.do_gen_package(chef_files, chef_tarball)
 
     return chef_tarball
-
-
-def do_chef_only(options):
-    gen_out = gen.generate(
-        options=options,
-        mixins=['chef', 'centos', 'onprem'],
-        extra_cluster_packages=['onprem-config']
-        )
-    chef_tarball = make_chef(gen_out)
-    util.do_bundle_onprem([chef_tarball], gen_out, options.output_dir)
-    print("Chef tarball:", chef_tarball)
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Gen Chef templates to use to install a DCOS cluster')
-
-    # No subcommand
-    gen.add_arguments(parser)
-    parser.add_argument('--output-dir',
-                        type=str,
-                        help='Directory to write generated config')
-    do_chef_only(parser.parse_args())

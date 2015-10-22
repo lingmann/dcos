@@ -2,11 +2,14 @@
 """Generates a bash script for installing DCOS On-Prem."""
 
 import argparse
-
 from pkgpanda.util import write_string
-
 import gen
 import util
+
+
+"""
+Templates for use in on-premise bash-type installations of DCOS
+"""
 
 file_template = """mkdir -p `dirname {filename}`
 cat <<'EOF' > "{filename}"
@@ -316,11 +319,17 @@ main
 
 """
 
+def generate(gen_out, output_dir):
+    print("Generating Bash configuration files for DCOS")
+    make_bash(gen_out)
+    util.do_bundle_onprem(['dcos_install.sh'], gen_out, output_dir) 
+
 
 def make_bash(gen_out):
-
-    # Reformat the cloud-config into bash heredocs
-    # Assert the cloud-config is only write_files
+    """
+    Reformat the cloud-config into bash heredocs
+    Assert the cloud-config is only write_files
+    """
     setup_flags = ""
     cloud_config = gen_out.templates['cloud-config']
     assert len(cloud_config) == 1
@@ -372,22 +381,3 @@ def make_bash(gen_out):
 
     return 'dcos_install.sh'
 
-
-def do_bash_only(options):
-    gen_out = gen.generate(
-        options=options,
-        mixins=['bash', 'centos', 'onprem'],
-        extra_cluster_packages=['onprem-config']
-        )
-    make_bash(gen_out)
-    util.do_bundle_onprem(['dcos_install.sh'], gen_out, options.output_dir)
-
-
-if __name__ == '__main__':
-    print("Generating configuration files for DCOS")
-    parser = argparse.ArgumentParser(description='Gen BASH templates to use to install a DCOS cluster')
-    gen.add_arguments(parser)
-    parser.add_argument('--output-dir',
-                        type=str,
-                        help='Directory to write generated config')
-    do_bash_only(parser.parse_args())

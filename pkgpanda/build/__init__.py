@@ -225,12 +225,22 @@ def checkout_sources(sources):
             raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
 
 
+# Ref must be a git sha-1. We then pass it through get_sha1 to make
+# sure it is a sha-1 for the commit, not the tree, tag, or any other
+# git object.
+def is_sha(sha_str):
+    try:
+        return int(sha_str, 16) and len(sha_str) == 40
+    except ValueError:
+        return False
+
+
 # TODO(cmaloney): Validate sources has all expected fields...
 def fetch_sources(sources):
     """Fetch sources to the source cache."""
     ids = dict()
     # TODO(cmaloney): Update if already exists rather than hard-failing
-    for src, info in sources.items():
+    for src, info in sorted(sources.items()):
 
         # Stash directory for download reuse between builds.
         cache_dir = os.path.abspath("cache")
@@ -279,19 +289,10 @@ def fetch_sources(sources):
                         git_ref + "^{commit}"]).decode('ascii').strip()
                 except CalledProcessError as ex:
                     raise ValidationError(
-                        "ERROR: Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
-
-            # Ref must be a git sha-1. We then pass it through get_sha1 to make
-            # sure it is a sha-1 for the commit, not the tree, tag, or any other
-            # git object.
-            def is_sha(sha_str):
-                try:
-                    return int(sha_str, 16) and len(sha_str) == 40
-                except ValueError:
-                    return False
+                        "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
 
             if not is_sha(ref):
-                raise ValidationError("ERROR: ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
+                raise ValidationError("ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
             commit = get_sha1(ref)
 
             # Warn if the ref_origin is set and gives a different sha1 than the
@@ -322,11 +323,17 @@ def fetch_sources(sources):
             if not os.path.exists(cache_filename):
                 fetch_url(cache_filename, info['url'])
 
-            # TODO(cmaloney): While src can't be reused, the downloaded tarball
-            # can so long as it has the same sha1gsum.
-            ids[src] = {
-                "sha1": sha1(cache_filename)
-            }
+            # Validate the sha1 of the source is given and matches the sha1
+            file_sha = sha1(cache_filename)
+            if 'sha1' not in info:
+                raise ValidationError(
+                    "url and url_extract both require a sha1 to be given in the buildinfo but no sha1 " +
+                    "found for file " + info['url'] + " which when downloaded has the sha1 " + file_sha)
+
+            if info['sha1'] != file_sha:
+                raise ValidationError(
+                    "Provided sha1 didn't match sha1 of downloaded file. " +
+                    "Provided: {}, Download file's sha1: {}, Url: {}".format(info['sha1'], file_sha, info['url']))
         else:
             raise ValidationError("Currently only packages from url and git sources are supported")
 

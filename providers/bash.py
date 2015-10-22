@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 """Generates a bash script for installing DCOS On-Prem."""
 
-import argparse
 from pkgpanda.util import write_string
-import gen
 import util
 
 
@@ -319,10 +317,11 @@ main
 
 """
 
+
 def generate(gen_out, output_dir):
     print("Generating Bash configuration files for DCOS")
     make_bash(gen_out)
-    util.do_bundle_onprem(['dcos_install.sh'], gen_out, output_dir) 
+    util.do_bundle_onprem(['dcos_install.sh'], gen_out, output_dir)
 
 
 def make_bash(gen_out):
@@ -380,4 +379,3 @@ def make_bash(gen_out):
     write_string('dcos_install.sh', bash_script)
 
     return 'dcos_install.sh'
-

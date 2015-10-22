@@ -17,7 +17,7 @@ import sys
 from functools import partial, partialmethod
 from pkgpanda import PackageId
 from pkgpanda.build import get_last_bootstrap_set, sha1
-from pkgpanda.util import load_json, load_string, write_string
+from pkgpanda.util import load_json, write_string
 from subprocess import check_call, CalledProcessError
 
 import util
@@ -108,7 +108,7 @@ class ChannelManager():
 
         with open(path, 'rb') as data:
             print("Uploading {}{}".format(
-                    path, " as {}".format(destination_path) if destination_path else ''))
+                path, " as {}".format(destination_path) if destination_path else ''))
             return s3_object.put(Body=data, **args)
 
     def upload_string(self, destination_path, text, args={}):
@@ -271,7 +271,8 @@ def do_promote(options):
         metadata['commit']
         )
 
-    metadata_json = to_json({
+    metadata_json = to_json(
+        {
             'active_packages': active_packages,
             'bootstrap_dict': bootstrap_dict,
             'commit': commit,
@@ -346,10 +347,12 @@ def do_variable_set_or_exists(env_var, path):
     if path in os.environ:
         print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
     else:
-        print(("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
-               "or ensure there is a checkout at the default path {path}.").format(
-                    var=env_var,
-                    path=path))
+        print(
+            ("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
+             "or ensure there is a checkout at the default path {path}.").format(
+                var=env_var,
+                path=path
+                ))
     sys.exit(1)
 
 
@@ -397,7 +400,8 @@ def do_create(options):
     for bootstrap_id in bootstrap_dict.values():
         active_packages |= get_bootstrap_packages(bootstrap_id)
 
-    metadata_json = to_json({
+    metadata_json = to_json(
+        {
             'active_packages': list(active_packages),
             'bootstrap_dict': bootstrap_dict,
             'commit': commit,

@@ -119,11 +119,12 @@ def render_cloudformation(
     def transform_lines(text):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
-    template_str = util.jinja_env.from_string(cf_template).render({
-        'master_cloud_config': transform_lines(master_cloudconfig),
-        'slave_cloud_config': transform_lines(slave_cloudconfig),
-        'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
-    })
+    template_str = util.jinja_env.from_string(cf_template).render(
+        {
+            'master_cloud_config': transform_lines(master_cloudconfig),
+            'slave_cloud_config': transform_lines(slave_cloudconfig),
+            'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
+        })
 
     template_json = json.loads(template_str)
 
@@ -184,7 +185,8 @@ def gen_templates(arguments, options):
 
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
-    return util.jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render({
+    return util.jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render(
+        {
             'channel': channel,
             'tag': tag,
             'commit': commit,

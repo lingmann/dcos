@@ -11,3 +11,5 @@ onprem.tar.xz
 *~
 *backups
 docker-tag
+.tox/
+dcos_generate_config.sh

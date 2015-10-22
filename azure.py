@@ -178,8 +178,9 @@ def do_create(tag, channel, commit, gen_arguments):
 
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
-    template_url = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/azure/single-master.azuredeploy.json".format(channel)
-    return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
+    template_url = "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/azure/single-master.azuredeploy.json".format(channel) # flake8: noqa
+    return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render(
+        {
             'channel': channel,
             'tag': tag,
             'commit': commit,

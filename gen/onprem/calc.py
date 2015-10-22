@@ -1,5 +1,5 @@
 defaults = {
-  "resolvers": "[\"8.8.8.8\"]"
+    "resolvers": "[\"8.8.8.8\"]"
 }
 
 # TODO(cmaloney): GCE, Azure

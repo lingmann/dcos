@@ -10,6 +10,14 @@ dcos_install.sh
 onprem.tar.xz
 *~
 *backups
+.cache
 docker-tag
 .tox/
 dcos_generate_config.sh
+.*.swp
+
+# Integration tests related:
+test/build/*
+PASSED
+FAILED
+test/.vagrant/*

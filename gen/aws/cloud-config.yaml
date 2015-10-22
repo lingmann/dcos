@@ -11,6 +11,8 @@ write_files:
       AWS_REGION={ "Ref" : "AWS::Region" }
       AWS_STACK_ID={ "Ref" : "AWS::StackId" }
       AWS_STACK_NAME={ "Ref" : "AWS::StackName" }
+      AWS_IAM_MASTER_ROLE_NAME={ "Ref" : "MasterRole" }
+      AWS_IAM_SLAVE_ROLE_NAME={ "Ref" : "SlaveRole" }
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
       ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}

@@ -39,8 +39,8 @@ role_template = '/etc/mesosphere/roles/{}'
 
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(
-        loader=jinja2.FileSystemLoader(os.getcwd()),
-        undefined=jinja2.StrictUndefined)
+    loader=jinja2.FileSystemLoader(os.getcwd()),
+    undefined=jinja2.StrictUndefined)
 
 
 def add_roles(cloudconfig, roles):
@@ -278,7 +278,12 @@ def add_arguments(parser):
     parser.add_argument('--save-final-config', type=str)
     parser.add_argument('--save-user-config', type=str)
     parser.add_argument('--non-interactive', action='store_true')
-    parser.add_argument('-l','--log-level', default='info', choices=['debug', 'info'], help='Logging level. Default: info. Options: info, debug.')
+    parser.add_argument(
+        '-l',
+        '--log-level',
+        default='info',
+        choices=['debug', 'info'],
+        help='Logging level. Default: info. Options: info, debug.')
 
     return parser
 
@@ -358,12 +363,12 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         possible_values_str = ''
         if possible_values:
             possible_values_str = '{' + ",".join(possible_values) + '}'
-        
+
         descriptions = load_json("gen/descriptions.json")
 
         if name in descriptions:
             print("")
-            print("Please provide values for: %s"% name)
+            print("Please provide values for: %s" % name)
             print(descriptions[name])
 
         value = input('{}{}{}: '.format(name, default_str, possible_values_str))
@@ -535,11 +540,12 @@ def do_generate(
             # message to users when they try just feeding a computed config back
             # into the generation library.
             if 'dcos_image_commit' in user_arguments:
-                log.error("The configuration saved by --save-config cannot be fed directly back as `--config`. "
-                      "It is the full computed configuration used to flesh out the various templates, and contains "
-                      "multiple derived / calculated values that are asserted to be calculated "
-                      "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
-                      "before the saved config can be used.")
+                log.error(
+                    "The configuration saved by --save-config cannot be fed directly back as `--config`. "
+                    "It is the full computed configuration used to flesh out the various templates, and contains "
+                    "multiple derived / calculated values that are asserted to be calculated "
+                    "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
+                    "before the saved config can be used.")
                 sys.exit(1)
 
             # Make sure there are no overlaps between arguments and user_arguments.
@@ -548,7 +554,7 @@ def do_generate(
             for k in user_arguments.keys():
                 if k in arguments.keys():
                     log.error("User config contains option `{}` already ".format(k) +
-                          "provided by caller of gen.generate()")
+                              "provided by caller of gen.generate()")
                     sys.exit(1)
 
             # update arguments with the user_arguments
@@ -590,11 +596,11 @@ def do_generate(
             # Prompt if the user hasn't already chosen which option to use.
             if name not in arguments:
                 arguments[name] = prompt_argument(
-                        options.non_interactive,
-                        name,
-                        can_calc=False,
-                        default=None,
-                        possible_values=value.keys())
+                    options.non_interactive,
+                    name,
+                    can_calc=False,
+                    default=None,
+                    possible_values=value.keys())
             choice = arguments[name]
 
             # If there is no mixin for the choice or the mixin has already been
@@ -626,7 +632,7 @@ def do_generate(
             for template in template_list:
                 if not template.endswith('.yaml'):
                     log.error("Only know how to merge YAML templates at this point in time. Can't merge template",
-                          name, template_list)
+                              name, template_list)
                     sys.exit(1)
 
     # Inject extra_templates and parameters inside.
@@ -772,7 +778,7 @@ def generate(
         else:
             log.error("Logging option not available: %s", options.log_level)
             sys.exit(1)
-        
+
         log.info("Generating configuration files...")
         return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
     except jinja2.TemplateSyntaxError as ex:

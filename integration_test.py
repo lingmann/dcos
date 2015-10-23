@@ -1,49 +1,11 @@
+import bs4
 import json
+import kazoo.client
 import os
 import pytest
 import requests
-import uuid
 import time
-
-
-def assertTaskWebPortsUp(cluster, app):
-    # app must begin with trailing '/'
-    assert app.startswith('/')
-    r = requests.get("%s/marathon/v2/apps%s" % (cluster.uri, app))
-    j = r.json()
-    tasks = j.get('app').get('tasks')
-
-    for task in tasks:
-        host = task.get('host')
-        ports = task.get('ports')
-
-        for port in ports:
-            r = requests.get("http://%s:%s" % (host, port))
-            # basically just check if it's serving
-            assert r.status_code != 500
-
-
-def assertPackageInstalled(cluster, package_name):
-    stdout, stderr = cluster.cli(['package', 'list-installed'])
-    assert stdout is not None
-
-    output = json.loads(stdout.decode())
-
-    package_list = [x for x in output if (x.get('appId')) == package_name]
-
-    assert len(package_list) == 1
-
-
-def assertStatusRunning(cluster, app):
-    stdout, stderr = cluster.cli(['marathon', 'app', 'show', app])
-
-    assert stdout is not None
-    j = json.loads(stdout.decode())
-
-    assert j.get('tasksHealthy') > 0
-    assert j.get('tasksRunning') > 0
-    assert j.get('tasksStaged') == 0
-    assert j.get('tasksUnhealthy') == 0
+import uuid
 
 
 @pytest.fixture(scope='module')
@@ -77,31 +39,115 @@ class Cluster:
     def delete(self, path=""):
         return requests.delete(self.uri + path)
 
+    def head(self, path=""):
+        return requests.head(self.uri + path)
 
-def test_DCOSUIUp(cluster):
+
+def test_if_DCOS_UI_is_up(cluster):
     r = cluster.get('/')
+
     assert r.status_code == 200
+    assert len(r.text) > 100
+    assert 'Mesosphere DCOS' in r.text
+
+    # Not sure if it's really needed, seems a bit of an overkill:
+    soup = bs4.BeautifulSoup(r.text, "html.parser")
+    for link in soup.find_all(['link', 'a'], href=True):
+        link_response = cluster.head(link.attrs['href'])
+        assert link_response.status_code == 200
 
 
-def test_MarathonUp(cluster):
-    r = cluster.get('marathon')
-    assert r.status_code == 200
-
-
-def test_MesosUp(cluster):
-    # TODO(cmaloney): Test number of slaves registered, public_slaves registered
-    # As well as number of masters. This doesn't provide much as the ui being up
-    # means the leading mesos master is up
+def test_if_Mesos_is_up(cluster):
     r = cluster.get('mesos')
+
     assert r.status_code == 200
+    assert len(r.text) > 100
+    assert '<title>Mesos</title>' in r.text
 
 
-def test_ExhibitorUp(cluster):
+def test_if_all_Mesos_slaves_have_registered(cluster):
+    r = cluster.get('mesos/master/slaves')
+    data = r.json()
+    slaves_ips = sorted([x['hostname'] for x in data['slaves']])
+
+    assert r.status_code == 200
+    assert len(data['slaves']) == 2
+    assert slaves_ips == ['172.17.10.201', '172.17.10.202']
+
+
+def test_if_all_Mesos_masters_have_registered(cluster):
+    # Currently it is not possible to extract this information through Mesos'es
+    # API, let's query zookeeper directly.
+    zk = kazoo.client.KazooClient(hosts="172.17.10.101:2181,"
+                                        "172.17.10.102:2181,"
+                                        "172.17.10.103:2181",
+                                  read_only=True)
+    masters = []
+    zk.start()
+    for znode in zk.get_children("/mesos"):
+        if not znode.startswith("json.info_"):
+            continue
+        tmp = zk.get("/mesos/" + znode)[0].decode('utf-8')
+        masters.append(json.loads(tmp))
+    zk.stop()
+    masters_ips = sorted([x['address']['ip'] for x in masters])
+
+    assert len(masters) == 3
+    assert masters_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
+
+
+def test_if_Exhibitor_is_up(cluster):
+    r = cluster.get('exhibitor/exhibitor/v1/cluster/list')
+    data = r.json()
+
+    assert r.status_code == 200
+    assert data["port"] > 0
+
+
+def test_if_ZooKeeper_cluster_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
+    data = r.json()
+    serving_zks = sum([1 for x in data if x['code'] == 3])
+    zks_ips = sorted([x['hostname'] for x in data])
+
     assert r.status_code == 200
+    assert serving_zks == 3
+    assert zks_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
 
 
-def test_MarathonAppWorking(cluster):
+def test_DCOSHistoryService_is_up(cluster):
+    r = cluster.get('dcos-history-service/ping')
+
+    assert r.status_code == 200
+    assert 'pong' == r.text
+
+
+def test_if_Marathon_UI_is_up(cluster):
+    r = cluster.get('marathon/ui/')
+
+    assert r.status_code == 200
+    assert len(r.text) > 100
+    assert '<title>Marathon</title>' in r.text
+
+
+def test_if_Mesos_API_is_up(cluster):
+    r = cluster.get('mesos_dns/v1/version')
+    data = r.json()
+
+    assert r.status_code == 200
+    assert data["Service"] == 'Mesos-DNS'
+
+
+def test_if_PkgPanda_metadata_is_available(cluster):
+    r = cluster.get('pkgpanda/active.buildinfo.full.json')
+    data = r.json()
+
+    assert r.status_code == 200
+    assert 'mesos' in data
+    assert len(data) > 5  # (prozlach) We can try to put minimal number of pacakages required
+
+
+def test_if_Marathon_app_can_be_deployed(cluster):
     rnd = uuid.uuid4().hex
     app = '/integrationtest-{}'.format(rnd)
 

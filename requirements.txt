@@ -1,5 +1,5 @@
 boto3
-botocore==1.2.3
+botocore
 jinja2
 requests
 pyyaml

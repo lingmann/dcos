@@ -116,6 +116,8 @@ function main {
 # Builds the Docker image located in $1
 function build {
   check_prereqs
+  echo "Pulling base docker"
+  docker pull python:3.4.3-slim
   echo "Building: $1"
   pushd "$1"
   docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .

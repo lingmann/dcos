@@ -54,7 +54,7 @@ for platform in $PLATFORMS; do
 
   # Generate the config packages
   echo "Generating config packages"
-  docker run -v $PWD/build:/genconf mesosphere/dcos-genconf:$GEN_DOCKER_TAG --installer-format $platform --config /genconf/config.json non-interactive
+  docker run -v $PWD/build:/genconf mesosphere/dcos-genconf:$GEN_DOCKER_TAG --installer-format $platform --config /genconf/config.json 
 
   trap cleanup EXIT
 

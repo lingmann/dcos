@@ -71,7 +71,7 @@ for platform in $PLATFORMS; do
   PLATFORM=$platform vagrant up
 
   echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
-  while ! [ -n "$(dig +short leader.mesos @$MASTER_IP)" ]; do sleep 1; done # Wait for elected leader
+  until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done
 
   echo "Waiting for WebUI to come up"
   while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui

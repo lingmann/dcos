@@ -1,0 +1,11 @@
+---
+# An arbitary name for your DCOS cluster
+cluster_name:
+# The URL where the installer can download the configuration built with DCOS_generate utility.
+bootstrap_url:
+# Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
+master_discovery:
+  static: true # true/false
+    master_list: 
+  vrrp: false # true/false
+  zookeeper: false # true/false

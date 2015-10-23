@@ -12,10 +12,13 @@ var verbose = flag.Bool("v", false, "Log verbosity true.")
 
 // Configuration from YAML
 type Config struct {
-	ClusterName     string `yaml:"cluster_name"`
-	BootstrapUrl    string `yaml:"bootstrap_url"`
-	DnsResolvers    string `yaml:"dns_resolvers"`
-	MasterDiscovery struct {
+	ClusterName       string   `yaml:"cluster_name"`
+	BootstrapUrl      string   `yaml:"bootstrap_url"`
+	NumMasters        string   `yaml:"num_masters"`
+	GcDelay           string   `yaml:"gc_delay"`
+	DockerRemoveDelay string   `yaml:"docker_remove_delay"`
+	DnsResolvers      []string `yaml:"dns_resolvers"`
+	MasterDiscovery   struct {
 		CloudDynamic struct {
 			Set bool `yaml:"set"`
 		} `yaml:"cloud_dynamic"`
@@ -24,16 +27,17 @@ type Config struct {
 			MasterList string `yaml:"master_list"`
 		} `yaml:"static"`
 		Vrrp struct {
-			Set bool `yaml:"set"`
-			KeepalivedRouterId: string `yaml:"keepalived_router_id"`
-			KeepalivedInterface: string `yaml:"keepalived_interface"`
-			KeepalivedPass:	string `yaml:"keepalived_pass"`
-			KeepalivedVirtualIpaddress: string `yaml:"keepalived_virtual_ipaddress"`
-		}
+			Set                        bool   `yaml:"set"`
+			KeepalivedRouterId         string `yaml:"keepalived_router_id"`
+			KeepalivedInterface        string `yaml:"keepalived_interface"`
+			KeepalivedPass             string `yaml:"keepalived_pass"`
+			KeepalivedVirtualIpaddress string `yaml:"keepalived_virtual_ipaddress"`
+		} `yaml:"vrrp"`
 	} `yaml:"master_discovery"`
-	ExhibitorStorageBackend string   `yaml:"exhibitor_storage_backend"`
-	ExhibitorZkHosts        []string `yaml:"exhibitor_zk_hosts"`
-	ExhibitorZkPath         string   `yaml:"exhibitor_zk_path"`
+	ExhibitorStorageBackend struct {
+		ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
+		ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
+	} `yaml:"exhibitor_storage_backend"`
 }
 
 func main() {

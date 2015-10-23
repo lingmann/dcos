@@ -35,8 +35,23 @@ type Config struct {
 		} `yaml:"vrrp"`
 	} `yaml:"master_discovery"`
 	ExhibitorStorageBackend struct {
-		ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
-		ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
+		Zookeeper struct {
+			Set              bool     `yaml:"set"`
+			ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
+			ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
+		} `yaml:"zookeeper"`
+		AwsS3 struct {
+			Set                bool   `yaml:"set"`
+			AwsAccessKeyId     string `yaml:"aws_access_key_id"`
+			AwsRegion          string `yaml:"aws_region"`
+			AwsSecretAccessKey string `yaml:"aws_secret_access_key"`
+			S3Bucket           string `yaml:"s3_bucket"`
+			S3Prefix           string `yaml:"s3_prefix"`
+		} `yaml:"aws_s3"`
+		SharedFilesystem struct {
+			Set                   bool   `yaml:"set"`
+			ExhibitorFsConfigPath string `yaml:"exhibitor_fs_config_path"`
+		} `yaml:"shared_filesystem"`
 	} `yaml:"exhibitor_storage_backend"`
 }
 

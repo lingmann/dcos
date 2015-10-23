@@ -65,4 +65,4 @@ ex hibitor_storage_backend:
   shared_filesystem:
     set: false     
     # This parameter specifies the absolute path to the folder that Exhibitor uses to coordinate its configuration. This should be a directory inside of a Network File System (NFS) mount. For example, if every master has /fserv mounted via NFS, set as "exhibitor_fs_config_dir": "/fserv/dcos-exhibitor".
-    exhibitor_fs_config_dir:
+    exhibitor_fs_config_path:

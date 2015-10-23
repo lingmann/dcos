@@ -1,11 +1,19 @@
 ---
 # GLOBAL PARAMETERS
 # An arbitary name for your DCOS cluster
-cluster_name:
+cluster_name: foo
 # The URL where the installer can download the configuration built with DCOS_generate utility.
-bootstrap_url:
+bootstrap_url: IP_ADDRESS_TO_THIS_MACHINE
+# Number of masters
+num_masters: 3 
 # Garbage collection delay. Shouldn't be touched unless you're a pro.
-gc_delay:
+gc_delay: '2days'
+# Docker remove delay
+docker_remove_delay: '1hrs'
+# DNS resolvers
+dns_resolvers: 
+  - 8.8.8.8
+  - 8.8.4.4
 
 # MASTER DISCOVERY
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
@@ -29,14 +37,15 @@ master_discovery:
 
 # EXHIBITOR STORAGE BACKEND
 # This parameter specifies the name of Exhibitor storage backend. During DCOS installation, a storage system is required for configuring and orchestrating Zookeeper with Exhibitor on the master nodes. Exhibitor automatically configures your Zookeeper installation on the master nodes during your DCOS installation. The available options are zookeeper, aws_s3, and shared_filesystem.
-exhibitor_storage_backend:
-  zookeeper: true # true/false
+ex hibitor_storage_backend:
+  # Zookeeper backend
+  zookeeper: 
     # This parameter specifies a comma-separated list of one or more Zookeeper node IP addresses to use for configuring the internal Exhibitor instances. Exhibitor uses this Zookeeper cluster to orchestrate it’s configuration.
     exhibitor_zk_hosts: PRECONFIGURED_ZK_IPS
     # This parameter specifies the filepath that Exhibitor uses to store data, including the zoo.cfg file.
     exhibitor_zk_path: /SOME/PATH
   # Use S3 as the exhibitor backend
-  aws_s3: false # true/false
+  aws_s3: 
     # This parameter specifies AWS key ID.
     aws_access_key_id:    
     # This parameter specifies AWS region for your S3 bucket.
@@ -47,4 +56,7 @@ exhibitor_storage_backend:
     s3_bucket:
     # This parameter specifies S3 prefix to be used within your S3 bucket to be used by Exhibitor.
     s3_prefix:
-    
+  # Shared filesystem backend for exhibitor. With shared_filesystem, all masters must must have the NFS volume mounted and exhibitor_fs_config_dir must be inside of it. If any of your servers are missing the mount, the DCOS cluster will not start.
+  shared_filesystem:     
+    # This parameter specifies the absolute path to the folder that Exhibitor uses to coordinate its configuration. This should be a directory inside of a Network File System (NFS) mount. For example, if every master has /fserv mounted via NFS, set as "exhibitor_fs_config_dir": "/fserv/dcos-exhibitor".
+    exhibitor_fs_config_dir:

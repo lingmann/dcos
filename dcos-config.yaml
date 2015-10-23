@@ -19,13 +19,13 @@ dns_resolvers:
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
 master_discovery:
   # For cloud environment only: Use an external proxy for the masters that lives at a static IP, for example, haproxy or nginx. 
-  cloud_dynamic: false
+  cloud_dynamic: 
   # Use the Mesos agents to discover the masters by giving each agent a static list of master IPs. The masters must not change IP addresses, and if a master is replaced, the new master must take the old master’s IP address.
-  static: true # true/false
+  static: 
     # Specify a JSON-formatted list of your static master IP addresses.
     master_list: YOUR_IP_LIST_HERE_PLEASE
   # Use keepalived with a VIP. You are required to maintain this VIP infrastructure
-  vrrp: false # true/false
+  vrrp: 
     # Specify the virtual router ID of the keepalived cluster. You must use the same virtual router ID across your cluster.
     keepalived_router_id: 
     # Specify the interface that keepalived uses.

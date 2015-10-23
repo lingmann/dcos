@@ -37,5 +37,14 @@ exhibitor_storage_backend:
     exhibitor_zk_path: /SOME/PATH
   # Use S3 as the exhibitor backend
   aws_s3: false # true/false
-    
+    # This parameter specifies AWS key ID.
+    aws_access_key_id:    
+    # This parameter specifies AWS region for your S3 bucket.
+    aws_region:
+    # This parameter specifies AWS secret access key.
+    aws_secret_access_key:
+    # This parameter specifies name of your S3 bucket.
+    s3_bucket:
+    # This parameter specifies S3 prefix to be used within your S3 bucket to be used by Exhibitor.
+    s3_prefix:
     

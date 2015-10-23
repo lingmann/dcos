@@ -16,9 +16,20 @@ type Config struct {
 	BootstrapUrl    string `yaml:"bootstrap_url"`
 	DnsResolvers    string `yaml:"dns_resolvers"`
 	MasterDiscovery struct {
-		Static struct {
+		CloudDynamic struct {
 			Set bool `yaml:"set"`
+		} `yaml:"cloud_dynamic"`
+		Static struct {
+			Set        bool   `yaml:"set"`
+			MasterList string `yaml:"master_list"`
 		} `yaml:"static"`
+		Vrrp struct {
+			Set bool `yaml:"set"`
+			KeepalivedRouterId: string `yaml:"keepalived_router_id"`
+			KeepalivedInterface: string `yaml:"keepalived_interface"`
+			KeepalivedPass:	string `yaml:"keepalived_pass"`
+			KeepalivedVirtualIpaddress: string `yaml:"keepalived_virtual_ipaddress"`
+		}
 	} `yaml:"master_discovery"`
 	ExhibitorStorageBackend string   `yaml:"exhibitor_storage_backend"`
 	ExhibitorZkHosts        []string `yaml:"exhibitor_zk_hosts"`

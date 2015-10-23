@@ -7,22 +7,28 @@
 Co-ordinates across all providers.
 """
 
+import abc
+import azure.storage
+import azure.storage.blob
 import argparse
 import botocore.client
 import copy
 import importlib
 import json
+import mimetypes
 import os.path
 import sys
 from functools import partial, partialmethod
-from pkgpanda import PackageId
-from pkgpanda.build import get_last_bootstrap_set, sha1
-from pkgpanda.util import load_json, write_string
-from subprocess import check_call, CalledProcessError
-
+import pkgpanda
+import pkgpanda.build
+import subprocess
+import aws_config
 import util
 
 provider_names = ['aws', 'azure', 'vagrant']
+
+AZURE_TESTING_CONTAINER = 'dcos'
+METADATA_FILE = 'metadata.json'
 
 
 def to_json(data):
@@ -30,12 +36,7 @@ def to_json(data):
 
 
 def get_bootstrap_packages(bootstrap_id):
-    return set(load_json('packages/{}.active.json'.format(bootstrap_id)))
-
-
-def get_bucket():
-    from aws_config import session_prod
-    return session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+    return set(pkgpanda.util.load_json('packages/{}.active.json'.format(bootstrap_id)))
 
 
 def load_providers():
@@ -45,11 +46,199 @@ def load_providers():
     return modules
 
 
-class ChannelManager():
+class CopyAcrossException(Exception):
+    """A Custom Exception raise when trying to copy across providers and either source of
+       destination provider is missing"""
 
-    def __init__(self, bucket, channel):
-        self.__bucket = bucket
+
+class AbstractStorageProvider(metaclass=abc.ABCMeta):
+    @abc.abstractmethod
+    def copy_across(self):
+        pass
+
+    @abc.abstractmethod
+    def upload_local_file(self):
+        pass
+
+    @abc.abstractmethod
+    def upload_string(self):
+        pass
+
+    def upload_packages(self, packages):
+        for id_str in set(packages):
+            pkg_id = pkgpanda.PackageId(id_str)
+            self.upload_local_file(
+                'packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str),
+                if_not_exists=True)
+
+    def upload_bootstrap(self, bootstrap_dict):
+        upload = partial(self.upload_local_file, if_not_exists=True)
+        for bootstrap_id in bootstrap_dict.values():
+            upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
+                   'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
+            upload('packages/{}.active.json'.format(bootstrap_id),
+                   'bootstrap/{}.active.json'.format(bootstrap_id))
+
+    def upload_provider_files(self, provider_data, path_key, prefix):
+        for provider_name, data in provider_data.items():
+            for file_info in data['files']:
+                if path_key not in file_info:
+                    continue
+
+                paths = file_info[path_key]
+
+                # Avoid accidentally iterating strings by letter.
+                # providers may give a single path or a list of paths.
+                if isinstance(paths, str):
+                    paths = [paths]
+
+                for path in paths:
+                    if prefix:
+                        path = provider_name + '/' + path
+
+                    if 'upload_args' in file_info:
+                        self.upload_string(
+                            path,
+                            file_info['content'],
+                            args=file_info['upload_args'])
+                    else:
+                        self.put_text(path, file_info['content'])
+
+    def upload_provider_packages(self, provider_data):
+        extra_packages = list()
+        for data in provider_data.values():
+            extra_packages += data['extra_packages']
+        self.upload_packages(extra_packages)
+
+    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
+        # Upload provider artifacts to their stable locations
+        print("Uploading stable artifacts to Azure Blob storage")
+        self.upload_provider_packages(provider_data)
+        self.put_json("metadata/{}.json".format(commit), metadata_json)
+        self.upload_provider_files(provider_data, 'stable_path', prefix=True)
+
+        # Make active point to all the arifacts
+        # - bootstrap.latest
+        # - metadata.latest.json
+        # - provider templates to known_paths
+        # - dcos_generate_config.sh
+        print("Marking new build as the latest")
+        self.put_text('bootstrap.latest', bootstrap_dict[None])
+        for variant, bootstrap_id in bootstrap_dict.items():
+            if variant is None:
+                continue
+            self.put_text(variant + '.bootstrap.latest', bootstrap_id)
+
+        self.put_json(METADATA_FILE, metadata_json)
+        self.upload_provider_files(provider_data, 'known_path', prefix=False)
+        # TODO(cmaloney): Make a stable location version of this like
+        # provider_files does. Not extending provider_files currently because
+        # those are all in-memory, and this one is a couple hundred MB of data.
+        # TODO(cmaloney): Make at a reliable name so caching can be enabled.
+        self.upload_local_file('dcos_generate_config.sh', no_cache=True)
+
+    def _copy_across(self, bootstrap_dict, active_packages, do_copy):
+        # Copy across all the active packages
+        for id_str in active_packages:
+            pkg_id = pkgpanda.PackageId(id_str)
+            do_copy('packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str))
+
+        # Copy across the bootstrap, active.json
+        for bootstrap_id in bootstrap_dict.values():
+            do_copy('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
+            do_copy('bootstrap/{}.active.json'.format(bootstrap_id))
+
+
+class AzureStorageProvider(AbstractStorageProvider):
+    name = 'azure'
+
+    def __init__(self, channel):
         self.__channel = channel
+        account_name = os.environ.get('AZURE_STORAGE_ACCOUNT')
+        account_key = os.environ.get('AZURE_STORAGE_ACCESS_KEY')
+        self.blob_service = azure.storage.blob.BlobService(account_name=account_name, account_key=account_key)
+
+    @property
+    def repository_url(self):
+        return 'http://mesospheredownloads.blob.core.windows.net/dcos/{}'.format(self.__channel)
+
+    def upload_local_file(self, path, destination_path=None, container=None, args={}, no_cache=False,
+                          if_not_exists=False):
+        if not destination_path:
+            destination_path = path
+
+        destination_path = os.path.join(self.__channel, destination_path.lstrip('/'))
+        if not container:
+            container = AZURE_TESTING_CONTAINER
+
+        if no_cache:
+            args['cache_control'] = None
+
+        if if_not_exists:
+            try:
+                self.blob_service.get_blob_properties(container, destination_path)
+                print("Skipping {}: already exists".format(destination_path))
+                return
+            except azure.storage._common_error.AzureMissingResourceHttpError:
+                pass
+
+        print("Uploading {}/{}".format(path, " as {}".format(destination_path) if destination_path else ''))
+        self.blob_service.put_block_blob_from_path(
+            container,
+            destination_path,
+            path,
+            x_ms_blob_content_type=mimetypes.guess_type(path),
+            **args)
+
+    def upload_packages(self, packages):
+        super().upload_packages(packages)
+
+    def upload_bootstrap(self, bootstrap_dict):
+        super().upload_bootstrap(bootstrap_dict)
+
+    def copy_across(self, source, bootstrap_dict, active_packages):
+        def do_copy(path, no_cache=None):
+            print("Copying across {}".format(path))
+            self.blob_service.copy_blob(AZURE_TESTING_CONTAINER,
+                                        os.path.join(self.__channel, path.lstrip('/')),
+                                        os.path.join(source.repository_url, path.lstrip('/')))
+
+        super()._copy_across(bootstrap_dict, active_packages, do_copy)
+
+    def upload_provider_files(self, provider_data, path_key, prefix):
+        super().upload_provider_files(provider_data, path_key, prefix)
+
+    def upload_provider_packages(self, provider_data):
+        super().upload_provider_packages(provider_data)
+
+    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
+        super().upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
+
+    def upload_string(self, destination_path, text, args, container=None):
+        destination_path = os.path.join(self.__channel, destination_path.lstrip('/'))
+        if 'ContentType' in args:
+            content_type_value = args['ContentType']
+            del args['ContentType']
+            args.update({'x_ms_blob_content_type': content_type_value})
+        if not container:
+            container = AZURE_TESTING_CONTAINER
+        self.blob_service.put_block_blob_from_text(container, destination_path, text.encode('utf-8'), **args)
+
+    put_text = partialmethod(upload_string, args={'x_ms_blob_content_type': 'text/plain; charset=utf-8'})
+
+    put_json = partialmethod(upload_string, args={'x_ms_blob_content_type': 'application/json'})
+
+
+class S3StorageProvider(AbstractStorageProvider):
+    name = 'aws'
+
+    def __init__(self, channel):
+        self.__channel = channel
+        self.__bucket = aws_config.session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+
+    @property
+    def repository_url(self):
+        return 'https://downloads.mesosphere.com/dcos/{}'.format(self.__channel)
 
     def copy_across(self, source, bootstrap_dict, active_packages):
         def do_copy(path, no_cache=None):
@@ -62,16 +251,7 @@ class ChannelManager():
                 new_object.copy_from(CopySource=old_path, CacheControl='no-cache')
             else:
                 new_object.copy_from(CopySource=old_path)
-
-        # Copy across all the active packages
-        for id_str in active_packages:
-            pkg_id = PackageId(id_str)
-            do_copy('packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str))
-
-        # Copy across the bootstrap, active.json
-        for bootstrap_id in bootstrap_dict.values():
-            do_copy('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-            do_copy('bootstrap/{}.active.json'.format(bootstrap_id))
+        super()._copy_across(bootstrap_dict, active_packages, do_copy)
 
     def get_object(self, name):
         return self.__bucket.Object('dcos/{}/{}'.format(self.__channel, name))
@@ -107,7 +287,7 @@ class ChannelManager():
                 pass
 
         with open(path, 'rb') as data:
-            print("Uploading {}{}".format(
+            print("Uploading {}/{}".format(
                 path, " as {}".format(destination_path) if destination_path else ''))
             return s3_object.put(Body=data, **args)
 
@@ -117,88 +297,86 @@ class ChannelManager():
 
         # Save a local artifact for TeamCity
         local_path = "artifacts/" + destination_path
-        check_call(["mkdir", "-p", os.path.dirname(local_path)])
-        write_string(local_path, text)
+        subprocess.check_call(["mkdir", "-p", os.path.dirname(local_path)])
+        pkgpanda.util.write_string(local_path, text)
 
     def upload_bootstrap(self, bootstrap_dict):
-        upload = partial(self.upload_local_file, if_not_exists=True)
-        for bootstrap_id in bootstrap_dict.values():
-            upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
-                   'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-            upload('packages/{}.active.json'.format(bootstrap_id),
-                   'bootstrap/{}.active.json'.format(bootstrap_id))
+        super().upload_bootstrap(bootstrap_dict)
 
     def upload_packages(self, packages):
-        for id_str in set(packages):
-            pkg_id = PackageId(id_str)
-            self.upload_local_file(
-                'packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str),
-                if_not_exists=True)
+        super().upload_packages(packages)
 
     def upload_provider_packages(self, provider_data):
-        extra_packages = list()
-        for data in provider_data.values():
-            extra_packages += data['extra_packages']
-        self.upload_packages(extra_packages)
+        super().upload_provider_packages(provider_data)
 
     def upload_provider_files(self, provider_data, path_key, prefix):
-        for provider_name, data in provider_data.items():
-            for file_info in data['files']:
-                if path_key not in file_info:
-                    continue
-
-                paths = file_info[path_key]
-
-                # Avoid accidentally iterating strings by letter.
-                # providers may give a single path or a list of paths.
-                if isinstance(paths, str):
-                    paths = [paths]
-
-                for path in paths:
-                    if prefix:
-                        path = provider_name + '/' + path
-
-                    if 'upload_args' in file_info:
-                        self.upload_string(
-                            path,
-                            file_info['content'],
-                            args=file_info['upload_args'])
-                    else:
-                        self.put_text(path, file_info['content'])
+        super().upload_provider_files(provider_data, path_key, prefix)
 
     def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
-        # Upload provider artifacts to their stable locations
-        print("Uploading stable artifacts")
-        self.upload_provider_packages(provider_data)
-        self.put_json("metadata/{}.json".format(commit), metadata_json)
-        self.upload_provider_files(provider_data, 'stable_path', prefix=True)
+        super().upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
 
-        # Make active point to all the arifacts
-        # - bootstrap.latest
-        # - metadata.latest.json
-        # - provider templates to known_paths
-        # - dcos_generate_config.sh
-        print("Marking new build as the latest")
-        self.put_text('bootstrap.latest', bootstrap_dict[None])
-        for variant, bootstrap_id in bootstrap_dict.items():
-            if variant is None:
-                continue
-            self.put_text(variant + '.bootstrap.latest', bootstrap_id)
+    put_text = partialmethod(upload_string, args={'ContentType': 'text/plain; charset=utf-8'})
 
-        self.put_json('metadata.json', metadata_json)
-        self.upload_provider_files(provider_data, 'known_path', prefix=False)
-        # TODO(cmaloney): Make a stable location version of this like
-        # provider_files does. Not extending provider_files currently because
-        # those are all in-memory, and this one is a couple hundred MB of data.
-        # TODO(cmaloney): Make at a reliable name so caching can be enabled.
-        self.upload_local_file('dcos_generate_config.sh', no_cache=True)
+    put_json = partialmethod(upload_string, args={'ContentType': 'application/json'})
+
+
+class ChannelManager():
+    """
+    Magic Proxy class wil accept a lit of storage providers, iterate over the list and call a function against
+    each storage provider.
+
+    channel = ChannelManager([S3StorageProvider('s3provider_name'), AzureStorageProvider('azure_provider_name')])
+    channel.call_me() -> S3StorageProvider('s3provider_name').call_me and
+    AzureStorageProvider('azure_provider_name').call_me()
+    """
+    def __init__(self, storage_providers):
+        self.__storage_providers = storage_providers
+
+        # A default storage provider is the very first element in self.__sotrage_providers
+        self.__default_storage_provider = storage_providers[0]
+
+    def __getattr__(self, name, *args, **kwargs):
+        def wrapper(*args, **kwargs):
+            for provider in self.__storage_providers:
+                if hasattr(provider, name):
+                    getattr(provider, name)(*args, **kwargs)
+                else:
+                    raise AttributeError('Provider {} does not have attribute {}'.format(provider.name, name))
+        return wrapper
+
+    def copy_across(self, source, bootstrap_dict, active_packages):
+        """
+        Dispatch copy_across in a special way. source and destination will both have self.__storage_providers
+        as an array of different storage providers This function will match providers by their type
+        """
+        copy_providers = {}
+        for destination_provider in self.__storage_providers:
+            found_source_provider = False
+            for source_provider in source.__storage_providers:
+                if destination_provider.name == source_provider.name:
+                    found_source_provider = True
+                    copy_providers.update({
+                        destination_provider.name: (source_provider, destination_provider)})
+            if not found_source_provider:
+                raise CopyAcrossException(
+                    'Cannot promote for {}, source provider not found'.format(destination_provider.name))
+            for provider_name, providers in copy_providers.items():
+                source_provider, destination_provider = providers
+                destination_provider.copy_across(source_provider, bootstrap_dict, active_packages)
 
     @property
     def repository_url(self):
-        return 'https://downloads.mesosphere.com/dcos/{}'.format(self.__channel)
 
-    put_text = partialmethod(upload_string, args={'ContentType': 'text/plain; charset=utf-8'})
-    put_json = partialmethod(upload_string, args={'ContentType': 'application/json'})
+        repository_urls = {}
+        for provider in self.__storage_providers:
+            repository_urls.update({provider.name: provider.repository_url})
+        repository_urls.update({'default': self.__default_storage_provider.repository_url})
+        return repository_urls
+
+    def read_file(self, name):
+        for provider in self.__storage_providers:
+            if provider.name == 'aws':
+                return provider.read_file(name)
 
 
 # Generate provider templates against the bootstrap id, capturing the
@@ -215,7 +393,11 @@ class ChannelManager():
 def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
     provider_data = {}
     providers = load_providers()
+    bootstrap_url = repository_url['default']
     for name, module in providers.items():
+        if name in repository_url:
+            bootstrap_url = repository_url[name]
+
         # Use keyword args to make not matching ordering a loud error around changes.
         provider_data[name] = module.do_create(
             tag=tag,
@@ -224,7 +406,7 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
             gen_arguments=copy.deepcopy({
                 'bootstrap_id': bootstrap_id,
                 'channel_name': tag,
-                'bootstrap_url': repository_url
+                'bootstrap_url': bootstrap_url
             }))
 
     cleaned = copy.deepcopy(provider_data)
@@ -238,12 +420,15 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
 
 def do_promote(options):
     print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
-    bucket = get_bucket()
-    destination = ChannelManager(bucket, options.destination_channel)
-    source = ChannelManager(bucket, options.source_channel)
+    destination_storage_providers = [S3StorageProvider(options.destination_channel),
+                                     AzureStorageProvider(options.destination_channel)]
+    source_storage_providers = [S3StorageProvider(options.source_channel),
+                                AzureStorageProvider(options.source_channel)]
+    destination = ChannelManager(destination_storage_providers)
+    source = ChannelManager(source_storage_providers)
 
     # Download source channel metadata
-    metadata = json.loads(source.read_file('metadata.json').decode('utf-8'))
+    metadata = json.loads(source.read_file(METADATA_FILE).decode('utf-8'))
     bootstrap_dict = metadata['bootstrap_dict']
 
     # None gets stored as null in the key of the dictionary. Undo that.
@@ -268,8 +453,7 @@ def do_promote(options):
         default_bootstrap_id,
         metadata['tag'],
         options.destination_channel,
-        metadata['commit']
-        )
+        metadata['commit'])
 
     metadata_json = to_json(
         {
@@ -278,8 +462,7 @@ def do_promote(options):
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
-            'tag': metadata['tag']
-        })
+            'tag': metadata['tag']})
 
     # Copy across packages, bootstrap.
     destination.copy_across(source, bootstrap_dict, active_packages)
@@ -289,32 +472,35 @@ def do_promote(options):
     print("Channel {} now at tag {}".format(options.destination_channel, metadata['tag']))
 
 
-def get_local_build(skip_build, repository_url):
+def get_local_build(skip_build, repository_url, storage_provider=None):
+    if not storage_provider:
+        storage_provider = 'aws'
+
     if not skip_build:
-        check_call(
-            ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + repository_url],
+        subprocess.check_call(
+            ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + repository_url[storage_provider]],
             cwd='packages',
             env=os.environ)
 
-    return get_last_bootstrap_set('packages')
+    return pkgpanda.build.get_last_bootstrap_set('packages')
 
 
 def do_build_packages(repository_url, skip_build):
-    dockerfile = "docker/builder/Dockerfile"
-    container_name = 'mesosphere/dcos-builder:dockerfile-' + sha1(dockerfile)
+    dockerfile = 'docker/builder/Dockerfile'
+    container_name = 'mesosphere/dcos-builder:dockerfile-' + pkgpanda.build.sha1(dockerfile)
     print("Attempting to pull dcos-builder docker:", container_name)
     pulled = False
     try:
-        check_call(['docker', 'pull', container_name])
+        subprocess.check_call(['docker', 'pull', container_name])
         pulled = True
         # TODO(cmaloney): Differentiate different failures of running the process better here
-    except CalledProcessError:
+    except subprocess.CalledProcessError:
         pulled = False
 
     if not pulled:
         print("Pull failed, building instead:", container_name)
         # Pull failed, build it
-        check_call(
+        subprocess.check_call(
             ['docker', 'build', '-t', container_name, '-'],
             stdin=open("docker/builder/Dockerfile"))
 
@@ -325,10 +511,10 @@ def do_build_packages(repository_url, skip_build):
         # So we can track back the builder id for a given commit or bootstrap id, and reproduce whatever
         # we need. The  Dockerfile-<sha1> is useful for making sure we don't rebuild more than
         # necessary.
-        check_call(['docker', 'push', container_name])
+        subprocess.check_call(['docker', 'push', container_name])
 
     # mark as latest so it will be used when building packages
-    check_call(['docker', 'tag', '-f', container_name, 'dcos-builder:latest'])
+    subprocess.check_call(['docker', 'tag', '-f', container_name, 'dcos-builder:latest'])
 
     bootstrap_dict = get_local_build(skip_build, repository_url)
 
@@ -358,7 +544,8 @@ def do_variable_set_or_exists(env_var, path):
 
 def do_create(options):
     channel_name = 'testing/' + options.destination_channel
-    channel = ChannelManager(get_bucket(), channel_name)
+    storage_providers = [S3StorageProvider(channel_name), AzureStorageProvider(channel_name)]
+    channel = ChannelManager(storage_providers)
     commit = util.dcos_image_commit
     print("Creating release on channel:", channel_name)
     print("version tag:", options.tag)
@@ -388,7 +575,7 @@ def do_create(options):
     # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
     # bootstrap tarball inside of it.
     print("Building dcos_genconf docker container")
-    check_call(['docker/genconf/make.sh'], env={
+    subprocess.check_call(['docker/genconf/make.sh'], env={
         'PKGPANDA_SRC': pkgpanda_src,
         'DCOS_IMAGE_SRC': dcos_image_src,
         'CHANNEL_NAME': channel_name,
@@ -422,7 +609,7 @@ def do_create(options):
     # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
     # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
     # to have the channel name as a tag.
-    check_call(['docker/genconf/make.sh', 'push'], env={
+    subprocess.check_call(['docker/genconf/make.sh', 'push'], env={
         'PKGPANDA_SRC': pkgpanda_src,
         'DCOS_IMAGE_SRC': dcos_image_src,
         'CHANNEL_NAME': channel_name,
@@ -432,6 +619,11 @@ def do_create(options):
     # Upload provider artifacts, mark as active
     channel.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
     print("New release created on channel", channel_name)
+
+
+def validate_options(options):
+    assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
+    assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
 
 
 def main():
@@ -457,6 +649,7 @@ def main():
     # Parse the arguments and dispatch.
     options = parser.parse_args()
     if hasattr(options, 'func'):
+        validate_options(options)
         options.func(options)
         sys.exit(0)
     else:

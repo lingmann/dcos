@@ -1,12 +1,13 @@
 ---
+# GLOBAL PARAMETERS
 # An arbitary name for your DCOS cluster
 cluster_name:
 # The URL where the installer can download the configuration built with DCOS_generate utility.
 bootstrap_url:
 # Garbage collection delay. Shouldn't be touched unless you're a pro.
 gc_delay:
-#
 
+# MASTER DISCOVERY
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
 master_discovery:
   # For cloud environment only: Use an external proxy for the masters that lives at a static IP, for example, haproxy or nginx. 
@@ -26,6 +27,15 @@ master_discovery:
     # Specify the VIP in use by your keepalived cluster.
     keepalived_virtual_ipaddress:
 
+# EXHIBITOR STORAGE BACKEND
 # This parameter specifies the name of Exhibitor storage backend. During DCOS installation, a storage system is required for configuring and orchestrating Zookeeper with Exhibitor on the master nodes. Exhibitor automatically configures your Zookeeper installation on the master nodes during your DCOS installation. The available options are zookeeper, aws_s3, and shared_filesystem.
 exhibitor_storage_backend:
-  zookeeper: false # true/false
+  zookeeper: true # true/false
+    # This parameter specifies a comma-separated list of one or more Zookeeper node IP addresses to use for configuring the internal Exhibitor instances. Exhibitor uses this Zookeeper cluster to orchestrate it’s configuration.
+    exhibitor_zk_hosts: PRECONFIGURED_ZK_IPS
+    # This parameter specifies the filepath that Exhibitor uses to store data, including the zoo.cfg file.
+    exhibitor_zk_path: /SOME/PATH
+  # Use S3 as the exhibitor backend
+  aws_s3: false # true/false
+    
+    

@@ -19,13 +19,16 @@ dns_resolvers:
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
 master_discovery:
   # For cloud environment only: Use an external proxy for the masters that lives at a static IP, for example, haproxy or nginx. 
-  cloud_dynamic: 
+  cloud_dynamic:
+    set: false 
   # Use the Mesos agents to discover the masters by giving each agent a static list of master IPs. The masters must not change IP addresses, and if a master is replaced, the new master must take the old master’s IP address.
   static: 
+    set: true
     # Specify a JSON-formatted list of your static master IP addresses.
     master_list: YOUR_IP_LIST_HERE_PLEASE
   # Use keepalived with a VIP. You are required to maintain this VIP infrastructure
   vrrp: 
+    set: false
     # Specify the virtual router ID of the keepalived cluster. You must use the same virtual router ID across your cluster.
     keepalived_router_id: 
     # Specify the interface that keepalived uses.
@@ -40,12 +43,14 @@ master_discovery:
 ex hibitor_storage_backend:
   # Zookeeper backend
   zookeeper: 
+    set: false
     # This parameter specifies a comma-separated list of one or more Zookeeper node IP addresses to use for configuring the internal Exhibitor instances. Exhibitor uses this Zookeeper cluster to orchestrate it’s configuration.
     exhibitor_zk_hosts: PRECONFIGURED_ZK_IPS
     # This parameter specifies the filepath that Exhibitor uses to store data, including the zoo.cfg file.
     exhibitor_zk_path: /SOME/PATH
   # Use S3 as the exhibitor backend
   aws_s3: 
+    set: true
     # This parameter specifies AWS key ID.
     aws_access_key_id:    
     # This parameter specifies AWS region for your S3 bucket.
@@ -57,6 +62,7 @@ ex hibitor_storage_backend:
     # This parameter specifies S3 prefix to be used within your S3 bucket to be used by Exhibitor.
     s3_prefix:
   # Shared filesystem backend for exhibitor. With shared_filesystem, all masters must must have the NFS volume mounted and exhibitor_fs_config_dir must be inside of it. If any of your servers are missing the mount, the DCOS cluster will not start.
-  shared_filesystem:     
+  shared_filesystem:
+    set: false     
     # This parameter specifies the absolute path to the folder that Exhibitor uses to coordinate its configuration. This should be a directory inside of a Network File System (NFS) mount. For example, if every master has /fserv mounted via NFS, set as "exhibitor_fs_config_dir": "/fserv/dcos-exhibitor".
     exhibitor_fs_config_dir:

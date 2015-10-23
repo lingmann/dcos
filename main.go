@@ -16,7 +16,7 @@ type Config struct {
 	BootstrapUrl            string   `yaml:"bootstrap_url"`
 	DnsResolvers            string   `yaml:"dns_resolvers"`
 	MasterDiscovery         string   `yaml:"master_discovery"`
-	MasterStaticList        []string `yaml:"master_static_list"`
+	MasterList              []string `yaml:"master_list"`
 	ExhibitorStorageBackend string   `yaml:"exhibitor_storage_backend"`
 	ExhibitorZkHosts        []string `yaml:"exhibitor_zk_hosts"`
 	ExhibitorZkPath         string   `yaml:"exhibitor_zk_path"`

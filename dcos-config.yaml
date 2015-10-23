@@ -3,9 +3,29 @@
 cluster_name:
 # The URL where the installer can download the configuration built with DCOS_generate utility.
 bootstrap_url:
+# Garbage collection delay. Shouldn't be touched unless you're a pro.
+gc_delay:
+#
+
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
 master_discovery:
+  # For cloud environment only: Use an external proxy for the masters that lives at a static IP, for example, haproxy or nginx. 
+  cloud_dynamic: false
+  # Use the Mesos agents to discover the masters by giving each agent a static list of master IPs. The masters must not change IP addresses, and if a master is replaced, the new master must take the old master’s IP address.
   static: true # true/false
-    master_list: 
+    # Specify a JSON-formatted list of your static master IP addresses.
+    master_list: YOUR_IP_LIST_HERE_PLEASE
+  # Use keepalived with a VIP. You are required to maintain this VIP infrastructure
   vrrp: false # true/false
+    # Specify the virtual router ID of the keepalived cluster. You must use the same virtual router ID across your cluster.
+    keepalived_router_id: 
+    # Specify the interface that keepalived uses.
+    keepalived_interface:
+    # If you’ve set your auth to PASS, specify the same password that you set in your configuration file. 
+    keepalived_pass:
+    # Specify the VIP in use by your keepalived cluster.
+    keepalived_virtual_ipaddress:
+
+# This parameter specifies the name of Exhibitor storage backend. During DCOS installation, a storage system is required for configuring and orchestrating Zookeeper with Exhibitor on the master nodes. Exhibitor automatically configures your Zookeeper installation on the master nodes during your DCOS installation. The available options are zookeeper, aws_s3, and shared_filesystem.
+exhibitor_storage_backend:
   zookeeper: false # true/false

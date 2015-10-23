@@ -66,15 +66,13 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 		log.Info("Log level INFO")
 	}
-	// Get YAML configuration
-	config := GetConfig(*configpath)
-	log.Info(config)
 	// Execute the correct console mode
 	switch *mode {
 	case "web":
 		log.Info("Starting configuration mode in browser.")
 	case "non-interactive":
 		log.Info("Starting configuration mode in non-interactive mode.")
+		NonInteractive()
 	case "interactive":
 		log.Info("Starting configuration mode in interactive mode.")
 	default:

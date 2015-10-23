@@ -12,11 +12,14 @@ var verbose = flag.Bool("v", false, "Log verbosity true.")
 
 // Configuration from YAML
 type Config struct {
-	ClusterName             string   `yaml:"cluster_name"`
-	BootstrapUrl            string   `yaml:"bootstrap_url"`
-	DnsResolvers            string   `yaml:"dns_resolvers"`
-	MasterDiscovery         string   `yaml:"master_discovery"`
-	MasterList              []string `yaml:"master_list"`
+	ClusterName     string `yaml:"cluster_name"`
+	BootstrapUrl    string `yaml:"bootstrap_url"`
+	DnsResolvers    string `yaml:"dns_resolvers"`
+	MasterDiscovery struct {
+		Static struct {
+			Set bool `yaml:"set"`
+		} `yaml:"static"`
+	} `yaml:"master_discovery"`
 	ExhibitorStorageBackend string   `yaml:"exhibitor_storage_backend"`
 	ExhibitorZkHosts        []string `yaml:"exhibitor_zk_hosts"`
 	ExhibitorZkPath         string   `yaml:"exhibitor_zk_path"`

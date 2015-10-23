@@ -2,13 +2,15 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"os"
 )
 
 // CLI Flags
-var mode = flag.String("interactive", "web", "Interactive configuration builder mode.")
+var mode = flag.String("mode", "NOT SET", "Interactive configuration builder mode.")
 var verbose = flag.Bool("v", false, "Log verbosity true.")
+var configpath = flag.String("config", "dcos-config.yaml", "/path/to/dcos-config.yaml")
 
 // Configuration from YAML
 type Config struct {
@@ -64,7 +66,10 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 		log.Info("Log level INFO")
 	}
-
+	// Get YAML configuration
+	config := GetConfig(*configpath)
+	log.Info(config)
+	// Execute the correct console mode
 	switch *mode {
 	case "web":
 		log.Info("Starting configuration mode in browser.")
@@ -73,9 +78,8 @@ func main() {
 	case "interactive":
 		log.Info("Starting configuration mode in interactive mode.")
 	default:
-		log.Error(mode, " is not a known configuration mode.")
+		log.Error(fmt.Sprintf("%s is not a known configuration mode.", *mode))
 		//showDefaults()
 		os.Exit(1)
 	}
-
 }

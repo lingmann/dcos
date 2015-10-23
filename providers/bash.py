@@ -201,8 +201,29 @@ function check_all() {
     check_preexisting_dcos
 
     check_sort_capability
+
+    docker_version=$(docker version | awk '
+        BEGIN { version=0 }
+        {
+            if($1 == "Server:") {
+                server=1
+                client=0
+            } else if($1 == "Client:") {
+                server=0
+                client=1
+            } else if ($1 == "Server" && $2 == "version:") {
+                version=$3
+                exit
+            }
+            if(server && $1 == "Version:") {
+                version=$2
+                exit
+            }
+        }
+        END { print version }
+    ')
     # CoreOS stable as of Aug 2015 has 1.6.2
-    check docker 1.6 $(docker --version | cut -f3 -d' ' | cut -f1 -d',')
+    check docker 1.6 "$docker_version"
 
     check curl
     check bash

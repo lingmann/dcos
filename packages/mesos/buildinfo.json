@@ -5,7 +5,7 @@
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
     "ref": "4ec686c8a350176ba0f319daf094e1146f658cac",
-    "ref_origin" : "0.24.1+systemd+webui"
+    "ref_origin" : "dcos-1.3.1"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

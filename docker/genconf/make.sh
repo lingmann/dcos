@@ -64,6 +64,8 @@ CONFIG_JSON
   export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/$BOOTSTRAP_FILENAME"
   export DOCKER_TAG="$DOCKER_TAG"
   export GENCONF_TAR="$GENCONF_TAR"
+  export CHANNEL_NAME="$CHANNEL_NAME"
+  export BOOTSTRAP_ID="$BOOTSTRAP_ID"
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
   envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/bootstrap/Dockerfile
   envsubst '$DOCKER_TAG:$GENCONF_TAR' < "${MY_ROOT}"/dcos_generate_config.sh.in > dcos_generate_config.sh

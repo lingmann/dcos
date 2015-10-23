@@ -26,8 +26,6 @@ cp ip-detect build/ip-detect
 cat <<EOF > "build/config.json"
 {
   "cluster_name":"test_cluster",
-  "ip_detect_filename": "/genconf/ip-detect",
-  "channel_name":"$CHANNEL_NAME",
   "bootstrap_url":"http://$HOST_IP:8080",
   "resolvers":"[\"8.8.8.8\"]",
   "exhibitor_storage_backend": "zookeeper",

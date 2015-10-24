@@ -16,7 +16,7 @@ cluster = {
 
 Vagrant.configure("2") do |config|
   config.vm.synced_folder ".", "/home/vagrant/sync", disabled: true
-  config.vm.synced_folder 'build/serve/', '/vagrant', type: 'rsync', rsync__auto: false, rsync__exclude: [ "packages", "bootstrap" ]
+  config.vm.synced_folder 'genconf/serve/', '/vagrant', type: 'rsync', rsync__auto: false, rsync__exclude: [ "packages", "bootstrap" ]
   config.vm.synced_folder 'platforms/', '/test_platforms', type: 'rsync', rsync__auto: false
 
   cluster.each do |n, c|

@@ -15,7 +15,7 @@ fi
 
 echo "Running mesosphere/dcos-genconf docker with BUILD_DIR set to $PWD/genconf"
 mkdir -p genconf
-docker run -it -v $(pwd)/genconf/:/genconf mesosphere/dcos-genconf:with-bootstrap-${DOCKER_TAG} "$@"
+docker run -i -v $(pwd)/genconf/:/genconf mesosphere/dcos-genconf:${DOCKER_TAG} "$@"
 
 exit 0
 #EOF#

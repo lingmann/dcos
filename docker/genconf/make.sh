@@ -53,21 +53,12 @@ function get_build_dir {
   # capture any temporary files in the filesystem (package builds, etc).
   git clone --depth=1 "file://${PKGPANDA_SRC}" "${tmpdir}"/pkgpanda
   git clone --depth=1 "file://${DCOS_IMAGE_SRC}" "${tmpdir}"/dcos-image
-  cat <<CONFIG_JSON > "${tmpdir}"/dcos-image/config.json
-{
-  "bootstrap_id":"$BOOTSTRAP_ID",
-  "ip_detect_filename":"/genconf/ip-detect",
-  "channel_name":"${CHANNEL_NAME}"
-}
-CONFIG_JSON
   export BOOTSTRAP_FILENAME="$BOOTSTRAP_FILENAME"
-  export BOOTSTRAP_TAR="${BOOTSTRAP_ROOT}/${CHANNEL_NAME}/bootstrap/$BOOTSTRAP_FILENAME"
   export DOCKER_TAG="$DOCKER_TAG"
   export GENCONF_TAR="$GENCONF_TAR"
   export CHANNEL_NAME="$CHANNEL_NAME"
   export BOOTSTRAP_ID="$BOOTSTRAP_ID"
   envsubst < "${MY_ROOT}"/Dockerfile.template > "${tmpdir}"/Dockerfile
-  envsubst < "${MY_ROOT}"/Dockerfile-bootstrap.template > "${tmpdir}"/bootstrap/Dockerfile
   envsubst '$DOCKER_TAG:$GENCONF_TAR' < "${MY_ROOT}"/dcos_generate_config.sh.in > dcos_generate_config.sh
   out "$tmpdir"
 }
@@ -120,17 +111,15 @@ function build {
   docker pull python:3.4.3-slim
   echo "Building: $1"
   pushd "$1"
-  docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
-  popd
-  pushd "$1/bootstrap"
   cp "${BOOTSTRAP_PATH}" "${BOOTSTRAP_FILENAME}"
-  docker build -t mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" .
+  docker build -t mesosphere/dcos-genconf:"${DOCKER_TAG}" .
   rm "${BOOTSTRAP_FILENAME}"
   popd
   echo "$DOCKER_TAG" > docker-tag
+  echo "$DOCKER_TAG" > docker-tag.txt
 
   echo "Building dcos_genergate_config.sh"
-  docker save mesosphere/dcos-genconf:"with-bootstrap-${DOCKER_TAG}" > "$GENCONF_TAR"
+  docker save mesosphere/dcos-genconf:"${DOCKER_TAG}" > "$GENCONF_TAR"
   tar cvf - "$GENCONF_TAR" >> dcos_generate_config.sh
   chmod +x dcos_generate_config.sh
 }

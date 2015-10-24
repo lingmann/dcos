@@ -204,33 +204,46 @@ function check_all() {
 
     local docker_version=$(docker version 2>/dev/null | awk '
         BEGIN {
-            version=0
-            client_version=0
-            server_version=0
+            version = 0
+            client_version = 0
+            server_version = 0
         }
         {
             if($1 == "Server:") {
-                server=1
-                client=0
+                server = 1
+                client = 0
             } else if($1 == "Client:") {
-                server=0
-                client=1
+                server = 0
+                client = 1
             } else if ($1 == "Server" && $2 == "version:") {
-                server_version=$3
+                server_version = $3
             } else if ($1 == "Client" && $2 == "version:") {
-                client_version=$3
+                client_version = $3
             }
             if(server && $1 == "Version:") {
-                server_version=$2
+                server_version = $2
             } else if(client && $1 == "Version:") {
-                client_version=$2
+                client_version = $2
             }
         }
         END {
-            if(client_version < server_version) {
-                version=client_version
+            if(client_version == server_version) {
+                version = client_version
             } else {
-                version=server_version
+                split(client_version, cv, ".")
+                split(server_version, sv, ".")
+
+                y = length(cv) > length(sv) ? length(cv) : length(sv)
+
+                for(i = 1; i <= y; i++) {
+                    if(cv[i] < sv[i]) {
+                        version = client_version
+                        break
+                    } else if(sv[i] < cv[i]) {
+                        version = server_version
+                        break
+                    }
+                }
             }
             print version
         }

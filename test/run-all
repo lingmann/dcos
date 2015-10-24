@@ -20,10 +20,10 @@ export PLATFORMS="$@"
 # TeamCity will get logs from vagrant if possible then cleanup all artifacts.
 rm -rf PASSED
 
-mkdir -p build
+mkdir -p genconf
 
-cp ip-detect build/ip-detect
-cat <<EOF > "build/config.json"
+cp ip-detect genconf/ip-detect
+cat <<EOF > "genconf/config.json"
 {
   "cluster_name":"test_cluster",
   "bootstrap_url":"http://$HOST_IP:8080",
@@ -54,7 +54,7 @@ for platform in $PLATFORMS; do
 
   # Generate the config packages
   echo "Generating config packages"
-  docker run -v $PWD/build:/genconf mesosphere/dcos-genconf:$GEN_DOCKER_TAG --installer-format $platform --config /genconf/config.json 
+  bash ../dcos_generate_config.sh --installer-format $platform --config /genconf/config.json
 
   trap cleanup EXIT
 
@@ -64,7 +64,7 @@ for platform in $PLATFORMS; do
 
   # Start nginx
   echo "Starting Nginx"
-  docker run -d -v $PWD/build/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
+  docker run -d -v $PWD/genconf/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
 
   # Launch the vagrant
   echo "Starting Vagrant VMs"

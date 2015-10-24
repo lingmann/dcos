@@ -202,8 +202,12 @@ function check_all() {
 
     check_sort_capability
 
-    docker_version=$(docker version 2>/dev/null | awk '
-        BEGIN { version=0 }
+    local docker_version=$(docker version 2>/dev/null | awk '
+        BEGIN {
+            version=0
+            client_version=0
+            server_version=0
+        }
         {
             if($1 == "Server:") {
                 server=1
@@ -212,15 +216,24 @@ function check_all() {
                 server=0
                 client=1
             } else if ($1 == "Server" && $2 == "version:") {
-                version=$3
-                exit
+                server_version=$3
+            } else if ($1 == "Client" && $2 == "version:") {
+                client_version=$3
             }
             if(server && $1 == "Version:") {
-                version=$2
-                exit
+                server_version=$2
+            } else if(client && $1 == "Version:") {
+                client_version=$2
             }
         }
-        END { print version }
+        END {
+            if(client_version < server_version) {
+                version=client_version
+            } else {
+                version=server_version
+            }
+            print version
+        }
     ')
     # CoreOS stable as of Aug 2015 has 1.6.2
     check docker 1.6 "$docker_version"

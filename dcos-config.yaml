@@ -4,8 +4,6 @@
 cluster_name: foo
 # The URL where the installer can download the configuration built with DCOS_generate utility.
 bootstrap_url: IP_ADDRESS_TO_THIS_MACHINE
-# Number of masters
-num_masters: 3 
 # Garbage collection delay. Shouldn't be touched unless you're a pro.
 gc_delay: '2days'
 # Docker remove delay
@@ -21,6 +19,7 @@ master_discovery:
   # For cloud environment only: Use an external proxy for the masters that lives at a static IP, for example, haproxy or nginx. 
   cloud_dynamic:
     set: false 
+    num_masters: 1
   # Use the Mesos agents to discover the masters by giving each agent a static list of master IPs. The masters must not change IP addresses, and if a master is replaced, the new master must take the old master’s IP address.
   static: 
     set: true
@@ -37,6 +36,8 @@ master_discovery:
     keepalived_pass:
     # Specify the VIP in use by your keepalived cluster.
     keepalived_virtual_ipaddress:
+    # Number of masters
+    num_masters:
 
 # EXHIBITOR STORAGE BACKEND
 # This parameter specifies the name of Exhibitor storage backend. During DCOS installation, a storage system is required for configuring and orchestrating Zookeeper with Exhibitor on the master nodes. Exhibitor automatically configures your Zookeeper installation on the master nodes during your DCOS installation. The available options are zookeeper, aws_s3, and shared_filesystem.

@@ -202,7 +202,7 @@ function check_all() {
 
     check_sort_capability
 
-    docker_version=$(docker version | awk '
+    docker_version=$(docker version 2>/dev/null | awk '
         BEGIN { version=0 }
         {
             if($1 == "Server:") {

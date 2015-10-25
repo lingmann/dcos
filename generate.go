@@ -33,6 +33,7 @@ func do_onprem(config Config) {
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates
 	switch config.MasterDiscovery {
+	// Static
 	case "static":
 		if len(config.MasterList) == 0 {
 			log.Error("Must set master_list when using master_discovery type static. Exiting.")
@@ -40,6 +41,7 @@ func do_onprem(config Config) {
 		}
 		path := build_template_path("master-discovery/static")
 		templates = append(templates, path)
+	// Keepalived
 	case "keepalived":
 		if len(config.KeepalivedRouterId) == 0 {
 			log.Error("Must set keepalived_router_id when using master_discovery type keepalived. Exiting.")
@@ -56,6 +58,7 @@ func do_onprem(config Config) {
 		}
 		path := build_template_path("master-discovery/keepalived")
 		templates = append(templates, path)
+	// Cloud dynamic
 	case "cloud-dynamic":
 		if len(config.NumMasters) == 0 {
 			log.Error("Must set num_masters when using master_discovery type cloud-dynamic. Exiting.")
@@ -75,7 +78,7 @@ func do_onprem(config Config) {
 			log.Error("Must set exhibitor_zk_path when using exhibitor_storage_backend type zookeeper. Exiting.")
 			os.Exit(1)
 		}
-		path := build_template_path("master-discovery/cloud-dynamic")
+		path := build_template_path("exhibitor-storage-backend/zookeeper")
 		templates = append(templates, path)
 	// S3 Backend
 	case "aws_s3":
@@ -95,10 +98,16 @@ func do_onprem(config Config) {
 			log.Error("Must set s3_prefix when using exhibitor_storage_backend type aws_s3. Exiting.")
 			os.Exit(1)
 		}
-		path := build_template_path("master-discovery/cloud-dynamic")
+		path := build_template_path("exhibitor-storage-backend/aws_s3")
 		templates = append(templates, path)
 
 	case "shared_filesystem":
+		if len(config.ExhibitorFsConfigPath) == 0 {
+			log.Error("Must set exhibitor_fs_config_path when using exhibitor_storage_backend type shared_filesystem. Exiting.")
+			os.Exit(1)
+		}
+		path := build_template_path("exhibitor-storage-backend/filesystem")
+		templates = append(templates, path)
 	}
 	RenderTemplates(config, templates)
 }
@@ -145,7 +154,7 @@ func WriteTemplate(path string, config Config) {
 }
 
 func build_template_path(appendpath string) (templatepath string) {
-	basetemplates := "templates/onprem"
+	basetemplates := fmt.Sprintf("templates/%s", *gentype)
 	tempfile := "config.yaml"
 	templatepath = fmt.Sprintf("%s/%s/%s", basetemplates, appendpath, tempfile)
 	_, err := os.Open(templatepath)

@@ -21,7 +21,8 @@ type Config struct {
 			NumMasters string `yaml:"num_masters"`
 		} `yaml:"cloud_dynamic"`
 		Static struct {
-			MasterList string `yaml:"master_list"`
+			Set        bool     `yaml:"set"`
+			MasterList []string `yaml:"master_list"`
 		} `yaml:"static"`
 		Keepalived struct {
 			KeepalivedRouterId         string `yaml:"keepalived_router_id"`

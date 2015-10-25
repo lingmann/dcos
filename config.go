@@ -1,6 +1,7 @@
 package main
 
 import (
+	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"os"
@@ -62,6 +63,16 @@ func GetConfig(path string) (config Config) {
 	err = yaml.Unmarshal(cf, &config)
 	CheckError(err)
 	// Get ENV based configuration
-	this, err := os.GetEnv("DCOS_BOOTSTRAP_ID")
+	config.BootstrapId = os.Getenv("DCOS_BOOTSTRAP_ID")
+	CheckEnv(config.BootstrapId, "DCOS_BOOTSTRAP_ID")
+	config.ChannelName = os.Getenv("DOCS_CHANNEL_NAME")
+	CheckEnv(config.ChannelName, "DCOS_CHANNEL_NAME")
 	return config
+}
+
+func CheckEnv(env string, name string) {
+	if len(env) == 0 {
+		log.Error(name, " is not set. Exiting.")
+		os.Exit(1)
+	}
 }

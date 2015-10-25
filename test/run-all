@@ -1,6 +1,32 @@
 #!/bin/bash
 set -euo pipefail
 
+cleanup_nginx() {
+  echo "Cleaning up Nginx container"
+  set +e
+  docker kill dcos_int_nginx
+  docker rm dcos_int_nginx
+  set -e
+}
+
+cleanup_zookeeper() {
+  echo "Cleaning up Zookeeper container"
+  set +e
+  docker kill dcos_int_zk
+  docker rm dcos_int_zk
+  set -e
+}
+
+clean_all() {
+  echo "Cleaning up remainig (if any) zookeeper and nginx Docker containers"
+  cleanup_nginx
+  cleanup_zookeeper
+}
+
+# Flag used so TeamCity can tell if the build passed or failed. On failure,
+# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
+rm -rf PASSED
+
 # Make sure we're running inside the test directory which contains the Vagrantfile
 if [ ! -f Vagrantfile ]
 then
@@ -13,12 +39,13 @@ docker build -t py.test - < py.test.Dockerfile
 
 export MASTER_IP=172.17.10.101
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
-export HOST_IP=$(ip addr show dev virbr0|awk '/inet / { print $2 }' |cut -d/ -f1)
+export HOST_IP=$(ip addr show dev ${BR_DEVICE-virbr0}|awk '/inet / { print $2 }' |cut -d/ -f1)
 export PLATFORMS="$@"
 
-# Flag used so TeamCity can tell if the build passed or failed. On failure,
-# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
-rm -rf PASSED
+if [ -z "${HOST_IP// }" ]; then
+    echo "Host ip has not been identified, aborting."
+    exit 1
+fi
 
 mkdir -p genconf
 
@@ -36,35 +63,26 @@ cat <<EOF > "genconf/config.json"
 }
 EOF
 
-cleanup() {
-  echo "Cleaning up zookeeper and nginx Docker containers"
-  set +e
-  docker kill dcos_int_zk
-  docker rm dcos_int_zk
-  docker kill dcos_int_nginx
-  docker rm dcos_int_nginx
-  set -e
-}
-
+# Start nginx
+echo "Starting Nginx"
+cleanup_nginx
+mkdir -p $PWD/genconf/serve
+docker run -d -v $PWD/genconf/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
 
 for platform in $PLATFORMS; do
 
-  # Cleanup zk, nginx containers to be safe
-  cleanup
+  # Cleanup zk to be safe
+  cleanup_zookeeper
 
   # Generate the config packages
   echo "Generating config packages"
   bash ../dcos_generate_config.sh --installer-format $platform --config /genconf/config.json
 
-  trap cleanup EXIT
+  trap clean_all EXIT
 
   # Start zookeeper
   echo "Starting Zookeeper"
   docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
-
-  # Start nginx
-  echo "Starting Nginx"
-  docker run -d -v $PWD/genconf/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
 
   # Launch the vagrant
   echo "Starting Vagrant VMs"

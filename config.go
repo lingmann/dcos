@@ -54,6 +54,7 @@ type Config struct {
 	// Config from ENV
 	BootstrapId string
 	ChannelName string
+	DcosDir     string
 	OutputDir   string
 }
 
@@ -65,7 +66,7 @@ func GetConfig(path string) (config Config) {
 	err = yaml.Unmarshal(cf, &config)
 	CheckError(err)
 	// Get output dir and set if does not exist
-	config.OutputDir = CheckOutputDir(*outputdir)
+	config.DcosDir, config.OutputDir = CheckOutputDir()
 	// Get ENV based configuration
 	config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
 	config.ChannelName = CheckEnv(os.Getenv("DCOS_CHANNEL_NAME"), "DCOS_CHANNEL_NAME")
@@ -81,10 +82,13 @@ func CheckEnv(env string, name string) string {
 	return env
 }
 
-func CheckOutputDir(path string) (outputpath string) {
-	cwd := os.Getenv("PWD")
-	servepath := fmt.Sprintf("%s/serve/", cwd)
+func CheckOutputDir() (string, string) {
+	cwd := os.Getenv("HOME")
+	servepath := fmt.Sprintf("%s/dcos/serve/", cwd)
+	dcospath := fmt.Sprintf("%s/dcos", cwd)
+	log.Info("Building DCOS directory ", dcospath)
 	log.Info("Building output directory ", servepath)
+	os.Mkdir(dcospath, 0755)
 	os.Mkdir(servepath, 0755)
-	return outputpath
+	return dcospath, servepath
 }

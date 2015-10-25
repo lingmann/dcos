@@ -11,7 +11,6 @@ import (
 var mode = flag.String("mode", "NOT SET", "Interactive configuration builder mode.")
 var verbose = flag.Bool("v", false, "Log verbosity true.")
 var configpath = flag.String("config", "dcos-config.yaml", "/path/to/dcos-config.yaml")
-var outputdir = flag.String("output-dir", "serve/", "/path/to/serve/directory")
 
 func main() {
 	flag.Parse()

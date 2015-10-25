@@ -75,7 +75,7 @@ func CheckEnv(env string, name string) string {
 
 func CheckOutputDir() (string, string) {
 	cwd := os.Getenv("HOME")
-	servepath := fmt.Sprintf("%s/dcos/serve/", cwd)
+	servepath := fmt.Sprintf("%s/dcos/serve", cwd)
 	dcospath := fmt.Sprintf("%s/dcos", cwd)
 	log.Info("Building DCOS directory ", dcospath)
 	log.Info("Building output directory ", servepath)

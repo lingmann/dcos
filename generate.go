@@ -98,9 +98,8 @@ func WriteTemplate(path string, config Config) {
 	err = yaml.Unmarshal(tempfile, &template)
 	CheckError(err)
 	for _, file := range template.WriteFiles {
-		filePath := fmt.Sprintf("", config.OutputDir, file.Path)
-		log.Info("Writing configuration file ", file, " to ", config.OutputDir)
-		log.Info(filePath)
+		filePath := fmt.Sprintf("%s%s", config.OutputDir, file.Path)
+		log.Info("Writing configuration file ", filePath)
 	}
 
 }

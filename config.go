@@ -10,12 +10,17 @@ import (
 
 // Configuration from YAML
 type Config struct {
-	ClusterName       string   `yaml:"cluster_name"`
-	BootstrapUrl      string   `yaml:"bootstrap_url"`
+	ClusterName  string `yaml:"cluster_name"`
+	BootstrapUrl string `yaml:"bootstrap_url"`
+	// Set with defaults
 	GcDelay           string   `yaml:"gc_delay"`
 	DockerRemoveDelay string   `yaml:"docker_remove_delay"`
 	DnsResolvers      []string `yaml:"dns_resolvers"`
-	MasterDiscovery   string   `yaml:"master_discovery"`
+	Weights           string   `yaml:"weights"`
+	Roles             string   `yaml:"roles"`
+	Quorum            string   `yaml:"quorum"`
+	// Set by user
+	MasterDiscovery string `yaml:"master_discovery"`
 	// Static
 	MasterList []string `yaml:"master_list"`
 	// Cloud-dynamic
@@ -45,7 +50,23 @@ type Config struct {
 	OutputDir   string
 }
 
+const (
+	DefaultNumMasters        = "3"
+	DefaultRoles             = "slave_public"
+	DefaultWeights           = "slave_public=1"
+	DefaultQuorum            = "3"
+	DefaultDockerRemoveDelay = "2hrs"
+	DefaultGcDelay           = "2hrs"
+)
+
 func GetConfig(path string) (config Config) {
+	config.GcDelay = DefaultGcDelay
+	config.DockerRemoveDelay = DefaultDockerRemoveDelay
+	//config.DnsResolves = DefaultDnsResolvers
+	config.Weights = DefaultWeights
+	config.Roles = DefaultRoles
+	config.Quorum = DefaultQuorum
+	// Read in the actual config and override stuff
 	cf, err := ioutil.ReadFile(path)
 	// Maybe generate base config if not found later
 	CheckError(err)

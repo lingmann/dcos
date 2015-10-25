@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
+	"gopkg.in/yaml.v2"
+	"io"
 	"os"
 	//	"reflect"
 	"text/template"
@@ -66,11 +68,33 @@ func do_onprem(config Config) {
 
 func RenderTemplates(config Config, templates []string) {
 	for _, temp := range templates {
+		var tempWriter io.Writer
 		t, err := template.ParseFiles(temp)
 		CheckError(err)
-		err = t.Execute(os.Stdout, config)
+		var byteTemplate []byte
+		err = t.Execute(tempWriter, config)
 		CheckError(err)
+		_, err = tempWriter.Write(byteTemplate)
+		WriteTemplate(byteTemplate, config)
 	}
+}
+
+func WriteTemplate(w []byte, config Config) {
+	type Template struct {
+		WriteFiles []struct {
+			Path    string `yaml:"path"`
+			Content string `yaml:"content"`
+		} `yaml:"write_files"`
+	}
+	var template Template
+	err := yaml.Unmarshal(w, &template)
+	CheckError(err)
+	for _, file := range template.WriteFiles {
+		filePath := fmt.Sprintf("", config.OutputDir, file.Path)
+		log.Info("Writing configuration file ", file, " to ", config.OutputDir)
+		log.Info(filePath)
+	}
+
 }
 
 func build_template_path(appendpath string) (templatepath string) {

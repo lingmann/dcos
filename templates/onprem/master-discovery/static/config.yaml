@@ -5,7 +5,7 @@ write_files:
   - path: /etc/dns_config
     content: |
       MASTER_SOURCE=master_list
-      RESOLVERS={{.DnsResolvers}}
+      RESOLVERS={{range  $r := .DnsResolvers}}{{$r}} {{end}}
   - path: /etc/master_list
     content: |
       {{ .MasterList }}

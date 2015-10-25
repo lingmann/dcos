@@ -30,8 +30,11 @@ func do_onprem(config Config) {
 	log.Info("Starting on premise configuration generation...")
 	// Initial array of templates to create
 	var templates []string
+	// Add the base onprem template for the given provider
+	path := build_template_path("")
+	templates = append(templates, path)
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
-	// Load required templates
+	// Load required templates and validate dependencies
 	switch config.MasterDiscovery {
 	// Static
 	case "static":
@@ -150,7 +153,6 @@ func WriteTemplate(path string, config Config) {
 		err := ioutil.WriteFile(filePath, []byte(file.Content), 0644)
 		CheckError(err)
 	}
-
 }
 
 func build_template_path(appendpath string) (templatepath string) {
@@ -164,8 +166,4 @@ func build_template_path(appendpath string) (templatepath string) {
 	}
 	log.Info("Loading template ", templatepath)
 	return templatepath
-
-}
-func build_packages() {
-
 }

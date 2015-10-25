@@ -63,16 +63,15 @@ func GetConfig(path string) (config Config) {
 	err = yaml.Unmarshal(cf, &config)
 	CheckError(err)
 	// Get ENV based configuration
-	config.BootstrapId = os.Getenv("DCOS_BOOTSTRAP_ID")
-	CheckEnv(config.BootstrapId, "DCOS_BOOTSTRAP_ID")
-	config.ChannelName = os.Getenv("DOCS_CHANNEL_NAME")
-	CheckEnv(config.ChannelName, "DCOS_CHANNEL_NAME")
+	config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
+	config.ChannelName = CheckEnv(os.Getenv("DOCS_CHANNEL_NAME"), "DOCS_CHANNEL_NAME")
 	return config
 }
 
-func CheckEnv(env string, name string) {
+func CheckEnv(env string, name string) string {
 	if len(env) == 0 {
 		log.Error(name, " is not set. Exiting.")
 		os.Exit(1)
 	}
+	return env
 }

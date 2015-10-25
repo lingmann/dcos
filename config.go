@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -53,6 +54,7 @@ type Config struct {
 	// Config from ENV
 	BootstrapId string
 	ChannelName string
+	OutputDir   string
 }
 
 func GetConfig(path string) (config Config) {
@@ -62,6 +64,8 @@ func GetConfig(path string) (config Config) {
 	// Unmarshal YAML config to struct and return
 	err = yaml.Unmarshal(cf, &config)
 	CheckError(err)
+	// Get output dir and set if does not exist
+	config.OutputDir = CheckOutputDir(*outputdir)
 	// Get ENV based configuration
 	config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
 	config.ChannelName = CheckEnv(os.Getenv("DCOS_CHANNEL_NAME"), "DCOS_CHANNEL_NAME")
@@ -75,4 +79,12 @@ func CheckEnv(env string, name string) string {
 	}
 	log.Info(name, " found in ENV: ", env)
 	return env
+}
+
+func CheckOutputDir(path string) (outputpath string) {
+	cwd := os.Getenv("PWD")
+	servepath := fmt.Sprintf("%s/serve/", cwd)
+	log.Info("Building output directory ", servepath)
+	os.Mkdir(servepath, 0755)
+	return outputpath
 }

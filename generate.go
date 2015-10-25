@@ -100,6 +100,7 @@ func WriteTemplate(path string, config Config) {
 	for _, file := range template.WriteFiles {
 		filePath := fmt.Sprintf("%s%s", config.OutputDir, file.Path)
 		log.Info("Writing configuration file ", filePath)
+		err := os.MkdirAll()
 	}
 
 }

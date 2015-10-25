@@ -1,0 +1,11 @@
+write_files:
+  - path: /etc_master/dns_config_master
+    content: |
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=master_list
+      RESOLVERS=8.8.8.8 8.8.4.4 
+  - path: /etc/master_list
+    content: |
+      [10.0.0.1 10.0.0.2 10.0.0.3]

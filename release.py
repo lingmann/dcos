@@ -41,7 +41,7 @@ def get_bucket():
 def load_providers():
     modules = dict()
     for name in provider_names:
-        modules[name] = importlib.import_module(name)
+        modules[name] = importlib.import_module("providers." + name)
     return modules
 
 

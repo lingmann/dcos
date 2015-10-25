@@ -68,13 +68,19 @@ func do_onprem(config Config) {
 
 func RenderTemplates(config Config, templates []string) {
 	for _, temp := range templates {
+		// Declare an io writer interface and a byte array to dump to for rendered template
 		var tempWriter io.Writer
+		var byteTemplate []byte
+		// Parse the tmeplate
 		t, err := template.ParseFiles(temp)
 		CheckError(err)
-		var byteTemplate []byte
+		// Write to the writer
 		err = t.Execute(tempWriter, config)
 		CheckError(err)
+		// Dump writer to byte arry
 		_, err = tempWriter.Write(byteTemplate)
+		CheckError(err)
+		// Write the byte arry to disk
 		WriteTemplate(byteTemplate, config)
 	}
 }

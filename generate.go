@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
+	"strings"
 	//	"io"
 	"io/ioutil"
 	"os"
@@ -100,7 +101,10 @@ func WriteTemplate(path string, config Config) {
 	for _, file := range template.WriteFiles {
 		filePath := fmt.Sprintf("%s%s", config.OutputDir, file.Path)
 		log.Info("Writing configuration file ", filePath)
-		err := os.MkdirAll()
+		wd := strings.Join(strings.Split(filePath, "/")[:len(strings.Split(filePath, "/"))-1], "/")
+		os.MkdirAll(wd, 0755)
+		err := ioutil.WriteFile(filePath, []byte(file.Content), 0644)
+		CheckError(err)
 	}
 
 }

@@ -64,6 +64,7 @@ func do_onprem(config Config) {
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
 	}
+	switch config.
 	RenderTemplates(config, templates)
 }
 

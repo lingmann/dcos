@@ -11,6 +11,7 @@ import (
 var mode = flag.String("mode", "NOT SET", "Interactive configuration builder mode.")
 var verbose = flag.Bool("v", false, "Log verbosity true.")
 var configpath = flag.String("config", "dcos-config.yaml", "/path/to/dcos-config.yaml")
+var gentype = flag.String("type", "onprem", "Installation type. Available candidates: onprem, chef, aws")
 
 func main() {
 	flag.Parse()

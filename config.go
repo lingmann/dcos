@@ -26,22 +26,18 @@ type Config struct {
 	KeepalivedPass             string `yaml:"keepalived_pass"`
 	KeepalivedVirtualIpaddress string `yaml:"keepalived_virtual_ipaddress"`
 	// Exhibitor storage backend
-	ExhibitorStorageBackend struct {
-		Zookeeper struct {
-			ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
-			ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
-		} `yaml:"zookeeper"`
-		AwsS3 struct {
-			AwsAccessKeyId     string `yaml:"aws_access_key_id"`
-			AwsRegion          string `yaml:"aws_region"`
-			AwsSecretAccessKey string `yaml:"aws_secret_access_key"`
-			S3Bucket           string `yaml:"s3_bucket"`
-			S3Prefix           string `yaml:"s3_prefix"`
-		} `yaml:"aws_s3"`
-		SharedFilesystem struct {
-			ExhibitorFsConfigPath string `yaml:"exhibitor_fs_config_path"`
-		} `yaml:"shared_filesystem"`
-	} `yaml:"exhibitor_storage_backend"`
+	ExhibitorStorageBackend string `yaml:"exhibitor_storage_backend"`
+	// Zookeeper requires:
+	ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
+	ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
+	// AWS S3 requires:
+	AwsAccessKeyId     string `yaml:"aws_access_key_id"`
+	AwsRegion          string `yaml:"aws_region"`
+	AwsSecretAccessKey string `yaml:"aws_secret_access_key"`
+	S3Bucket           string `yaml:"s3_bucket"`
+	S3Prefix           string `yaml:"s3_prefix"`
+	// Shared filesystem requires:
+	ExhibitorFsConfigPath string `yaml:"exhibitor_fs_config_path"`
 	// Config from ENV
 	BootstrapId string
 	ChannelName string

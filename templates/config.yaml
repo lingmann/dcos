@@ -1,0 +1,59 @@
+write_files:
+  - path: /pkginfo.json
+    content: |
+      {
+        "environment": {
+          "ZOOKEEPER_CLUSTER_SIZE": {{ .NumMasters }},
+          "MESOS_IP_DISCOVERY_COMMAND": "/opt/mesosphere/bin/detect_ip"
+        }
+      }
+  - path: /etc/mesos-dns.json
+    content: |
+      {
+        "zk": "zk://127.0.0.1:2181/mesos",
+        "refreshSeconds": 30,
+        "ttl": 60,
+        "domain": "mesos",
+        "port": 53,
+        {{ .DnsResolvers }},
+        "timeout": 5,
+        "listener": "0.0.0.0",
+        "email": "root.mesos-dns.mesos"
+      }
+  - path: /etc/mesos-master
+    content: |
+      MESOS_LOG_DIR=/var/log/mesos
+      MESOS_WORK_DIR=/var/lib/mesos/master
+      MESOS_ZK=zk://127.0.0.1:2181/mesos
+      MESOS_ROLES={{ .Roles }}
+      MESOS_WEIGHTS={{ .Weights }}
+      MESOS_QUORUM={{ .MasterQuorum }}
+      SASL_PATH=/opt/mesosphere/lib/sasl2
+  - path: /etc/mesos-slave-common
+    content: |
+      MESOS_MASTER=zk://leader.mesos:2181/mesos
+      MESOS_CONTAINERIZERS=docker,mesos
+      MESOS_LOG_DIR=/var/log/mesos
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
+      MESOS_ISOLATION=cgroups/cpu,cgroups/mem
+      MESOS_WORK_DIR=/var/lib/mesos/slave
+      MESOS_SLAVE_SUBSYSTEMS=cpu,memory
+      MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-ex  ecutor-environment.json
+      MESOS_DOCKER_REMOVE_DELAY={{ .DockerRemoveDelay }}
+      MESOS_GC_DELAY={{ .GcDelay }}
+  - path: /etc/mesos-slave
+    content: |
+      MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180  ,8182-32000]
+  - path: /etc/mesos-slave-public
+    content: |
+      MESOS_RESOURCES=ports:[1-21,23-5050,5052-32000]
+      MESOS_DEFAULT_ROLE=slave_public
+      MESOS_ATTRIBUTES=public_ip:true
+  - path: /etc/mesos-executor-environment.json
+    content: |
+      {
+        "PATH": "/usr/bin",
+        "SHELL": "/usr/bin/bash",
+        "LD_LIBRARY_PATH": "/opt/mesosphere/lib",
+        "SASL_PATH": "/opt/mesosphere/lib/sasl2"
+      }

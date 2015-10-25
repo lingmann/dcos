@@ -16,8 +16,10 @@ func generate(config Config, gentype string) {
 	log.Info("Generating configuration for ", config.ClusterName, " in ", config.OutputDir, " for installation type ", gentype)
 	switch gentype {
 	case "onprem":
+		// Generate configuration
 		do_onprem(config)
-		build_packages()
+		// Build packages
+		//build_packages()
 	case "aws":
 	case "chef":
 	default:
@@ -30,6 +32,8 @@ func do_onprem(config Config) {
 	log.Info("Starting on premise configuration generation...")
 	// Initial array of templates to create
 	var templates []string
+	// Add the base template
+	templates = append(templates, "templates/config.yaml")
 	// Add the base onprem template for the given provider
 	path := build_template_path("")
 	templates = append(templates, path)

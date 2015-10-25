@@ -37,11 +37,35 @@ func do_onprem(config Config) {
 		path := build_template_path("master-discovery/static")
 		templates = append(templates, path)
 	case "keepalived":
+		if len(config.KeepalivedRouterId) == 0 {
+			log.Error("Must set keepalived_router_id when using master_discovery type keepalived. Exiting.")
+			os.Exit(1)
+		} else if len(config.KeepalivedInterface) == 0 {
+			log.Error("Must set keepalived_interface when using master_discovery type keepalived. Exiting.")
+			os.Exit(1)
+		} else if len(config.KeepalivedPass) == 0 {
+			log.Error("Must set keepalived_pass when using master_discovery type keepalived. Exiting.")
+			os.Exit(1)
+		} else if len(config.KeepalivedVirtualIpaddress) == 0 {
+			log.Error("Must set keepalived_virtual_ipaddress when using master_discovery type keepalived. Exiting.")
+			os.Exit(1)
+		}
 		path := build_template_path("master-discovery/keepalived")
 		templates = append(templates, path)
 	case "cloud-dynamic":
+		if len(config.NumMasters) == 0 {
+			log.Error("Must set num_masters when using master_discovery type cloud-dynamic. Exiting.")
+			os.Exit(1)
+		}
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
+	}
+}
+
+func validate_parameters(parameter string) {
+	switch parameter {
+	case "static":
+
 	}
 }
 

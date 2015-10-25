@@ -4,11 +4,9 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"strings"
-	//	"io"
 	"io/ioutil"
 	"os"
-	//	"reflect"
+	"strings"
 	"text/template"
 )
 
@@ -34,9 +32,7 @@ func do_onprem(config Config) {
 	var templates []string
 	// Add the base template
 	templates = append(templates, "templates/config.yaml")
-	// Add the base onprem template for the given provider
-	path := build_template_path("")
-	templates = append(templates, path)
+	templates = append(templates, "templates/onprem/config.yaml")
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates and validate dependencies
 	switch config.MasterDiscovery {
@@ -121,6 +117,7 @@ func do_onprem(config Config) {
 
 func RenderTemplates(config Config, templates []string) {
 	for _, temp := range templates {
+		log.Info("Rendering template ", temp)
 		// Parse the tmeplate
 		t, err := template.ParseFiles(temp)
 		CheckError(err)

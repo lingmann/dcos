@@ -64,7 +64,7 @@ func GetConfig(path string) (config Config) {
 	CheckError(err)
 	// Get ENV based configuration
 	config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
-	config.ChannelName = CheckEnv(os.Getenv("DOCS_CHANNEL_NAME"), "DOCS_CHANNEL_NAME")
+	config.ChannelName = CheckEnv(os.Getenv("DCOS_CHANNEL_NAME"), "DCOS_CHANNEL_NAME")
 	return config
 }
 
@@ -73,5 +73,6 @@ func CheckEnv(env string, name string) string {
 		log.Error(name, " is not set. Exiting.")
 		os.Exit(1)
 	}
+	log.Info(name, " found in ENV: ", env)
 	return env
 }

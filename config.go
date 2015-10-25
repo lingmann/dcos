@@ -18,14 +18,12 @@ type Config struct {
 	DnsResolvers      []string `yaml:"dns_resolvers"`
 	MasterDiscovery   struct {
 		CloudDynamic struct {
-			Set bool `yaml:"set"`
+			NumMasters string `yaml:"num_masters"`
 		} `yaml:"cloud_dynamic"`
 		Static struct {
-			Set        bool   `yaml:"set"`
 			MasterList string `yaml:"master_list"`
 		} `yaml:"static"`
-		Vrrp struct {
-			Set                        bool   `yaml:"set"`
+		Keepalived struct {
 			KeepalivedRouterId         string `yaml:"keepalived_router_id"`
 			KeepalivedInterface        string `yaml:"keepalived_interface"`
 			KeepalivedPass             string `yaml:"keepalived_pass"`
@@ -34,12 +32,10 @@ type Config struct {
 	} `yaml:"master_discovery"`
 	ExhibitorStorageBackend struct {
 		Zookeeper struct {
-			Set              bool     `yaml:"set"`
 			ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`
 			ExhibitorZkPath  string   `yaml:"exhibitor_zk_path"`
 		} `yaml:"zookeeper"`
 		AwsS3 struct {
-			Set                bool   `yaml:"set"`
 			AwsAccessKeyId     string `yaml:"aws_access_key_id"`
 			AwsRegion          string `yaml:"aws_region"`
 			AwsSecretAccessKey string `yaml:"aws_secret_access_key"`
@@ -47,7 +43,6 @@ type Config struct {
 			S3Prefix           string `yaml:"s3_prefix"`
 		} `yaml:"aws_s3"`
 		SharedFilesystem struct {
-			Set                   bool   `yaml:"set"`
 			ExhibitorFsConfigPath string `yaml:"exhibitor_fs_config_path"`
 		} `yaml:"shared_filesystem"`
 	} `yaml:"exhibitor_storage_backend"`

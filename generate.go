@@ -11,6 +11,7 @@ func generate(config Config, gentype string) {
 	switch gentype {
 	case "onprem":
 		do_onprem(config)
+		build_packages()
 	case "aws":
 	case "chef":
 	default:
@@ -21,5 +22,9 @@ func generate(config Config, gentype string) {
 
 func do_onprem(config Config) {
 	log.Info("Starting on premise configuration generation...")
+
+}
+
+func build_packages() {
 
 }

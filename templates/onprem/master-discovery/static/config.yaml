@@ -1,4 +1,3 @@
-{{ with .Config }}
 write_files:
   - path: /etc_master/dns_config_master
     content: |
@@ -6,8 +5,7 @@ write_files:
   - path: /etc/dns_config
     content: |
       MASTER_SOURCE=master_list
-      RESOLVERS={{for _, r := range .DnsResolvers}}r{{end}}
+      RESOLVERS={{.DnsResolvers}}
   - path: /etc/master_list
     content: |
-      {{ .MasterDiscovery.Static.MasterList }}
-{{end}}
+      {{ .MasterList }}

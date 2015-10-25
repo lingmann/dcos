@@ -5,7 +5,7 @@ import (
 	log "github.com/Sirupsen/logrus"
 	"os"
 	//	"reflect"
-	//"text/template"
+	"text/template"
 )
 
 func generate(config Config, gentype string) {
@@ -60,12 +60,16 @@ func do_onprem(config Config) {
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
 	}
+
+	RenderTemplates(config, templates)
 }
 
-func validate_parameters(parameter string) {
-	switch parameter {
-	case "static":
-
+func RenderTemplates(config Config, templates []string) {
+	for _, temp := range templates {
+		t, err := template.ParseFiles(temp)
+		CheckError(err)
+		err = t.Execute(os.Stdout, config)
+		CheckError(err)
 	}
 }
 

@@ -4,7 +4,8 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"gopkg.in/yaml.v2"
-	"io"
+	//	"io"
+	"io/ioutil"
 	"os"
 	//	"reflect"
 	"text/template"
@@ -68,24 +69,23 @@ func do_onprem(config Config) {
 
 func RenderTemplates(config Config, templates []string) {
 	for _, temp := range templates {
-		// Declare an io writer interface and a byte array to dump to for rendered template
-		var tempWriter io.Writer
-		var byteTemplate []byte
 		// Parse the tmeplate
 		t, err := template.ParseFiles(temp)
 		CheckError(err)
+		tempfile, err := ioutil.TempFile(config.OutputDir, "template-")
 		// Write to the writer
-		err = t.Execute(tempWriter, config)
+		if err := t.Execute(tempfile, config); err == nil {
+			tempFilePath := tempfile.Name()
+			log.Info("Writing template ", tempFilePath)
+			WriteTemplate(tempFilePath, config)
+			log.Info("Cleaning up ", tempFilePath)
+			os.Remove(tempFilePath)
+		}
 		CheckError(err)
-		// Dump writer to byte arry
-		_, err = tempWriter.Write(byteTemplate)
-		CheckError(err)
-		// Write the byte arry to disk
-		WriteTemplate(byteTemplate, config)
 	}
 }
 
-func WriteTemplate(w []byte, config Config) {
+func WriteTemplate(path string, config Config) {
 	type Template struct {
 		WriteFiles []struct {
 			Path    string `yaml:"path"`
@@ -93,7 +93,9 @@ func WriteTemplate(w []byte, config Config) {
 		} `yaml:"write_files"`
 	}
 	var template Template
-	err := yaml.Unmarshal(w, &template)
+	tempfile, err := ioutil.ReadFile(path)
+	CheckError(err)
+	err = yaml.Unmarshal(tempfile, &template)
 	CheckError(err)
 	for _, file := range template.WriteFiles {
 		filePath := fmt.Sprintf("", config.OutputDir, file.Path)

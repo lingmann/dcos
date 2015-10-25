@@ -1,0 +1,15 @@
+write_files:
+  - path: /etc/keepalived
+    content: |
+      KEEPALIVED_VIRTUAL_IPADDRESS={{ keepalived_virtual_ipaddress }}
+      KEEPALIVED_INTERFACE={{ keepalived_interface }}
+      KEEPALIVED_ROUTER_ID={{ keepalived_router_id }}
+      KEEPALIVED_PASS={{ keepalived_pass }}
+  - path: /etc_master/dns_config_master
+    content: |
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS={{ keepalived_virtual_ipaddress }}
+      RESOLVERS={{ resolvers_str }}

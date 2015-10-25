@@ -64,7 +64,25 @@ func do_onprem(config Config) {
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
 	}
-	switch config.
+	switch config.ExhibitorStorageBackend {
+	case "zookeeper":
+		if len(config.ExhibitorZkHosts) == 0 {
+			log.Error("Must set exhibitor_zk_hosts when using exhibitor_storage_backend type zookeeper. Exiting.")
+			os.Exit(1)
+		} else if len(config.ExhibitorZkPath) == 0 {
+			log.Error("Must set exhibitor_zk_path when using exhibitor_storage_backend type zookeeper. Exiting.")
+			os.Exit(1)
+		}
+		path := build_template_path("master-discovery/cloud-dynamic")
+		templates = append(templates, path)
+
+	case "aws_s3":
+		if len(config.AwsAccessKeyId) == 0 {
+			log.Error("Must set aws_access_key_id when using exhibitor_storage_backend type aws_s3. Exiting.")
+			os.Exit(1)
+		}
+	case "shared_filesystem":
+	}
 	RenderTemplates(config, templates)
 }
 

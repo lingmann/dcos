@@ -4,6 +4,7 @@ import (
 	"fmt"
 	log "github.com/Sirupsen/logrus"
 	"os"
+	//	"reflect"
 	//"text/template"
 )
 
@@ -25,11 +26,22 @@ func do_onprem(config Config) {
 	log.Info("Starting on premise configuration generation...")
 	// Initial array of templates to create
 	var templates []string
+	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates
-	if config.MasterDiscovery.Static.Set {
+	switch config.MasterDiscovery {
+	case "static":
+		if len(config.MasterList) == 0 {
+			log.Error("Must set master_list when using master_discovery type static. Exiting.")
+			os.Exit(1)
+		}
 		path := build_template_path("master-discovery/static")
 		templates = append(templates, path)
-
+	case "keepalived":
+		path := build_template_path("master-discovery/keepalived")
+		templates = append(templates, path)
+	case "cloud-dynamic":
+		path := build_template_path("master-discovery/cloud-dynamic")
+		templates = append(templates, path)
 	}
 }
 

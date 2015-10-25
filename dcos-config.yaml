@@ -15,15 +15,12 @@ dns_resolvers:
 
 # MASTER DISCOVERY
 # Master discovery options: static, vrrp, or zookeeper. Sub options for a given discovery method are required for that method. 
-master_discovery:
-    # Use the Mesos agents to discover the masters by giving each agent a static list of master IPs. The masters must not change IP addresses, and if a master is replaced, the new master must take the old master’s IP address.
-  static: 
-    set: true
-    # Specify a JSON-formatted list of your static master IP addresses.
-    master_list: 
-      - 10.0.0.1
-      - 10.0.0.2
-      - 10.0.0.3 
+master_discovery: static
+# Specify a JSON-formatted list of your static master IP addresses.
+master_list: 
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3 
 # Other optional master discovery methods:
   # Use keepalived with a VIP. You are required to maintain this VIP infrastructure
 #  keepalived: 

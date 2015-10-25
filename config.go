@@ -12,25 +12,20 @@ import (
 type Config struct {
 	ClusterName       string   `yaml:"cluster_name"`
 	BootstrapUrl      string   `yaml:"bootstrap_url"`
-	NumMasters        string   `yaml:"num_masters"`
 	GcDelay           string   `yaml:"gc_delay"`
 	DockerRemoveDelay string   `yaml:"docker_remove_delay"`
 	DnsResolvers      []string `yaml:"dns_resolvers"`
-	MasterDiscovery   struct {
-		CloudDynamic struct {
-			NumMasters string `yaml:"num_masters"`
-		} `yaml:"cloud_dynamic"`
-		Static struct {
-			Set        bool     `yaml:"set"`
-			MasterList []string `yaml:"master_list"`
-		} `yaml:"static"`
-		Keepalived struct {
-			KeepalivedRouterId         string `yaml:"keepalived_router_id"`
-			KeepalivedInterface        string `yaml:"keepalived_interface"`
-			KeepalivedPass             string `yaml:"keepalived_pass"`
-			KeepalivedVirtualIpaddress string `yaml:"keepalived_virtual_ipaddress"`
-		} `yaml:"vrrp"`
-	} `yaml:"master_discovery"`
+	MasterDiscovery   string   `yaml:"master_discovery"`
+	// Static
+	MasterList []string `yaml:"master_list"`
+	// Cloud-dynamic
+	NumMasters string `yaml:"num_masters"`
+	// Keepalived
+	KeepalivedRouterId         string `yaml:"keepalived_router_id"`
+	KeepalivedInterface        string `yaml:"keepalived_interface"`
+	KeepalivedPass             string `yaml:"keepalived_pass"`
+	KeepalivedVirtualIpaddress string `yaml:"keepalived_virtual_ipaddress"`
+	// Exhibitor storage backend
 	ExhibitorStorageBackend struct {
 		Zookeeper struct {
 			ExhibitorZkHosts []string `yaml:"exhibitor_zk_hosts"`

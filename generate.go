@@ -64,7 +64,9 @@ func do_onprem(config Config) {
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
 	}
+	// Test dependencies for exhibitor storage backend
 	switch config.ExhibitorStorageBackend {
+	// Zookeeper Backend
 	case "zookeeper":
 		if len(config.ExhibitorZkHosts) == 0 {
 			log.Error("Must set exhibitor_zk_hosts when using exhibitor_storage_backend type zookeeper. Exiting.")
@@ -75,12 +77,27 @@ func do_onprem(config Config) {
 		}
 		path := build_template_path("master-discovery/cloud-dynamic")
 		templates = append(templates, path)
-
+	// S3 Backend
 	case "aws_s3":
 		if len(config.AwsAccessKeyId) == 0 {
 			log.Error("Must set aws_access_key_id when using exhibitor_storage_backend type aws_s3. Exiting.")
 			os.Exit(1)
+		} else if len(config.AwsRegion) == 0 {
+			log.Error("Must set aws_region when using exhibitor_storage_backend type aws_s3. Exiting.")
+			os.Exit(1)
+		} else if len(config.AwsSecretAccessKey) == 0 {
+			log.Error("Must set aws_secret_access_key when using exhibitor_storage_backend type aws_s3. Exiting.")
+			os.Exit(1)
+		} else if len(config.S3Bucket) == 0 {
+			log.Error("Must set s3_bucket when using exhibitor_storage_backend type aws_s3. Exiting.")
+			os.Exit(1)
+		} else if len(config.S3Prefix) == 0 {
+			log.Error("Must set s3_prefix when using exhibitor_storage_backend type aws_s3. Exiting.")
+			os.Exit(1)
 		}
+		path := build_template_path("master-discovery/cloud-dynamic")
+		templates = append(templates, path)
+
 	case "shared_filesystem":
 	}
 	RenderTemplates(config, templates)

@@ -10,24 +10,6 @@ import (
 	"text/template"
 )
 
-// Define a list of dependencies
-type TemplateTree struct {
-	OnPrem struct {
-		Base            *string
-		Onprem          *string
-		MasterDiscovery struct {
-			Static       *string
-			Keepalived   *string
-			CloudDynamic *string
-		}
-		ExhibitorStorageBackend struct {
-			Zookeeper *string
-			Aws       *string
-			SharedFs  *string
-		}
-	}
-}
-
 func generate(config Config, gentype string) {
 	log.Info("Generating configuration for ", config.ClusterName, " in ", config.OutputDir, " for installation type ", gentype)
 	switch gentype {
@@ -44,53 +26,53 @@ func generate(config Config, gentype string) {
 	}
 }
 
-func set_tree(tree TemplateTree) (tree TemplateTree) {
-	tree{
-		OnPrem{
-			Base: "templates/config.yaml",
-		},
-	}
-	return tree
+func get_template_tree(config Config) string {
+	searchPath := fmt.Sprintf("templates/:templates/%s/:templates/%s/master-discovery/%s/:templates/%s/exhibitor-storage-backend/%s/", *gentype, *gentype, config.MasterDiscovery, *gentype, config.ExhibitorStorageBackend)
+	log.Debug("Template search path ", searchPath)
+	return searchPath
+}
+
+func blowup(required_key string, requiring_key string, case_key string) {
+	log.Error(fmt.Sprintf("Must set %s when using %s type %s. Exiting.", required_key, requiring_key, case_key))
+	os.Exit(1)
 }
 
 func do_onprem(config Config) {
-	var tree TemplateTree
-	tree = set_tree(tree)
+
 	log.Info("Starting on premise configuration generation...")
-	// Initial array of templates to create
-	var templates []string
+	templates := strings.Split(get_template_tree(config), ":")
 	// Add the base template
-	templates = append(templates, "templates/config.yaml")
-	templates = append(templates, "templates/onprem/config.yaml")
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates and validate dependencies
 	switch *config.MasterDiscovery {
 	// Static
 	case "static":
 		if check_property(config.MasterList) {
-			path := build_template_path("master-discovery/static")
-			templates = append(templates, path)
+			continue
 		} else {
-			log.Error("Must set master_list when using master_discovery type static. Exiting.")
-			os.Exit(1)
+			blowup("master_list", "master_discovery", *config.MasterDiscovery)
 		}
-		// Keepalived
 	case "keepalived":
-		if len(config.KeepalivedRouterId) == 0 {
-			log.Error("Must set keepalived_router_id when using master_discovery type keepalived. Exiting.")
-			os.Exit(1)
-		} else if len(config.KeepalivedInterface) == 0 {
-			log.Error("Must set keepalived_interface when using master_discovery type keepalived. Exiting.")
-			os.Exit(1)
-		} else if len(config.KeepalivedPass) == 0 {
-			log.Error("Must set keepalived_pass when using master_discovery type keepalived. Exiting.")
-			os.Exit(1)
-		} else if len(config.KeepalivedVirtualIpaddress) == 0 {
-			log.Error("Must set keepalived_virtual_ipaddress when using master_discovery type keepalived. Exiting.")
-			os.Exit(1)
+		if check_property(config.KeepalivedRouterId) {
+			continue
+		} else {
+			blowup("keepalived", "keepalived_router_id", *config.MasterDiscovery)
 		}
-		path := build_template_path("master-discovery/keepalived")
-		templates = append(templates, path)
+		if check_property(config.KeepalivedInterface) {
+			continue
+		} else {
+			blowup("keepalived", "keepalived_interface", *config.MasterDiscovery)
+		}
+		if check_property(config.KeepalivedPass) {
+			continue
+		} else {
+			blowup("keepalived", "keepalived_pass", *config.MasterDiscovery)
+		}
+		if check_property(config.KeepalivedVirtualIpaddress) {
+			continue
+		} else {
+			blowup("keepalived", "keepalived_virtual_ipaddress", *config.MasterDiscovery)
+		}
 	// Cloud dynamic
 	case "cloud-dynamic":
 		if len(config.NumMasters) == 0 {

@@ -10,6 +10,24 @@ import (
 	"text/template"
 )
 
+// Define a list of dependencies
+type TemplateTree struct {
+	Onprem struct {
+		Base            *string
+		Onprem          *string
+		MasterDiscovery struct {
+			Static       *string
+			Keepalived   *string
+			CloudDynamic *string
+		}
+		ExhibitorStorageBackend struct {
+			Zookeeper *string
+			Aws       *string
+			SharedFs  *string
+		}
+	}
+}
+
 func generate(config Config, gentype string) {
 	log.Info("Generating configuration for ", config.ClusterName, " in ", config.OutputDir, " for installation type ", gentype)
 	switch gentype {
@@ -35,16 +53,17 @@ func do_onprem(config Config) {
 	templates = append(templates, "templates/onprem/config.yaml")
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates and validate dependencies
-	switch config.MasterDiscovery {
+	switch *config.MasterDiscovery {
 	// Static
 	case "static":
-		if len(config.MasterList) == 0 {
+		if check_property(config.MasterList) {
+			path := build_template_path("master-discovery/static")
+			templates = append(templates, path)
+		} else {
 			log.Error("Must set master_list when using master_discovery type static. Exiting.")
 			os.Exit(1)
 		}
-		path := build_template_path("master-discovery/static")
-		templates = append(templates, path)
-	// Keepalived
+		// Keepalived
 	case "keepalived":
 		if len(config.KeepalivedRouterId) == 0 {
 			log.Error("Must set keepalived_router_id when using master_discovery type keepalived. Exiting.")
@@ -167,4 +186,12 @@ func build_template_path(appendpath string) (templatepath string) {
 	}
 	log.Info("Loading template ", templatepath)
 	return templatepath
+}
+
+func check_property(property interface{}) bool {
+	if property != nil {
+		return true
+	} else {
+		return false
+	}
 }

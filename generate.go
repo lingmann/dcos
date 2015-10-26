@@ -12,7 +12,7 @@ import (
 
 // Define a list of dependencies
 type TemplateTree struct {
-	Onprem struct {
+	OnPrem struct {
 		Base            *string
 		Onprem          *string
 		MasterDiscovery struct {
@@ -44,7 +44,18 @@ func generate(config Config, gentype string) {
 	}
 }
 
+func set_tree(tree TemplateTree) (tree TemplateTree) {
+	tree{
+		OnPrem{
+			Base: "templates/config.yaml",
+		},
+	}
+	return tree
+}
+
 func do_onprem(config Config) {
+	var tree TemplateTree
+	tree = set_tree(tree)
 	log.Info("Starting on premise configuration generation...")
 	// Initial array of templates to create
 	var templates []string

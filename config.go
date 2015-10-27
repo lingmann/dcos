@@ -60,12 +60,12 @@ const (
 )
 
 func GetConfig(path string) (config Config) {
-	config.GcDelay = DefaultGcDelay
-	config.DockerRemoveDelay = DefaultDockerRemoveDelay
+	*config.GcDelay = DefaultGcDelay
+	*config.DockerRemoveDelay = DefaultDockerRemoveDelay
 	//config.DnsResolves = DefaultDnsResolvers
-	config.Weights = DefaultWeights
-	config.Roles = DefaultRoles
-	config.Quorum = DefaultQuorum
+	*config.Weights = DefaultWeights
+	*config.Roles = DefaultRoles
+	*config.Quorum = DefaultQuorum
 	// Read in the actual config and override stuff
 	cf, err := ioutil.ReadFile(path)
 	// Maybe generate base config if not found later
@@ -74,10 +74,10 @@ func GetConfig(path string) (config Config) {
 	err = yaml.Unmarshal(cf, &config)
 	CheckError(err)
 	// Get output dir and set if does not exist
-	config.DcosDir, config.OutputDir = CheckOutputDir()
+	*config.DcosDir, *config.OutputDir = CheckOutputDir()
 	// Get ENV based configuration
-	config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
-	config.ChannelName = CheckEnv(os.Getenv("DCOS_CHANNEL_NAME"), "DCOS_CHANNEL_NAME")
+	*config.BootstrapId = CheckEnv(os.Getenv("DCOS_BOOTSTRAP_ID"), "DCOS_BOOTSTRAP_ID")
+	*config.ChannelName = CheckEnv(os.Getenv("DCOS_CHANNEL_NAME"), "DCOS_CHANNEL_NAME")
 	return config
 }
 

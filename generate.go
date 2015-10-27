@@ -37,7 +37,7 @@ func RenderTemplates(config Config, templates []string) {
 		// Parse the tmeplate
 		t, err := template.ParseFiles(temp)
 		CheckError(err)
-		tempfile, err := ioutil.TempFile(config.OutputDir, "template-")
+		tempfile, err := ioutil.TempFile(*config.OutputDir, "template-")
 		// Write to the writer
 		if err := t.Execute(tempfile, config); err == nil {
 			tempFilePath := tempfile.Name()

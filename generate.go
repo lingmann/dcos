@@ -26,7 +26,7 @@ func generate(config Config, gentype string) {
 }
 
 func get_template_tree(config Config) []string {
-	searchPath := fmt.Sprintf("templates/:templates/%s/config.yaml:templates/%s/master-discovery/%s/config.yaml:templates/%s/exhibitor-storage-backend/%s/config.yaml", *gentype, *gentype, config.MasterDiscovery, *gentype, config.ExhibitorStorageBackend)
+	searchPath := fmt.Sprintf("templates/config.yaml:templates/%s/config.yaml:templates/%s/master-discovery/%s/config.yaml:templates/%s/exhibitor-storage-backend/%s/config.yaml", *gentype, *gentype, config.MasterDiscovery, *gentype, config.ExhibitorStorageBackend)
 	log.Debug("Template search path ", searchPath)
 	return strings.Split(searchPath, ":")
 }

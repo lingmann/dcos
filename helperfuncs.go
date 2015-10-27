@@ -11,3 +11,7 @@ func CheckError(err error) {
 		os.Exit(1)
 	}
 }
+
+func CleanupTempTemplates() {
+
+}

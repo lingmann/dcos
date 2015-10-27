@@ -22,10 +22,16 @@ func main() {
 		log.SetLevel(log.InfoLevel)
 		log.Info("Log level INFO")
 	}
+	if *gentype != "onprem" {
+		log.Error(gentype, " is not a supported installation type. Exiting")
+		os.Exit(1)
+	}
+
 	// Execute the correct console mode
 	switch *mode {
 	case "web":
 		log.Info("Starting configuration mode in browser.")
+		Web()
 	case "non-interactive":
 		log.Info("Starting configuration mode in non-interactive mode.")
 		NonInteractive()

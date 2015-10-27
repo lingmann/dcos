@@ -11,10 +11,6 @@ import (
 )
 
 func generate(config Config, gentype string) {
-	if gentype != "onprem" {
-		log.Error(gentype, " is not a supported installation type. Exiting")
-		os.Exit(1)
-	}
 	log.Info("Generating configuration for ", config.ClusterName, " in ", config.OutputDir, " for installation type ", gentype)
 	// Get templates to load per provider
 	templates := get_template_tree(config)

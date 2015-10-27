@@ -2,10 +2,9 @@ package main
 
 import (
 	"fmt"
-	"strings"
 )
 
-func ValidateDependencies(config) {
+func ValidateDependencies(config Config) {
 	// Add the base template
 	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates and validate dependencies
@@ -39,54 +38,59 @@ func ValidateDependencies(config) {
 			blowup("keepalived", "keepalived_virtual_ipaddress", *config.MasterDiscovery)
 		}
 	case "cloud-dynamic":
-		if len(config.NumMasters) == 0 {
-			log.Error("Must set num_masters when using master_discovery type cloud-dynamic. Exiting.")
-			os.Exit(1)
+		if check_property(config.NumMasters) {
+			continue
+		} else {
+			blowup("cloud-dynamic", "num_masters", *config.MasterDiscovery)
 		}
-		path := build_template_path("master-discovery/cloud-dynamic")
-		templates = append(templates, path)
 	}
 	// Test dependencies for exhibitor storage backend
 	switch config.ExhibitorStorageBackend {
 	// Zookeeper Backend
 	case "zookeeper":
-		if len(config.ExhibitorZkHosts) == 0 {
-			log.Error("Must set exhibitor_zk_hosts when using exhibitor_storage_backend type zookeeper. Exiting.")
-			os.Exit(1)
-		} else if len(config.ExhibitorZkPath) == 0 {
-			log.Error("Must set exhibitor_zk_path when using exhibitor_storage_backend type zookeeper. Exiting.")
-			os.Exit(1)
+		if check_property(config.ExhibitorZkHosts) {
+			continue
+		} else {
+			blowup("zookeeper", "exhibitor_zk_hosts", *config.MasterDiscovery)
 		}
-		path := build_template_path("exhibitor-storage-backend/zookeeper")
-		templates = append(templates, path)
-		// S3 Backend
+		if check_property(config.ExhibitorZkPath) {
+			continue
+		} else {
+			blowup("zookeeper", "exhibitor_zk_path", *config.MasterDiscovery)
+		}
+	// S3 Backend
 	case "aws_s3":
-		if len(config.AwsAccessKeyId) == 0 {
-			log.Error("Must set aws_access_key_id when using exhibitor_storage_backend type aws_s3. Exiting.")
-			os.Exit(1)
-		} else if len(config.AwsRegion) == 0 {
-			log.Error("Must set aws_region when using exhibitor_storage_backend type aws_s3. Exiting.")
-			os.Exit(1)
-		} else if len(config.AwsSecretAccessKey) == 0 {
-			log.Error("Must set aws_secret_access_key when using exhibitor_storage_backend type aws_s3. Exiting.")
-			os.Exit(1)
-		} else if len(config.S3Bucket) == 0 {
-			log.Error("Must set s3_bucket when using exhibitor_storage_backend type aws_s3. Exiting.")
-			os.Exit(1)
-		} else if len(config.S3Prefix) == 0 {
-			log.Error("Must set s3_prefix when using exhibitor_storage_backend type aws_s3. Exiting.")
-			os.Exit(1)
+		if check_property(config.AwsAccessKeyId) {
+			continue
+		} else {
+			blowup("aws_s3", "aws_access_key_id", *config.MasterDiscovery)
 		}
-		path := build_template_path("exhibitor-storage-backend/aws_s3")
-		templates = append(templates, path)
-
+		if check_property(config.AwsRegion) {
+			continue
+		} else {
+			blowup("aws_s3", "aws_region", *config.MasterDiscovery)
+		}
+		if check_property(config.AwsSecretAccessKey) {
+			continue
+		} else {
+			blowup("aws_s3", "aws_secret_access_Key", *config.MasterDiscovery)
+		}
+		if check_property(config.S3Bucket) {
+			continue
+		} else {
+			blowup("aws_s3", "s3_bucket", *config.MasterDiscovery)
+		}
+		if check_property(config.S3Prefix) {
+			continue
+		} else {
+			blowup("aws_s3", "s3_prefix", *config.MasterDiscovery)
+		}
 	case "shared_filesystem":
-		if len(config.ExhibitorFsConfigPath) == 0 {
-			log.Error("Must set exhibitor_fs_config_path when using exhibitor_storage_backend type shared_filesystem. Exiting.")
-			os.Exit(1)
+		if check_property(config.ExhibitorFsConfigPath) {
+			continue
+		} else {
+			blowup("shared_filesystem", "exhibitor_fs_config_Path", *config.MasterDiscovery)
 		}
-		path := build_template_path("exhibitor-storage-backend/filesystem")
-		templates = append(templates, path)
 	}
 }
 

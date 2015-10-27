@@ -10,88 +10,88 @@ func ValidateDependencies(config Config) {
 	// Add the base template
 	log.Info("Validating parameters for master discovery type ", *config.MasterDiscovery)
 	// Load required templates and validate dependencies
-	switch *config.MasterDiscovery {
+	switch config.MasterDiscovery {
 	// Static
 	case "static":
-		if check_property(*config.MasterList) {
+		if check_property(config.MasterList) {
 			pass()
 		} else {
-			blowup("master_list", "master_discovery", *config.MasterDiscovery)
+			blowup("master_list", "master_discovery", config.MasterDiscovery)
 		}
 	case "keepalived":
-		if check_property(*config.KeepalivedRouterId) {
+		if check_property(config.KeepalivedRouterId) {
 			pass()
 		} else {
-			blowup("keepalived", "keepalived_router_id", *config.MasterDiscovery)
+			blowup("keepalived", "keepalived_router_id", config.MasterDiscovery)
 		}
-		if check_property(*config.KeepalivedInterface) {
+		if check_property(config.KeepalivedInterface) {
 			pass()
 		} else {
-			blowup("keepalived", "keepalived_interface", *config.MasterDiscovery)
+			blowup("keepalived", "keepalived_interface", config.MasterDiscovery)
 		}
-		if check_property(*config.KeepalivedPass) {
+		if check_property(config.KeepalivedPass) {
 			pass()
 		} else {
-			blowup("keepalived", "keepalived_pass", *config.MasterDiscovery)
+			blowup("keepalived", "keepalived_pass", config.MasterDiscovery)
 		}
-		if check_property(*config.KeepalivedVirtualIpaddress) {
+		if check_property(config.KeepalivedVirtualIpaddress) {
 			pass()
 		} else {
-			blowup("keepalived", "keepalived_virtual_ipaddress", *config.MasterDiscovery)
+			blowup("keepalived", "keepalived_virtual_ipaddress", config.MasterDiscovery)
 		}
 	case "cloud-dynamic":
-		if check_property(*config.NumMasters) {
+		if check_property(config.NumMasters) {
 			pass()
 		} else {
-			blowup("cloud-dynamic", "num_masters", *config.MasterDiscovery)
+			blowup("cloud-dynamic", "num_masters", config.MasterDiscovery)
 		}
 	}
 	// Test dependencies for exhibitor storage backend
-	switch *config.ExhibitorStorageBackend {
+	switch config.ExhibitorStorageBackend {
 	// Zookeeper Backend
 	case "zookeeper":
-		if check_property(*config.ExhibitorZkHosts) {
+		if check_property(config.ExhibitorZkHosts) {
 			pass()
 		} else {
-			blowup("zookeeper", "exhibitor_zk_hosts", *config.MasterDiscovery)
+			blowup("zookeeper", "exhibitor_zk_hosts", config.MasterDiscovery)
 		}
-		if check_property(*config.ExhibitorZkPath) {
+		if check_property(config.ExhibitorZkPath) {
 			pass()
 		} else {
-			blowup("zookeeper", "exhibitor_zk_path", *config.MasterDiscovery)
+			blowup("zookeeper", "exhibitor_zk_path", config.MasterDiscovery)
 		}
 	// S3 Backend
 	case "aws_s3":
-		if check_property(*config.AwsAccessKeyId) {
+		if check_property(config.AwsAccessKeyId) {
 			pass()
 		} else {
-			blowup("aws_s3", "aws_access_key_id", *config.MasterDiscovery)
+			blowup("aws_s3", "aws_access_key_id", config.MasterDiscovery)
 		}
-		if check_property(*config.AwsRegion) {
+		if check_property(config.AwsRegion) {
 			pass()
 		} else {
-			blowup("aws_s3", "aws_region", *config.MasterDiscovery)
+			blowup("aws_s3", "aws_region", config.MasterDiscovery)
 		}
-		if check_property(*config.AwsSecretAccessKey) {
+		if check_property(config.AwsSecretAccessKey) {
 			pass()
 		} else {
-			blowup("aws_s3", "aws_secret_access_Key", *config.MasterDiscovery)
+			blowup("aws_s3", "aws_secret_access_Key", config.MasterDiscovery)
 		}
-		if check_property(*config.S3Bucket) {
+		if check_property(config.S3Bucket) {
 			pass()
 		} else {
-			blowup("aws_s3", "s3_bucket", *config.MasterDiscovery)
+			blowup("aws_s3", "s3_bucket", config.MasterDiscovery)
 		}
 		if check_property(config.S3Prefix) {
 			pass()
 		} else {
-			blowup("aws_s3", "s3_prefix", *config.MasterDiscovery)
+			blowup("aws_s3", "s3_prefix", config.MasterDiscovery)
 		}
 	case "shared_filesystem":
-		if check_property(*config.ExhibitorFsConfigPath) {
+		if check_property(config.ExhibitorFsConfigPath) {
 			pass()
 		} else {
-			blowup("shared_filesystem", "exhibitor_fs_config_Path", *config.MasterDiscovery)
+			blowup("shared_filesystem", "exhibitor_fs_config_Path", config.MasterDiscovery)
 		}
 	}
 }

@@ -37,7 +37,7 @@ func RenderTemplates(config Config, templates []string) {
 		// Parse the tmeplate
 		t, err := template.ParseFiles(temp)
 		CheckError(err)
-		tempfile, err := ioutil.TempFile(*config.OutputDir, "template-")
+		tempfile, err := ioutil.TempFile(config.OutputDir, "template-")
 		// Write to the writer
 		if err := t.Execute(tempfile, config); err == nil {
 			tempFilePath := tempfile.Name()
@@ -86,9 +86,19 @@ func build_template_path(appendpath string) (templatepath string) {
 }
 
 func check_property(property interface{}) bool {
-	if property != nil {
-		return true
-	} else {
-		return false
+	switch property.(type) {
+	case string:
+		if len(property.(string)) == 0 {
+			return false
+		} else {
+			return true
+		}
+	case []string:
+		if len(property.([]string)) == 0 {
+			return false
+		} else {
+			return true
+		}
 	}
+	return true
 }

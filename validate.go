@@ -8,7 +8,7 @@ import (
 
 func ValidateDependencies(config Config) {
 	// Add the base template
-	log.Info("Validating parameters for master discovery type ", *config.MasterDiscovery)
+	log.Info("Validating parameters for master discovery type ", config.MasterDiscovery)
 	// Load required templates and validate dependencies
 	switch config.MasterDiscovery {
 	// Static

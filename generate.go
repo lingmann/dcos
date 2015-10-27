@@ -11,7 +11,7 @@ import (
 )
 
 func generate(config Config, gentype string) {
-	if gentype != "onprem" || gentype != "chef" || gentype != "aws" {
+	if gentype != "onprem" {
 		log.Error(gentype, " is not a supported installation type. Exiting")
 		os.Exit(1)
 	}

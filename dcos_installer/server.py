@@ -3,6 +3,7 @@ from flask import Flask
 from flask import request
 from flask import render_template
 import logging as log
+import yaml
 
 def run(options):
     """
@@ -31,16 +32,27 @@ def do_routes(app,options):
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
-            do_redirect(app)
+            log.debug("Dumping configruation from form...")
+            dump_configuration(options.config_path,request.form)
                         
         return render_template('main.html', title='Flask Test')
+
+def dump_configuration(path, data):
+    """
+    Dumps our configuration to the config path specific in CLI flags.
+    """
+    log.info("Dumping configuration from form to ", path)
+    with open(path, 'w') as f:
+        f.write(yaml.dump(data, default_flow_style=True))
 
 
 def do_redirect(app):
     """
-    do_redirect defines our redirect logic. In the case of the installer,
+    Defines our redirect logic. In the case of the installer,
     we have several parameters that require other paramters in the tree. 
     This method ensures the user gets redirected to the proper URI based
     on their initial top-level input to the installer.
     """
-
+    return "this"
+       # abort(404)
+    #return redirect(url_for('login'))

@@ -50,7 +50,9 @@ def do_routes(app, options):
 
 def add_config(data):
     log.debug("Adding user config from form POST")
+    log.debug(data.keys)
     for key in data.keys():
+        log.debug(key)
         userconfig[key] = data[key]
 
 

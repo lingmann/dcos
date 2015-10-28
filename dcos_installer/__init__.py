@@ -1,15 +1,6 @@
 import argparse
-
-#from flask import Flask
-
-#from fabric.api import run
-
-#import genconf
-
 import logging as log
-
 import sys
-
 from . import server
 
 class DcosInstaller:

@@ -1,3 +1,4 @@
-DcosInstaller
-Flask==0.10.1
+#DcosInstaller
+Fabric
+Flask
 

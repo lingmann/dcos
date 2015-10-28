@@ -9,7 +9,6 @@ Global Variables
 userconfig = {}
 
 
-
 def run(options):
     """
     Define some routes and execute the Flask server. Currently
@@ -28,8 +27,6 @@ def run(options):
     app.run()
 
 
-
-
 def do_routes(app, options):
     """
     Organize all our routes into a single def so we can keep
@@ -44,16 +41,20 @@ def do_routes(app, options):
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
-            add_config(request.form)
+            add_config(request)
             dump_config(options.config_path) 
 
         return render_template('main.html', title='Flask Test')
 
 
 def add_config(data):
+    """
+    Updates the global userconfig{} map with the latest data from 
+    the web console.
+    """
     log.debug("Adding user config from form POST")
-    log.debug(data.keys)
-    for key in data.keys():
+    log.debug("Received raw data: {}".format(data.data))
+    for key in data.form.keys():
         log.debug(key)
         userconfig[key] = data[key]
 

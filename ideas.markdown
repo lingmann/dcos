@@ -32,6 +32,8 @@ Parts marked ALPHA are slated in the first release of the web installer:
 2. Get IP Addresses - one choice of:
   - Get list of masters / slave_public / slave_private in console - ALPHA
   - Upload JSON: - ALPHA
+TODO - review yaml functional version of this - consistency.
+
 ```json
 {
   "masters": [],

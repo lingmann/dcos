@@ -15,6 +15,7 @@ docker-tag
 .tox/
 dcos_generate_config.sh
 .*.swp
+ext/
 
 # Integration tests related:
 test/build/*

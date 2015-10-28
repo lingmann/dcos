@@ -1,6 +1,6 @@
 import argparse
 
-from flask import Flask
+#from flask import Flask
 
 #from fabric.api import run
 
@@ -13,21 +13,21 @@ import sys
 from . import server
 
 class DcosInstaller:
-    def __call__(self):
+    def __init__(self):
         """
         The web based installer leverages Flask to present end-users of 
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-        options = parse_args()  
-        set_log_level(options)
+        options = self.parse_args()  
+        self.set_log_level(options)
         if options.mode == 'web':
             server.run()
         else:
             log.error("Sorry, %s is not a usable run mode.", options.mode)
             sys.exit(1)
 
-    def parse_args():
+    def parse_args(self):
         """
         Parse CLI arguments and return a map of options.
         """
@@ -66,7 +66,7 @@ class DcosInstaller:
         return options
 
 
-    def set_log_level(options):
+    def set_log_level(self,options):
         """
         Given a map of options, parse for log level flag and set the 
         default logging level.

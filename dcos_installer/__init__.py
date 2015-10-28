@@ -13,7 +13,7 @@ class DcosInstaller:
         options = self.parse_args()  
         self.set_log_level(options)
         if options.mode == 'web':
-            server.run()
+            server.run(options)
         else:
             log.error("Sorry, %s is not a usable run mode.", options.mode)
             sys.exit(1)

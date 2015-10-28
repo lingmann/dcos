@@ -1,7 +1,5 @@
 from fabric.api import run
-from flask import Flask
-from flask import request
-from flask import render_template
+from flask import Flask, request, render_template, url_for, redirect
 import logging as log
 import yaml
 
@@ -38,6 +36,10 @@ def do_routes(app, options):
     all our routes defined in one place.
     """
     version = '1.0'
+
+    @app.route("/", methods=['GET'])
+    def redirectslash():
+        return redirect(url_for('mainpage'))
 
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():

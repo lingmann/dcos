@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-import dcos_installer
+from dcos_installer import DcosInstaller
 
 def main():
-    dcos_installer.__init__()
+    DcosInstaller()
 
 if __name__ == '__main__':
     main()

@@ -1,6 +1,7 @@
 import argparse
 import logging as log
 import sys
+import os
 from . import server
 
 class DcosInstaller:
@@ -10,8 +11,9 @@ class DcosInstaller:
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-        options = self.parse_args()  
+        options = self.parse_args()
         self.set_log_level(options)
+        self.set_install_dir(options)
         if options.mode == 'web':
             server.run(options)
         else:
@@ -22,6 +24,10 @@ class DcosInstaller:
         """
         Parse CLI arguments and return a map of options.
         """
+        # Get the user's homedir in a cross platfrom manner
+        homedir    = os.path.expanduser('~')
+        installdir = '{}/dcos-installer'.format(homedir)
+
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
             '-p', 
@@ -50,11 +56,30 @@ class DcosInstaller:
             '-c',
             '--config-path',
             type=str,
-            default='dcos_config.yaml',
+            default='{}/dcos_config.yaml'.format(installdir),
             help='The path to dcos_config.yaml.')
+
+        parser.add_argument(
+            '-d',
+            '--install-directory',
+            type=str,
+            default=installdir,
+            help='The install directory for the DCOS installer.')
 
         options = parser.parse_args()
         return options
+
+    
+    def set_install_dir(self, options):
+        """
+        Ensures the default or user provided install directory path
+        exists.
+        """
+        try:
+            os.stat(options.install_directory)
+        except:
+            log.info('{} does not exist, creating.'.format(options.install_directory))
+            os.mkdir(options.install_directory)       
 
 
     def set_log_level(self,options):

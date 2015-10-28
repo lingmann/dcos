@@ -1,6 +1,0 @@
-write_files:
-  - path: /etc/exhibitor
-    content: |
-      EXHIBITOR_BACKEND=ZK
-      ZK_CONFIG_CONNECT={{ .ExhibitorZkHosts }}
-      ZK_CONFIG_ZPATH={{ .ExhibitorZkPath }}

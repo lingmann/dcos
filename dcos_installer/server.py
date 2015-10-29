@@ -44,15 +44,19 @@ def do_routes(app, options):
     def mainpage():
         if request.method == 'POST':
             add_config(request)
-            dump_config(options.config_path) 
-            # Return a redirect to a route handler via the configuration requirements
-            return redirect(url_for(get_redirect(options.config_path)))        
+            dump_config(options.config_path)
+            log.debug(request.url_rule.rule)
+            # Redirects to correct page 
+            if "/installer/v{}/configurator".format(version) in request.url_rule.rule:
+                return redirect(url_for('config'))      
+            else:
+                return redirect(url_for('mainpage'))
 
-        return render_template('main.html', title='Flask Test')
+        return render_template('main.html')
 
 
     @app.route("/installer/v{}/configurator".format(version))
-    def master_discovery_static_route():
+    def config():
         return render_template(
             'config.html', 
             isset=get_config(options.config_path),
@@ -67,7 +71,7 @@ def add_config(data):
     log.debug("Adding user config from form POST")
     log.debug("Received raw data: %s", data.form)
     for key in data.form.keys():
-        log.debug(key, data.form[key])
+        log.debug("%s: %s",key, data.form[key])
         # Reencode the unicode string to an ASCII string for compatability
         userconfig[key] = data.form[key].encode('ascii','ignore')
 
@@ -86,6 +90,9 @@ def dump_config(path):
             log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
             if not userconfig[bk]:
                 userconfig[bk] = bv
+
+        with open(path, 'w') as f:
+            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
     
     if not os.path.exists(path):
         with open(path, 'w') as f:

@@ -48,7 +48,7 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">DNS Resolvers</span>
-            <input name="dns_resolvers" type="text" class="form-control" placeholder={% if isset['cluster_name'] %}"{{ isset['dns_resolvers']}}"{% else %}"Not found in config, example: 8.8.8.8,8.8.4.4" {% endif %} aria-describedby="basic-addon1">
+            <input name="dns_resolvers" type="text" class="form-control" placeholder={% if isset['dns_resolvers'] %}"{{ isset['dns_resolvers']}}"{% else %}"Not found in config, example: 8.8.8.8,8.8.4.4" {% endif %} aria-describedby="basic-addon1">
           </div>
           <br>
           <div class="input-group">
@@ -75,7 +75,7 @@
           </div>
           {% endfor %}
           <br>
-          <input type="submit" value='Submit'>
+          <input class="submit" type="submit" value='Submit'> 
         </form>
       </div>
   </body>

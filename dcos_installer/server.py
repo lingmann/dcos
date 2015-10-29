@@ -2,6 +2,7 @@ from fabric.api import run
 from flask import Flask, request, render_template, url_for, redirect
 import logging as log
 import yaml
+import unicodedata
 
 """
 Global Variables 
@@ -53,10 +54,11 @@ def add_config(data):
     the web console.
     """
     log.debug("Adding user config from form POST")
-    log.debug("Received raw data: {}".format(data.data))
+    log.debug("Received raw data: {}".format(data.form))
     for key in data.form.keys():
         log.debug(key)
-        userconfig[key] = data[key]
+        # Reencode the unicode string to an ASCII string for python compatability
+        userconfig[key] = data.form[key].encode('ascii','ignore')
 
 
 def dump_config(path):
@@ -64,7 +66,7 @@ def dump_config(path):
     Dumps our configuration to the config path specific in CLI flags.
     """
     with open(path, 'w') as f:
-        f.write(yaml.dump(userconfig, default_flow_style=True))
+        f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 
 def do_redirect(app):

@@ -26,22 +26,22 @@
         <form method="POST" action="/installer/v1.0/">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Cluster Name</span>
-            <input type="text" class="form-control" placeholder="foo" aria-describedby="basic-addon1">
+            <input name="cluster_name" type="text" class="form-control" placeholder="foo" aria-describedby="basic-addon1">
           </div>
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">DNS Resolvers</span>
-            <input type="text" class="form-control" placeholder="8.8.8.8,8.8.4.4" aria-describedby="basic-addon1">
+            <input name="dns_resolvers" type="text" class="form-control" placeholder="8.8.8.8,8.8.4.4" aria-describedby="basic-addon1">
           </div>
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Master Discovery Method</span>
-            <input type="text" class="form-control" placeholder="static || keepalived || zookeeper" aria-describedby="basic-addon1">
+            <input name="master_discovery" type="text" class="form-control" placeholder="static || keepalived || zookeeper" aria-describedby="basic-addon1">
           </div>
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Exhibitor Storage Backend</span>
-            <input type="text" class="form-control" placeholder="zookeeper || aws_s3 || shared_filesystem" aria-describedby="basic-addon1">
+            <input name="exhibitor_storage_backend" type="text" class="form-control" placeholder="zookeeper || aws_s3 || shared_filesystem" aria-describedby="basic-addon1">
           </div>
           <br>
           <input type="submit" value='Submit'>

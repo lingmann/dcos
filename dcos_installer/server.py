@@ -84,10 +84,12 @@ def dump_config(path):
         base_config = yaml.load(open(path, 'r')) 
         for bk, bv in base_config.iteritems():
             log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
-            userconfig[bk] = bv
-
-    with open(path, 'w') as f:
-        f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+            if not userconfig[bk]:
+                userconfig[bk] = bv
+    
+    if not os.path.exists(path):
+        with open(path, 'w') as f:
+            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 
 def get_config(path):
@@ -99,8 +101,7 @@ def get_config(path):
         return yaml.load(open(path, 'r'))
     else:
         log.error("The configuration path does not exist %s", path)
-        os.exit(1)
-
+        return {}
 
 def get_redirect(config_path):
     """

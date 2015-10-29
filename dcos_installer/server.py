@@ -76,14 +76,8 @@ def dump_config(path):
             log.debug("Adding pre-written configuration from yaml file {}: {}".format(bk, bv))
             userconfig[bk] = bv
 
-        with open(path, 'w') as f:
-            log.debug("Writing yaml file with complete configuration ", path)
-            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
-    
-    else:
-        log.info('{} does not exist, creating.'.format(path))
-        with open(path, 'w') as f:
-            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+    with open(path, 'w') as f:
+        f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 
 def do_redirect(app):

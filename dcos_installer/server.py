@@ -45,12 +45,8 @@ def do_routes(app, options):
         if request.method == 'POST':
             add_config(request)
             dump_config(options.config_path)
-            log.debug(request.url_rule.rule)
             # Redirects to correct page 
-            if "/installer/v{}/configurator".format(version) in request.url_rule.rule:
-                return redirect(url_for('config'))      
-            else:
-                return redirect(url_for('mainpage'))
+            return redirect(redirect_url())
 
         return render_template('main.html')
 
@@ -60,7 +56,7 @@ def do_routes(app, options):
         return render_template(
             'config.html', 
             isset=get_config(options.config_path),
-            dependencies={})
+            dependencies=get_dependencies(options.config_path))
 
 
 def add_config(data):
@@ -88,6 +84,7 @@ def dump_config(path):
         base_config = yaml.load(open(path, 'r')) 
         for bk, bv in base_config.iteritems():
             log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
+            # Overwrite the yaml config with the config from the console
             if not userconfig[bk]:
                 userconfig[bk] = bv
 
@@ -110,7 +107,14 @@ def get_config(path):
         log.error("The configuration path does not exist %s", path)
         return {}
 
-def get_redirect(config_path):
+
+def redirect_url(default='mainpage'):
+    return request.args.get('next') or \
+        request.referrer or \
+        url_for(default)
+
+
+def get_dependencies(config_path):
     """
     Defines our redirect logic. In the case of the installer,
     we have several parameters that require other paramters in the tree. 
@@ -133,16 +137,22 @@ def get_redirect(config_path):
     }
     
     if config.get('master_discovery'):
-        for value in dep_tree['master_discovery'][config['master_discovery']]:
-            log.debug("Checking for dependency %s", value)
-            if config.get('value'):
-                log.debug("Dependency found, %s", value)
-                continue
-            else:
-                log.debug("Dependency not found, %s", value)
-                return 'master_discovery_{}_route'.format(config['master_discovery']) 
+        return_deps = {}
 
-    else:
-        log.error('The master_discovery key does not exist, please restart the installer or add it manually.')
-        return("mainpage")
-    #return redirect(url_for('login'))
+        try: 
+            for value in dep_tree['master_discovery'][config['master_discovery']]:
+                log.debug("Checking for dependency %s", value)
+                if config.get('value'):
+                    log.debug("Dependency found, %s", value)
+                    continue
+
+                else:
+                    log.debug("Dependency not found, %s", value)
+                    return_deps['master_discovery'] = dep_tree['master_discovery'][config['master_discovery']] 
+        
+        except: 
+            log.error("The specified configuration value is not valid, %s", config['master_discovery'])
+        
+        return return_deps 
+
+    return {}

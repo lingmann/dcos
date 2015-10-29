@@ -51,9 +51,12 @@ def do_routes(app, options):
         return render_template('main.html', title='Flask Test')
 
 
-    @app.route("/installer/v{}/getdependency/master_discovery_static".format(version))
+    @app.route("/installer/v{}/configurator".format(version))
     def master_discovery_static_route():
-        return render_template('master_discovery_static.html')
+        return render_template(
+            'config.html', 
+            isset=get_config(options.config_path),
+            dependencies={})
 
 
 def add_config(data):

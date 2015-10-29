@@ -124,27 +124,6 @@ def save_ip_detect(data, path):
         f.write(script)
 
 
-#def save_hosts(data, path):
-#    """
-#    Saves the hosts.yaml file from the preflight form to the install_directory
-#    /hosts.yaml. We use this file later in the SSH deploy function.
-#    """
-#    log.info("Adding hosts.yaml...")
-#    log.debug("Raw data %s", data.form)
-#    # Need ascii encoded data and stuff
-#    clean_hosts = {}
-#    
-#    try:
-#        for key in data.form.keys():
-#            log.debug("Adding to %s %s: %s", path, key, data.form[key])
-#            clean_hosts[key] = data.form[key].encode('ascii', 'ignore')
-#
-#        with open(path, 'w') as f:
-#            f.write(yaml.dump(clean_hosts, default_flow_style=False, explicit_start=True))
-#   
-#    except:
-#        log.error("Issue with hosts data in preflight.")
-
 def add_config(data, global_data):
     """
     Updates the global userconfig{} map with the latest data from 
@@ -241,6 +220,19 @@ def validate_path(path):
         return "success"
 
     else:
+        return "danger"
+
+
+def validate_key_exists(path, key):
+    """
+    Validate that a key has a value in a config file.
+    """
+    test_me = get_config(path)
+    if key in test_me.keys():
+        log.debug("%s exists in %s", key, path)
+        return "success"
+    else:
+        log.debug("%s not found in %s", key, path)
         return "danger"
 
 

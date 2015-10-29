@@ -60,10 +60,11 @@ def do_routes(app, options):
     @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
         config_level, message = validate(options.config_path)
+        ip_detect_level = validate_ip_detect('{}/ip-detect'.format(options.install_directory))
         return render_template(
             'configurator.html',
             config_level=config_level,
-            ip_detect_level="success")
+            ip_detect_level=ip_detect_level)
 
 
     @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET', 'POST'])
@@ -106,6 +107,10 @@ def save_ip_detect(data, path):
     Save the ip-detect script to the dcos-installer directory.
     """
     log.info("Saving ip-detect script to %s", path)
+    script = data.form['ip_detect']
+    log.debug("ip-detect script: %s", script)
+    with open(path, 'w') as f:
+        f.write(script)
 
 
 def add_config(data):
@@ -170,6 +175,8 @@ def clean_config(path):
     with open(path, 'w') as f:
         f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
+
+
 def validate(path):
     config = get_config(path)
     if config != {}:
@@ -193,6 +200,17 @@ def validate(path):
         log.warning("Configuration file is empty")
         return "warning", "Configuration file appears empty."
    
+
+def validate_ip_detect(path):
+    """
+    Validate the ip-detect script exists and report back.
+    """
+    if os.path.exists(path):
+        return "success"
+
+    else:
+        return "danger"
+
 
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \

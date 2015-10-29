@@ -41,15 +41,17 @@ def do_routes(app, options):
     def redirectslash():
         return redirect(url_for('mainpage'))
 
+    @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
+    def clear():
+        clean_config(options.config_path)
+        return redirect(redirect_url())
+
+
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
             add_config(request)
-
             dump_config(options.config_path)
-
-            clean_config(options.config_path)
-
             # Redirects to correct page 
             return redirect(redirect_url())
 
@@ -124,54 +126,9 @@ def clean_config(path):
     by top-level configuration. I.e., master_list should not be present for 
     master_discovery type keepliaved.
     """
-    config = get_config(path)
-    if config != {}:
-        config_dep_list = []
-        dependencies = get_dependencies(path)
-        log.debug(dependencies)
-        if config['master_discovery'] in dependencies: 
-            for value in dependencies['master_discovery']:
-                config_dep_list.append(value)
-
-        else:
-            log.error("master_discovery method %s is not valid.", config['master_discovery'])
-            return
-
-        if config['exhibitor_storage_backend'] in dependencies:
-            for value in dependencies['exhibitor_storage_backend']:
-                config_dep_list.append(value)
-
-        else: 
-            log.error("exhibitor_storage_backend method %s is not valid.", config['exhibitor_storage_backend'])
-            return
-
-    else:
-        log.warn("Nothing to compare in config file %s ", path)
-        return
-        
-        log.debug(config_dep_list)
-
-        dc = deepcopy(config)
-        log.debug("Checking configuration for stale data...")
-        try:
-            for ck, cv in config.iteritems():
-                log.debug("Looking up %s in %s", ck, path)
-                if not ck in config_dep_list:
-                    log.warning("Cleaning unneeded values from config: %s", ck)
-                    del dc[ck]
-                
-                else:
-                    log.debug("Retaining dependent value: %s", ck)
-                    continue
-
-        except:
-           log.debug("The dependency probably wasn't found in the config file %s", dk)
-
-        # Update config and write it to disk
-        config = dc
-        with open(path, 'w') as f:
-            f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
-
+    log.debug("Clearing config...")
+    userconfig = {}
+    dump_config(path)
 
 def validate(path):
     config = get_config(path)

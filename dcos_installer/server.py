@@ -40,6 +40,7 @@ def do_routes(app, options):
     def redirectslash():
         return redirect(url_for('mainpage'))
 
+
     @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
     def clear():
         clean_config(options.config_path)
@@ -56,11 +57,12 @@ def do_routes(app, options):
 
         return render_template('main.html')
     
+
     # Configurator routes
     @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
         config_level, message = validate(options.config_path)
-        ip_detect_level = validate_ip_detect('{}/ip-detect'.format(options.install_directory))
+        ip_detect_level = validate_path('{}/ip-detect'.format(options.install_directory))
         return render_template(
             'configurator.html',
             config_level=config_level,
@@ -88,16 +90,21 @@ def do_routes(app, options):
             validate_message = message)
 
     # Preflight 
-    @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET'])
+    @app.route("/installer/v{}/preflight/".format(version),  methods=['GET', 'POST'])
     def preflight():
         """
         Serve the preflight page.
         """
+        if request.method == 'POST':
+            save_to_path = '{}/hosts.yaml'.format(options.install_directory)
+            save_hosts(request, save_to_path)
+            # TODO: basic host validation??
+
         return render_template('preflight.html')
 
 
     # Deploy
-    @app.route("/installer/v{}/configurator/deploy/".format(version))
+    @app.route("/installer/v{}/deploy/".format(version))
     def deploy():
         return render_template('deploy.html')
 
@@ -113,12 +120,33 @@ def save_ip_detect(data, path):
         f.write(script)
 
 
+def save_hosts(data, path):
+    """
+    Saves the hosts.yaml file from the preflight form to the install_directory
+    /hosts.yaml. We use this file later in the SSH deploy function.
+    """
+    log.info("Adding hosts.yaml...")
+    log.debug("Raw data %s", data.form)
+    # Need ascii encoded data and stuff
+    clean_hosts = {}
+    
+    try:
+        for key in data.form.keys():
+            log.debug("Adding to %s %s: %s", path, key, data.form[key])
+            clean_hosts[key] = data.form[key].encode('ascii', 'ignore')
+
+        with open(path, 'w') as f:
+            f.write(yaml.dump(clean_hosts, default_flow_style=False, explicit_start=True))
+   
+    except:
+        log.error("Issue with hosts data in preflight.")
+
 def add_config(data):
     """
     Updates the global userconfig{} map with the latest data from 
     the web console.
     """
-    log.debug("Adding user config from form POST")
+    log.info("Adding user config from form POST")
     log.debug("Received raw data: %s", data.form)
     for key in data.form.keys():
         log.debug("%s: %s",key, data.form[key])
@@ -201,7 +229,7 @@ def validate(path):
         return "warning", "Configuration file appears empty."
    
 
-def validate_ip_detect(path):
+def validate_path(path):
     """
     Validate the ip-detect script exists and report back.
     """

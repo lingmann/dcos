@@ -51,6 +51,11 @@ def do_routes(app, options):
         return render_template('main.html', title='Flask Test')
 
 
+    @app.route("/installer/v{}/getdependency/master_discovery_static".format(version))
+    def master_discovery_static_route():
+        return render_template('master_discovery_static_route.html')
+
+
 def add_config(data):
     """
     Updates the global userconfig{} map with the latest data from 
@@ -117,9 +122,14 @@ def get_redirect(config_path):
     }
     
     if config.get('master_discovery'):
-        for value in dep_tree['master_discovery'][config['master_discovery'].iteritems:
+        for value in dep_tree['master_discovery'][config['master_discovery']].iteritems:
             log.debug("Checking for dependency %s", value)
-
+            if config.get('value'):
+                log.debug("Dependency found, %s", value)
+                continue
+            else:
+                log.debug("Dependency not found, %s", value)
+                return 'master_discovery_{}_route'.format(value) 
 
     else:
         log.error('The master_discovery key does not exist, please restart the installer or add it manually.')

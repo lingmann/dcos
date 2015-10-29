@@ -144,11 +144,11 @@ def validate(path):
                     log.debug("Value: %s", config[required_value])
                     if not config[required_value]:
                         log.warning("Found unneccessary data in %s: %s", path, config[required_value])
-                        return "danger", "Configuation isn't valid: {}".format(config[required_value])
+                        return "danger", 'Configuation is not valid: {}'.format(required_value)
 
                 except:
                     log.info("Configuration looks good!")
-                    return "success", ""
+                    return "success", "Configuration looks good!"
     
     else:
         log.warning("Configuration file is empty")

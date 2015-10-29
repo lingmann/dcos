@@ -123,21 +123,22 @@ def clean_config(path):
     master_discovery type keepliaved.
     """
     config = get_config(path)
-    dependencies = get_dependencies(path)
-    dc = deepcopy(config)
-    log.debug("Checking configuration for stale data...")
-    for ck, cv in dc.iteritems():
-        try:
-            if not dependencies[ck]:
-                log.debug("Flusing unneeded values from config %s: %s", ck, cv)
-                del config[ck]
+    if config != {}:
+        dependencies = get_dependencies(path)
+        dc = deepcopy(config)
+        log.debug("Checking configuration for stale data...")
+        for ck, cv in dc.iteritems():
+            try:
+                if not dependencies[ck]:
+                    log.debug("Flusing unneeded values from config %s: %s", ck, cv)
+                    del config[ck]
 
-        except:
-            log.debug("Retaining needed values from config %s: %s", ck, cv)
-            
+            except:
+                log.debug("Retaining needed values from config %s: %s", ck, cv)
+                
 
-    with open(path, 'w') as f:
-        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
+        with open(path, 'w') as f:
+            f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
 
 
 

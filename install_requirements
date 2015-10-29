@@ -5,7 +5,7 @@ set -euo pipefail
 if [ ! -d ext/pkgpanda ]; then
   git clone git@github.com:mesosphere/pkgpanda.git ext/pkgpanda
 else
-  git -C ext/pkgpanda fetch origin -t +refs/heads/*:refs/heads/*
+  git -C ext/pkgpanda fetch origin -t +refs/heads/*:refs/remotes/origin/*
 fi
 
 hash jq 2>/dev/null || { echo >&2 "jq must be in path. Get it from https://stedolan.github.io/jq/. Aborting"; exit 1; }

@@ -55,10 +55,10 @@ def add_config(data):
     the web console.
     """
     log.debug("Adding user config from form POST")
-    log.debug("Received raw data: {}".format(data.form))
+    log.debug("Received raw data: %s", data.form)
     for key in data.form.keys():
         log.debug(key, data.form[key])
-        # Reencode the unicode string to an ASCII string for python compatability
+        # Reencode the unicode string to an ASCII string for compatability
         userconfig[key] = data.form[key].encode('ascii','ignore')
 
 
@@ -70,10 +70,10 @@ def dump_config(path):
     config passed to us from the console.
     """
     if os.path.exists(path):
-        log.debug("Configuration path exists, reading in and adding config ", path)
+        log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
-        for bk, bv in base_config:
-            log.debug("Adding pre-written configuration from yaml file {}: {}".format(bk, bv))
+        for bk, bv in base_config.iteritems:
+            log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
             userconfig[bk] = bv
 
     with open(path, 'w') as f:

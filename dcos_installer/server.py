@@ -125,21 +125,37 @@ def clean_config(path):
     """
     config = get_config(path)
     if config != {}:
-        dependencies = get_dependencies(path)
+        config_dep_list = []
+        if config['master_discovery']: 
+            dependencies = get_dependencies(path)
+            for value in dependencies['exhibitor_storage_backend'][config['exhibitor_storage_backend']]:
+                # TODO
+                config_dep_list.append(value)
+
+        if config['exhibitor_storage_backend']:
+            dependencies = get_dependencies(path)
+            config_dep_list.append(dependencies['master_discovery'][config['master_discovery']])
+
+    else:
+        log.warn("Nothing to compare in config file %s ", path)
+        return
+        
         dc = deepcopy(config)
         log.debug("Checking configuration for stale data...")
-        for dk, dv in dependencies.iteritems():
-            log.debug("Checking configuration for %s", dk)
-            try:
-                log.debug("Checking: %s", config[required_value])
-                for ck, cv in config.iteritems():
-                    if not ck in dependencies[dv].keys():
-                        log.warning("Flusing unneeded values from config: %s", ck)
-                        del dc[ck]
-
-                except:
-                    log.debug("Retaining needed values from config %s", config[required_value])
+        try:
+            for ck, cv in config.iteritems():
+                log.debug("Looking up %s in %s", ck, path)
+                if not ck in config_dep_list:
+                    log.warning("Flusing unneeded values from config: %s", ck)
+                    del dc[ck]
                 
+                else:
+                    log.debug("Retaining dependent value: %s", ck)
+                    continue
+
+        except:
+           log.debug("The dependency probably wasn't found in the config file %s", dk)
+
         # Update config and write it to disk
         config = dc
         with open(path, 'w') as f:
@@ -156,7 +172,7 @@ def validate(path):
             for required_value in dv:
                 log.debug("Ensuring dependency %s exists in config", required_value)
                 try:
-                    log.debug("Checking: %s", config[required_value])
+                    log.debug("Value: %s", config[required_value])
                     if not config[required_value]:
                         log.warning("Found unneccessary data in %s: %s", path, config[required_value])
                         return False
@@ -168,7 +184,7 @@ def validate(path):
     else:
         log.warning("Configuration file is empty")
         return "warn"
-
+   
 
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \
@@ -199,7 +215,9 @@ def get_dependencies(config_path):
         "base": {
             "cluster_name": "", 
             "dns_resolvers": "", 
-            "num_masters": ""
+            "num_masters": "",
+            "master_discovery": "",
+            "exhibitor_storage_backend": ""
         },
     }
     # The final return dict 

@@ -1,8 +1,9 @@
 from fabric.api import run
 from flask import Flask, request, render_template, url_for, redirect
 import logging as log
+import os
 import yaml
-import unicodedata
+#import unicodedata
 
 """
 Global Variables 
@@ -63,10 +64,25 @@ def add_config(data):
 
 def dump_config(path):
     """
-    Dumps our configuration to the config path specific in CLI flags.
+    Dumps our configuration to the config path specific in CLI flags. If the file 
+    already exists, add configuration to it from the userconfig presented to us 
+    in the web console. Otherwise, if the file does no exist, create it and write the
+    config passed to us from the console.
     """
-    with open(path, 'w') as f:
-        f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+    try:
+        if os.stat(path):
+            log.debug("Configuration path exists, reading in and adding config ", path)
+            base_config = yaml.load(open(path, 'r')) 
+            for bk, bv in base_config:
+                userconfig[bk] = bv
+
+            with open(path, 'w') as f:
+                f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+
+    except:
+        log.info('{} does not exist, creating.'.format(path))
+        with open(path, 'w') as f:
+            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 
 def do_redirect(app):

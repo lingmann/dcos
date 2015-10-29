@@ -52,23 +52,39 @@
         <form method="POST" action="/installer/v1.0/">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Cluster Name</span>
-            <input name="cluster_name" type="text" class="form-control" placeholder={% if isset['cluster_name']  %}"{{ isset['cluster_name']}}"{% else %}"Not found in config, example: foo_cluster" {% endif %} aria-describedby="basic-addon1">
+            {% if isset['cluster_name'] %}
+            <p class="list-group-item disabled">{{ isset['cluster_name'] }}</p>
+            {% else %}
+            <input name="cluster_name" type="text" class="form-control" placeholder="foo_cluster" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">DNS Resolvers</span>
-            <input name="dns_resolvers" type="text" class="form-control" placeholder={% if isset['dns_resolvers'] %}"{{ isset['dns_resolvers']}}"{% else %}"Not found in config, example: 8.8.8.8,8.8.4.4" {% endif %} aria-describedby="basic-addon1">
+            {% if isset['dns_resolvers'] %}
+            <p class="list-group-item disabled">{{ isset['dns_resolvers'] }}</p>
+            {% else %}
+            <input name="dns_resolvers" type="text" class="form-control" placeholder="8.8.8.8,8.8.4.4" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Master Discovery Method</span>
-            <input name="master_discovery" type="text" class="form-control" placeholder={% if isset['master_discovery'] %}"{{ isset['master_discovery']}}"{% else %}"Not found in config, example: static" {% endif %} aria-describedby="basic-addon1">
+            {% if isset['master_discovery'] %}
+            <p class="list-group-item disabled">{{ isset['master_discovery'] }}</p>
+            {% else %}
+            <input name="master_discovery" type="text" class="form-control" placeholder="static || keepalived || cloud_dynamic" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           {% for value in dependencies['master_discovery'] %}
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">{{ value }}</span>
-            <input name="{{ value }}" type="text" class="form-control" placeholder={% if isset[value] %}"{{ isset[value]}}"{% else %}"Not found in config." {% endif %} aria-describedby="basic-addon1">
+            {% if isset[value] %}
+            <p class="list-group-item disabled">{{ isset[value] }}</p>
+            {% else %}
+            <input name="{{ value }}" type="text" class="form-control" placeholder="{{ value }}" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           {% endfor %}
           <br>

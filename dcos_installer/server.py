@@ -49,6 +49,7 @@ def do_routes(app, options):
             dump_config(options.config_path)
 
             clean_config(options.config_path)
+
             # Redirects to correct page 
             return redirect(redirect_url())
 
@@ -57,7 +58,7 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/configurator".format(version))
     def config():
-        return render_template(
+                return render_template(
             'config.html', 
             isset=get_config(options.config_path),
             dependencies=get_dependencies(options.config_path),
@@ -126,27 +127,37 @@ def clean_config(path):
     config = get_config(path)
     if config != {}:
         config_dep_list = []
-        if config['master_discovery']: 
-            dependencies = get_dependencies(path)
-            for value in dependencies['exhibitor_storage_backend'][config['exhibitor_storage_backend']]:
-                # TODO
+        dependencies = get_dependencies(path)
+        log.debug(dependencies)
+        if config['master_discovery'] in dependencies: 
+            for value in dependencies['master_discovery']:
                 config_dep_list.append(value)
 
-        if config['exhibitor_storage_backend']:
-            dependencies = get_dependencies(path)
-            config_dep_list.append(dependencies['master_discovery'][config['master_discovery']])
+        else:
+            log.error("master_discovery method %s is not valid.", config['master_discovery'])
+            return
+
+        if config['exhibitor_storage_backend'] in dependencies:
+            for value in dependencies['exhibitor_storage_backend']:
+                config_dep_list.append(value)
+
+        else: 
+            log.error("exhibitor_storage_backend method %s is not valid.", config['exhibitor_storage_backend'])
+            return
 
     else:
         log.warn("Nothing to compare in config file %s ", path)
         return
         
+        log.debug(config_dep_list)
+
         dc = deepcopy(config)
         log.debug("Checking configuration for stale data...")
         try:
             for ck, cv in config.iteritems():
                 log.debug("Looking up %s in %s", ck, path)
                 if not ck in config_dep_list:
-                    log.warning("Flusing unneeded values from config: %s", ck)
+                    log.warning("Cleaning unneeded values from config: %s", ck)
                     del dc[ck]
                 
                 else:

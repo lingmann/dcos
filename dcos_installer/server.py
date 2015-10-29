@@ -57,7 +57,7 @@ def add_config(data):
     log.debug("Adding user config from form POST")
     log.debug("Received raw data: {}".format(data.form))
     for key in data.form.keys():
-        log.debug(key)
+        log.debug(key, data.form[key])
         # Reencode the unicode string to an ASCII string for python compatability
         userconfig[key] = data.form[key].encode('ascii','ignore')
 
@@ -69,19 +69,18 @@ def dump_config(path):
     in the web console. Otherwise, if the file does no exist, create it and write the
     config passed to us from the console.
     """
-    try:
-        if os.path.exists(path):
-            log.debug("Configuration path exists, reading in and adding config ", path)
-            base_config = yaml.load(open(path, 'r')) 
-            for bk, bv in base_config:
-                log.debug("Adding pre-written configuration from yaml file {}: {}".format(bk, bv))
-                userconfig[bk] = bv
+    if os.path.exists(path):
+        log.debug("Configuration path exists, reading in and adding config ", path)
+        base_config = yaml.load(open(path, 'r')) 
+        for bk, bv in base_config:
+            log.debug("Adding pre-written configuration from yaml file {}: {}".format(bk, bv))
+            userconfig[bk] = bv
 
-            with open(path, 'w') as f:
-                log.debug("Writing yaml file with complete configuration ", path)
-                f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
-
-    except:
+        with open(path, 'w') as f:
+            log.debug("Writing yaml file with complete configuration ", path)
+            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+    
+    else:
         log.info('{} does not exist, creating.'.format(path))
         with open(path, 'w') as f:
             f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))

@@ -103,4 +103,25 @@ def get_redirect(config_path):
     """
     config = get_config(config_path)
 
+    dep_tree = {
+        "master_discovery": {
+            "static":  ["master_list"],
+            "keepalived": ["keepalived_router_id", "keepalived_interface", "keepalived_pass", "keepalived_virtual_ipaddress"],
+            "cloud_dynamic": ["num_masters"],
+        },
+        "exhibitor_storage_backend": {
+            "zookeeper": ["exhibitor_zk_hosts", "exhibitor_zk_path"],
+            "shared_fs": ["exhibitor_fs_config_path"],
+            "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
+        }
+    }
+    
+    if config.get('master_discovery'):
+        for value in dep_tree['master_discovery'][config['master_discovery'].iteritems:
+            log.debug("Checking for dependency %s", value)
+
+
+    else:
+        log.error('The master_discovery key does not exist, please restart the installer or add it manually.')
+        return("mainpage")
     #return redirect(url_for('login'))

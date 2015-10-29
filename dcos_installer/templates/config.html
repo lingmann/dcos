@@ -40,6 +40,15 @@
       <div class="container">
         <p>Configuration found in the config YAML file are shown as placeholders. If configruation is no found, an example is given. Config in the YAML file will not be overwritten by the console - this is a to be determinted feature. </p>
         <br>
+        {% if validate_config %}
+        <div class="alert alert-success" role="alert">
+          <a href="/installer/v1.0/preflight/" class="alert-link">Configuration looks good!</a>
+        </div>
+        {% else %}
+        <div class="alert alert-danger" role="alert">
+          <a href="http://enterprise.mesosphere.com/" class="alert-link">Configuration has some problems! Check below or see our documentation for help.</a>
+        </div>
+        {% endif %}
         <form method="POST" action="/installer/v1.0/">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Cluster Name</span>
@@ -75,7 +84,7 @@
           </div>
           {% endfor %}
           <br>
-          <input class="submit" type="submit" value='Submit'> 
+          <input class="submit" type="submit" value='Validate Configuration'> 
         </form>
       </div>
   </body>

@@ -60,7 +60,8 @@ def do_routes(app, options):
         return render_template(
             'config.html', 
             isset=get_config(options.config_path),
-            dependencies=get_dependencies(options.config_path))
+            dependencies=get_dependencies(options.config_path),
+            validate_config = validate(options.config_path))
 
 
 def add_config(data):
@@ -147,6 +148,28 @@ def redirect_url(default='mainpage'):
         request.referrer or \
         url_for(default)
 
+def validate(path):
+    config = get_config(path)
+    if config != {}:
+        dependencies = get_dependencies(path)
+        log.debug("Validating configruation file %s...", path)
+        for dk, dv in dependencies.iteritems():
+            log.debug("Checking coniguration for %s", dk)
+            for required_value in dv:
+                log.debug("Ensuring dependency %s exists in config", required_value)
+                try:
+                    log.debug("Checking: %s", config[required_value])
+                    if not config[required_value]:
+                        log.warning("Found unneccessary data in %s: %s", path, config[required_value])
+                        return False
+
+                except:
+                    log.info("Configuration looks good!")
+                    return True
+    
+    else:
+        log.warning("Configuration file is empty")
+        return "warn"
 
 def get_dependencies(config_path):
     """

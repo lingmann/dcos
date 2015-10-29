@@ -70,8 +70,8 @@
           {% for value in dependencies['exhibitor_storage_backend'] %}
           <br>
           <div class="input-group">
-            <span class="input-group-addon" id="basic-addon1">{{ value['title'] }}</span>
-            <input name="{{ value['name'] }}" type="text" class="form-control" placeholder="{{ value['placeholder'] }}" aria-describedby="basic-addon1">
+            <span class="input-group-addon" id="basic-addon1">{{ value }}</span>
+            <input name="{{ value }}" type="text" class="form-control" placeholder="{{ value }}" aria-describedby="basic-addon1">
           </div>
           {% endfor %}
           <br>

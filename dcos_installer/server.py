@@ -136,9 +136,8 @@ def get_dependencies(config_path):
         }
     }
     
+    return_deps = {}
     if config.get('master_discovery'):
-        return_deps = {}
-
         try: 
             for value in dep_tree['master_discovery'][config['master_discovery']]:
                 log.debug("Checking for dependency %s", value)
@@ -148,11 +147,29 @@ def get_dependencies(config_path):
 
                 else:
                     log.debug("Dependency not found, %s", value)
-                    return_deps['master_discovery'] = dep_tree['master_discovery'][config['master_discovery']] 
+                    continue 
+
+                return_deps['master_discovery'] = dep_tree['master_discovery'][config['master_discovery']] 
         
         except: 
             log.error("The specified configuration value is not valid, %s", config['master_discovery'])
-        
-        return return_deps 
+    
+    if config.get('exhibitor_storage_backend'):
+        try:
+            for value in dep_tree['exhibitor_storage_backend'][config['exhibitor_storage_backend']]:
+                log.debug("Checking for dependency %s", value)
+                if config.get('value'):
+                    log.debug("Dependency found, %s", value)
+                    continue
 
-    return {}
+                else:
+                    log.debug("Dependency not found, %s", value)
+                    continue   
+
+                return_deps['exhibitor_storage_backend'] = dep_tree['exhibitor_storage_backend'][config['exhibitor_storage_backend']] 
+        
+        except: 
+            log.error("The specified configuration value is not valid, %s", config['master_discovery'])
+
+        
+    return return_deps

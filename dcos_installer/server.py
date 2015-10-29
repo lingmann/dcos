@@ -70,13 +70,15 @@ def dump_config(path):
     config passed to us from the console.
     """
     try:
-        if os.stat(path):
+        if os.path.exists(path):
             log.debug("Configuration path exists, reading in and adding config ", path)
             base_config = yaml.load(open(path, 'r')) 
             for bk, bv in base_config:
+                log.debug("Adding pre-written configuration from yaml file {}: {}".format(bk, bv))
                 userconfig[bk] = bv
 
             with open(path, 'w') as f:
+                log.debug("Writing yaml file with complete configuration ", path)
                 f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
     except:

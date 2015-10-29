@@ -59,18 +59,18 @@ def do_routes(app, options):
     
     # Configurator routes
     @app.route("/installer/v{}/configurator/".format(version))
-    def ip_detect():
-        return render_template('configurator.html')
-
-
-    @app.route("/installer/v{}/configurator/ip-detect/".format(version))
-    def upload_ip_detect():
+    def configurator():
         config_level, message = validate(options.config_path)
         return render_template(
-            'ip_detect.html',
+            'configurator.html',
             config_level=config_level,
             ip_detect_level="success")
 
+
+    @app.route("/installer/v{}/configurator/ip-detect/".format(version))
+    def ip_detect():
+        return render_template('ip_detect.html')
+        
 
     @app.route("/installer/v{}/configurator/config".format(version))
     def config():

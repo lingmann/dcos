@@ -45,6 +45,8 @@ def do_routes(app, options):
         if request.method == 'POST':
             add_config(request)
             dump_config(options.config_path) 
+            # Return a redirect to a route handler via the configuration requirements
+            return redirect(url_for(get_redirect(options.config_path)))        
 
         return render_template('main.html', title='Flask Test')
 
@@ -80,13 +82,25 @@ def dump_config(path):
         f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 
-def do_redirect(app):
+def get_config(path):
+    """
+    Returns the config file as a dict.
+    """
+    if os.stat.exists(path):
+        log.debug("Reading in config file from %s", path)
+        return yaml.load(open(path, 'r'))
+    else:
+        log.error("The configuration path does not exist %s", path)
+        os.exit(1)
+
+
+def get_redirect(config_path):
     """
     Defines our redirect logic. In the case of the installer,
     we have several parameters that require other paramters in the tree. 
     This method ensures the user gets redirected to the proper URI based
     on their initial top-level input to the installer.
     """
-    return "this"
-       # abort(404)
+    config = get_config(config_path)
+
     #return redirect(url_for('login'))

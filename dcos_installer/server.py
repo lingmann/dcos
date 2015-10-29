@@ -43,6 +43,8 @@ def do_routes(app, options):
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
+        
+            flush_config(options.config_path)
             add_config(request)
             dump_config(options.config_path)
             # Redirects to correct page 
@@ -108,6 +110,20 @@ def get_config(path):
         return {}
 
 
+def flush_config(path):
+    """
+    Flushes stale configuration that does not adhere to the dependencies specified
+    my top-level configuration. I.e., master_list should not be present for 
+    master_discovery type keepliaved.
+    """
+    config = get_config(path)
+    dependencies = get_dependencies(path)
+    log.debug("Checking configuration for stale data...")
+    for ck, cv in config.iteritems():
+        if not ck in dependencies.keys():
+            log.debug("Flusing unneeded values from config %s: %s", ck, cv)
+
+
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \
         request.referrer or \
@@ -133,7 +149,8 @@ def get_dependencies(config_path):
             "zookeeper": ["exhibitor_zk_hosts", "exhibitor_zk_path"],
             "shared_fs": ["exhibitor_fs_config_path"],
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
-        }
+        },
+        "base": ["cluster_name", "dns_resolvers", "num_masters"]
     }
     
     return_deps = {}
@@ -170,5 +187,5 @@ def get_dependencies(config_path):
         
         except: 
             log.error("The specified configuration value is not valid, %s", config['master_discovery'])
-
+    return_deps['base'] = dep_tree['base']
     return return_deps

@@ -59,7 +59,7 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">{{ value }}</span>
-            <input name="{{ value }}" type="text" class="form-control" placeholder="{{ value }}" aria-describedby="basic-addon1">
+            <input name="{{ value }}" type="text" class="form-control" placeholder={% if isset[value] %}"{{ isset[value]}}"{% else %}"Not found in config." {% endif %} aria-describedby="basic-addon1">
           </div>
           {% endfor %}
           <br>
@@ -71,7 +71,7 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">{{ value }}</span>
-            <input name="{{ value }}" type="text" class="form-control" placeholder="{{ value }}" aria-describedby="basic-addon1">
+            <input name="{{ value }}" type="text" class="form-control" placeholder={% if isset[value] %}"{{ isset[value]}}"{% else %}"Not found in config." {% endif %} aria-describedby="basic-addon1">
           </div>
           {% endfor %}
           <br>

@@ -60,11 +60,13 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/configurator".format(version))
     def config():
-                return render_template(
+        level, message = validate(options.config_path)
+        return render_template(
             'config.html', 
             isset=get_config(options.config_path),
             dependencies=get_dependencies(options.config_path),
-            validate_config = validate(options.config_path))
+            validate_level = level,
+            validate_message = message)
 
 
 def add_config(data):
@@ -91,7 +93,7 @@ def dump_config(path):
         log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
         for bk, bv in base_config.iteritems():
-            log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
+            log.debug("Adding configuration from yaml file %s: %s", bk, bv)
             # Overwrite the yaml config with the config from the console
             try:
                 if not userconfig[bk]:
@@ -122,13 +124,12 @@ def get_config(path):
 
 def clean_config(path):
     """
-    Flushes stale configuration that does not adhere to the dependencies specified
-    by top-level configuration. I.e., master_list should not be present for 
-    master_discovery type keepliaved.
+    Fuckitshiptit method that clears the configuration.
     """
     log.debug("Clearing config...")
     userconfig = {}
-    dump_config(path)
+    with open(path, 'w') as f:
+        f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
 
 def validate(path):
     config = get_config(path)
@@ -143,15 +144,15 @@ def validate(path):
                     log.debug("Value: %s", config[required_value])
                     if not config[required_value]:
                         log.warning("Found unneccessary data in %s: %s", path, config[required_value])
-                        return False
+                        return "danger", "Configuation isn't valid: {}".format(config[required_value])
 
                 except:
                     log.info("Configuration looks good!")
-                    return True
+                    return "success", ""
     
     else:
         log.warning("Configuration file is empty")
-        return "warn"
+        return "warning", "Configuration file appears empty."
    
 
 def redirect_url(default='mainpage'):

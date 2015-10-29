@@ -128,25 +128,23 @@ def clean_config(path):
         dependencies = get_dependencies(path)
         dc = deepcopy(config)
         log.debug("Checking configuration for stale data...")
-        for ck, cv in dc.iteritems():
+        for dk, dv in dependencies.iteritems():
+            log.debug("Checking configuration for %s", dk)
             try:
-                if not dependencies[ck]:
-                    log.debug("Flusing unneeded values from config %s: %s", ck, cv)
-                    del config[ck]
+                log.debug("Checking: %s", config[required_value])
+                for ck, cv in config.iteritems():
+                    if not ck in dependencies[dv].keys():
+                        log.warning("Flusing unneeded values from config: %s", ck)
+                        del dc[ck]
 
-            except:
-                log.debug("Retaining needed values from config %s: %s", ck, cv)
+                except:
+                    log.debug("Retaining needed values from config %s", config[required_value])
                 
-
+        # Update config and write it to disk
+        config = dc
         with open(path, 'w') as f:
             f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
 
-
-
-def redirect_url(default='mainpage'):
-    return request.args.get('next') or \
-        request.referrer or \
-        url_for(default)
 
 def validate(path):
     config = get_config(path)
@@ -170,6 +168,13 @@ def validate(path):
     else:
         log.warning("Configuration file is empty")
         return "warn"
+
+
+def redirect_url(default='mainpage'):
+    return request.args.get('next') or \
+        request.referrer or \
+        url_for(default)
+
 
 def get_dependencies(config_path):
     """

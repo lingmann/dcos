@@ -3,6 +3,8 @@ import logging as log
 import sys
 import os
 from . import server
+from . import preflight
+from . import deploy
 
 class DcosInstaller:
     def __init__(self):

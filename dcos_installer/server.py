@@ -1,5 +1,4 @@
 from copy import deepcopy
-from fabric.api import run
 from flask import Flask, request, render_template, url_for, redirect
 import logging as log
 import os
@@ -58,7 +57,7 @@ def do_routes(app, options):
         return render_template('main.html')
     
     # Configurator routes
-    @app.route("/installer/v{}/configurator/".format(version))
+    @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
         config_level, message = validate(options.config_path)
         return render_template(
@@ -67,12 +66,17 @@ def do_routes(app, options):
             ip_detect_level="success")
 
 
-    @app.route("/installer/v{}/configurator/ip-detect/".format(version))
+    @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET', 'POST'])
     def ip_detect():
+        if request.method == 'POST':
+            save_to_path = '{}/ip-detect'.format(options.install_directory)
+            save_ip_detect(request, save_to_path)
+            # TODO: basic ip-detect script validation 
+
         return render_template('ip_detect.html')
         
 
-    @app.route("/installer/v{}/configurator/config".format(version))
+    @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET'])
     def config():
         level, message = validate(options.config_path)
         return render_template(
@@ -81,6 +85,28 @@ def do_routes(app, options):
             dependencies=get_dependencies(options.config_path),
             validate_level = level,
             validate_message = message)
+
+    # Preflight 
+    @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET'])
+    def preflight():
+        """
+        Serve the preflight page.
+        """
+        return render_template('preflight.html')
+
+
+    # Deploy
+    @app.route("/installer/v{}/configurator/deploy/".format(version))
+    def deploy():
+        return render_template('deploy.html')
+
+
+def save_ip_detect(data, ):
+    """
+    Save the ip-detect script to the dcos-installer directory.
+    """
+    path = 
+    log.info("Saving ip-detect script to
 
 
 def add_config(data):

@@ -72,7 +72,7 @@ def dump_config(path):
     if os.path.exists(path):
         log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
-        for bk, bv in base_config.iteritems:
+        for bk, bv in base_config.iteritems():
             log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
             userconfig[bk] = bv
 

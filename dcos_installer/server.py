@@ -187,5 +187,6 @@ def get_dependencies(config_path):
         
         except: 
             log.error("The specified configuration value is not valid, %s", config['master_discovery'])
+
     return_deps['base'] = dep_tree['base']
     return return_deps

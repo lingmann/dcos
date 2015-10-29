@@ -9,6 +9,7 @@ import yaml
 Global Variables 
 """
 userconfig = {}
+hostsconfig = {}
 
 
 def run(options):
@@ -50,8 +51,8 @@ def do_routes(app, options):
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
-            add_config(request)
-            dump_config(options.config_path)
+            add_config(request, userconfig)
+            dump_config(options.config_path, userconfig)
             # Redirects to correct page 
             return redirect(redirect_url())
 
@@ -97,10 +98,13 @@ def do_routes(app, options):
         """
         if request.method == 'POST':
             save_to_path = '{}/hosts.yaml'.format(options.install_directory)
-            save_hosts(request, save_to_path)
+            add_config(request, hostsconfig)
+            dump_config(save_to_path, hostsconfig)
             # TODO: basic host validation??
 
-        return render_template('preflight.html')
+        return render_template(
+            'preflight.html',
+            isset=get_config('{}/hosts.yaml'.format(options.install_directory)))
 
 
     # Deploy
@@ -120,28 +124,28 @@ def save_ip_detect(data, path):
         f.write(script)
 
 
-def save_hosts(data, path):
-    """
-    Saves the hosts.yaml file from the preflight form to the install_directory
-    /hosts.yaml. We use this file later in the SSH deploy function.
-    """
-    log.info("Adding hosts.yaml...")
-    log.debug("Raw data %s", data.form)
-    # Need ascii encoded data and stuff
-    clean_hosts = {}
-    
-    try:
-        for key in data.form.keys():
-            log.debug("Adding to %s %s: %s", path, key, data.form[key])
-            clean_hosts[key] = data.form[key].encode('ascii', 'ignore')
+#def save_hosts(data, path):
+#    """
+#    Saves the hosts.yaml file from the preflight form to the install_directory
+#    /hosts.yaml. We use this file later in the SSH deploy function.
+#    """
+#    log.info("Adding hosts.yaml...")
+#    log.debug("Raw data %s", data.form)
+#    # Need ascii encoded data and stuff
+#    clean_hosts = {}
+#    
+#    try:
+#        for key in data.form.keys():
+#            log.debug("Adding to %s %s: %s", path, key, data.form[key])
+#            clean_hosts[key] = data.form[key].encode('ascii', 'ignore')
+#
+#        with open(path, 'w') as f:
+#            f.write(yaml.dump(clean_hosts, default_flow_style=False, explicit_start=True))
+#   
+#    except:
+#        log.error("Issue with hosts data in preflight.")
 
-        with open(path, 'w') as f:
-            f.write(yaml.dump(clean_hosts, default_flow_style=False, explicit_start=True))
-   
-    except:
-        log.error("Issue with hosts data in preflight.")
-
-def add_config(data):
+def add_config(data, global_data):
     """
     Updates the global userconfig{} map with the latest data from 
     the web console.
@@ -151,10 +155,10 @@ def add_config(data):
     for key in data.form.keys():
         log.debug("%s: %s",key, data.form[key])
         # Reencode the unicode string to an ASCII string for compatability
-        userconfig[key] = data.form[key].encode('ascii','ignore')
+        global_data[key] = data.form[key].encode('ascii','ignore')
 
 
-def dump_config(path):
+def dump_config(path, global_data):
     """
     Dumps our configuration to the config path specific in CLI flags. If the file 
     already exists, add configuration to it from the userconfig presented to us 
@@ -168,18 +172,18 @@ def dump_config(path):
             log.debug("Adding configuration from yaml file %s: %s", bk, bv)
             # Overwrite the yaml config with the config from the console
             try:
-                if not userconfig[bk]:
-                    userconfig[bk] = bv
+                if not global_data[bk]:
+                    global_data[bk] = bv
             
             except:
                 log.error("Configuration doesn't work %s: %s", bk, bv)
 
         with open(path, 'w') as f:
-            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+            f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
     
     if not os.path.exists(path):
         with open(path, 'w') as f:
-            f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+            f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
 
 
 def get_config(path):

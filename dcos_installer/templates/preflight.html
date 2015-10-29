@@ -42,17 +42,29 @@
       <form method="POST" action="/installer/v1.0/preflight/">
         <div class="input-group">
           <span class="input-group-addon" id="basic-addon1">Masters</span>
+          {% if isset['masters'] %}
+          <p class="list-group-item disabled">{{ isset['masters'] }}</p>
+          {% else %}
           <input name="masters" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          {% endif %}
         </div>
         <br>
         <div class="input-group">
           <span class="input-group-addon" id="basic-addon1">Public Slaves</span>
+          {% if isset['slaves_public'] %}
+          <p class="list-group-item disabled">{{ isset['slaves_public'] }}</p>
+          {% else %}
           <input name="slaves_public" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          {% endif %}
         </div>
         <br>
         <div class="input-group">
           <span class="input-group-addon" id="basic-addon1">Private Slaves</span>
+          {% if isset['slaves_private'] %}
+          <p class="list-group-item disabled">{{ isset['slaves_private'] }}</p>
+          {% else %}
           <input name="slaves_private" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          {% endif %}
         </div>
         <br>
         <input class="submit" type="submit" value='Submit'>

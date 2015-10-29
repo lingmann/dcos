@@ -37,6 +37,12 @@
         </ul>
         </div>
       </nav>
-      UPLOAD YOUR IP_DETECT SCRIPT HERE!!!
+      <form method="POST" action="/installer/v1.0/configurator/ip-detect/">
+        <div class="input-group">
+          <span class="input-group-addon" id="basic-addon1">Upload ip-detect Script</span>
+          <input name="ip_detect" type="text" class="form-control" placeholder="#!/usr/bin/env bash ..." aria-describedby="basic-addon1">
+        </div>
+        <input class="submit" type="submit" value='Upload'>
+      </form>
   </body>
 </html>

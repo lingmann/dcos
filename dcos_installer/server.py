@@ -101,12 +101,11 @@ def do_routes(app, options):
         return render_template('deploy.html')
 
 
-def save_ip_detect(data, ):
+def save_ip_detect(data, path):
     """
     Save the ip-detect script to the dcos-installer directory.
     """
-    path = 
-    log.info("Saving ip-detect script to
+    log.info("Saving ip-detect script to %s", path)
 
 
 def add_config(data):

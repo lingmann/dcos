@@ -122,6 +122,11 @@ def flush_config(path):
     for ck, cv in config.iteritems():
         if not ck in dependencies.keys():
             log.debug("Flusing unneeded values from config %s: %s", ck, cv)
+            del config[ck]
+
+    with open(path, 'w') as f:
+        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
+
 
 
 def redirect_url(default='mainpage'):
@@ -150,7 +155,11 @@ def get_dependencies(config_path):
             "shared_fs": ["exhibitor_fs_config_path"],
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
         },
-        "base": ["cluster_name", "dns_resolvers", "num_masters"]
+        "base": {
+            "cluster_name", 
+            "dns_resolvers", 
+            "num_masters"
+        },
     }
     
     return_deps = {}

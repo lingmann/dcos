@@ -1,3 +1,4 @@
+from copy import deepcopy
 from fabric.api import run
 from flask import Flask, request, render_template, url_for, redirect
 import logging as log
@@ -43,10 +44,11 @@ def do_routes(app, options):
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
         if request.method == 'POST':
-        
-            flush_config(options.config_path)
             add_config(request)
+
             dump_config(options.config_path)
+
+            clean_config(options.config_path)
             # Redirects to correct page 
             return redirect(redirect_url())
 
@@ -87,8 +89,12 @@ def dump_config(path):
         for bk, bv in base_config.iteritems():
             log.debug("Adding pre-written configuration from yaml file %s: %s", bk, bv)
             # Overwrite the yaml config with the config from the console
-            if not userconfig[bk]:
-                userconfig[bk] = bv
+            try:
+                if not userconfig[bk]:
+                    userconfig[bk] = bv
+            
+            except:
+                log.error("Configuration doesn't work %s: %s", bk, bv)
 
         with open(path, 'w') as f:
             f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
@@ -110,19 +116,25 @@ def get_config(path):
         return {}
 
 
-def flush_config(path):
+def clean_config(path):
     """
     Flushes stale configuration that does not adhere to the dependencies specified
-    my top-level configuration. I.e., master_list should not be present for 
+    by top-level configuration. I.e., master_list should not be present for 
     master_discovery type keepliaved.
     """
     config = get_config(path)
     dependencies = get_dependencies(path)
+    dc = deepcopy(config)
     log.debug("Checking configuration for stale data...")
-    for ck, cv in config.iteritems():
-        if not ck in dependencies.keys():
-            log.debug("Flusing unneeded values from config %s: %s", ck, cv)
-            del config[ck]
+    for ck, cv in dc.iteritems():
+        try:
+            if not dependencies[ck]:
+                log.debug("Flusing unneeded values from config %s: %s", ck, cv)
+                del config[ck]
+
+        except:
+            log.debug("Retaining needed values from config %s: %s", ck, cv)
+            
 
     with open(path, 'w') as f:
         f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
@@ -156,9 +168,9 @@ def get_dependencies(config_path):
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
         },
         "base": {
-            "cluster_name", 
-            "dns_resolvers", 
-            "num_masters"
+            "cluster_name": "", 
+            "dns_resolvers": "", 
+            "num_masters": ""
         },
     }
     

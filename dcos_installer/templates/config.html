@@ -90,13 +90,21 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Exhibitor Storage Backend</span>
-            <input name="exhibitor_storage_backend" type="text" class="form-control" placeholder={% if isset['exhibitor_storage_backend'] %}"{{ isset['exhibitor_storage_backend']}}"{% else %}"Not found in config, example: zookeeper" {% endif %} aria-describedby="basic-addon1">
+            {% if isset['exhibitor_storage_backend'] %}
+            <p class="list-group-item disabled">{{ isset['exhibitor_storage_backend'] }}</p>
+            {% else %}
+            <input name="exhibitor_storage_backend" type="text" class="form-control" placeholder="zookeeper || aws_s3 || shared_fs" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           {% for value in dependencies['exhibitor_storage_backend'] %}
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">{{ value }}</span>
-            <input name="{{ value }}" type="text" class="form-control" placeholder={% if isset[value] %}"{{ isset[value]}}"{% else %}"Not found in config." {% endif %} aria-describedby="basic-addon1">
+            {% if isset[value] %}
+            <p class="list-group-item disabled">{{ isset[value] }}</p>
+            {% else %}
+            <input name="{{ value }}" type="text" class="form-control" placeholder="{{ value }}" aria-describedby="basic-addon1">
+            {% endif %}
           </div>
           {% endfor %}
           <br>

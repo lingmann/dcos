@@ -11,13 +11,13 @@ Global Variables
 userconfig = {}
 hostsconfig = {}
 
-
 def run(options):
     """
     Define some routes and execute the Flask server. Currently
     pinning the routes with v1.0 to allow for seamless upgrades
     in the future.
     """
+
     log.info("Executing Flask server...")
     # Define a new Flask object
     app = Flask(__name__)
@@ -113,6 +113,7 @@ def do_routes(app, options):
         """
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         ssh_key_path = '{}/ssh_key'.format(options.install_directory)
+        ssh_user_path = '{}/ssh_user'.format(options.install_directory)
         #preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
 
         if request.method == 'POST':
@@ -120,15 +121,20 @@ def do_routes(app, options):
             dump_config(hosts_path, hostsconfig)
             # TODO: basic host validation??
 
+        # Validate hosts file, ssh key file and ssh username file
         validate_hosts_level, hosts_message = validate_hosts(hosts_path)
         validate_ssh_level, validate_ssh_message = validate_path(ssh_key_path)
+        validate_user_level, validate_user_message = validate_path(ssh_user_path)
+
         return render_template(
             'preflight.html',
             isset=get_config('{}/hosts.yaml'.format(options.install_directory)),
             validate_hosts_level=validate_hosts_level,
             validate_hosts_message=hosts_message,
             validate_ssh_level=validate_ssh_level,
-            validate_ssh_message=validate_ssh_message)
+            validate_ssh_message=validate_ssh_message,
+            validate_user_level=validate_user_level,
+            validate_user_message=validate_user_message)
 
 
     # Preflight helpers
@@ -144,11 +150,19 @@ def do_routes(app, options):
     def preflight_ssh_key():
         log.debug("Upload ssh_key POST")
         ssh_key_path = '{}/ssh_key'.format(options.install_directory)
-        log.info("Adding SSH key")
+        ssh_user_path = '{}/ssh_user'.format(options.install_directory)
+        
+        #log.info("Adding SSH key")
+        #ssh_key = request.files['ssh_key']
+        #ssh_key.save(os.path.join(ssh_key_path, 'ssh_key'))
+        
+        log.info("Adding SSH user")
         save_file(
-            request.form['ssh_key'],
-            ssh_key_path)
+            request.form['ssh_uesr'],
+            ssh_user_path)
+        
         return redirect(redirect_url())
+    
     # TODO Move hosts down here too
 
     # Deploy

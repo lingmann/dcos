@@ -2,7 +2,6 @@
 <html>
   <head>
     <title>DCOS Installer</title>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js"></script>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css  ">
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap-theme.m  in.css">
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
@@ -50,10 +49,27 @@
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
         <strong>{{ validate_ssh_level }}!</strong> {{ validate_ssh_message }}
       </div>
-      <h4 class="list-group-item-heading">Upload Private SSH Key</h4>
+      <div class="alert alert-{{ validate_user_level }} alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
+        <strong>{{ validate_user_level }}!</strong> {{ validate_user_message }}
+      </div>
+      <h4 class="list-group-item-heading">Upload Private SSH Key and SSH Username</h4>
       <form method="POST" action="/installer/v1.0/preflight/ssh_key/">
         <div class="input-group">
-          <input name="ssh_key" type="text" class="form-control" placeholder="-----BEGIN RSA PRIVATE KEY-----..." aria-describedby="basic-addon1">
+          {% if validate_ssh_level == 'success' %}
+          <input type="file" class="filestyle" data-disabled="true">
+          {% else %}
+          <input type="file" class="filestyle" data-buttonName="btn-primary">
+          {% endif %}
+        </div>
+        <br>
+        <div class="input-group">
+          <span class="input-group-addon" id="basic-addon1">SSH Username</span>
+          {% if validate_user_level == 'success' %}
+          <p class="list-group-item disabled"></p>
+          {% else %}
+          <input name="ssh_user" type="text" class="form-control" placeholder="My SSH Username" aria-describedby="basic-addon1">
+          {% endif %}
         </div>
         <br>
         <input class="submit" type="submit" value='Upload'>

@@ -258,8 +258,9 @@ def validate_hosts(path):
     """
     Validate that the host file exists and the keys are available.
     """
-    if not validate_path(path):
+    if validate_path(path) == 'danger':
         return 'danger', 'hosts.yaml does not exist: {}'.format(path)
+
     
     for key in ['masters', 'slaves_public', 'slaves_private']:    
         validation, message = validate_key_exists(path, key)
@@ -273,6 +274,7 @@ def validate_hosts(path):
 
         else:
             return validation, 'hosts.yaml looks good!' 
+
 
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \

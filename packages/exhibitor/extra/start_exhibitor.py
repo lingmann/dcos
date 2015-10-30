@@ -17,9 +17,11 @@ def write_str(filename, contents):
     with open(filename, 'w') as f:
         f.write(contents)
 
+
 def invoke_detect_ip():
     try:
-        ip = check_output(['/opt/mesosphere/bin/detect_ip']).strip().decode('utf-8')
+        ip = check_output(
+            ['/opt/mesosphere/bin/detect_ip']).strip().decode('utf-8')
     except CalledProcessError as e:
         print("check_output exited with {}".format(e))
         sys.exit(1)
@@ -27,7 +29,8 @@ def invoke_detect_ip():
         inet_aton(ip)
         return ip
     except socket_error as e:
-        print("inet_aton exited with {}. {} is not a valid IPv4 address".format(e, ip))
+        print(
+            "inet_aton exited with {}. {} is not a valid IPv4 address".format(e, ip))
         sys.exit(1)
 
 # TODO(cmaloney): Move exhibitor_defaults to a temp runtime conf dir.
@@ -70,8 +73,8 @@ auto-manage-instances-settling-period-ms=0
 auto-manage-instances=1
 auto-manage-instances-fixed-ensemble-size={zookeeper_cluster_size}
 """.format(
-        zookeeper_cluster_size=get_var_assert_set('ZOOKEEPER_CLUSTER_SIZE')
-    ))
+    zookeeper_cluster_size=get_var_assert_set('ZOOKEEPER_CLUSTER_SIZE')
+))
 
 # Make a custom /etc/resolv.conf and mount it for exhibitor
 resolvers = get_var_assert_set('RESOLVERS').split(',')
@@ -85,31 +88,35 @@ write_str("/run/dcos_exhibitor/resolv.conf", resolvconf_text)
 # this _should_ have already made the mounts private, but we do this here as an
 # extra bit of safety.
 check_call(['mount', '--make-rprivate', '/'])
-check_call(['mount', '--bind', '/run/dcos_exhibitor/resolv.conf', '/etc/resolv.conf'])
+check_call(
+    ['mount', '--bind', '/run/dcos_exhibitor/resolv.conf', '/etc/resolv.conf'])
 
 # Add backend specific arguments
 exhibitor_backend = get_var_assert_set('EXHIBITOR_BACKEND')
 if exhibitor_backend == 'AWS_S3':
     print("Exhibitor configured for AWS S3")
     exhibitor_cmdline += [
-            '--configtype=s3',
-            '--s3config', get_var_assert_set("AWS_S3_BUCKET") + ':' + get_var_assert_set("AWS_S3_PREFIX"),
-            '--s3credentials', '/opt/mesosphere/etc/exhibitor.properties',
-            '--s3region', get_var_assert_set("AWS_REGION"),
-            '--s3backup', 'false',
-        ]
+        '--configtype=s3',
+        '--s3config', get_var_assert_set("AWS_S3_BUCKET") +
+        ':' + get_var_assert_set("AWS_S3_PREFIX"),
+        '--s3credentials', '/opt/mesosphere/etc/exhibitor.properties',
+        '--s3region', get_var_assert_set("AWS_REGION"),
+        '--s3backup', 'false',
+    ]
 elif exhibitor_backend == 'AZURE':
     print("Exhibitor configured for Azure")
     exhibitor_cmdline += [
         '--configtype=azure',
-        '--azureconfig', get_var_assert_set('AZURE_CONTAINER') + ':' + get_var_assert_set('AZURE_PREFIX'),
+        '--azureconfig', get_var_assert_set(
+            'AZURE_CONTAINER') + ':' + get_var_assert_set('AZURE_PREFIX'),
         '--azurecredentials', '/opt/mesosphere/etc/exhibitor.properties',
     ]
 elif exhibitor_backend == 'GCE':
     print("Exhibitor configured for GCE")
     exhibitor_cmdline += [
         '--configtype=gcs',
-        '--gcsconfig={}:{}'.format(get_var_assert_set('GCS_BUCKET_NAME', 'GCE_BUCKET_NAME'))
+        '--gcsconfig={}:{}'.format(
+            get_var_assert_set('GCS_BUCKET_NAME', 'GCE_BUCKET_NAME'))
     ]
 elif exhibitor_backend == 'ZK':
     print("Exhibitor configured for Zookeeper")

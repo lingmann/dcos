@@ -35,7 +35,7 @@ def get_masters_exhibitor():
         return servers
     except:
         print('Error getting list of masters from exhibitor {}: {}'.format(
-                (status_url), sys.exc_info()[1]), file=sys.stderr)
+            (status_url), sys.exc_info()[1]), file=sys.stderr)
         return []
 
 
@@ -48,15 +48,18 @@ def check_server(addr):
         query = dns.message.make_query(dns_test_query, dns.rdatatype.ANY)
         result = dns.query.udp(query, addr, dns_timeout)
         if len(result.answer) == 0:
-            print('Skipping DNS server {}: no records for {}'.format(addr, dns_test_query), file=sys.stderr)
+            print('Skipping DNS server {}: no records for {}'.format(
+                addr, dns_test_query), file=sys.stderr)
         else:
             return True
     except socket.gaierror as ex:
         print(ex, file=sys.stderr)
     except dns.exception.Timeout:
-        print('Skipping DNS server {}: no response'.format(addr), file=sys.stderr)
+        print('Skipping DNS server {}: no response'.format(
+            addr), file=sys.stderr)
     except:
-        print("Unexpected error querying DNS for server \"{}\" exception: {}".format(addr, sys.exc_info()[1]))
+        print("Unexpected error querying DNS for server \"{}\" exception: {}".format(
+            addr, sys.exc_info()[1]))
 
     return False
 
@@ -88,7 +91,8 @@ if os.environ.get('TRY_LOCALHOST', "false") == "true":
 # resolv.h MAXNS, with a good fallback dns server always present as the last in
 # the set.
 if len(up_master_nameservers) >= needed_server_count - 1:
-    final_nameservers += random.sample(up_master_nameservers, needed_server_count - 1)
+    final_nameservers += random.sample(
+        up_master_nameservers, needed_server_count - 1)
 else:
     random.shuffle(up_master_nameservers)
     final_nameservers += up_master_nameservers

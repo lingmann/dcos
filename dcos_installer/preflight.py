@@ -17,23 +17,26 @@ def check(options, hosts_path):
         log.debug("Host list: %s, Role: %s", host_list, role)
         for host in host_list.split(','):
             # Upload the preflight script
-            upload(preflight_output_path, ssh_key_path, hosts, ssh_user)
+            upload(preflight_output_path, ssh_key_path, host, ssh_user)
 
             # Execute installation
-            execute_check(preflight_output_path, ssh_key_path, hosts, ssh_user)
+            execute_check(preflight_output_path, ssh_key_path, host, ssh_user)
 
 
 def upload(output_path, key_path, host, username):
     """
     Upload the preflight script to the host via paramiko SSH API.
     """
+    log.info("Attempting to transfer preflight.sh...")
+    log.info("Key path %s", key_path)
+    log.info("Hostname: %s", host)
+    log.info("Username: %s", username)
+    
     # Create a new SFTP object
-    transport = paramiko.Transport((host, 22))
+    transport = paramiko.Transport(host, 22)
     # Get the key 
     key = paramiko.RSAKey.from_private_key_file(key_path)
     # Set the hostname missing policy so we don't need it in authorized_hosts
-    transport.set_missing_host_key_policy(
-        paramiko.AutoAddPolicy())
 
     try:
         transport.connect(username = username, pkey = key)
@@ -42,7 +45,7 @@ def upload(output_path, key_path, host, username):
         sftp.close()
         transport.close()
     except:
-        log.error("Problem uploading preflight script.", %s)
+        log.error("Problem uploading preflight script.")
         log.error(sys.exc_info()[0])
         pass
 
@@ -52,7 +55,7 @@ def execute_check(output_path, key_path, host, username):
     Execute the SSH script to install DCOS over SSH via the Paramiko 
     library.
     """
-    preflight_cmd = '/bin/bash /home/{}/preflight.sh'.format(username)
+    preflight_cmd = '/bin/bash $HOME/preflight.sh'.format(username)
     ssh = paramiko.SSHClient()
     key = paramiko.RSAKey.from_private_key_file(key_path)
     ssh.set_missing_host_key_policy(

@@ -50,6 +50,9 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
     def mainpage():
+        """
+        The mainpage handler
+        """
         if request.method == 'POST':
             add_config(request, userconfig)
             dump_config(options.config_path, userconfig)
@@ -72,12 +75,21 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET', 'POST'])
     def ip_detect():
+        save_to_path = '{}/ip-detect'.format(options.install_directory)
         if request.method == 'POST':
-            save_to_path = '{}/ip-detect'.format(options.install_directory)
             save_ip_detect(request, save_to_path)
             # TODO: basic ip-detect script validation 
 
-        return render_template('ip_detect.html')
+        validate_level = validate_path(save_to_path)
+        if validate_level == 'danger':
+            message = 'ip-detect script not found, {}'.format(save_to_path)
+        else:
+            message = 'ip-detect script found, {}'.format(save_to_path)
+
+        return render_template(
+            'ip_detect.html',
+            validate_level=validate_level,
+            validate_message=message)
         
 
     @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET'])

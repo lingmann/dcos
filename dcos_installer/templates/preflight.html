@@ -37,13 +37,19 @@
         </ul>
         </div>
       </nav>
-      {% if validate_level %}
+      {% if validate_level == 'success' %}
+      <form method='POST' action="/installer/v1.0/preflight/check">
+        <input class="btn btn-info" type="submit" value='Execute Preflight Check on Hosts'>
+      </form>
+      {% endif %}
+      <br>
+      {% if not preflight_response %}
+        {% if validate_level %}
       <div class="alert alert-{{ validate_level }} alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
         <strong>{{ validate_level }}!</strong> {{ validate_message }}
       </div>
-      {% endif %}
-      <br>
+        {% endif %}
       <h4 class="list-group-item-heading">Configure the hosts.yaml for SSH Deploy</h4>
       <form method="POST" action="/installer/v1.0/preflight/">
         <div class="input-group">
@@ -75,5 +81,8 @@
         <br>
         <input class="submit" type="submit" value='Submit'>
       </form>
+      {% else %}
+      {{ preflight_response }}
+      {% endif %}
   </body>
 </html>

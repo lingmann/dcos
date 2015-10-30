@@ -243,12 +243,15 @@ def validate_key_exists(path, key):
     Validate that a key has a value in a config file.
     """
     test_me = get_config(path)
-    if key in test_me.keys():
+    if key in test_me.keys() and test_me[key] != '':
         log.debug("%s exists in %s", key, path)
-        return "success"
+        return "success", '{} exists in {}'.format(key,path)
+    elif test_me[key] == '':
+        log.debug("%s exists but is empty", key)
+        return "warning", '{} existt but is empty'.format(key)
     else:
         log.debug("%s not found in %s", key, path)
-        return "danger"
+        return "danger", '{} not found in {}'.format(key, path)
 
 
 def validate_hosts(path):
@@ -257,12 +260,19 @@ def validate_hosts(path):
     """
     if not validate_path(path):
         return 'danger', 'hosts.yaml does not exist: {}'.format(path)
+    
+    for key in ['masters', 'slaves_public', 'slaves_private']:    
+        validation, message = validate_key_exists(path, key)
+        # Catch dangers first
+        if validation == 'danger':
+            return validation, message 
+       
+        # Catch warnings last
+        if validation == 'warning':
+            return validation, message 
 
-    for key in ['masters', 'slaves_public', 'slaves_private']:
-        if validate_key_exists(path, key) == 'danger':
-            return 'warning', 'hosts.yaml is missing {}'.format(key)
-        
-    return "success", 'hosts.yaml looks good!'
+        else:
+            return validation, 'hosts.yaml looks good!' 
 
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \

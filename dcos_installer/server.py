@@ -130,26 +130,29 @@ def do_routes(app, options):
             validate_ssh_level=validate_ssh_level,
             validate_ssh_message=validate_ssh_message)
 
+
     # Preflight helpers
-    @app.route("/installer/v{}/preflight/check".format(version), methods=['POST'])
+    @app.route('/installer/v{}/preflight/check/'.format(version), methods=['POST'])
     def preflight_check():
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         log.debug("Kicking off preflight check...")
         preflight.check(options, hosts_path)
+        return redirect(redirect_url())
 
 
-    @app.route("/installer/v{}/preflight/ssh_key".format(version), methods=['POST'])
+    @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():
+        log.debug("Upload ssh_key POST")
         ssh_key_path = '{}/ssh_key'.format(options.install_directory)
         log.info("Adding SSH key")
         save_file(
             request.form['ssh_key'],
             ssh_key_path)
-
+        return redirect(redirect_url())
     # TODO Move hosts down here too
 
     # Deploy
-    @app.route("/installer/v{}/deploy/".format(version))
+    @app.route('/installer/v{}/deploy/'.format(version))
     def deploy():
         return render_template('deploy.html')
 

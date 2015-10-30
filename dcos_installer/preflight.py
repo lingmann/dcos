@@ -1,5 +1,4 @@
 from fabric import *
-from fabric.contrib import confirm
 import logging as log
 
 

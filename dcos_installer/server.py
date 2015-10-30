@@ -65,11 +65,13 @@ def do_routes(app, options):
     # Configurator routes
     @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
-        config_level, message = validate(options.config_path)
-        ip_detect_level = validate_path('{}/ip-detect'.format(options.install_directory))
+        config_level, config_message = validate(options.config_path)
+        ip_detect_level, ip_detect_message = validate_path('{}/ip-detect'.format(options.install_directory))
         return render_template(
             'configurator.html',
             config_level=config_level,
+            config_message=config_message,
+            ip_detect_message=ip_detect_message,
             ip_detect_level=ip_detect_level)
 
 
@@ -77,14 +79,12 @@ def do_routes(app, options):
     def ip_detect():
         save_to_path = '{}/ip-detect'.format(options.install_directory)
         if request.method == 'POST':
-            save_ip_detect(request, save_to_path)
+            save_file(
+                request.form['ip_detect'], 
+                save_to_path)
             # TODO: basic ip-detect script validation 
 
-        validate_level = validate_path(save_to_path)
-        if validate_level == 'danger':
-            message = 'ip-detect script not found, {}'.format(save_to_path)
-        else:
-            message = 'ip-detect script found, {}'.format(save_to_path)
+        validate_level, message = validate_path(save_to_path)
 
         return render_template(
             'ip_detect.html',
@@ -111,25 +111,34 @@ def do_routes(app, options):
         execute the preflight.check library. If it doesn't, save hosts.yaml config. If
         the method is a GET, serve the template.
         """
-        save_to_path = '{}/hosts.yaml'.format(options.install_directory)
-        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
+        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
+        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
+        #preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
 
         if request.method == 'POST':
             if request.form['preflight_check']:
                 log.debug("Kicking off preflight check...")
-                preflight.check(options, save_to_path)
+                preflight.check(options, hosts_path)
 
+            elif request.form['ssh_key']:
+                log.debug("SSH key caught...")
+                save_file(
+                    request.form['ssh_key'],
+                    ssh_key_path)
             else:
                 add_config(request, hostsconfig)
-                dump_config(save_to_path, hostsconfig)
+                dump_config(hosts_path, hostsconfig)
                 # TODO: basic host validation??
 
-        validate_level, message = validate_hosts(save_to_path)
+        validate_hosts_level, hosts_message = validate_hosts(hosts_path)
+        validate_ssh_level, validate_ssh_message = validate_path(ssh_key_path)
         return render_template(
             'preflight.html',
             isset=get_config('{}/hosts.yaml'.format(options.install_directory)),
-            validate_level=validate_level,
-            validate_message=message)
+            validate_hosts_level=validate_hosts_level,
+            validate_hosts_message=hosts_message,
+            validate_ssh_level=validate_ssh_level,
+            validate_ssh_message=validate_ssh_message)
 
 
     # Deploy
@@ -138,15 +147,14 @@ def do_routes(app, options):
         return render_template('deploy.html')
 
 
-def save_ip_detect(data, path):
+def save_file(data, path):
     """
     Save the ip-detect script to the dcos-installer directory.
     """
-    log.info("Saving ip-detect script to %s", path)
-    script = data.form['ip_detect']
-    log.debug("ip-detect script: %s", script)
+    log.info("Saving script to %s", path)
+    log.debug("Saving file data: %s", data)
     with open(path, 'w') as f:
-        f.write(script)
+        f.write(data)
 
 
 def add_config(data, global_data):
@@ -242,10 +250,10 @@ def validate_path(path):
     Validate the ip-detect script exists and report back.
     """
     if os.path.exists(path):
-        return "success"
+        return "success", 'File exists {}'.format(path)
 
     else:
-        return "danger"
+        return "danger", 'File does not exist {}'.format(path)
 
 
 def validate_key_exists(path, key):

@@ -1,5 +1,6 @@
 import logging as log
 import paramiko
+import sys
 import yaml
 
 def check(options, hosts_path):
@@ -10,46 +11,75 @@ def check(options, hosts_path):
     preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
     ssh_key_path = '{}/ssh_key'.format(options.install_directory)
     hosts = yaml.load(open(hosts_path, 'r'))
-    ssh_user = open('{}/ssh_user'.format(options.install_directory))
-    execute_check(preflight_output_path, ssh_key_path, hosts, ssh_user)
+    ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
+    
+    for role, host_list in hosts.iteritems():
+        log.debug("Host list: %s, Role: %s", host_list, role)
+        for host in host_list.split(','):
+            # Upload the preflight script
+            upload(preflight_output_path, ssh_key_path, hosts, ssh_user)
 
-def execute_check(output_path, key_path, hosts, username):
+            # Execute installation
+            execute_check(preflight_output_path, ssh_key_path, hosts, ssh_user)
+
+
+def upload(output_path, key_path, host, username):
+    """
+    Upload the preflight script to the host via paramiko SSH API.
+    """
+    # Create a new SFTP object
+    transport = paramiko.Transport((host, 22))
+    # Get the key 
+    key = paramiko.RSAKey.from_private_key_file(key_path)
+    # Set the hostname missing policy so we don't need it in authorized_hosts
+    transport.set_missing_host_key_policy(
+        paramiko.AutoAddPolicy())
+
+    try:
+        transport.connect(username = username, pkey = key)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        sftp.put('preflight.sh', '$HOME/preflight.sh')
+        sftp.close()
+        transport.close()
+    except:
+        log.error("Problem uploading preflight script.", %s)
+        log.error(sys.exc_info()[0])
+        pass
+
+
+def execute_check(output_path, key_path, host, username):
     """
     Execute the SSH script to install DCOS over SSH via the Paramiko 
     library.
     """
+    preflight_cmd = '/bin/bash /home/{}/preflight.sh'.format(username)
     ssh = paramiko.SSHClient()
     key = paramiko.RSAKey.from_private_key_file(key_path)
     ssh.set_missing_host_key_policy(
         paramiko.AutoAddPolicy())
-    log.debug("Available hosts: %s", hosts)
-    for role, host_list in hosts.iteritems():
-        log.info("Installing DCOS on hosts matching role %s", role)
-        install_cmd = '/home/%s/install_dcos.sh %s'.format(username, role)
-        log.debug("Install command: %s, username: %s", install_cmd, username)
-        log.debug("Host list attempt: %s", host_list)
-        for host in host_list.split(','):
-            try:
-                log.info("Connecting to %s", host)
-                ssh.connect( 
-                    hostname=host,
-                    username=username,
-                    pkey=key)
+    # Execute command via SSH
+    try:
+        log.info("Connecting to %s@%s", username, host)
+        ssh.connect( 
+            hostname=host,
+            username=username,
+            pkey=key)
 
-                log.info('Executing {}'.format(install_cmd))
-                stdin , stdout, stderr = ssh.exec_command(install_cmd)
-                
-                response = {
-                    "host": {
-                        "stdin": stdin,
-                        "stdout": stdout,
-                        "stderr": stderr
-                    }
-                }
-                dump_response(output_path, response)
-            except:
-                log.error("Something broke...")
-                continue
+        log.info('Executing {}'.format(preflight_cmd))
+        stdin , stdout, stderr = ssh.exec_command(install_cmd)
+        
+        response = {
+            "host": {
+                "stdin": stdin,
+                "stdout": stdout,
+                "stderr": stderr
+            }
+        }
+        dump_response(output_path, response)
+    except:
+        log.error("Connection issue with %s", host)
+        log.error(sys.exc_info()[0])
+        pass
 
 
 def dump_response(path, response):

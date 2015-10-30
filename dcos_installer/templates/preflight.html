@@ -38,9 +38,13 @@
         </div>
       </nav>
       {% if validate_hosts_level == 'success' and validate_ssh_level == 'success' %}
-      <form method='POST' action="/installer/v1.0/preflight/check">
-        <input class="btn btn-info" type="submit" value='Execute Preflight Check on Hosts'>
-      </form>
+      <div  class="panel panel-primary">
+        <div class="panel-body">
+            <form method='POST' action="/installer/v1.0/preflight/check">
+            <input class="btn btn-info" type="submit" value='Execute Preflight Check on Hosts'>
+          </form>
+        </div>
+      </div>
       {% endif %} 
       <div class="alert alert-{{ validate_ssh_level }} alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>

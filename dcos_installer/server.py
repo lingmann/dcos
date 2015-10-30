@@ -102,17 +102,27 @@ def do_routes(app, options):
             validate_level = level,
             validate_message = message)
 
+
     # Preflight 
     @app.route("/installer/v{}/preflight/".format(version),  methods=['GET', 'POST'])
     def preflight():
         """
-        Serve the preflight page.
+        If the request is a POST, check for the preflight_check form key. If that key exists
+        execute the preflight.check library. If it doesn't, save hosts.yaml config. If
+        the method is a GET, serve the template.
         """
         save_to_path = '{}/hosts.yaml'.format(options.install_directory)
+        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
+
         if request.method == 'POST':
-            add_config(request, hostsconfig)
-            dump_config(save_to_path, hostsconfig)
-            # TODO: basic host validation??
+            if request.form['preflight_check']:
+                log.debug("Kicking off preflight check...")
+                preflight.check(options, save_to_path)
+
+            else:
+                add_config(request, hostsconfig)
+                dump_config(save_to_path, hostsconfig)
+                # TODO: basic host validation??
 
         validate_level, message = validate_hosts(save_to_path)
         return render_template(

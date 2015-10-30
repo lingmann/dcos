@@ -96,15 +96,18 @@ def do_routes(app, options):
         """
         Serve the preflight page.
         """
+        save_to_path = '{}/hosts.yaml'.format(options.install_directory)
         if request.method == 'POST':
-            save_to_path = '{}/hosts.yaml'.format(options.install_directory)
             add_config(request, hostsconfig)
             dump_config(save_to_path, hostsconfig)
             # TODO: basic host validation??
 
+        validate_level, message = validate_hosts(save_to_path)
         return render_template(
             'preflight.html',
-            isset=get_config('{}/hosts.yaml'.format(options.install_directory)))
+            isset=get_config('{}/hosts.yaml'.format(options.install_directory)),
+            validate_level=validate_level,
+            validate_message=message)
 
 
     # Deploy
@@ -235,6 +238,19 @@ def validate_key_exists(path, key):
         log.debug("%s not found in %s", key, path)
         return "danger"
 
+
+def validate_hosts(path):
+    """
+    Validate that the host file exists and the keys are available.
+    """
+    if not validate_path(path):
+        return validate_path(path), 'hosts.yaml does not exist: {}'.format(path)
+
+    for key in ['master', 'slave_public', 'slave_private']:
+        if not validate_key_exists(path, key):
+            return validate_path(path), 'hosts.yaml is missing {}'.format(key)
+        
+    return "success", 'hosts.yaml looks good!'
 
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \

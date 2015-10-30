@@ -244,11 +244,11 @@ def validate_hosts(path):
     Validate that the host file exists and the keys are available.
     """
     if not validate_path(path):
-        return validate_path(path), 'hosts.yaml does not exist: {}'.format(path)
+        return 'danger', 'hosts.yaml does not exist: {}'.format(path)
 
-    for key in ['master', 'slave_public', 'slave_private']:
-        if not validate_key_exists(path, key):
-            return validate_path(path), 'hosts.yaml is missing {}'.format(key)
+    for key in ['masters', 'slaves_public', 'slaves_private']:
+        if validate_key_exists(path, key) == 'danger':
+            return 'warning', 'hosts.yaml is missing {}'.format(key)
         
     return "success", 'hosts.yaml looks good!'
 

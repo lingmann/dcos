@@ -142,6 +142,7 @@ def do_routes(app, options):
     def preflight_check():
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         log.debug("Kicking off preflight check...")
+        from . import preflight
         preflight.check(options, hosts_path)
         return redirect(redirect_url())
 

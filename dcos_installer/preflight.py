@@ -1,7 +1,5 @@
 import logging as log
-
 import paramiko
-
 import yaml
 
 def check(options, hosts_path):
@@ -24,29 +22,34 @@ def execute_check(output_path, key_path, hosts, username):
     key = paramiko.RSAKey.from_private_key_file(key_path)
     ssh.set_missing_host_key_policy(
         paramiko.AutoAddPolicy())
-
-    for role in hosts.iteritems():
-        log.info("Installing DCOS on %s role hosts.", role)
+    log.debug("Available hosts: %s", hosts)
+    for role, host_list in hosts.iteritems():
+        log.info("Installing DCOS on hosts matching role %s", role)
         install_cmd = '/home/%s/install_dcos.sh %s'.format(username, role)
+        log.debug("Install command: %s, username: %s", install_cmd, username)
+        log.debug("Host list attempt: %s", host_list)
+        for host in host_list.split(','):
+            try:
+                log.info("Connecting to %s", host)
+                ssh.connect( 
+                    hostname=host,
+                    username=username,
+                    pkey=key)
 
-        for host in role.iteritems():
-            log.info("Connecting to %s", host)
-            ssh.connect( 
-                hostname=host,
-                username=username,
-                pkey=key)
-
-            log.info('Executing {}'.format(install_cmd))
-            stdin , stdout, stderr = ssh.exec_command(install_cmd)
-            
-            response = {
-                "host": {
-                    "stdin": stdin,
-                    "stdout": stdout,
-                    "stderr": stderr
+                log.info('Executing {}'.format(install_cmd))
+                stdin , stdout, stderr = ssh.exec_command(install_cmd)
+                
+                response = {
+                    "host": {
+                        "stdin": stdin,
+                        "stdout": stdout,
+                        "stderr": stderr
+                    }
                 }
-            }
-            dump_response(output_path, response)
+                dump_response(output_path, response)
+            except:
+                log.error("Something broke...")
+                continue
 
 
 def dump_response(path, response):

@@ -41,7 +41,7 @@ def upload(output_path, key_path, host, username):
     try:
         transport.connect(username = username, pkey = key)
         sftp = paramiko.SFTPClient.from_transport(transport)
-        sftp.put('preflight.sh', '$HOME/preflight.sh')
+        sftp.put('preflight.sh', '/home/vagrant/preflight.sh')
         sftp.close()
         transport.close()
     except:

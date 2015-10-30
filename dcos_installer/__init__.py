@@ -5,6 +5,7 @@ import os
 from . import server
 from . import preflight
 from . import deploy
+from . import cli
 
 class DcosInstaller:
     def __init__(self):
@@ -38,8 +39,16 @@ class DcosInstaller:
             default='{}/dcos_config.yaml'.format(installdir),
             help='The path to dcos_config.yaml.')
 
+        # TODO - implement CLI utility
         parser.add_argument(
             '-d',
+            '--deploy',
+            action='store_true',
+            default=False,
+            help='Execute a deploy. Assumes preflight checks have already been executed and the cluster is in a usable state.')
+
+        parser.add_argument(
+            '-i',
             '--install-directory',
             type=str,
             default=installdir,
@@ -68,6 +77,13 @@ class DcosInstaller:
             default=9000,
             help='Web server port number.')
 
+        # TODO - implement CLI utility
+        parser.add_argument(
+            '-pre',
+            '--preflight',
+            action='store_true',
+            default=False,
+            help='Execute the preflight checks on a series of nodes. Assumes $INSTALL_DIR/hosts.yaml exists.')
 
         options = parser.parse_args()
         return options

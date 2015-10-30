@@ -116,19 +116,9 @@ def do_routes(app, options):
         #preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
 
         if request.method == 'POST':
-            if request.form['preflight_check']:
-                log.debug("Kicking off preflight check...")
-                preflight.check(options, hosts_path)
-
-            elif request.form['ssh_key']:
-                log.debug("SSH key caught...")
-                save_file(
-                    request.form['ssh_key'],
-                    ssh_key_path)
-            else:
-                add_config(request, hostsconfig)
-                dump_config(hosts_path, hostsconfig)
-                # TODO: basic host validation??
+            add_config(request, hostsconfig)
+            dump_config(hosts_path, hostsconfig)
+            # TODO: basic host validation??
 
         validate_hosts_level, hosts_message = validate_hosts(hosts_path)
         validate_ssh_level, validate_ssh_message = validate_path(ssh_key_path)
@@ -140,6 +130,23 @@ def do_routes(app, options):
             validate_ssh_level=validate_ssh_level,
             validate_ssh_message=validate_ssh_message)
 
+    # Preflight helpers
+    @app.route("/installer/v{}/preflight/check".format(version), methods=['POST'])
+    def preflight_check():
+        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
+        log.debug("Kicking off preflight check...")
+        preflight.check(options, hosts_path)
+
+
+    @app.route("/installer/v{}/preflight/ssh_key".format(version), methods=['POST'])
+    def preflight_ssh_key():
+        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
+        log.info("Adding SSH key")
+        save_file(
+            request.form['ssh_key'],
+            ssh_key_path)
+
+    # TODO Move hosts down here too
 
     # Deploy
     @app.route("/installer/v{}/deploy/".format(version))
@@ -260,16 +267,20 @@ def validate_key_exists(path, key):
     """
     Validate that a key has a value in a config file.
     """
+    log.debug("Testing %s", key)
     test_me = get_config(path)
-    if key in test_me.keys() and test_me[key] != '':
-        log.debug("%s exists in %s", key, path)
-        return "success", '{} exists in {}'.format(key,path)
-    elif test_me[key] == '':
-        log.debug("%s exists but is empty", key)
-        return "warning", '{} existt but is empty'.format(key)
-    else:
+    try:
+        if test_me[key] and test_me[key] != '':
+            log.debug("%s exists in %s", key, path)
+            return "success", '{} exists in {}'.format(key,path)
+        elif test_me[key] == '':
+            log.debug("%s exists but is empty", key)
+            return "warning", '{} existt but is empty'.format(key)
+    
+    except:
         log.debug("%s not found in %s", key, path)
         return "danger", '{} not found in {}'.format(key, path)
+
 
 
 def validate_hosts(path):

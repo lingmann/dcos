@@ -47,7 +47,7 @@
         <strong>{{ validate_ssh_level }}!</strong> {{ validate_ssh_message }}
       </div>
       <h4 class="list-group-item-heading">Upload Private SSH Key</h4>
-      <form method="POST" action="/installer/v1.0/preflight/">
+      <form method="POST" action="/installer/v1.0/preflight/ssh_key/">
         <div class="input-group">
           <input name="ssh_key" type="text" class="form-control" placeholder="-----BEGIN RSA PRIVATE KEY-----..." aria-describedby="basic-addon1">
         </div>

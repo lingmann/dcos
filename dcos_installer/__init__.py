@@ -32,11 +32,18 @@ class DcosInstaller:
 
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
-            '-p', 
-            '--port',
-            type=int,
-            default=9000,
-            help='Web server port number.')
+            '-c',
+            '--config-path',
+            type=str,
+            default='{}/dcos_config.yaml'.format(installdir),
+            help='The path to dcos_config.yaml.')
+
+        parser.add_argument(
+            '-d',
+            '--install-directory',
+            type=str,
+            default=installdir,
+            help='The install directory for the DCOS installer.')
 
         parser.add_argument(
             '-l',
@@ -55,18 +62,12 @@ class DcosInstaller:
             help='Installation mode.')
 
         parser.add_argument(
-            '-c',
-            '--config-path',
-            type=str,
-            default='{}/dcos_config.yaml'.format(installdir),
-            help='The path to dcos_config.yaml.')
+            '-p', 
+            '--port',
+            type=int,
+            default=9000,
+            help='Web server port number.')
 
-        parser.add_argument(
-            '-d',
-            '--install-directory',
-            type=str,
-            default=installdir,
-            help='The install directory for the DCOS installer.')
 
         options = parser.parse_args()
         return options

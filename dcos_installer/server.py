@@ -27,7 +27,7 @@ def run(options):
     if options.log_level == 'debug':
         app.debug = True
 
-    app.run()
+    app.run(port=options.port)
 
 
 def do_routes(app, options):

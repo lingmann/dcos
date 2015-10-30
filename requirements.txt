@@ -1,5 +1,5 @@
 #DcosInstaller
-Fabric
 Flask
+Paramiko
 
 

@@ -3,6 +3,7 @@ from flask import Flask, request, render_template, url_for, redirect
 import logging as log
 import os
 import yaml
+import time
 #import unicodedata
 
 """
@@ -138,13 +139,34 @@ def do_routes(app, options):
 
 
     # Preflight helpers
+    def stream_template(template_name, **context):
+        """
+        Stream function to help us buffer template data to the console 
+        since each time yield is called the entire context is refreshed.
+        """
+        app.update_template_context(context)
+        t = app.jinja_env.get_template(template_name)
+        rv = t.stream(context)
+        rv.enable_buffering(5)
+        return rv
+
+
     @app.route('/installer/v{}/preflight/check/'.format(version), methods=['POST'])
     def preflight_check():
+        """
+        Execute the preflight checks and stream the SSH output back to the 
+        web interface.
+        """
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
+        #preflight_path = '{}/preflight_check.output'.format(options.install_directory)
+
         log.debug("Kicking off preflight check...")
         from . import preflight
-        preflight.check(options, hosts_path)
-        return redirect(redirect_url())
+        output = preflight.check(options, hosts_path)
+        
+        return stream_template(
+            'preflight.html',
+            preflight_data=output)
 
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

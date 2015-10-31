@@ -44,6 +44,7 @@ def upload(output_path, key_path, host, username):
         sftp.put('preflight.sh', '/home/vagrant/preflight.sh')
         sftp.close()
         transport.close()
+
     except:
         log.error("Problem uploading preflight script.")
         log.error(sys.exc_info()[0])
@@ -71,6 +72,7 @@ def execute_check(output_path, key_path, host, username):
         log.info('Executing {}'.format(preflight_cmd))
         stdin , stdout, stderr = ssh.exec_command(install_cmd)
         
+        yield stdout, stderr
         response = {
             "host": {
                 "stdin": stdin,

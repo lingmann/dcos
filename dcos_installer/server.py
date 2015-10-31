@@ -141,11 +141,9 @@ def do_routes(app, options):
 
     # Preflight helpers
     def stream_template(template_name, **context):
-        # http://flask.pocoo.org/docs/patterns/streaming/#streaming-from-templates
         app.update_template_context(context)
         t = app.jinja_env.get_template(template_name)
         rv = t.stream(context)
-        # uncomment if you don't need immediate reaction
         ##rv.enable_buffering(5)
         return rv
 
@@ -165,7 +163,23 @@ def do_routes(app, options):
         ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
         
         def generate():
-            total_hosts = len(hosts['master']) + len(hosts['slave_public']) + len(hosts['slave_private'])
+            """
+            Check for what keys exist in the hosts.yaml, and assume that master key must be present.
+            Once total_hosts is resolved, start a counter to figure out the host number complete, 
+            divide that by total hosts on each iteration of the loop and yield that and the host
+            name to the web console on each loop. This will increment the counter (hopefully).
+            """
+            if 'slave_public' in hosts and 'slave_private' in hosts:
+                total_hosts = len(hosts['master']) + len(hosts['slave_public']) + len(hosts['slave_private'])
+            elif 'slave_public' in hosts:
+                total_hosts = len(hosts['master']) + len(hosts['slave_public'])
+
+            elif 'slave_private' in hosts:
+                total_hosts = len(hosts['master']) + len(hosts['slave_private'])
+
+            else:
+                total_hosts = len(hosts['master']) 
+
             hosts_done = 0
             for role, host_list in hosts.iteritems():
                 log.debug("Host list: %s, Role: %s", host_list, role)

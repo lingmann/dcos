@@ -1,4 +1,5 @@
 from copy import deepcopy
+import paramiko
 from flask import Flask, request, render_template, url_for, redirect, Response
 import logging as log
 import os
@@ -154,6 +155,7 @@ def do_routes(app, options):
         """
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
+        """
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         #preflight_path = '{}/preflight_check.output'.format(options.install_directory)
 
@@ -171,19 +173,19 @@ def do_routes(app, options):
                 for host in host_list.split(','):
                     # Upload the preflight script
                     preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
+                    #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
+                    log_output = open('preflight.log', 'r').read()
+                    log.info("GOT: %s", log_output)
+                    yield log_output
 
-                    # Execute installation
-                    yield preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
-        
-        return Response(generate(), mimetype='text/csv')
+        return Response(stream_template('preflight_check.html', data=generate()))
         """
-            def g():
-                for i, c in enumerate("hello"*10):
-                    time.sleep(.1)  # an artificial delay
-                    yield i, c
-            return Response(stream_template('preflight_check.html', data=g()))
-
-
+        def g():
+            for i, c in enumerate("hello"*10):
+                time.sleep(.1)  # an artificial delay
+                yield i, c
+        """
+             
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():

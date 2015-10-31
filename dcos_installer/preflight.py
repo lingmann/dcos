@@ -3,6 +3,7 @@ import paramiko
 import sys
 import yaml
 
+
 def check(options, hosts_path):
     """
     Open the hosts file and execute the preflight checks
@@ -20,18 +21,21 @@ def check(options, hosts_path):
             upload(preflight_output_path, ssh_key_path, host, ssh_user)
 
             # Execute installation
-            execute_check(preflight_output_path, ssh_key_path, host, ssh_user)
+            return execute_check(preflight_output_path, ssh_key_path, host, ssh_user)
 
 
 def upload(output_path, key_path, host, username):
     """
     Upload the preflight script to the host via paramiko SSH API.
     """
+    import logging as log
+    log.basicConfig(filename='preflight.log', filemode='w', level=log.DEBUG)
+
     log.info("Attempting to transfer preflight.sh...")
     log.info("Key path %s", key_path)
     log.info("Hostname: %s", host)
     log.info("Username: %s", username)
-    
+    paramiko.util.log_to_file('preflight.log')
     # Create a new SFTP object
     transport = paramiko.Transport(host, 22)
     # Get the key 
@@ -59,6 +63,7 @@ def execute_check(output_path, key_path, host, username):
     preflight_cmd = '/bin/bash $HOME/preflight.sh'.format(username)
     ssh = paramiko.SSHClient()
     key = paramiko.RSAKey.from_private_key_file(key_path)
+    paramiko.util.log_to_file('test.log')
     ssh.set_missing_host_key_policy(
         paramiko.AutoAddPolicy())
     # Execute command via SSH
@@ -70,21 +75,20 @@ def execute_check(output_path, key_path, host, username):
             pkey=key)
 
         log.info('Executing {}'.format(preflight_cmd))
-        stdin , stdout, stderr = ssh.exec_command(install_cmd)
+        stdin, stdout, stderr = ssh.exec_command(preflight_cmd)
         
         yield stdout, stderr
-        response = {
-            "host": {
-                "stdin": stdin,
-                "stdout": stdout,
-                "stderr": stderr
-            }
-        }
-        dump_response(output_path, response)
+#        response = {
+#            "host": {
+#                "stdin": stdin,
+#                "stdout": stdout,
+#                "stderr": stderr
+#            }
+#        }
+#        dump_response(output_path, response)
     except:
         log.error("Connection issue with %s", host)
-        log.error(sys.exc_info()[0])
-        pass
+        yield "An error occured", log.error(sys.exc_info()[0])
 
 
 def dump_response(path, response):

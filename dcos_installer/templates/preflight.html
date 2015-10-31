@@ -45,6 +45,9 @@
         </div>
       </div>
       {% endif %} 
+      {% if preflight_data %}
+      <p>{{ preflight_data }}</p>
+      {% endif %}
       <div class="alert alert-{{ validate_ssh_level }} alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
         <strong>{{ validate_ssh_level }}!</strong> {{ validate_ssh_message }}

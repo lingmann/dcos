@@ -1,5 +1,5 @@
 from copy import deepcopy
-from flask import Flask, request, render_template, url_for, redirect
+from flask import Flask, request, render_template, url_for, redirect, Response
 import logging as log
 import os
 import yaml
@@ -140,33 +140,49 @@ def do_routes(app, options):
 
     # Preflight helpers
     def stream_template(template_name, **context):
-        """
-        Stream function to help us buffer template data to the console 
-        since each time yield is called the entire context is refreshed.
-        """
+        # http://flask.pocoo.org/docs/patterns/streaming/#streaming-from-templates
         app.update_template_context(context)
         t = app.jinja_env.get_template(template_name)
         rv = t.stream(context)
-        rv.enable_buffering(5)
+        # uncomment if you don't need immediate reaction
+        ##rv.enable_buffering(5)
         return rv
 
 
-    @app.route('/installer/v{}/preflight/check/'.format(version), methods=['POST'])
+    @app.route('/installer/v{}/preflight/check/'.format(version), methods=['GET','POST'])
     def preflight_check():
         """
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
-        """
         hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         #preflight_path = '{}/preflight_check.output'.format(options.install_directory)
 
         log.debug("Kicking off preflight check...")
         from . import preflight
-        output = preflight.check(options, hosts_path)
+        # Execute the preflight which will return a generator to stream back to the web 
+        # console.
+        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
+        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
+        hosts = yaml.load(open(hosts_path, 'r'))
+        ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
+        def generate():
+           for role, host_list in hosts.iteritems():
+                log.debug("Host list: %s, Role: %s", host_list, role)
+                for host in host_list.split(','):
+                    # Upload the preflight script
+                    preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
+
+                    # Execute installation
+                    yield preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
         
-        return stream_template(
-            'preflight.html',
-            preflight_data=output)
+        return Response(generate(), mimetype='text/csv')
+        """
+            def g():
+                for i, c in enumerate("hello"*10):
+                    time.sleep(.1)  # an artificial delay
+                    yield i, c
+            return Response(stream_template('preflight_check.html', data=g()))
+
 
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

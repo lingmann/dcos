@@ -33,6 +33,10 @@ def test_url_extract_zip(tmpdir):
     package("resources/url_extract-zip", "url_extract-zip", tmpdir)
 
 
+def test_single_source_with_extra(tmpdir):
+    package("resources/single_source_extra", "single_source_extra", tmpdir)
+
+
 def test_no_buildinfo(tmpdir):
     package("resources/no_buildinfo", "no_buildinfo", tmpdir)
 
@@ -86,6 +90,7 @@ def test_bootstrap(tmpdir):
             './active/url_extract-tar',
             './active/url_extract-zip',
             './active/single_source',
+            './active/single_source_extra',
             './active/no_buildinfo',
             './bin/',
             './bin/mesos-master',
@@ -110,6 +115,7 @@ def test_bootstrap(tmpdir):
             'url_extract-zip': set(['pkginfo.json', 'buildinfo.full.json']),
             'url_extract-tar': set(['pkginfo.json', 'buildinfo.full.json']),
             'single_source': set(['pkginfo.json', 'buildinfo.full.json']),
+            'single_source_extra': {'pkginfo.json', 'buildinfo.full.json'},
             'base': set([
                 'base',
                 'bin/',

@@ -490,6 +490,20 @@ def build(variant, name, repository_url):
     build_ids['build'] = sha1("build")
     build_ids['pkgpanda_version'] = pkgpanda.build.constants.version
 
+    # Add the "extra" folder inside the package as an additional source if it
+    # exists
+    if os.path.exists('extra'):
+        extra_id = check_output([
+            "/bin/bash",
+            "-o", "nounset",
+            "-o", "pipefail",
+            "-o", "errexit",
+            "-c",
+            "find extra -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | cut -d ' ' -f 1"
+            ]).decode('ascii').strip()
+        build_ids['extra_source'] = extra_id
+        buildinfo['extra_source'] = extra_id
+
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
     cmd.container = docker_name
@@ -727,6 +741,10 @@ def build(variant, name, repository_url):
         abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"
     })
+
+    if os.path.exists("extra"):
+        cmd.volumes[abspath("extra")] = "/pkg/extra:ro"
+
     cmd.environment = {
         "PKG_VERSION": version,
         "PKG_NAME": name,

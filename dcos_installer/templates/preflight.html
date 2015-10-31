@@ -46,7 +46,11 @@
       </div>
       {% endif %} 
       {% if preflight_data %}
-      <p>{{ preflight_data }}</p>
+      <div class="progress">
+        <div class="progress-bar" role="progressbar" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
+          {{ percent }}% Current Host: {{ host }}
+        </div>
+      </div>
       {% endif %}
       <div class="alert alert-{{ validate_ssh_level }} alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
@@ -85,36 +89,33 @@
       <h4 class="list-group-item-heading">Configure the hosts.yaml for SSH Deploy</h4>
       <form method="POST" action="/installer/v1.0/preflight/">
         <div class="input-group">
-          <span class="input-group-addon" id="basic-addon1">Masters</span>
-          {% if isset['masters'] %}
-          <p class="list-group-item disabled">{{ isset['masters'] }}</p>
+          <span class="input-group-addon" id="basic-addon1">master</span>
+          {% if isset['master'] %}
+          <p class="list-group-item disabled">{{ isset['master'] }}</p>
           {% else %}
-          <input name="masters" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          <input name="master" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
           {% endif %}
         </div>
         <br>
         <div class="input-group">
           <span class="input-group-addon" id="basic-addon1">Public Slaves</span>
-          {% if isset['slaves_public'] %}
-          <p class="list-group-item disabled">{{ isset['slaves_public'] }}</p>
+          {% if isset['slave_public'] %}
+          <p class="list-group-item disabled">{{ isset['slave_public'] }}</p>
           {% else %}
-          <input name="slaves_public" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          <input name="slave_public" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
           {% endif %}
         </div>
         <br>
         <div class="input-group">
           <span class="input-group-addon" id="basic-addon1">Private Slaves</span>
-          {% if isset['slaves_private'] %}
-          <p class="list-group-item disabled">{{ isset['slaves_private'] }}</p>
+          {% if isset['slave_private'] %}
+          <p class="list-group-item disabled">{{ isset['slave_private'] }}</p>
           {% else %}
-          <input name="slaves_private" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
+          <input name="slave_private" type="text" class="form-control" placeholder="10.0.0.1,10.0.0.2" aria-describedby="basic-addon1">
           {% endif %}
         </div>
         <br>
         <input class="submit" type="submit" value='Submit'>
       </form>
-      {% if preflight_response %}
-      {{ preflight_response }}
-      {% endif %}
   </body>
 </html>

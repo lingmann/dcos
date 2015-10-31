@@ -156,35 +156,28 @@ def do_routes(app, options):
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
         """
-        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
-        #preflight_path = '{}/preflight_check.output'.format(options.install_directory)
-
         log.debug("Kicking off preflight check...")
         from . import preflight
-        # Execute the preflight which will return a generator to stream back to the web 
-        # console.
+        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
         preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
         ssh_key_path = '{}/ssh_key'.format(options.install_directory)
         hosts = yaml.load(open(hosts_path, 'r'))
         ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
+        
         def generate():
-           for role, host_list in hosts.iteritems():
+            total_hosts = len(hosts['master']) + len(hosts['slave_public']) + len(hosts['slave_private'])
+            hosts_done = 0
+            for role, host_list in hosts.iteritems():
                 log.debug("Host list: %s, Role: %s", host_list, role)
                 for host in host_list.split(','):
                     # Upload the preflight script
                     preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
                     #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
-                    log_output = open('preflight.log', 'r').read()
-                    log.info("GOT: %s", log_output)
-                    yield log_output
+                    hosts_done += 1
+                    percent = (hosts_done / total_hosts) * 100 
+                    yield percent, host 
 
-        return Response(stream_template('preflight_check.html', data=generate()))
-        """
-        def g():
-            for i, c in enumerate("hello"*10):
-                time.sleep(.1)  # an artificial delay
-                yield i, c
-        """
+        return Response(stream_template('preflight_check.html', preflight_data=generate()))
              
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
@@ -349,7 +342,7 @@ def validate_hosts(path):
         return 'danger', 'hosts.yaml does not exist: {}'.format(path)
 
     
-    for key in ['masters', 'slaves_public', 'slaves_private']:    
+    for key in ['master', 'slave_public', 'slave_private']:    
         validation, message = validate_key_exists(path, key)
         # Catch dangers first
         if validation == 'danger':

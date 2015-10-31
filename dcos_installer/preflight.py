@@ -35,7 +35,6 @@ def upload(output_path, key_path, host, username):
     log.info("Key path %s", key_path)
     log.info("Hostname: %s", host)
     log.info("Username: %s", username)
-    paramiko.util.log_to_file('preflight.log')
     # Create a new SFTP object
     transport = paramiko.Transport(host, 22)
     # Get the key 

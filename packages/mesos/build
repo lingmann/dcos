@@ -37,64 +37,15 @@ cp /usr/lib/x86_64-linux-gnu/libsvn_subr-1.so.1 "$libdir"
 cp /usr/lib/x86_64-linux-gnu/libapr-1.so.0 "$libdir"
 cp /usr/lib/x86_64-linux-gnu/libaprutil-1.so.0 "$libdir"
 
+export PKG_PATH=$PKG_PATH
 systemd_master="$PKG_PATH"/dcos.target.wants_master/dcos-mesos-master.service
 mkdir -p "$(dirname "$systemd_master")"
-cat <<EOF > "$systemd_master"
-[Unit]
-Description=Mesos Master
-[Service]
-Restart=always
-StartLimitInterval=0
-RestartSec=15
-LimitNOFILE=infinity
-EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/mesos-master
-EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
-EnvironmentFile=/opt/mesosphere/etc/cloudenv
-ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py \$ZOOKEEPER_CLUSTER_SIZE
-ExecStart=$PKG_PATH/sbin/mesos-master
-EOF
+envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-master.service > "$systemd_master"
 
 systemd_slave="$PKG_PATH"/dcos.target.wants_slave/dcos-mesos-slave.service
 mkdir -p "$(dirname "$systemd_slave")"
-cat <<EOF > "$systemd_slave"
-[Unit]
-Description=Mesos Slave
-[Service]
-Restart=always
-StartLimitInterval=0
-RestartSec=5
-KillMode=control-group
-Delegate=true
-LimitNOFILE=infinity
-EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
-EnvironmentFile=/opt/mesosphere/etc/mesos-slave
-EnvironmentFile=-/var/lib/dcos/mesos-slave-common
-ExecStartPre=/bin/ping -c1 leader.mesos
-ExecStart=$PKG_PATH/sbin/mesos-slave
-EOF
+envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-slave.service > "$systemd_slave"
 
 systemd_slave_public="$PKG_PATH"/dcos.target.wants_slave_public/dcos-mesos-slave-public.service
 mkdir -p "$(dirname "$systemd_slave_public")"
-cat <<EOF > "$systemd_slave_public"
-[Unit]
-Description=Mesos Slave Public
-[Service]
-Restart=always
-StartLimitInterval=0
-RestartSec=5
-KillMode=control-group
-Delegate=true
-LimitNOFILE=infinity
-EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
-EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
-EnvironmentFile=-/var/lib/dcos/mesos-slave-common
-ExecStartPre=/bin/ping -c1 leader.mesos
-ExecStart=$PKG_PATH/sbin/mesos-slave
-EOF
-
-
-
-echo "Finished building Mesos"
+envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-slave-public.service > "$systemd_slave_public"

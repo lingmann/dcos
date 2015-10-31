@@ -1,3 +1,2 @@
 #!/bin/bash
-cd "/pkg/src/dcos-diagnostics"
-cp -r bin "$PKG_PATH"
+cp -r /pkg/extra/bin "$PKG_PATH"

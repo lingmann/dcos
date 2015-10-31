@@ -32,5 +32,6 @@ RUN apt-get -qq update && apt-get -y install \
   libnl-3-dev \
   libnl-genl-3-dev \
   linux-headers-3.19.0-21-generic \
-  pkg-config
+  pkg-config \
+  gettext-base
 RUN pip install awscli

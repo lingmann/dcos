@@ -188,12 +188,12 @@ def do_routes(app, options):
                     preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
                     #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
                     hosts_done += 1
-                    percent = 10 * float(hosts_done) / float(total_hosts) 
-                    yield percent 
+                    percent = 1000 * float(hosts_done) / float(total_hosts) 
+                    yield percent, host 
 
         return Response(stream_template(
             'preflight_check.html', 
-            percent=generate()))
+            data=generate()))
              
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

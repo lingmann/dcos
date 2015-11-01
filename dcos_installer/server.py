@@ -144,7 +144,7 @@ def do_routes(app, options):
         app.update_template_context(context)
         t = app.jinja_env.get_template(template_name)
         rv = t.stream(context)
-        ##rv.enable_buffering(5)
+        rv.enable_buffering(5)
         return rv
 
 
@@ -188,10 +188,12 @@ def do_routes(app, options):
                     preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
                     #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
                     hosts_done += 1
-                    percent = 100 * float(hosts_done) / float(total_hosts) 
-                    yield percent, host 
+                    percent = 10 * float(hosts_done) / float(total_hosts) 
+                    yield percent 
 
-        return Response(stream_template('preflight_check.html', preflight_data=generate()))
+        return Response(stream_template(
+            'preflight_check.html', 
+            percent=generate()))
              
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

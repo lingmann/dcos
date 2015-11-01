@@ -36,17 +36,18 @@ def upload(output_path, key_path, host, username):
     log.info("Hostname: %s", host)
     log.info("Username: %s", username)
     # Create a new SFTP object
-    transport = paramiko.Transport(host, 22)
     # Get the key 
     key = paramiko.RSAKey.from_private_key_file(key_path)
     # Set the hostname missing policy so we don't need it in authorized_hosts
 
     try:
+        transport = paramiko.Transport(host, 22)
         transport.connect(username = username, pkey = key)
         sftp = paramiko.SFTPClient.from_transport(transport)
         sftp.put('preflight.sh', '/home/vagrant/preflight.sh')
         sftp.close()
         transport.close()
+        return
 
     except:
         log.error("Problem uploading preflight script.")

@@ -13,13 +13,11 @@ class DcosInstaller:
         site-based installation of DCOS.
         """
         options = self.parse_args()
-        
-                
         self.set_log_level(options)
         self.set_install_dir(options)
 
         if options.mode == 'web':
-            server.run(options,config)
+            server.run(options)
         else:
             log.error("Sorry, %s is not a usable run mode.", options.mode)
             sys.exit(1)
@@ -31,7 +29,10 @@ class DcosInstaller:
         # Get the user's homedir in a cross platfrom manner
         # Can set top level install dir as env var or accept default in $HOME
         homedir    = os.path.expanduser('~')
-        installdir = os.environ['DCOS_INSTALL_DIR'] or '{}/dcos-installer'.format(homedir)
+        if 'DCOS_INSTALL_DIR' in os.environ:
+            installdir = os.environ['DCOS_INSTALL_DIR']
+        else:
+            installdir = '{}/dcos-installer'.format(homedir)
         
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
@@ -54,7 +55,7 @@ class DcosInstaller:
 
         parser.add_argument(
             '--ssh-user-path',
-            type-str,
+            type=str,
             default='{}/ssh_user'.format(installdir),
             help='The path to ssh_user file containing the name of the user for SSH access. Required for preflight and deploy functionality.')
 

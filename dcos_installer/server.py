@@ -13,7 +13,7 @@ Global Variables
 userconfig = {}
 hostsconfig = {}
 
-def run(options, config):
+def run(options):
     """
     Define some routes and execute the Flask server. Currently
     pinning the routes with v1.0 to allow for seamless upgrades
@@ -68,7 +68,7 @@ def do_routes(app, options):
     @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
         config_level, config_message = validate(options.config_path)
-        ip_detect_level, ip_detect_message = validate_path('{}/ip-detect'.format(options.install_directory))
+        ip_detect_level, ip_detect_message = validate_path(options.ip_detect_path)
         return render_template(
             'configurator.html',
             config_level=config_level,
@@ -79,7 +79,7 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET', 'POST'])
     def ip_detect():
-        save_to_path = '{}/ip-detect'.format(options.install_directory)
+        save_to_path = options.ip_detect_path
         if request.method == 'POST':
             save_file(
                 request.form['ip_detect'], 
@@ -116,6 +116,8 @@ def do_routes(app, options):
         hosts_path = options.hosts_yaml_path
         ssh_key_path = options.ssh_key_path
         ssh_user_path = options.ssh_user_path
+        from . import ansible
+        ansible.setup(options)
 
         if request.method == 'POST':
             add_config(request, hostsconfig)

@@ -8,6 +8,7 @@ import logging as log
 import sys
 import yaml
 from jinja2 import Template
+from tempfile import NamedTemporaryFile
 
 
 def setup(options):
@@ -63,11 +64,28 @@ def uptime(options):
     inventory = get_inventory(options.hosts_yaml_path)
 
     for role, hosts in inventory.iteritems():
+        # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
+            # HACK ATTACK: inventory file must be present even if I pass a list of hosts, so....
+            inventory = """
+            [{{ role }}]
+            {% for host in hosts %}
+            {{ host }}
+            {% endfor %}
+            """
+            inventory_template = Template(inventory)
+            rendered_inventory = inventory_template.render(
+                role=role,
+                hosts=hosts)
+            
+            hosts = NamedTemporaryFile(delete=False)
+            hosts.write(rendered_inventory)
+            hosts.close()
+
             log.info("Executing preflight on %s role...", role)
             pb = PlayBook(
                 playbook=options.playbook_path,
-                host_list=hosts,     
+                host_list=hosts.name,     
                 remote_user=ssh_user,
                 callbacks=playbook_cb,
                 runner_callbacks=runner_cb,

@@ -3,6 +3,48 @@ import ansible.inventory
 import logging as log
 import sys
 import yaml
+from jinja2 import Template
+
+
+def setup(options):
+  """
+  Sets up the ansible configuration file and other basic things.
+  """
+  ssh_user = open(options.ssh_user_path, 'r').read()
+  ansible_cfg = Template("""
+[defaults]
+host_key_checking = False
+remote_user = {{ ssh_user }}
+private_key_file= {{ssh_key_path}}
+log_path = DCOS-ssh.log
+""")
+
+  with open(options.ansible_cfg_path, 'w') as f:
+      f.write(ansible_cfg.render(
+          ssh_user=ssh_user,
+          ssh_key_path=options.ssh_key_path
+      ))
+
+  log.info("Ansible configration at %s", options.ansible_cfg_path)
+  print(ansible_cfg.render(
+      ssh_user=ssh_user,
+      ssh_key_path=options.ssh_key_path
+  ))
+
+
+def create_playbook(options):
+    """
+    Creates the ansible playbook for our roles.
+    """
+    ansible_playbook = """
+- hosts: *
+  tasks:
+    - name: preflight
+      command: uptime
+"""
+    with open(options.ansible_playbook_path, 'w') as f:
+          f.write(ansible_playbook)
+
 
 def uptime(options):
     """
@@ -41,6 +83,5 @@ def uptime(options):
 def get_inventory(path):
     log.debug("Getting host inventory from %", path)
     hosts = yaml.load(open(path, 'r'))
-    log.debug("Hosts: %s", hosts)
     inventory = ansible.inventory.Inventory(hosts)
     return inventory

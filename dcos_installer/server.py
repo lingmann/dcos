@@ -113,11 +113,10 @@ def do_routes(app, options):
         execute the preflight.check library. If it doesn't, save hosts.yaml config. If
         the method is a GET, serve the template.
         """
-        from . import ansible
-
         if request.method == 'POST':
-            log.info("Everything looks good! Setting ansible.cfg.")
-            ansible.setup(options)
+            """ 
+            If request is a POST then we assume it's updating the hosts.yaml.
+            """
             add_config(request, hostsconfig)
             dump_config(options.hosts_yaml_path, hostsconfig)
             # TODO: basic host validation??
@@ -159,18 +158,15 @@ def do_routes(app, options):
         """
         log.debug("Kicking off preflight check...")
         from . import preflight
+        preflight.setup(options)
         preflight.uptime(options)
             
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():
         log.debug("Upload ssh_key POST")
-        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
-        ssh_user_path = '{}/ssh_user'.format(options.install_directory)
-        
-        #log.info("Adding SSH key")
-        #ssh_key = request.files['ssh_key']
-        #ssh_key.save(os.path.join(ssh_key_path, 'ssh_key'))
+        ssh_key_path = options.ssh_key_path
+        ssh_user_path = options.ssh_user_path
         
         log.info("Adding SSH user")
         save_file(

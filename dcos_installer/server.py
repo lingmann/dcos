@@ -13,7 +13,7 @@ Global Variables
 userconfig = {}
 hostsconfig = {}
 
-def run(options):
+def run(options, config):
     """
     Define some routes and execute the Flask server. Currently
     pinning the routes with v1.0 to allow for seamless upgrades

@@ -13,10 +13,13 @@ class DcosInstaller:
         site-based installation of DCOS.
         """
         options = self.parse_args()
+        
+                
         self.set_log_level(options)
         self.set_install_dir(options)
+
         if options.mode == 'web':
-            server.run(options)
+            server.run(options,config)
         else:
             log.error("Sorry, %s is not a usable run mode.", options.mode)
             sys.exit(1)
@@ -26,10 +29,41 @@ class DcosInstaller:
         Parse CLI arguments and return a map of options.
         """
         # Get the user's homedir in a cross platfrom manner
+        # Can set top level install dir as env var or accept default in $HOME
         homedir    = os.path.expanduser('~')
-        installdir = '{}/dcos-installer'.format(homedir)
-
+        installdir = os.environ['DCOS_INSTALL_DIR'] or '{}/dcos-installer'.format(homedir)
+        
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
+        parser.add_argument(
+            '--ansible-cfg-path',
+            type=str,
+            default='{}/ansible.cfg'.format(installdir),
+            help='The path to ansible.cfg.')
+
+        parser.add_argument(
+            '--ssh-key-path',
+            type=str,
+            default='{}/ssh_key'.format(installdir),
+            help='The path to the private ssh key for preflight and deploy functionality.')
+
+        parser.add_argument(
+            '--hosts-yaml-path',
+            type=str,
+            default='{}/hosts.yaml'.format(installdir),
+            help='The path to the hosts.yaml for preflight and deploy functionlity.')
+
+        parser.add_argument(
+            '--ssh-user-path',
+            type-str,
+            default='{}/ssh_user'.format(installdir),
+            help='The path to ssh_user file containing the name of the user for SSH access. Required for preflight and deploy functionality.')
+
+        parser.add_argument(
+            '--ip-detect-path',
+            type=str,
+            default='{}/ip-detect'.format(installdir),
+            help='The path to the ip-detect script.')
+
         parser.add_argument(
             '-c',
             '--config-path',
@@ -85,14 +119,7 @@ class DcosInstaller:
 
         options = parser.parse_args()
 
-        # Set non-user defined options
-        options['ansbile_cfg_path'] = '{}/ansible.cfg'.format(options.install_directory)
-        options['ssh_key_path'] = '{}/ssh_key'.format(options.install_directory)
-        options['hosts_yaml_path'] = '{}/hosts.yaml'.format(options.install_directory)
-        options['ssh_user_path'] = '{}/ssh_user.yaml'.format(options.install_directory)
-        options['dcos_config_path'] = '{}/dcos_config.yaml'.format(options.install_directory)
-        options['ip_detect_path'] = '{}/ip-detect'.format(options.install_directory)
-
+        
         return options
 
     

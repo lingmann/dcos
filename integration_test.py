@@ -65,9 +65,10 @@ def test_if_Mesos_is_up(cluster):
     assert '<title>Mesos</title>' in r.text
 
 
-# FIXME: there is a problem with Mesos on agent4-1. Even though the leader was
-#        elected, slaves are not joining and the test is failing. Work is in
-#        progress with developers on debugging it.
+# FIXME: DCOS-3496
+# TLDR: there is a problem with Mesos on agent4-1. Even though the leader was
+# elected, slaves are not joining and the test is failing. Work is in progress
+# with developers on debugging it.
 # def test_if_all_Mesos_slaves_have_registered(cluster):
     # r = cluster.get('mesos/master/slaves')
     # data = r.json()

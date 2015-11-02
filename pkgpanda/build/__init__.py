@@ -106,8 +106,8 @@ def _check_components_sanity(path):
                               "component, unable to strip it.")
 
 
-def _strip_components_paths(path, components=0):
-    """Simulate tar's --strip-components behaviour using file operations
+def _strip_first_path_component(path):
+    """Simulate tar's --strip-components=1 behaviour using file operations
 
     Unarchivers like unzip do not support stripping component paths while
     inflating the archive. This function simulates this behaviour by moving
@@ -115,11 +115,7 @@ def _strip_components_paths(path, components=0):
 
     Args:
         path: path where extracted archive contents can be found
-        components: compontents to strip
     """
-    if components <= 0:
-        return
-
     _check_components_sanity(path)
 
     top_level_dir = os.path.join(path, os.listdir(path)[0])
@@ -142,7 +138,7 @@ def extract_archive(archive, dst_dir):
     elif archive_type == 'zip':
         check_call(["unzip", "-x", archive, "-d", dst_dir])
         # unzip binary does not support '--strip-components=1',
-        _strip_components_paths(dst_dir, components=1)
+        _strip_first_path_component(dst_dir)
     else:
         raise ValidationError("Unsupported archive: {}".format(os.path.basename(archive)))
 

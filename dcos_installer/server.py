@@ -156,44 +156,45 @@ def do_routes(app, options):
         """
         log.debug("Kicking off preflight check...")
         from . import preflight
-        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
-        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
-        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
-        hosts = yaml.load(open(hosts_path, 'r'))
-        ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
-        
-        def generate():
-            """
-            Check for what keys exist in the hosts.yaml, and assume that master key must be present.
-            Once total_hosts is resolved, start a counter to figure out the host number complete, 
-            divide that by total hosts on each iteration of the loop and yield that and the host
-            name to the web console on each loop. This will increment the counter (hopefully).
-            """
-            if 'slave_public' in hosts and 'slave_private' in hosts:
-                total_hosts = len(hosts['master']) + len(hosts['slave_public']) + len(hosts['slave_private'])
-            elif 'slave_public' in hosts:
-                total_hosts = len(hosts['master']) + len(hosts['slave_public'])
-
-            elif 'slave_private' in hosts:
-                total_hosts = len(hosts['master']) + len(hosts['slave_private'])
-
-            else:
-                total_hosts = len(hosts['master']) 
-
-            hosts_done = 0
-            for role, host_list in hosts.iteritems():
-                log.debug("Host list: %s, Role: %s", host_list, role)
-                for host in host_list.split(','):
-                    # Upload the preflight script
-                    preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
-                    #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
-                    hosts_done += 1
-                    percent = 1000 * float(hosts_done) / float(total_hosts) 
-                    yield percent, host 
-
-        return Response(stream_template(
-            'preflight_check.html', 
-            data=generate()))
+        preflight.uptime()
+#        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
+#        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
+#        ssh_key_path = '{}/ssh_key'.format(options.install_directory)
+#        hosts = yaml.load(open(hosts_path, 'r'))
+#        ssh_user = open('{}/ssh_user'.format(options.install_directory)).read()
+#        
+#        def generate():
+#            """
+#            Check for what keys exist in the hosts.yaml, and assume that master key must be present.
+#            Once total_hosts is resolved, start a counter to figure out the host number complete, 
+#            divide that by total hosts on each iteration of the loop and yield that and the host
+#            name to the web console on each loop. This will increment the counter (hopefully).
+#            """
+#            if 'slave_public' in hosts and 'slave_private' in hosts:
+#                total_hosts = len(hosts['master']) + len(hosts['slave_public']) + len(hosts['slave_private'])
+#            elif 'slave_public' in hosts:
+#                total_hosts = len(hosts['master']) + len(hosts['slave_public'])
+#
+#            elif 'slave_private' in hosts:
+#                total_hosts = len(hosts['master']) + len(hosts['slave_private'])
+#
+#            else:
+#                total_hosts = len(hosts['master']) 
+#
+#            hosts_done = 0
+#            for role, host_list in hosts.iteritems():
+#                log.debug("Host list: %s, Role: %s", host_list, role)
+#                for host in host_list.split(','):
+#                    # Upload the preflight script
+#                    preflight.upload(preflight_output_path, ssh_key_path, host, ssh_user)
+#                    #stdout, stderr = preflight.execute_check(preflight_output_path, ssh_key_path, host, ssh_user) 
+#                    hosts_done += 1
+#                    percent = 1000 * float(hosts_done) / float(total_hosts) 
+#                    yield percent, host 
+#
+#        return Response(stream_template(
+#            'preflight_check.html', 
+#            data=generate()))
              
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

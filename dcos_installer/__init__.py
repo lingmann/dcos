@@ -84,6 +84,15 @@ class DcosInstaller:
             help='Execute the preflight checks on a series of nodes. Assumes $INSTALL_DIR/hosts.yaml exists.')
 
         options = parser.parse_args()
+
+        # Set non-user defined options
+        options['ansbile_cfg_path'] = '{}/ansible.cfg'.format(options.install_directory)
+        options['ssh_key_path'] = '{}/ssh_key'.format(options.install_directory)
+        options['hosts_yaml_path'] = '{}/hosts.yaml'.format(options.install_directory)
+        options['ssh_user_path'] = '{}/ssh_user.yaml'.format(options.install_directory)
+        options['dcos_config_path'] = '{}/dcos_config.yaml'.format(options.install_directory)
+        options['ip_detect_path'] = '{}/ip-detect'.format(options.install_directory)
+
         return options
 
     

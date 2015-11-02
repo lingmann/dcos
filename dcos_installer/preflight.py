@@ -5,6 +5,10 @@ import sys
 import yaml
 
 def uptime(options):
+    """
+    A foo def for testing ansible.
+    """
+    # Our hosts.yaml path 
     inventory_path = '{}/hosts.yaml'.format(options.install_directory)
     # construct the ansible runner and execute on all hosts
     results = ansible.runner.Runner(

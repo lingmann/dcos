@@ -156,7 +156,7 @@ def do_routes(app, options):
         """
         log.debug("Kicking off preflight check...")
         from . import preflight
-        preflight.uptime()
+        preflight.uptime(options)
 #        hosts_path = '{}/hosts.yaml'.format(options.install_directory)
 #        preflight_output_path = '{}/preflight_check.output'.format(options.install_directory)
 #        ssh_key_path = '{}/ssh_key'.format(options.install_directory)

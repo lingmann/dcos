@@ -72,7 +72,7 @@ def test_if_Mesos_is_up(cluster):
 # def test_if_all_Mesos_slaves_have_registered(cluster):
     # r = cluster.get('mesos/master/slaves')
     # data = r.json()
-    # slaves_ips = sorted([x['hostname'] for x in data['slaves']])
+    # slaves_ips = sorted(x['hostname'] for x in data['slaves'])
 
     # assert r.status_code == 200
     # assert len(data['slaves']) == 2
@@ -94,7 +94,7 @@ def test_if_all_Mesos_masters_have_registered(cluster):
         tmp = zk.get("/mesos/" + znode)[0].decode('utf-8')
         masters.append(json.loads(tmp))
     zk.stop()
-    masters_ips = sorted([x['address']['ip'] for x in masters])
+    masters_ips = sorted(x['address']['ip'] for x in masters)
 
     assert len(masters) == 3
     assert masters_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
@@ -111,8 +111,8 @@ def test_if_Exhibitor_is_up(cluster):
 def test_if_ZooKeeper_cluster_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
     data = r.json()
-    serving_zks = sum([1 for x in data if x['code'] == 3])
-    zks_ips = sorted([x['hostname'] for x in data])
+    serving_zks = sum(1 for x in data if x['code'] == 3)
+    zks_ips = sorted(x['hostname'] for x in data)
 
     assert r.status_code == 200
     assert serving_zks == 3

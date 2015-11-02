@@ -113,21 +113,20 @@ def do_routes(app, options):
         execute the preflight.check library. If it doesn't, save hosts.yaml config. If
         the method is a GET, serve the template.
         """
-        hosts_path = options.hosts_yaml_path
-        ssh_key_path = options.ssh_key_path
-        ssh_user_path = options.ssh_user_path
         from . import ansible
-        ansible.setup(options)
 
         if request.method == 'POST':
+            log.info("Everything looks good! Setting ansible.cfg.")
+            ansible.setup(options)
             add_config(request, hostsconfig)
-            dump_config(hosts_path, hostsconfig)
+            dump_config(options.hosts_yaml_path, hostsconfig)
             # TODO: basic host validation??
 
         # Validate hosts file, ssh key file and ssh username file
-        validate_hosts_level, hosts_message = validate_hosts(hosts_path)
-        validate_ssh_level, validate_ssh_message = validate_path(ssh_key_path)
-        validate_user_level, validate_user_message = validate_path(ssh_user_path)
+        validate_hosts_level, hosts_message = validate_hosts(options.hosts_yaml_path)
+        validate_ssh_level, validate_ssh_message = validate_path(options.ssh_key_path)
+        validate_user_level, validate_user_message = validate_path(options.ssh_user_path)
+        validate_ansible_level, validate_ansible_message = validate_path(options.ansible_cfg_path)
 
         return render_template(
             'preflight.html',
@@ -137,7 +136,10 @@ def do_routes(app, options):
             validate_ssh_level=validate_ssh_level,
             validate_ssh_message=validate_ssh_message,
             validate_user_level=validate_user_level,
-            validate_user_message=validate_user_message)
+            validate_user_message=validate_user_message,
+            validate_ansible_level=validate_ansible_level,
+            validate_ansible_message=validate_ansible_message)
+
 
 
     # Preflight helpers

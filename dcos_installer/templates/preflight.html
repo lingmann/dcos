@@ -36,7 +36,7 @@
         </ul>
         </div>
       </nav>
-      {% if validate_hosts_level == 'success' and validate_ssh_level == 'success' %}
+      {% if validate_ansible_level == 'success' and validate_hosts_level == 'success' and validate_ssh_level == 'success' %}
       <div  class="panel panel-primary">
         <div class="panel-body">
             <form method='POST' action="/installer/v1.0/preflight/check/">
@@ -45,13 +45,11 @@
         </div>
       </div>
       {% endif %} 
-      {% if preflight_data %}
-      <div class="progress">
-        <div class="progress-bar" role="progressbar" aria-valuenow="{{ percent }}" aria-valuemin="0" aria-valuemax="100" style="width: 60%;">
-          {{ percent }}% Current Host: {{ host }}
-        </div>
+      <div class="alert alert-{{ validate_ansible_level }} alert-dismissible" role="alert">
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
+        <strong>{{ validate_ansible_level }}!</strong> {{ validate_ansible_message }}
       </div>
-      {% endif %}
+
       <div class="alert alert-{{ validate_ssh_level }} alert-dismissible" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
         <strong>{{ validate_ssh_level }}!</strong> {{ validate_ssh_message }}

@@ -470,7 +470,11 @@ def build(variant, name, repository_url):
 
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities.
-    checkout_ids = fetch_sources(sources)
+    try:
+        checkout_ids = fetch_sources(sources)
+    except ValidationError as ex:
+        print("ERROR: Validation error when fetching sources for package:", ex)
+        sys.exit(1)
 
     for src_name, checkout_id in checkout_ids.items():
         # NOTE: single_source buildinfo was expanded above so the src_name is
@@ -485,6 +489,20 @@ def build(variant, name, repository_url):
     build_ids = {"sources": checkout_ids}
     build_ids['build'] = sha1("build")
     build_ids['pkgpanda_version'] = pkgpanda.build.constants.version
+
+    # Add the "extra" folder inside the package as an additional source if it
+    # exists
+    if os.path.exists('extra'):
+        extra_id = check_output([
+            "/bin/bash",
+            "-o", "nounset",
+            "-o", "pipefail",
+            "-o", "errexit",
+            "-c",
+            "find extra -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | cut -d ' ' -f 1"
+            ]).decode('ascii').strip()
+        build_ids['extra_source'] = extra_id
+        buildinfo['extra_source'] = extra_id
 
     # Figure out the docker name.
     docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
@@ -723,6 +741,10 @@ def build(variant, name, repository_url):
         abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"
     })
+
+    if os.path.exists("extra"):
+        cmd.volumes[abspath("extra")] = "/pkg/extra:ro"
+
     cmd.environment = {
         "PKG_VERSION": version,
         "PKG_NAME": name,

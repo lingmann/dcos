@@ -281,6 +281,17 @@ def fetch_sources(sources):
                     raise ValidationError(
                         "ERROR: Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
 
+            # Ref must be a git sha-1. We then pass it through get_sha1 to make
+            # sure it is a sha-1 for the commit, not the tree, tag, or any other
+            # git object.
+            def is_sha(sha_str):
+                try:
+                    return int(sha_str, 16) and len(sha_str) == 40
+                except ValueError:
+                    return False
+
+            if not is_sha(ref):
+                raise ValidationError("ERROR: ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
             commit = get_sha1(ref)
 
             # Warn if the ref_origin is set and gives a different sha1 than the

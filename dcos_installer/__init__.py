@@ -36,7 +36,7 @@ class DcosInstaller:
         
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
-            '--ansible-playbook-path',
+            '--playbook-path',
             type=str,
             default='{}/playbook.yml'.format(installdir),
             help='The path to playbook.yml.')

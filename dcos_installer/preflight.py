@@ -1,5 +1,9 @@
 import ansible.runner
+from ansible.playbook import PlayBook
 import ansible.inventory 
+from ansible import callbacks
+from ansible import utils
+
 import logging as log
 import sys
 import yaml
@@ -37,12 +41,12 @@ def create_playbook(options):
     Creates the ansible playbook for our roles.
     """
     ansible_playbook = """
-- hosts: *
+- hosts: master 
   tasks:
     - name: preflight
       command: uptime
 """
-    with open(options.ansible_playbook_path, 'w') as f:
+    with open(options.playbook_path, 'w') as f:
           f.write(ansible_playbook)
 
 
@@ -50,38 +54,37 @@ def uptime(options):
     """
     A foo def for testing ansible.
     """
-    # Our hosts.yaml path 
-    inventory_path = '{}/hosts.yaml'.format(options.install_directory)
-    # construct the ansible runner and execute on all hosts
-    results = ansible.runner.Runner(
-        pattern='*',
-        forks=10,
-        module_name='command',
-        module_args='/usr/bin/uptime',
-        inventory=get_inventory(inventory_path)
-    ).run()
+    create_playbook(options)
+    utils.VERBOSITY = 0
+    playbook_cb = callbacks.PlaybookCallbacks(verbose=utils.VERBOSITY)
+    stats = callbacks.AggregateStats()
+    runner_cb = callbacks.PlaybookRunnerCallbacks(stats, verbose=utils.VERBOSITY)
+    ssh_user = open(options.ssh_user_path, 'r').read()
+    inventory = get_inventory(options.hosts_yaml_path)
 
-    if results is None:
-       print "No hosts found"
-       sys.exit(1)
+    for role, hosts in inventory.iteritems():
+        if len(hosts) > 0:
+            log.info("Executing preflight on %s role...", role)
+            pb = PlayBook(
+                playbook=options.playbook_path,
+                host_list=hosts,     
+                remote_user=ssh_user,
+                callbacks=playbook_cb,
+                runner_callbacks=runner_cb,
+                stats=stats,
+                private_key_file=options.ssh_key_path
+            )
+        else:
+            log.warn("%s is empty, skipping.", role)
 
-    print "UP ***********"
-    for (hostname, result) in results['contacted'].items():
-        if not 'failed' in result:
-            print "%s >>> %s" % (hostname, result['stdout'])
+    results = pb.run()
+    playbook_cb.on_stats(pb.stats)
 
-    print "FAILED *******"
-    for (hostname, result) in results['contacted'].items():
-        if 'failed' in result:
-            print "%s >>> %s" % (hostname, result['msg'])
-
-    print "DOWN *********"
-    for (hostname, result) in results['dark'].items():
-        print "%s >>> %s" % (hostname, result)
+    print results
 
 
 def get_inventory(path):
-    log.debug("Getting host inventory from %", path)
+    log.debug("Getting host inventory from %s", path)
     hosts = yaml.load(open(path, 'r'))
-    inventory = ansible.inventory.Inventory(hosts)
-    return inventory
+    #inventory = ansible.inventory.Inventory(hosts)
+    return hosts

@@ -1,13 +1,7 @@
-#import ansible.runner
-from ansible.playbook import PlayBook
-from ansible import callbacks, utils, runner, inventory
-
+from ansible import runner, inventory
 import logging as log
 import yaml
-import json
-from jinja2 import Template
-from tempfile import NamedTemporaryFile
-import pprint
+import os
 
 
 def check(options):
@@ -88,9 +82,14 @@ def get_inventory(path):
     return hosts
 
 def dump_host_results(options, results):
-    with open(options.preflight_results_path, 'rw') as preflight_file:
-        current_data = yaml.load(preflight_file.read)
-        
+    if os.path.exists(options.preflight_results_path): 
+        current_data = yaml.load(open(options.preflight_results_path)) 
+            
+        for status, data in current_data.iteritems():
+            for key, values in data.iteritems():
+                results[status][key] = values
+
+    with open(options.preflight_results_path, 'w') as preflight_file:
         preflight_file.write(yaml.dump(results, default_flow_style=False))
 
 

@@ -4,5 +4,5 @@ arguments = {
 
 defaults = {
     "resolvers": "[\"8.8.8.8\"]",
-    "ip_detect_filename": "scripts/vagrant/ip-detector.sh",
+    "ip_detect_filename": "scripts/ip-detect/vagrant.sh",
 }

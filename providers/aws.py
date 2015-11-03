@@ -65,13 +65,11 @@ late_services = """- name: dcos-cfn-signal.service
     Restart=on-failure
     StartLimitInterval=0
     RestartSec=15s
-    ExecStartPre=/usr/bin/docker pull mbabineau/cfn-bootstrap
+    EnvironmentFile=/opt/mesosphere/environment
+    EnvironmentFile=/opt/mesosphere/etc/cloudenv
+    Environment="AWS_CFN_SIGNAL_THIS_RESOURCE={{ report_name }}"
     ExecStartPre=/bin/ping -c1 leader.mesos
-    ExecStartPre=/usr/bin/docker run --rm mbabineau/cfn-bootstrap \\
-      cfn-signal -e 0 \\
-      --resource {{ report_name }} \\
-      --stack { "Ref": "AWS::StackName" } \\
-      --region { "Ref" : "AWS::Region" }
+    ExecStartPre=/opt/mesosphere/bin/cfn-signal
     ExecStart=/usr/bin/touch /var/lib/dcos-cfn-signal"""
 
 cf_instance_groups = {

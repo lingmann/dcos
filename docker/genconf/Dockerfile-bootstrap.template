@@ -1,5 +1,0 @@
-FROM mesosphere/dcos-genconf:$DOCKER_TAG
-MAINTAINER support+dcos@mesosphere.io
-
-RUN mkdir -p /artifacts
-COPY ${BOOTSTRAP_FILENAME} /artifacts/${BOOTSTRAP_FILENAME}

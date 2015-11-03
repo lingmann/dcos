@@ -375,7 +375,7 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
 
         # Make sure value is one of the allowed values
         if possible_values is not None and value not in possible_values:
-            log.error("Value not one of the possible values:", ','.join(possible_values))
+            log.error("Value not one of the possible values: %s", ','.join(possible_values))
             continue
 
         if value:
@@ -390,7 +390,7 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
 
 def prompt_arguments(non_interactive, to_set, defaults, can_calc):
     if non_interactive and len(to_set) > 0:
-        log.error("Unset variables in configuration:", ','.join(to_set))
+        log.error("Unset variables in configuration: %s", ','.join(to_set))
         sys.exit(1)
 
     arguments = dict()
@@ -631,8 +631,9 @@ def do_generate(
         if len(template_list) > 1:
             for template in template_list:
                 if not template.endswith('.yaml'):
-                    log.error("Only know how to merge YAML templates at this point in time. Can't merge template",
-                              name, template_list)
+                    log.error(
+                        "Only know how to merge YAML templates at this point in time. Can't" +
+                        " merge template %s in template_list %s", name, template_list)
                     sys.exit(1)
 
     # Inject extra_templates and parameters inside.
@@ -643,7 +644,7 @@ def do_generate(
     # prevent human typo errors.
     for argument in arguments:
         if argument not in parameters:
-            log.error("ERROR: Argument '", argument, "' given but not in parameters:", ', '.join(parameters))
+            log.error("ERROR: Argument '%s' given but not in parameters: %s", argument, ', '.join(parameters))
             sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.
@@ -719,7 +720,7 @@ def do_generate(
     # Save config parameters
     if options.save_final_config:
         write_json(options.save_final_config, arguments)
-        log.info("Fully expanded configuration saved to:", options.save_final_config)
+        log.info("Fully expanded configuration saved to: %s", options.save_final_config)
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)

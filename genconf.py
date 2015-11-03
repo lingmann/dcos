@@ -17,9 +17,8 @@ def do_genconf(options):
     """
     Wraps calls to the gen library and instanciates configuration for a given provider.
     """
-
     # Make sure to exit if --config is not passed when using non-interactive
-    if not options.is_interactive:
+    if not options.interactive:
         if not options.config:
             log.error("Must pass --config when using non-interactive mode.")
             sys.exit(1)
@@ -31,7 +30,7 @@ def do_genconf(options):
     gen_options.config = options.config
     gen_options.output_dir = options.output_dir
 
-    if options.is_interactive:
+    if options.interactive:
         gen_options.assume_defaults = False
         gen_options.non_interactive = False
     else:
@@ -52,7 +51,25 @@ def do_genconf(options):
 
 
 def do_provider(options, provider_module, mixins):
+    # We set the channel_name, bootstrap_id in env as to not expose it to users but still make it switchable
+    if 'CHANNEL_NAME' in os.environ:
+        channel_name = os.environ['CHANNEL_NAME']
+    else:
+        log.error("CHANNEL_NAME must be set in environment to run.")
+        sys.exit(1)
+
+    if 'BOOTSTRAP_ID' in os.environ:
+        bootstrap_id = os.environ['BOOTSTRAP_ID']
+    else:
+        log.error("BOOTSTRAP_ID must be set in environment to run.")
+        sys.exit(1)
+
     gen_out = gen.generate(
+        arguments={
+            'ip_detect_filename': '/genconf/ip-detect',
+            'channel_name': channel_name,
+            'bootstrap_id': bootstrap_id
+        },
         options=options,
         mixins=mixins,
         extra_cluster_packages=['onprem-config']
@@ -83,7 +100,9 @@ def fetch_bootstrap(channel_name, bootstrap_id):
         if os.path.exists(local_cache_filename):
             log.info("Copying bootstrap out of cache")
             try:
+                subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
                 subprocess.check_call(['cp', local_cache_filename, save_path])
+                return
             except (KeyboardInterrupt, CalledProcessError) as ex:
                 log.error("Copy failed or interrupted %s", ex.cmd)
                 cleanup_and_exit()
@@ -154,18 +173,19 @@ parameters that the input paramters were expanded to as DCOS configuration.
         help='Output directory for genconf')
 
     # Config file override
-    parser.add_argument('-c', '--config', type=str, help='Path to config.json')
+    parser.add_argument(
+        '-c',
+        '--config',
+        type=str,
+        help='Path to config.json')
 
-    # Setup subparsers
-    subparsers = parser.add_subparsers(title='commands')
-
-    # interactive subcommand
-    interactive = subparsers.add_parser('interactive')
-    interactive.set_defaults(is_interactive=True)
-
-    # non-interactive subcommand
-    non_interactive = subparsers.add_parser('non-interactive')
-    non_interactive.set_defaults(is_interactive=False)
+    # Set interactive mode
+    parser.add_argument(
+        '-i',
+        '--interactive',
+        action='store_true',
+        default=False,
+        help='Interactive configuration builder.')
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()
@@ -179,15 +199,7 @@ parameters that the input paramters were expanded to as DCOS configuration.
         log.error("Logging option not available: %s", options.log_level)
         sys.exit(1)
 
-    # Use an if rather than try/except since lots of things inside could throw
-    # an AttributeError.
-    if hasattr(options, 'is_interactive'):
-        do_genconf(options)
-        sys.exit(0)
-    else:
-        parser.print_help()
-        log.error("Must use a subcommand")
-        sys.exit(1)
+    do_genconf(options)
 
 
 if __name__ == '__main__':

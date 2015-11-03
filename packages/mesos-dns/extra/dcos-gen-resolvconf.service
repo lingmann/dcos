@@ -1,0 +1,11 @@
+[Unit]
+Description=Update systemd-resolved for mesos-dns
+[Service]
+Type=simple
+StandardOutput=journal
+StandardError=journal
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+EnvironmentFile=/opt/mesosphere/etc/dns_config
+EnvironmentFile=-/opt/mesosphere/etc/dns_config_master
+ExecStart=/opt/mesosphere/bin/gen_resolvconf.py /etc/resolv.conf

@@ -19,4 +19,10 @@ WORKDIR /dcos-image
 
 VOLUME ["/genconf"]
 
+RUN mkdir -p /artifacts
+COPY ${BOOTSTRAP_FILENAME} /artifacts/${BOOTSTRAP_FILENAME}
+
+ENV CHANNEL_NAME=${CHANNEL_NAME}
+ENV BOOTSTRAP_ID=${BOOTSTRAP_ID}
+
 ENTRYPOINT ["/dcos-image/genconf.py"]

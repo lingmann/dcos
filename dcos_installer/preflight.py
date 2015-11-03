@@ -19,9 +19,12 @@ def check(options):
     for role, hosts in hosts_blob.iteritems():
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
-            log.debug("Rendering inventory template for %s role with hosts %s", role, hosts)
+            log.debug("Rendering inventory %s role with hosts %s", role, hosts)
             host_list = []
-            host_list.append(hosts)
+            if type(hosts) is str:
+                host_list.append(hosts)
+            if type(hosts) is list:
+                host_list = hosts
     
             log.info("Executing preflight on %s role...", role)
             # Create an inventory object from the list of hosts in the current role
@@ -29,6 +32,7 @@ def check(options):
 
             # Execute a copy of the dcos_install.sh to the node
             copy_preflight = runner.Runner(
+                timeout=3,
                 module_name='copy',
                 module_args='src=install_dcos.sh dest=~/install_dcos.sh',
                 pattern='all',
@@ -40,6 +44,7 @@ def check(options):
             
             # Execute the script in --preflight-only mode
             execute_preflight = runner.Runner(
+                timeout=3,
                 module_name='command',
                 module_args='sudo /bin/bash ~/install_dcos.sh --preflight-only',
                 pattern='all',

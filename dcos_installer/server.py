@@ -158,7 +158,6 @@ def do_routes(app, options):
         """
         log.debug("Kicking off preflight check...")
         from . import preflight
-        preflight.setup(options)
         preflight.uptime(options)
             
 

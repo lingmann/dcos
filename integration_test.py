@@ -5,6 +5,7 @@ import os
 import pytest
 import requests
 import time
+import urllib.parse
 import uuid
 
 
@@ -53,6 +54,9 @@ def test_if_DCOS_UI_is_up(cluster):
     # Not sure if it's really needed, seems a bit of an overkill:
     soup = bs4.BeautifulSoup(r.text, "html.parser")
     for link in soup.find_all(['link', 'a'], href=True):
+        if urllib.parse.urlparse(link.attrs['href']).netloc:
+            # Relative URLs only, others are to complex to handle here
+            continue
         link_response = cluster.head(link.attrs['href'])
         assert link_response.status_code == 200
 

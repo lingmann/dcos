@@ -146,13 +146,14 @@ def do_routes(app, options):
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
         """
-        log.debug("Kicking off preflight check...")
-        from . import preflight
-        preflight.uptime(options)
+        if request.method == 'POST':
+            log.debug("Kicking off preflight check...")
+            from . import preflight
+            preflight.uptime(options)
+        
         preflight_data = yaml.load(open(options.preflight_results_path, 'r'))
-        for k, v in preflight_data.iteritems():
+        for k in preflight_data():
             print(k)
-            print(v)
 
         print("PREFLIGHT DATA", preflight_data)
         

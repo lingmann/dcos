@@ -178,9 +178,13 @@ def do_routes(app, options):
     # TODO Move hosts down here too
 
     # Deploy
-    @app.route('/installer/v{}/deploy/'.format(version))
+    @app.route('/installer/v{}/deploy/'.format(version), methods=['POST','GET'])
     def deploy():
-        return render_template('deploy.html')
+        if request.method == 'POST':
+            return redirect(redirect_url())
+
+        elif request.method == 'GET':
+            return render_template('deploy.html')
 
 
 def save_file(data, path):

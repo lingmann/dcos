@@ -151,9 +151,9 @@ def do_routes(app, options):
             from . import preflight
             preflight.uptime(options)
         
-        preflight_data = yaml.load(open(options.preflight_results_path, 'r'))
-        for k in preflight_data():
-            print(k)
+        preflight_data = yaml.load(open(options.preflight_results_path))
+        for k, v in preflight_data.iteritems():
+            print(k, v)
 
         print("PREFLIGHT DATA", preflight_data)
         

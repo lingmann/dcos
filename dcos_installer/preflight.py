@@ -108,11 +108,13 @@ def uptime(options):
     #runner_cb = LoggingRunnerCallbacks(stats, verbose=3)
 
     ssh_user = open(options.ssh_user_path, 'r').read()
-    inventory = get_inventory(options.hosts_yaml_path)
-    for role, hosts in inventory.iteritems():
+    hosts_blob = get_inventory(options.hosts_yaml_path)
+    for role, hosts in hosts_blob.iteritems():
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
             log.debug("Rendering inventory template for %s role with hosts %s", role, hosts)
+            host_list = []
+            host_list.append(hosts)
             # HACK ATTACK: inventory file must be present even if I pass a list of hosts, so....
             #inventory = """
             #[{{ role }}]
@@ -143,15 +145,19 @@ def uptime(options):
 #            results = pb.run()
 #            playbook_cb.on_stats(pb.stats)
 
+            print(hosts)
+            inventory_object = inventory.Inventory(host_list)
+
             runme = runner.Runner(
-                module_name='uptime',
-                module_args='',
-                pattern=hosts,
+                module_name='command',
+                module_args='/usr/bin/uptime',
+                pattern='all',
+                forks=10,
+                inventory=inventory_object,
                 remote_user=ssh_user,
                 private_key_file=options.ssh_key_path,
             )
             results = runme.run()
-            print(results)
         #    json.dumps(results, sort_keys=True, indent=4, separators=(',', ': '))
             dump_host_results(options, results)
 

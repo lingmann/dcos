@@ -36,6 +36,12 @@ class DcosInstaller:
         
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
+            '--preflight-results-path',
+            type=str,
+            default='{}/preflight-results.log'.format(installdir),
+            help='Path to the preflight-results.log.')
+
+        parser.add_argument(
             '--playbook-path',
             type=str,
             default='{}/playbook.yml'.format(installdir),

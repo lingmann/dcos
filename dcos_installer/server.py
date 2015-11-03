@@ -140,16 +140,6 @@ def do_routes(app, options):
             validate_ansible_message=validate_ansible_message)
 
 
-
-    # Preflight helpers
-    def stream_template(template_name, **context):
-        app.update_template_context(context)
-        t = app.jinja_env.get_template(template_name)
-        rv = t.stream(context)
-        rv.enable_buffering(5)
-        return rv
-
-
     @app.route('/installer/v{}/preflight/check/'.format(version), methods=['GET','POST'])
     def preflight_check():
         """
@@ -159,7 +149,17 @@ def do_routes(app, options):
         log.debug("Kicking off preflight check...")
         from . import preflight
         preflight.uptime(options)
-            
+        preflight_data = yaml.load(open(options.preflight_results_path, 'r'))
+        for k, v in preflight_data.iteritems():
+            print(k)
+            print(v)
+
+        print("PREFLIGHT DATA", preflight_data)
+        
+        return render_template(
+            'preflight_check.html',
+            preflight_data=preflight_data)
+   
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():

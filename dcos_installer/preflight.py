@@ -28,18 +28,35 @@ def uptime(options):
             print(hosts)
             inventory_object = inventory.Inventory(host_list)
 
-            runme = runner.Runner(
-                module_name='command',
-                module_args='/usr/bin/uptime',
+            copy_preflight = runner.Runner(
+                module_name='copy',
+                module_args='src=install_dcos.sh dest=~/install_dcos.sh',
                 pattern='all',
                 forks=10,
                 inventory=inventory_object,
                 remote_user=ssh_user,
                 private_key_file=options.ssh_key_path,
             )
-            results = runme.run()
-            results_ok = convert(results)
-            dump_host_results(options, results_ok)
+            
+            execute_preflight = runner.Runner(
+                module_name='command',
+                module_args='sudo /bin/bash ~/install_dcos.sh --preflight-only',
+                pattern='all',
+                forks=10,
+                inventory=inventory_object,
+                remote_user=ssh_user,
+                private_key_file=options.ssh_key_path,
+            )
+
+            # Execute a copy then preflight script
+            copy_results = copy_preflight.run()
+            execute_results = execute_preflight.run()
+            # Remove unicode text
+            copy_results = convert(copy_results)
+            dump_host_results(options, copy_results)
+            execute_results = convert(execute_results)
+            dump_host_results(options, execute_results)
+            
 
         else:
             log.warn("%s is empty, skipping.", role)

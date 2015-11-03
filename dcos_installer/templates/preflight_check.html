@@ -38,15 +38,46 @@
         </ul>
         </div>
       </nav>
-      {% for host, data in preflight_data.iteritems() %}
-        <div class="panel panel-default">
+      {% for status, data in preflight_data.iteritems() %}
+        {% if status == 'contacted' %}
+        <div class="panel panel-success">
           <div class="panel-heading">
-            <h3 class="panel-title">{{ host }}</h3>
+            <h3 class="panel-title">Success!</h3>
           </div>
+          {% for host, host_data in data.iteritems() %}
           <div class="panel-body">
-            {{ data }}
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h3 class="panel-title">{{ host }}</h3>
+              </div>
+              <div class="panel-body">
+                <pre>
+                {{ host_data['stdout'] }}
+                </pre>
+              </div>
+            </div>
           </div>
+          {% endfor %}
         </div>
+        {% elif status == 'dark' %}
+        <div class="panel panel-danger">
+          <div class="panel-heading">
+            <h3 class="panel-title">Dark Nodes</h3>
+          </div>
+          {% for host, host_data in data.iteritems() %}
+          <div class="panel-body">
+            <div class="panel panel-default">
+              <div class="panel-heading">
+                <h3 class="panel-title">{{ host }}</h3>
+              </div>
+              <div class="panel-body">
+                {{ host_data['stdout'] }}
+              </div>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
       {% endfor %}
   </body>
 </html>

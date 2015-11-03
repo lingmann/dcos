@@ -10,7 +10,7 @@ from tempfile import NamedTemporaryFile
 import pprint
 
 
-def uptime(options):
+def check(options):
     """
     A foo def for testing ansible.
     """
@@ -24,10 +24,10 @@ def uptime(options):
             host_list.append(hosts)
     
             log.info("Executing preflight on %s role...", role)
-   
-            print(hosts)
+            # Create an inventory object from the list of hosts in the current role
             inventory_object = inventory.Inventory(host_list)
 
+            # Execute a copy of the dcos_install.sh to the node
             copy_preflight = runner.Runner(
                 module_name='copy',
                 module_args='src=install_dcos.sh dest=~/install_dcos.sh',
@@ -38,6 +38,7 @@ def uptime(options):
                 private_key_file=options.ssh_key_path,
             )
             
+            # Execute the script in --preflight-only mode
             execute_preflight = runner.Runner(
                 module_name='command',
                 module_args='sudo /bin/bash ~/install_dcos.sh --preflight-only',
@@ -51,6 +52,7 @@ def uptime(options):
             # Execute a copy then preflight script
             copy_results = copy_preflight.run()
             execute_results = execute_preflight.run()
+            
             # Remove unicode text
             copy_results = convert(copy_results)
             dump_host_results(options, copy_results)

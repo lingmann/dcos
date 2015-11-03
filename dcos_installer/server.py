@@ -149,7 +149,7 @@ def do_routes(app, options):
         if request.method == 'POST':
             log.debug("Kicking off preflight check...")
             from . import preflight
-            preflight.uptime(options)
+            preflight.check(options)
         
         preflight_data = yaml.load(open(options.preflight_results_path))
         for k, v in preflight_data.iteritems():

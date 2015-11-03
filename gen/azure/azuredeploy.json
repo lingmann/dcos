@@ -868,12 +868,12 @@
     }
   ],
   "outputs": {
-    "masterFQDN0": {
-      "value": "[reference('masterPublicIP0').dnsSettings.fqdn]",
+    "DnsAddress": {
+      "value": "[reference('masterLBPublicIP0').dnsSettings.fqdn]",
       "type": "string"
     },
-    "slavePublicFQDN0": {
-      "value": "[reference('slavePublicIP0').dnsSettings.fqdn]",
+    "PublicSlaveDnsAddress": {
+      "value": "[reference('publicSlaveLBPublicIP0').dnsSettings.fqdn]",
       "type": "string"
     }
   }

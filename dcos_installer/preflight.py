@@ -38,20 +38,24 @@ def uptime(options):
                 private_key_file=options.ssh_key_path,
             )
             results = runme.run()
-            results_ok = results['contacted']
-            for ip, results in results_ok.iteritems():
-                for metric, result in results.iteritems():
-                    if result == str:
-                        print(metric, result)
-                        results_ok[ip][key.encode('ascii', 'ignore')] = value.encode('ascii', 'ignore')
-
-            
+            results_ok = convert(results)
             dump_host_results(options, results_ok)
 
         else:
             log.warn("%s is empty, skipping.", role)
 
-    
+def convert(input):
+    """ 
+    Converts a unicode dict to ascii for yaml dump
+    """
+    if isinstance(input, dict):
+        return {convert(key): convert(value) for key, value in input.iteritems()}
+    elif isinstance(input, list):
+        return [convert(element) for element in input]
+    elif isinstance(input, unicode):
+        return input.encode('utf-8')
+    else:
+        return input
 
 def get_inventory(path):
     log.debug("Getting host inventory from %s", path)

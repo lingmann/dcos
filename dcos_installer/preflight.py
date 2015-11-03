@@ -88,5 +88,10 @@ def get_inventory(path):
     return hosts
 
 def dump_host_results(options, results):
-    with open(options.preflight_results_path, 'a') as preflight_file:
+    with open(options.preflight_results_path, 'rw') as preflight_file:
+        current_data = yaml.load(preflight_file.read)
+        
         preflight_file.write(yaml.dump(results, default_flow_style=False))
+
+
+

@@ -42,7 +42,10 @@ def create_playbook(options):
     Creates the ansible playbook for our roles.
     """
     ansible_playbook = """
-- hosts: master 
+- hosts:
+    - master
+    - slave_public
+    - slave_private
   tasks:
     - name: preflight
       command: uptime
@@ -56,7 +59,7 @@ def uptime(options):
     A foo def for testing ansible.
     """
     create_playbook(options)
-    utils.VERBOSITY = 0
+    utils.VERBOSITY = 4 
     playbook_cb = callbacks.PlaybookCallbacks(verbose=utils.VERBOSITY)
     stats = callbacks.AggregateStats()
     runner_cb = callbacks.PlaybookRunnerCallbacks(stats, verbose=utils.VERBOSITY)
@@ -64,7 +67,6 @@ def uptime(options):
     inventory = get_inventory(options.hosts_yaml_path)
     print(inventory)
     for role, hosts in inventory.iteritems():
-        print(type(hosts))
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
             log.debug("Rendering inventory template for %s role with hosts %s", role, hosts)

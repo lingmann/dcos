@@ -37,22 +37,22 @@
         </ul>
         </div>
       </nav>
-      <div class="btn-group btn-group-justified" role="group" aria-label="...">
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-primary">SSH Deploy</button>
+      <div  class="panel panel-default">
+        <div class="panel-body">
+          <form method='POST' action="/installer/v1.0/preflight/deploy/ssh">
+            <input class="btn btn-info" type="submit" value='SSH Deploy'>
+          </form>
+          <br>
+          <form method='POST' action="/installer/v1.0/preflight/deploy/bootstrap-url">
+            <input class="btn btn-info" type="submit" value='Bootstrap URL'>
+          </form>
+          <br>
+          <form method='POST' action="/installer/v1.0/preflight/deploy/download">
+            <input class="btn btn-info" type="submit" value='Download bootstrap.tar.gz'>
+          </form>
+
         </div>
       </div>
-      <br>
-      <div class="btn-group btn-group-justified" role="group" aria-label="...">
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-primary">Create Bootstrap URL</button>
-        </div>
-      </div>
-      <br>
-      <div class="btn-group btn-group-justified" role="group" aria-label="...">
-        <div class="btn-group" role="group">
-          <button type="button" class="btn btn-primary">Download bootstrap.tar.gz</button>
-        </div>
-      </div>
+
   </body>
 </html>

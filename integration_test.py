@@ -126,7 +126,21 @@ def test_if_ZooKeeper_cluster_is_up(cluster):
     assert zks_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
 
 
-def test_DCOSHistoryService_is_up(cluster):
+def test_if_all_exhibitors_are_in_sync(cluster):
+    r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
+    assert r.status_code == 200
+
+    correct_data = sorted(r.json(), key=lambda k: k['hostname'])
+
+    for ex in ['172.17.10.101', '172.17.10.102', '172.17.10.103']:
+        resp = requests.get('http://{}:8181/exhibitor/v1/cluster/status'.format(ex))
+        assert resp.status_code == 200
+
+        tested_data = sorted(resp.json(), key=lambda k: k['hostname'])
+        assert correct_data == tested_data
+
+
+def test_if_DCOSHistoryService_is_up(cluster):
     r = cluster.get('dcos-history-service/ping')
 
     assert r.status_code == 200

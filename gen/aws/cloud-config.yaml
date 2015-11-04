@@ -34,3 +34,7 @@ write_files:
       MASTER_SOURCE=exhibitor
       EXHIBITOR_ADDRESS={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
       RESOLVERS={{ resolvers_str }}
+  - path: /etc/mesosphere/cluster-id
+    permissions: "0644"
+    content: |
+      { "Ref" : "AWS::StackId" }

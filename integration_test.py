@@ -106,20 +106,22 @@ def test_if_all_Mesos_masters_have_registered(cluster):
 
 def test_if_Exhibitor_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/list')
-    data = r.json()
-
     assert r.status_code == 200
+
+    data = r.json()
     assert data["port"] > 0
 
 
 def test_if_ZooKeeper_cluster_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
+    assert r.status_code == 200
+
     data = r.json()
     serving_zks = sum(1 for x in data if x['code'] == 3)
     zks_ips = sorted(x['hostname'] for x in data)
 
-    assert r.status_code == 200
     assert serving_zks == 3
+    assert zks_leaders == 1
     assert zks_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
 
 
@@ -140,17 +142,17 @@ def test_if_Marathon_UI_is_up(cluster):
 
 def test_if_Mesos_API_is_up(cluster):
     r = cluster.get('mesos_dns/v1/version')
-    data = r.json()
-
     assert r.status_code == 200
+
+    data = r.json()
     assert data["Service"] == 'Mesos-DNS'
 
 
 def test_if_PkgPanda_metadata_is_available(cluster):
     r = cluster.get('pkgpanda/active.buildinfo.full.json')
-    data = r.json()
-
     assert r.status_code == 200
+
+    data = r.json()
     assert 'mesos' in data
     assert len(data) > 5  # (prozlach) We can try to put minimal number of pacakages required
 

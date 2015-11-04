@@ -164,14 +164,20 @@ def do_routes(app, options):
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():
-        log.debug("Upload ssh_key POST")
         ssh_key_path = options.ssh_key_path
         ssh_user_path = options.ssh_user_path
-        
-        log.info("Adding SSH user")
-        save_file(
-            request.form['ssh_uesr'],
-            ssh_user_path)
+        print(request.files)
+        if 'ssh_user' in request.form: 
+            log.info("Adding SSH user")
+            save_file(
+                request.form['ssh_uesr'],
+                ssh_user_path)
+
+        if 'ssh_key' in request.files:
+            log.info("Adding SSH key")
+            save_file(
+                request.files['ssh_key'],
+                ssh_key_path)
         
         return redirect(redirect_url())
     
@@ -193,8 +199,9 @@ def save_file(data, path):
     """
     log.info("Saving script to %s", path)
     log.debug("Saving file data: %s", data)
+    print(str(data))
     with open(path, 'w') as f:
-        f.write(data)
+        f.write(str(data))
 
 
 def add_config(data, global_data):

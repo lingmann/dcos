@@ -54,12 +54,12 @@
         <button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidde  n="true">&times;</span></button>
         <strong>{{ validate_user_level }}!</strong> {{ validate_user_message }}
       </div>
-      <form method="POST" action="/installer/v1.0/preflight/ssh_key/">
+      <form method="POST" action="/installer/v1.0/preflight/ssh_key/" enctype="multipart/form-data">
         <div class="input-group">
           {% if validate_ssh_level == 'success' %}
           <input type="file" class="filestyle" data-disabled="true">
           {% else %}
-          <input type="file" class="filestyle" data-buttonName="btn-primary">
+          <input name="ssh_key" type="file" class="filestyle" data-buttonName="btn-primary">
           {% endif %}
         </div>
         <br>

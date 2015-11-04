@@ -19,17 +19,6 @@
       },
       "defaultValue": "0.0.0.0/0"
     },
-    "region": {
-      "type": "string",
-      "defaultValue": "West US",
-      "allowedValues": [
-        "East US",
-        "West US",
-        "West Europe",
-        "East Asia",
-        "Southeast Asia"
-      ]
-    },
     "numberOfMasters": {
       "type": "int",
       "metadata": {
@@ -49,7 +38,12 @@
         "Description": "Number of Private Slave nodes"
       },
       "defaultValue": 5,
-      "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
+      "allowedValues": [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40
+      ]
     },
     "numberOfPublicSlaves": {
       "type": "int",
@@ -57,15 +51,12 @@
         "Description": "Number of Public Slave nodes"
       },
       "defaultValue": 1,
-      "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
-    },
-    "vmsPerStorageAccount": {
-      "type": "int",
-      "metadata": {
-        "Description": "Number of VMs per Storage Account"
-      },
-      "defaultValue": 10,
-      "allowedValues": [ 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40 ]
+      "allowedValues": [
+        1, 2, 3, 4, 5, 6, 7, 8, 9, 10,
+        11, 12, 13, 14, 15, 16, 17, 18, 19, 20,
+        21, 22, 23, 24, 25, 26, 27, 28, 29, 30,
+        31, 32, 33, 34, 35, 36, 37, 38, 39, 40
+      ]
     }
   },
   "variables": {
@@ -87,12 +78,13 @@
     "addressPrefix": "10.0.0.0/16",
     "vmSize": "Standard_A5",
     "coreosVersion": "766.4.0",
-    "storageAccountsCount": "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),parameters('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), parameters('vmsPerStorageAccount')),1)))]",
+    "vmsPerStorageAccount": 10,
+    "storageAccountsCount": "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),variables('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),1)))]",
     "storageAccountType": "Standard_LRS",
     "storageAccountPrefix": [
-        "0","6","c","i","o","u","1","7","d","j","p","v",
-        "2","8","e","k","q","w","3","9","f","l","r","x",
-        "4","a","g","m","s","y","5","b","h","n","t","z"
+      "0","6","c","i","o","u","1","7","d","j","p","v",
+      "2","8","e","k","q","w","3","9","f","l","r","x",
+      "4","a","g","m","s","y","5","b","h","n","t","z"
     ],
     "storageAccountPrefixCount": "[length(variables('storageAccountPrefix'))]",
     "publicIPAddress0": "masterLBPublicIP0",
@@ -114,39 +106,53 @@
   },
   "resources": [
     {
-       "apiVersion": "2015-05-01-preview",
-       "location": "[parameters('region')]",
-       "name": "[variables('storageAccountName')]",
-       "properties": {
-          "accountType": "[variables('storageAccountType')]"
-       },
-       "type": "Microsoft.Storage/storageAccounts"
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('storageAccountName')]",
+      "location": "[resourceGroup().location]",
+      "properties": {
+        "accountType": "[variables('storageAccountType')]"
+      }
     },
     {
-      "apiVersion": "2015-05-01-preview",
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'))]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "vmLoopNode",
         "count": "[variables('storageAccountsCount')]"
       },
-      "location": "[parameters('region')]",
-      "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'))]",
       "properties": {
         "accountType": "[variables('storageAccountType')]"
-      },
-      "type": "Microsoft.Storage/storageAccounts"
+      }
     },
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/availabilitySets",
-      "name": "masters",
-      "location": "[parameters('region')]",
+      "name": "masterAS",
+      "location": "[resourceGroup().location]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "slavePublicAS",
+      "location": "[resourceGroup().location]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "slavePrivateAS",
+      "location": "[resourceGroup().location]",
       "properties": {}
     },
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('slavePublicSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -212,7 +218,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('slavePrivateSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -236,7 +242,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('masterSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -274,7 +280,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -298,14 +304,14 @@
       }
     },
     {
+      "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[concat('slavePublicIP', copyindex())]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "ipLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
       },
-      "location": "[parameters('region')]",
-      "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -317,7 +323,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat('slavePublicNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePublicNicLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
@@ -356,16 +362,20 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('slavePublic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePublicVMLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'slavePublicNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'slavePublicAS')]",
         "[concat('Microsoft.Storage/storageAccounts/',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')))]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'slavePublicAS')]"
+        },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
@@ -414,7 +424,7 @@
       "apiVersion": "2015-06-15",
       "type": "microsoft.network/networkInterfaces",
       "name": "[concat('slavePrivateNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePrivateNicloop",
         "count": "[parameters('numberOfPrivateSlaves')]"
@@ -444,16 +454,20 @@
       "apiversion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('slavePrivate', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePrivateVMLoop",
         "count": "[parameters('numberOfPrivateSlaves')]"
       },
       "dependsOn": [
         "[concat('microsoft.network/networkInterfaces/', 'slavePrivateNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'slavePrivateAS')]",
         "[concat('Microsoft.Storage/storageAccounts/',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')))]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'slavePrivateAS')]"
+        },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
@@ -499,14 +513,14 @@
       }
     },
     {
+      "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[concat('masterPublicIP', copyindex())]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "ipLoop",
         "count": "[parameters('numberOfMasters')]"
       },
-      "location": "[parameters('region')]",
-      "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -518,7 +532,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat('masterNodeNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterNicLoop",
         "count": "[parameters('numberOfMasters')]"
@@ -558,19 +572,19 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('master', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterVmLoop",
         "count": "[parameters('numberOfMasters')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
-        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'masterAS')]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masterAS')]"
         },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
@@ -620,7 +634,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddress0')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -632,7 +646,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddress1')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -644,7 +658,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('masterLBNicName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
@@ -679,7 +693,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('publicSlaveLBNicName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
@@ -714,7 +728,7 @@
       "apiVersion": "2015-05-01-preview",
       "name": "[variables('masterLoadBalancerName')]",
       "type": "Microsoft.Network/loadBalancers",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('masterLBNicName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddress0'))]",
@@ -757,7 +771,7 @@
               "backendPort": 80,
               "idleTimeoutInMinutes": 15,
               "probe": {
-                 "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
+                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
               },
               "frontendIPConfiguration": {
                 "id": "[variables('masterFrontEndIPConfigID')]"
@@ -792,7 +806,7 @@
       "apiVersion": "2015-05-01-preview",
       "name": "[variables('publicSlaveLoadBalancerName')]",
       "type": "Microsoft.Network/loadBalancers",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('publicSlaveLBNicName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddress1'))]",

@@ -23,9 +23,9 @@
         <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
           <div class="collapse navbar-collapse" id="bs-example-navbar-collapse-1">
             <ul class="nav navbar-nav">
-              <li class="active"><a href="/installer/v1.0/configurator">Configurator<span class="sr-only">(current)</span></a></li>
-              <li class="active"><a href="/installer/v1.0/preflight">Preflight<span class="sr-only">(current)</span></a></li>
-              <li class="active"><a href="/installer/v1.0/deploy">Deploy<span class="sr-only">(current)</span></a></li>
+              <li class="active"><a href="/installer/v1.0/configurator">Step 1: <small>Configure</small><span class="sr-only">(current)</span></a></li>
+              <li class="active"><a href="/installer/v1.0/preflight">Step 2: <small>Preflight</small><span class="sr-only">(current)</span></a></li>
+              <li class="active"><a href="/installer/v1.0/deploy">Step 3: <small>Deploy</small><span class="sr-only">(current)</span></a></li>
               <li class="dropdown">
                 <a href="#" class="dropdown-toggle" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false">Support<span class="caret"></span></a>
                 <ul class="dropdown-menu">
@@ -39,6 +39,7 @@
       </nav>
       <div class="list-group">
         <a href="/installer/v1.0/configurator/config" class="list-group-item list-group-item-{{ config_level }}">Configure DCOS: {{ config_message}}</a>
+        <br>
         <a href="/installer/v1.0/configurator/ip-detect" class="list-group-item list-group-item-{{ ip_detect_level }}">Upload ip-detect Script: {{ ip_detect_message }}</a>
       </div>
   </body>

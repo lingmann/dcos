@@ -130,7 +130,21 @@
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/availabilitySets",
-      "name": "masters",
+      "name": "masterAS",
+      "location": "[resourceGroup().location]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "slavePublicAS",
+      "location": "[resourceGroup().location]",
+      "properties": {}
+    },
+    {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/availabilitySets",
+      "name": "slavePrivateAS",
       "location": "[resourceGroup().location]",
       "properties": {}
     },
@@ -355,9 +369,13 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'slavePublicNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'slavePublicAS')]",
         "[concat('Microsoft.Storage/storageAccounts/',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')))]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'slavePublicAS')]"
+        },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
@@ -443,9 +461,13 @@
       },
       "dependsOn": [
         "[concat('microsoft.network/networkInterfaces/', 'slavePrivateNic', copyindex())]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'slavePrivateAS')]",
         "[concat('Microsoft.Storage/storageAccounts/',concat(variables('storageAccountPrefix')[mod(mod(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('storageAccountPrefix')[mod(div(copyIndex(),variables('storageAccountPrefixCount')),variables('storageAccountsCount'))],variables('uniquename')))]"
       ],
       "properties": {
+        "availabilitySet": {
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'slavePrivateAS')]"
+        },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"
         },
@@ -557,12 +579,12 @@
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",
-        "[concat('Microsoft.Compute/availabilitySets/', 'masters')]",
+        "[concat('Microsoft.Compute/availabilitySets/', 'masterAS')]",
         "[concat('Microsoft.Storage/storageAccounts/', variables('storageAccountName'))]"
       ],
       "properties": {
         "availabilitySet": {
-          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masters')]"
+          "id": "[resourceId('Microsoft.Compute/availabilitySets', 'masterAS')]"
         },
         "hardwareProfile": {
           "vmSize": "[variables('vmSize')]"

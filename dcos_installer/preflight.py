@@ -6,10 +6,12 @@ import os
 
 def check(options):
     """
-    A foo def for testing ansible.
+    Starting over. 
     """
+
     ssh_user = open(options.ssh_user_path, 'r').read()
     hosts_blob = get_inventory(options.hosts_yaml_path)
+    
     for role, hosts in hosts_blob.items():
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
@@ -21,42 +23,8 @@ def check(options):
                 host_list = hosts
     
             log.info("Executing preflight on %s role...", role)
-            # Create an inventory object from the list of hosts in the current role
-            inventory_object = inventory.Inventory(host_list)
-
-            # Execute a copy of the dcos_install.sh to the node
-            copy_preflight = runner.Runner(
-                timeout=3,
-                module_name='copy',
-                module_args='src=install_dcos.sh dest=~/install_dcos.sh',
-                pattern='all',
-                forks=10,
-                inventory=inventory_object,
-                remote_user=ssh_user,
-                private_key_file=options.ssh_key_path,
-            )
-            
-            # Execute the script in --preflight-only mode
-            execute_preflight = runner.Runner(
-                timeout=3,
-                module_name='command',
-                module_args='sudo /bin/bash ~/install_dcos.sh --preflight-only',
-                pattern='all',
-                forks=10,
-                inventory=inventory_object,
-                remote_user=ssh_user,
-                private_key_file=options.ssh_key_path,
-            )
-
-            # Execute a copy then preflight script
-            copy_results = copy_preflight.run()
-            execute_results = execute_preflight.run()
-            
-            # Remove unicode text
-            copy_results = convert(copy_results)
-            dump_host_results(options, copy_results)
-            execute_results = convert(execute_results)
-            dump_host_results(options, execute_results)
+#            execute_results = convert(execute_results)
+#            dump_host_results(options, execute_results)
             
 
         else:

@@ -1,7 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 
-cleanup_nginx() {
+cleanup_nginx_docker() {
   echo "Cleaning up Nginx container"
   set +e
   docker kill dcos_int_nginx
@@ -9,7 +9,7 @@ cleanup_nginx() {
   set -e
 }
 
-cleanup_zookeeper() {
+cleanup_zookeeper_docker() {
   echo "Cleaning up Zookeeper container"
   set +e
   docker kill dcos_int_zk
@@ -17,10 +17,10 @@ cleanup_zookeeper() {
   set -e
 }
 
-clean_all() {
-  echo "Cleaning up remainig (if any) zookeeper and nginx Docker containers"
-  cleanup_nginx
-  cleanup_zookeeper
+clean_all_dockers() {
+  echo "Cleaning up zookeeper and nginx Docker containers"
+  cleanup_nginx_docker
+  cleanup_zookeeper_docker
 }
 
 # Flag used so TeamCity can tell if the build passed or failed. On failure,
@@ -40,7 +40,7 @@ docker build -t py.test - < py.test.Dockerfile
 export MASTER_IP=172.17.10.101
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
 export HOST_IP=$(ip addr show dev ${BR_DEVICE-virbr0}|awk '/inet / { print $2 }' |cut -d/ -f1)
-export PLATFORMS="$@"
+export PLATFORM="$1"
 
 if [ -z "${HOST_IP// }" ]; then
     echo "Host ip has not been identified, aborting."
@@ -63,45 +63,35 @@ cat <<EOF > "genconf/config.json"
 }
 EOF
 
-# Start nginx
+clean_all_dockers
+trap clean_all_dockers EXIT
+
 echo "Starting Nginx"
-cleanup_nginx
 mkdir -p $PWD/genconf/serve
 docker run -d -v $PWD/genconf/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
 
-for platform in $PLATFORMS; do
+echo "Starting Zookeeper"
+docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
 
-  # Cleanup zk to be safe
-  cleanup_zookeeper
+echo "Generating config packages"
+bash ../dcos_generate_config.sh --installer-format $PLATFORM --config /genconf/config.json
 
-  # Generate the config packages
-  echo "Generating config packages"
-  bash ../dcos_generate_config.sh --installer-format $platform --config /genconf/config.json
+echo "Starting Vagrant VMs"
+vagrant up --parallel --provider=libvirt
 
-  trap clean_all EXIT
+echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
+until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done
 
-  # Start zookeeper
-  echo "Starting Zookeeper"
-  docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
+echo "Waiting for WebUI to come up"
+while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
 
-  # Launch the vagrant
-  echo "Starting Vagrant VMs"
-  PLATFORM=$platform vagrant up
+echo "Running integration test"
+if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS --net=host py.test py.test /integration_test.py; then
+  echo "TEST FAILED"
+  exit 1
+fi
 
-  echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
-  until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done
-
-  echo "Waiting for WebUI to come up"
-  while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
-
-  echo "Running integration test"
-  if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS --net=host py.test py.test /integration_test.py; then
-    echo "TEST FAILED"
-    exit 1
-  fi
-
-  echo "Cleaning up vagrant"
-  vagrant destroy -f
-done
+echo "Cleaning up vagrant"
+vagrant destroy -f
 
 touch PASSED

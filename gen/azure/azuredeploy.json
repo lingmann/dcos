@@ -19,17 +19,6 @@
       },
       "defaultValue": "0.0.0.0/0"
     },
-    "region": {
-      "type": "string",
-      "defaultValue": "West US",
-      "allowedValues": [
-        "East US",
-        "West US",
-        "West Europe",
-        "East Asia",
-        "Southeast Asia"
-      ]
-    },
     "numberOfMasters": {
       "type": "int",
       "metadata": {
@@ -108,7 +97,7 @@
   "resources": [
     {
        "apiVersion": "2015-05-01-preview",
-       "location": "[parameters('region')]",
+       "location": "[resourceGroup().location]",
        "name": "[variables('storageAccountName')]",
        "properties": {
           "accountType": "[variables('storageAccountType')]"
@@ -121,7 +110,7 @@
         "name": "vmLoopNode",
         "count": "[variables('storageAccountsCount')]"
       },
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'))]",
       "properties": {
         "accountType": "[variables('storageAccountType')]"
@@ -132,14 +121,14 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/availabilitySets",
       "name": "masters",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {}
     },
     {
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('slavePublicSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -205,7 +194,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('slavePrivateSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -229,7 +218,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('masterSecurityGroupName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "securityRules": [
           {
@@ -267,7 +256,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "addressSpace": {
           "addressPrefixes": [
@@ -297,7 +286,7 @@
         "name": "ipLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
       },
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
@@ -310,7 +299,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat('slavePublicNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePublicNicLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
@@ -349,7 +338,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('slavePublic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePublicVMLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
@@ -407,7 +396,7 @@
       "apiVersion": "2015-06-15",
       "type": "microsoft.network/networkInterfaces",
       "name": "[concat('slavePrivateNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePrivateNicloop",
         "count": "[parameters('numberOfPrivateSlaves')]"
@@ -437,7 +426,7 @@
       "apiversion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('slavePrivate', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "slavePrivateVMLoop",
         "count": "[parameters('numberOfPrivateSlaves')]"
@@ -498,7 +487,7 @@
         "name": "ipLoop",
         "count": "[parameters('numberOfMasters')]"
       },
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
@@ -511,7 +500,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat('masterNodeNic', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterNicLoop",
         "count": "[parameters('numberOfMasters')]"
@@ -551,7 +540,7 @@
       "apiVersion": "2015-06-15",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat('master', copyindex())]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterVmLoop",
         "count": "[parameters('numberOfMasters')]"
@@ -613,7 +602,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddress0')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -625,7 +614,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('publicIPAddress1')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -637,7 +626,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('masterLBNicName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
@@ -672,7 +661,7 @@
       "apiVersion": "2015-05-01-preview",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[variables('publicSlaveLBNicName')]",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
@@ -707,7 +696,7 @@
       "apiVersion": "2015-05-01-preview",
       "name": "[variables('masterLoadBalancerName')]",
       "type": "Microsoft.Network/loadBalancers",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('masterLBNicName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddress0'))]",
@@ -785,7 +774,7 @@
       "apiVersion": "2015-05-01-preview",
       "name": "[variables('publicSlaveLoadBalancerName')]",
       "type": "Microsoft.Network/loadBalancers",
-      "location": "[parameters('region')]",
+      "location": "[resourceGroup().location]",
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('publicSlaveLBNicName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', variables('publicIPAddress1'))]",

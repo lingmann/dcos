@@ -97,25 +97,25 @@
   "resources": [
     {
        "apiVersion": "2015-05-01-preview",
-       "location": "[resourceGroup().location]",
+       "type": "Microsoft.Storage/storageAccounts",
        "name": "[variables('storageAccountName')]",
+       "location": "[resourceGroup().location]",
        "properties": {
           "accountType": "[variables('storageAccountType')]"
-       },
-       "type": "Microsoft.Storage/storageAccounts"
+       }
     },
     {
       "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'))]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "vmLoopNode",
         "count": "[variables('storageAccountsCount')]"
       },
-      "location": "[resourceGroup().location]",
-      "name": "[concat(variables('storageAccountPrefix')[mod(copyIndex(),variables('storageAccountPrefixCount'))],variables('storageAccountPrefix')[div(copyIndex(),variables('storageAccountPrefixCount'))],variables('uniqueName'))]",
       "properties": {
         "accountType": "[variables('storageAccountType')]"
-      },
-      "type": "Microsoft.Storage/storageAccounts"
+      }
     },
     {
       "apiVersion": "2015-06-15",
@@ -280,14 +280,14 @@
       }
     },
     {
+      "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[concat('slavePublicIP', copyindex())]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "ipLoop",
         "count": "[parameters('numberOfPublicSlaves')]"
       },
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {
@@ -481,14 +481,14 @@
       }
     },
     {
+      "apiVersion": "2015-06-15",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[concat('masterPublicIP', copyindex())]",
+      "location": "[resourceGroup().location]",
       "copy": {
         "name": "ipLoop",
         "count": "[parameters('numberOfMasters')]"
       },
-      "location": "[resourceGroup().location]",
-      "apiVersion": "2015-06-15",
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
         "dnsSettings": {

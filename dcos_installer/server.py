@@ -216,11 +216,11 @@ def add_config(data, global_data):
         # If the string is actually a list from the POST...
         if len(data.form[key].split(',')) > 1:
             global_data[key] = []
-            for value in data.form[key].encode('ascii', 'ignore').split(','):
+            for value in data.form[key]:
                 global_data[key].append(value.rstrip().lstrip())
         else:
             # Reencode the unicode string to an ASCII string for compatability
-            global_data[key] = data.form[key].encode('ascii','ignore')
+            global_data[key] = data.form[key]
 
 
 def dump_config(path, global_data):

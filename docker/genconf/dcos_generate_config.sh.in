@@ -2,20 +2,19 @@
 set -o errexit -o nounset -o pipefail
 
 # preflight checks
-docker version >/dev/null 2>&1 || { echo >&2 "docker should be installed and running. Aborting."; exit 1; }
+docker version >/dev/null 2>&1 || {{ echo >&2 "docker should be installed and running. Aborting."; exit 1; }}
 
 # extract payload and load into docker if not extracted
-if [ ! -f "${GENCONF_TAR}" ]
+if [ ! -f "{genconf_tar}" ]
 then
   echo Extracting docker container from this script
   sed '0,/^#EOF#$/d' $0 | tar xv
   echo Loading container into Docker daemon
-  docker load -i ${GENCONF_TAR}
+  docker load -i {genconf_tar}
 fi
 
 echo "Running mesosphere/dcos-genconf docker with BUILD_DIR set to $PWD/genconf"
 mkdir -p genconf
-docker run -i -v $(pwd)/genconf/:/genconf mesosphere/dcos-genconf:${DOCKER_TAG} "$@"
+docker run -i -v $(pwd)/genconf/:/genconf {docker_image_name} "$@"
 
 exit 0
-#EOF#

@@ -165,7 +165,7 @@ def find_packages_fs():
     return packages
 
 
-def make_bootstrap_tarball(packages, variant):
+def make_bootstrap_tarball(packages, variant, repository_url):
     # Convert filenames to package ids
     pkg_ids = list()
     for pkg_path in packages:
@@ -188,15 +188,55 @@ def make_bootstrap_tarball(packages, variant):
     # bootstrap tarball = <sha1 of packages in tarball>.bootstrap.tar.xz
     bootstrap_name = "{}bootstrap.tar.xz".format(output_name)
     active_name = "{}active.json".format(output_name)
-    if (os.path.exists(bootstrap_name)):
+
+    def mark_latest():
         # Ensure latest is always written
         write_string(latest_name, bootstrap_id)
 
-        print("Bootstrap already up to date, not recreating")
         print("bootstrap: {}".format(bootstrap_name))
         print("active: {}".format(active_name))
         print("latest: {}".format(latest_name))
         return bootstrap_name
+
+    if (os.path.exists(bootstrap_name)):
+        print("Bootstrap already up to date, not recreating")
+        return mark_latest()
+
+    # Try downloading.
+    if repository_url:
+        tmp_bootstrap = bootstrap_name + '.tmp'
+        tmp_active = active_name + '.tmp'
+        try:
+            print("Attempting to download", bootstrap_name, "from repository-url", repository_url)
+            # Normalize to no trailing slash for repository_url
+            repository_url = repository_url.rstrip('/')
+            check_call([
+                'curl',
+                '-fsSL',
+                '-o', tmp_bootstrap,
+                repository_url + '/bootstrap/' + bootstrap_name])
+            check_call([
+                'curl',
+                '-fsSL',
+                '-o', tmp_active,
+                repository_url + '/bootstrap/' + active_name])
+
+            # Move into place
+            os.rename(tmp_bootstrap, bootstrap_name)
+            os.rename(tmp_active, active_name)
+
+            print("Bootstrap already up to date, Not recreating. Downloaded from repository-url.")
+            return mark_latest()
+        except CalledProcessError:
+            try:
+                os.remove(tmp_bootstrap)
+            except:
+                pass
+            try:
+                os.remove(tmp_active)
+            except:
+                pass
+            # Fall out and do the build since the command errored.
 
     print("Building bootstrap tarball")
 
@@ -241,10 +281,7 @@ def make_bootstrap_tarball(packages, variant):
     write_string(latest_name, bootstrap_id)
 
     print("Built bootstrap")
-    print("bootstrap: {}".format(bootstrap_name))
-    print("active: {}".format(active_name))
-    print("latest: {}".format(latest_name))
-    return bootstrap_name
+    return mark_latest()
 
 
 def get_tree_packages(tree_variant, built_packages, package_requires):
@@ -394,7 +431,7 @@ def build_tree(mkbootstrap, repository_url):
         package_paths = get_tree_packages(variant, built_packages, packages)
 
         if mkbootstrap:
-            return make_bootstrap_tarball(list(sorted(package_paths)), variant)
+            return make_bootstrap_tarball(list(sorted(package_paths)), variant, repository_url)
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.

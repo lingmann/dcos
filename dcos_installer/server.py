@@ -152,10 +152,10 @@ def do_routes(app, options):
             preflight.check(options)
         
         preflight_data = yaml.load(open(options.preflight_results_path))
-        for k, v in preflight_data.iteritems():
-            print(k, v)
+        for k, v in list(preflight_data.items()):
+            print((k, v))
 
-        print("PREFLIGHT DATA", preflight_data)
+        print(("PREFLIGHT DATA", preflight_data))
         
         return render_template(
             'preflight_check.html',
@@ -166,7 +166,7 @@ def do_routes(app, options):
     def preflight_ssh_key():
         ssh_key_path = options.ssh_key_path
         ssh_user_path = options.ssh_user_path
-        print(request.files)
+        print((request.files))
         if 'ssh_user' in request.form: 
             log.info("Adding SSH user")
             save_file(
@@ -199,7 +199,7 @@ def save_file(data, path):
     """
     log.info("Saving script to %s", path)
     log.debug("Saving file data: %s", data)
-    print(str(data))
+    print((str(data)))
     with open(path, 'w') as f:
         f.write(str(data))
 
@@ -211,7 +211,7 @@ def add_config(data, global_data):
     """
     log.info("Adding user config from form POST")
     log.debug("Received raw data: %s", data.form)
-    for key in data.form.keys():
+    for key in list(data.form.keys()):
         log.debug("%s: %s",key, data.form[key])
         # If the string is actually a list from the POST...
         if len(data.form[key].split(',')) > 1:
@@ -233,7 +233,7 @@ def dump_config(path, global_data):
     if os.path.exists(path):
         log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
-        for bk, bv in base_config.iteritems():
+        for bk, bv in list(base_config.items()):
             log.debug("Adding configuration from yaml file %s: %s", bk, bv)
             # Overwrite the yaml config with the config from the console
             try:
@@ -279,7 +279,7 @@ def validate(path):
     if config != {}:
         dependencies = get_dependencies(path)
         log.debug("Validating configruation file %s...", path)
-        for dk, dv in dependencies.iteritems():
+        for dk, dv in list(dependencies.items()):
             log.debug("Checking coniguration for %s", dk)
             for required_value in dv:
                 log.debug("Ensuring dependency %s exists in config", required_value)

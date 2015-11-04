@@ -1,4 +1,4 @@
 #DcosInstaller
 Flask
-Ansible
+git+ssh://git@github.com/malnick/ansible
 

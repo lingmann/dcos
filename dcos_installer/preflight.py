@@ -10,7 +10,7 @@ def check(options):
     """
     ssh_user = open(options.ssh_user_path, 'r').read()
     hosts_blob = get_inventory(options.hosts_yaml_path)
-    for role, hosts in hosts_blob.iteritems():
+    for role, hosts in hosts_blob.items():
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
             log.debug("Rendering inventory %s role with hosts %s", role, hosts)
@@ -67,10 +67,10 @@ def convert(input):
     Converts a unicode dict to ascii for yaml dump
     """
     if isinstance(input, dict):
-        return {convert(key): convert(value) for key, value in input.iteritems()}
+        return {convert(key): convert(value) for key, value in input.items()}
     elif isinstance(input, list):
         return [convert(element) for element in input]
-    elif isinstance(input, unicode):
+    elif isinstance(input, str):
         return input.encode('utf-8')
     else:
         return input
@@ -85,8 +85,8 @@ def dump_host_results(options, results):
     if os.path.exists(options.preflight_results_path): 
         current_data = yaml.load(open(options.preflight_results_path)) 
             
-        for status, data in current_data.iteritems():
-            for key, values in data.iteritems():
+        for status, data in current_data.items():
+            for key, values in data.items():
                 results[status][key] = values
 
     with open(options.preflight_results_path, 'w') as preflight_file:

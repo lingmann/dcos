@@ -119,6 +119,7 @@ def test_if_ZooKeeper_cluster_is_up(cluster):
     data = r.json()
     serving_zks = sum(1 for x in data if x['code'] == 3)
     zks_ips = sorted(x['hostname'] for x in data)
+    zks_leaders = sum(1 for x in data if x['isLeader'])
 
     assert serving_zks == 3
     assert zks_leaders == 1

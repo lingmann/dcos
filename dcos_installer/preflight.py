@@ -1,4 +1,4 @@
-from ansible import runner, inventory
+import subprocess
 import logging as log
 import yaml
 import os
@@ -9,7 +9,7 @@ def check(options):
     Starting over. 
     """
 
-    ssh_user = open(options.ssh_user_path, 'r').read()
+    ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
     hosts_blob = get_inventory(options.hosts_yaml_path)
     
     for role, hosts in hosts_blob.items():
@@ -23,6 +23,19 @@ def check(options):
                 host_list = hosts
     
             log.info("Executing preflight on %s role...", role)
+            
+            execute_cmd = 'ssh -i {0} {1}@10.33.1.20 "uptime"'.format(options.ssh_key_path, ssh_user)
+
+            print(execute_cmd)
+            process = subprocess.Popen(
+                execute_cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT)
+
+            output, stderr = process.communicate()
+            status = process.poll()
+            print(output)
 #            execute_results = convert(execute_results)
 #            dump_host_results(options, execute_results)
             

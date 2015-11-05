@@ -5,7 +5,14 @@ import logging as log
 import os
 import yaml
 import time
+import sys
 #import unicodedata
+
+sys.path.append("ext/dcos-image")
+import gen
+import providers.bash
+
+os.chdir("ext/dcos-image")
 
 """
 Global Variables 
@@ -103,6 +110,38 @@ def do_routes(app, options):
             dependencies=get_dependencies(options.config_path),
             validate_level = level,
             validate_message = message)
+
+
+    @app.route("/installer/v{}/configurator/generate".format(version),  methods=['GET'])
+    def generate():
+        gen_options=gen.get_options_object()
+        gen_options.assume_default=True
+        gen_options.non_interactive=True
+        #Ensure test YAML is full of all necessary components
+        #convert YAML to JSON for gen
+        #with open(options.config_path,'r') as conf_fh:
+        #    data=yaml.load(conf_fh.read())
+        #convert_to_json_path=os.path.join(os.path.dirname(options.config_path),'dcos_config.json')
+        #with open(convert_to_json_path,'w') as json_conf_fh:
+        #    json_conf_fh.write(json.dumps(data))
+        #gen_options.config=convert_to_json_path
+
+        #Non-interactive mode usually requires gen_options.config to be the full path
+        #for a json config file, however, the validate function in this utility should
+        #cover everything intended to be provided by that file 
+        gen_options.config='/genconf/config.json'
+        gen_options.log_level='debug'
+        gen_out = gen.generate(
+            arguments={
+                'ip_detect_filename': '/genconf/ip-detect',
+                'channel_name': 'continuous',
+                'bootstrap_id': 'deadbeef'
+            },
+            options=gen_options,
+            mixins=['bash', 'centos', 'onprem'],
+            extra_cluster_packages=['onprem-config']
+        )
+        return render_template('generator.html', fill=gen_options.config)
 
 
     # Preflight 

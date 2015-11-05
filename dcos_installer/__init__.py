@@ -42,16 +42,10 @@ class DcosInstaller:
             help='Path to the preflight-results.log.')
 
         parser.add_argument(
-            '--playbook-path',
+            '--dcos-install-script-path',
             type=str,
-            default='{}/playbook.yml'.format(installdir),
-            help='The path to playbook.yml.')
-
-        parser.add_argument(
-            '--ansible-cfg-path',
-            type=str,
-            default='{}/ansible.cfg'.format(installdir),
-            help='The path to ansible.cfg.')
+            default='install_dcos.sh',
+            help='The path to install_dcos.sh script. Defaults to sibling of the project repo.')
 
         parser.add_argument(
             '--ssh-key-path',

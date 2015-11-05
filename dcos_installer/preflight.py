@@ -12,7 +12,7 @@ def check(options):
 
     ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
     hosts_blob = get_inventory(options.hosts_yaml_path)
-    preflight_cmd = 'uptime'
+    preflight_cmd = 'bash ~/install_dcos.sh --preflight-only'
 
     for role, hosts in hosts_blob.items():
         # If our hosts list from yaml has more than 0 hosts in it...
@@ -26,8 +26,26 @@ def check(options):
     
         
             for host in host_list:
+                log.info("Copying dcos_install.sh to %s...", host)
+                
+                # Copy install_dcos.sh
+                host_copy_stdout = copy_cmd(
+                    options.ssh_key_path, 
+                    ssh_user, 
+                    host, 
+                    options.dcos_install_script_path, 
+                    '~/install_dcos.sh')
+
                 log.info("Executing preflight on %s role...", host)
-                host_stdout = execute_cmd(options.ssh_key_path, ssh_user, host, preflight_cmd)  
+                
+                # Execute the preflight command
+                host_stdout = execute_cmd(
+                    options.ssh_key_path, 
+                    ssh_user, 
+                    host, 
+                    preflight_cmd)  
+                
+                # Dump to structured data
                 dump_host_results(options, host, host_stdout)
                 
 
@@ -39,7 +57,11 @@ def execute_cmd(key_path, user, host, cmd):
     """
     Executes commands on remote machines via SSH protocol.
     """
-    execute_cmd = 'ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1}@{2} {3}'.format(key_path, user, host, cmd)
+    execute_cmd = 'ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1}@{2} {3}'.format(
+        key_path, 
+        user, 
+        host, 
+        cmd)
 
     log.debug("Executing %s", execute_cmd)
     process = subprocess.Popen(
@@ -53,6 +75,32 @@ def execute_cmd(key_path, user, host, cmd):
     log.info("%s: %s", host, convert(stdout))
 
     return convert(stdout)
+
+
+def copy_cmd(key_path, user, host, local_path, remote_path):
+    """
+    Copies arbitrary things to arbitrary places.
+    """
+    copy_cmd = 'scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1} {2}@{3}:{4}'.format(
+        key_path, 
+        local_path, 
+        user, 
+        host, 
+        remote_path)
+
+    log.info("Executing %s...", copy_cmd)
+    process = subprocess.Popen(
+        copy_cmd,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT)
+
+    stdout, stderr = process.communicate()
+    status = process.poll()
+    log.info("%s: %s", host, convert(stdout))
+
+    return convert(stdout)
+
 
 
 def convert(input):

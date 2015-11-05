@@ -28,11 +28,10 @@ def check(options):
     
         
             for host in host_list:
-                #def async_preflight():
                 log.info("Copying dcos_install.sh to %s...", host)
                 
                 # Copy install_dcos.sh
-                host_copy_stdout = copy_cmd(
+                copy_cmd(
                     options.ssh_key_path, 
                     ssh_user, 
                     host, 
@@ -50,11 +49,6 @@ def check(options):
                 
                 # Dump to structured data
                 dump_host_results(options, host, host_data)
-
-                #loop = asyncio.get_event_loop()
-                #loop.run_until_complete(async_preflight())
-                #loop.close()
-                
 
         else:
             log.warn("%s is empty, skipping.", role)
@@ -85,7 +79,7 @@ def execute_cmd(key_path, user, host, cmd):
         retcode = 1
         stdout = ''
         stderr = e
-        return get_structured_results(host, cmd, stdin, stdout, stderr)
+        return get_structured_results(host, cmd, retcode, stdout, stderr)
 
 
 def get_structured_results(host, cmd, retcode, stdout, stderr):
@@ -94,13 +88,23 @@ def get_structured_results(host, cmd, retcode, stdout, stderr):
     log file.
     """
     timestamp = str(datetime.datetime.now()).split('.')[0]
+    if type(stdout) is str:
+        pass
+    else:
+        stdout = convert(stdout.read())
+
+    #if type(stderr) is str:
+    #    pass
+    #else:
+    #    stderr = convert(stderr.read())
+
     struct_data = {
         host: {
             timestamp: {
                 'cmd': cmd,
                 'retcode': retcode,
-                'stdout': convert(stdout.read()),
-                'stderr': convert(stderr.read())
+                'stdout': stdout,
+                'stderr': '' 
             }
         }
     }
@@ -119,17 +123,22 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
         user, 
         host, 
         remote_path)
+    
+    try:
+        log.info("Executing %s...", copy_cmd)
+        process = subprocess.Popen(
+            copy_cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
 
-    log.info("Executing %s...", copy_cmd)
-    process = subprocess.Popen(
-        copy_cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+        stdout, stderr = process.communicate()
+        status = process.poll()
+        log.info("%s: %s", host, convert(stdout))
 
-    stdout, stderr = process.communicate()
-    status = process.poll()
-    log.info("%s: %s", host, convert(stdout))
+    except:
+        log.error(sys.exc_info()[0])
+        pass
 
     return convert(stdout)
 
@@ -155,16 +164,11 @@ def dump_host_results(options, host, results):
     Dumps the results to our preflight log file. Assumes incoming results are already
     pre-structured. 
     """
-    current_file = results
     if os.path.exists(options.preflight_results_path): 
         current_file = yaml.load(open(options.preflight_results_path)) 
-        if current_file != None and len(current_file) > 0:
-            for host, data in results.items():
-                for timestamp, fields in data.items():
-                    current_file[host][timestamp] = fields
+        for host, data in current_file.items():
+            for timestamp, values in data.items():
+                results[host][timestamp] = values
 
     with open(options.preflight_results_path, 'w') as preflight_file:
-        preflight_file.write(yaml.dump(current_file, default_flow_style=False))
-
-
-
+        preflight_file.write(yaml.dump(results, default_flow_style=False))

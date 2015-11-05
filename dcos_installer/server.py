@@ -166,16 +166,21 @@ def do_routes(app, options):
         ssh_user_path = options.ssh_user_path
         print((request.files))
         if 'ssh_user' in request.form: 
-            log.info("Adding SSH user")
+            log.info("Adding SSH user %s", request.form['ssh_user'])
             save_file(
-                request.form['ssh_uesr'],
+                request.form['ssh_user'],
                 ssh_user_path)
 
-        if 'ssh_key' in request.files:
+        elif 'ssh_key' in request.files:
             log.info("Adding SSH key")
             save_file(
                 request.files['ssh_key'],
                 ssh_key_path)
+
+        else:
+            log.error("Unknown POST to /ssh_key route.")
+            pass
+
         
         return redirect(redirect_url())
     

@@ -45,15 +45,11 @@ def validate_cloud_config(cc_string):
 
     @param cc_string: str, Cloud Configuration
     '''
-    match = ILLEGAL_ARM_CHARS_PATTERN.finditer(cc_string)
-    if match:
+    illegal_match = ILLEGAL_ARM_CHARS_PATTERN.search(cc_string)
+    if illegal_match:
         print("ERROR: Illegal cloud config string detected.", file=sys.stderr)
-        print("ERROR: {} matches : {}".format(
-            cc_string,
-            ','.join(map('{0[0]} @ {0[1]}'.format, [
-                (m.group(), m.start()) for m in match
-            ]))
-        ), file=sys.stderr)
+        print("ERROR: {} matches pattern {}".format(
+            illegal_match.string, illegal_match.re), file=sys.stderr)
         sys.exit(1)
 
 

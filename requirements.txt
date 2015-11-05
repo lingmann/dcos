@@ -1,4 +1,5 @@
 #DcosInstaller
 Flask
-git+ssh://git@github.com/malnick/ansible
+Paramiko
+scp
 

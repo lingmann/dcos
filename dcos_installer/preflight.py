@@ -1,5 +1,7 @@
 import asyncio
+import paramiko
 import subprocess
+import sys
 import logging as log
 import yaml
 import os
@@ -26,32 +28,32 @@ def check(options):
     
         
             for host in host_list:
-                def async_preflight():
-                    log.info("Copying dcos_install.sh to %s...", host)
-                    
-                    # Copy install_dcos.sh
-                    host_copy_stdout = copy_cmd(
-                        options.ssh_key_path, 
-                        ssh_user, 
-                        host, 
-                        options.dcos_install_script_path, 
-                        '~/install_dcos.sh')
+                #def async_preflight():
+                log.info("Copying dcos_install.sh to %s...", host)
+                
+                # Copy install_dcos.sh
+                host_copy_stdout = copy_cmd(
+                    options.ssh_key_path, 
+                    ssh_user, 
+                    host, 
+                    options.dcos_install_script_path, 
+                    '~/install_dcos.sh')
 
-                    log.info("Executing preflight on %s role...", host)
-                    
-                    # Execute the preflight command
-                    host_stdout = execute_cmd(
-                        options.ssh_key_path, 
-                        ssh_user, 
-                        host, 
-                        preflight_cmd)  
-                    
-                    # Dump to structured data
-                    dump_host_results(options, host, host_stdout)
+                log.info("Executing preflight on %s role...", host)
+                
+                # Execute the preflight command
+                host_data = execute_cmd(
+                    options.ssh_key_path, 
+                    ssh_user, 
+                    host, 
+                    preflight_cmd)  
+                
+                # Dump to structured data
+                dump_host_results(options, host, host_data)
 
-                loop = asyncio.get_event_loop()
-                loop.run_until_complete(async_preflight())
-                loop.close()
+                #loop = asyncio.get_event_loop()
+                #loop.run_until_complete(async_preflight())
+                #loop.close()
                 
 
         else:
@@ -62,25 +64,49 @@ def execute_cmd(key_path, user, host, cmd):
     """
     Executes commands on remote machines via SSH protocol.
     """
-    execute_cmd = 'ssh -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1}@{2} {3}'.format(
-        key_path, 
-        user, 
-        host, 
-        cmd)
+    try:
+        key = paramiko.RSAKey.from_private_key_file(key_path)
+        client = paramiko.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        log.debug("Connecting to %s", host)
+        client.connect(
+            hostname=host,
+            username=user,
+            pkey=key)
+        
+        log.debug("Executing %s", execute_cmd)
+        stdin, stdout, stderr = client.exec_command(cmd)
+        retcode = stdout.channel.recv_exit_status()
+        return get_structured_results(host, cmd, retcode, stdout, stderr)
 
-    log.debug("Executing %s", execute_cmd)
-    process = subprocess.Popen(
-        execute_cmd,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.STDOUT)
+    except: 
+        e = sys.exc_info()[0]
+        log.error(e)
+        retcode = 1
+        stdout = ''
+        stderr = e
+        return get_structured_results(host, cmd, stdin, stdout, stderr)
 
-    stdout, stderr = process.communicate()
-    retcode = process.returncode
-    status = process.poll()
-    log.info("%s: %s", host, convert(stdout))
 
-    return convert(stdout)
+def get_structured_results(host, cmd, retcode, stdout, stderr):
+    """
+    Takes the output from a SSH run and returns structured output for the 
+    log file.
+    """
+    timestamp = str(datetime.datetime.now()).split('.')[0]
+    struct_data = {
+        host: {
+            timestamp: {
+                'cmd': cmd,
+                'retcode': retcode,
+                'stdout': convert(stdout.read()),
+                'stderr': convert(stderr.read())
+            }
+        }
+    }
+    log.debug("Structured data:")
+    print(struct_data)
+    return struct_data
 
 
 def copy_cmd(key_path, user, host, local_path, remote_path):
@@ -126,20 +152,16 @@ def get_inventory(path):
 
 
 def dump_host_results(options, host, results):
-    timestamp = str(datetime.datetime.now()).split('.')[0]
-    current_results = {
-        host: {
-            timestamp: '{}'.format(results.lstrip().rstrip())
-        }
-    }
-    
-    current_file = current_results
+    current_file = results
     if os.path.exists(options.preflight_results_path): 
         current_file = yaml.load(open(options.preflight_results_path)) 
-        current_file[host][timestamp] = results.lstrip().rstrip()
+        if current_file != None and len(current_file) > 0:
+            for host, data in results.items():
+                for timestamp, fields in data.items():
+                    current_file[host][timestamp] = fields
 
     with open(options.preflight_results_path, 'w') as preflight_file:
-        preflight_file.write(yaml.dump(current_results, default_flow_style=False))
+        preflight_file.write(yaml.dump(current_file, default_flow_style=False))
 
 
 

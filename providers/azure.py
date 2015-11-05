@@ -50,10 +50,9 @@ def validate_cloud_config(cc_string):
         print("ERROR: Illegal cloud config string detected.", file=sys.stderr)
         print("ERROR: {} matches : {}".format(
             cc_string,
-            ','.join(map('{0[0]} @ {0[1]}'.format,
-                         [(m.group(), m.start()) for m in match]
-                        )
-                    )
+            ','.join(map('{0[0]} @ {0[1]}'.format, [
+                (m.group(), m.start()) for m in match
+            ]))
         ), file=sys.stderr)
         sys.exit(1)
 
@@ -198,11 +197,11 @@ def gen_buttons(channel, tag, commit):
     '''
     template_upload_url = UPLOAD_URL.format(channel)
     return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
-            'channel': channel,
-            'tag': tag,
-            'commit': commit,
-            'template_url': encode_url_as_param(template_upload_url)
-        })
+        'channel': channel,
+        'tag': tag,
+        'commit': commit,
+        'template_url': encode_url_as_param(template_upload_url)
+    })
 
 
 # Escape URL characters like '/' and ':' so that it can be used with the Azure

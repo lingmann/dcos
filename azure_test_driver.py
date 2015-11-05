@@ -1,56 +1,37 @@
 #!/usr/bin/env python3
 
+from functools import partial
 import json
 import os
 import requests
 import sys
 
-from gen.azure.azure_client import AzureClient
-from gen.azure.azure_client import OutOfRetries
-from gen.azure.azure_client import PollingFailureCondition
-from gen.azure.azure_client import TemplateProvisioningState
-from gen.azure.azure_client import poll_until
-
-
-def create_resource_group(client):
-    print("Creating new resource group")
-    r = client.create_resource_group()
-    print(r)
+from gen.azure.azure_client import (AzureClient,
+                                    OutOfRetries,
+                                    PollingFailureCondition,
+                                    TemplateProvisioningState,
+                                    AzureClientTemplateException,
+                                    poll_until)
 
 
 def verify_template_syntax(client, template_body_json, template_parameters):
     print("Verifying template ...")
-    r = client.verify(template_body_json=template_body_json,
+    try:
+        client.verify(template_body_json=template_body_json,
                       template_parameters=template_parameters)
-    print(r.json())
+    except AzureClientTemplateException as e:
+        print("Template verification failed\n{}".format(e), file=sys.stderr)
+        sys.exit(1)
     print("Template OK!")
 
 
-def create_template_deployment(client,
-                               template_body_json,
-                               template_parameters):
-    print("Creating template deployment ...")
-    deployment_response = client.create_template_deployment(
-        template_body_json=template_body_json,
-        template_parameters=template_parameters)
-    print(deployment_response)
-
-
-def in_succeeded_state(response_json):
-    provisioning_state = response_json.get(
-        'properties', {}).get('provisioningState')
-    is_succeeded = provisioning_state == TemplateProvisioningState.SUCCEEDED
-    if not is_succeeded:
-        print("Provisioning state: {}, expecting: {}".format(
-            provisioning_state, TemplateProvisioningState.SUCCEEDED))
-    return is_succeeded
-
-
-def in_failed_state(response_json):
-    provisioning_state = response_json.get(
-        'properties', {}).get('provisioningState')
-    is_failed = provisioning_state == TemplateProvisioningState.FAILED
-    return is_failed
+def check_state(expected_state, response_json):
+    provisioning_state = response_json.get('properties', {}).get('provisioningState')
+    if provisioning_state == expected_state:
+        return True
+    print("Provisioning state: {}, Watching for: {}".format(
+        provisioning_state, expected_state))
+    return False
 
 
 def poll_on_template_deploy_status(client):
@@ -60,26 +41,21 @@ def poll_on_template_deploy_status(client):
                    initial_delay=30,
                    delay=15,
                    backoff=1,
-                   success_lambda_list=[in_succeeded_state],
-                   failure_lambda_list=[in_failed_state],
+                   success_lambda_list=[partial(check_state, TemplateProvisioningState.SUCCEEDED)],
+                   failure_lambda_list=[partial(check_state, TemplateProvisioningState.FAILED)],
                    fn=client.get_template_deployment)
         print("Template deploy status OK")
     except (OutOfRetries, PollingFailureCondition) as e:
-        print("Failed! {}".format(e))
-
-        # Dump information
-        print("Dumping template deployment ...")
-        print(json.dumps(client.get_template_deployment(),
-                         sort_keys=True,
-                         indent=4,
-                         separators=(',', ':')))
-
-        print("Dumping template deployment operations ...")
-        print(json.dumps(client.list_template_deployment_operations(),
-                         sort_keys=True,
-                         indent=4,
-                         separators=(',', ':')))
+        print("Failed! {}".format(e), file=sys.stderr)
+        print("Dumping template deployment ...", file=sys.stderr)
+        json_pretty_print(client.get_template_deployment(), file=sys.stderr)
+        print("Dumping template deployment operations ...", file=sys.stderr)
+        json_pretty_print(client.list_template_deployment_operations(), file=sys.stderr)
         sys.exit(1)
+
+
+def json_pretty_print(json_str, file=sys.stdout):
+    print(json.dumps(json_str, sort_keys=True, indent=4, separators=(',', ':')), file=file)
 
 
 def get_template_master_url(client):
@@ -112,7 +88,7 @@ def poll_on_dcos_ui_up(client):
         print("DCOS UI status OK")
     except (OutOfRetries, PollingFailureCondition) as e:
         # TODO(mj): dump information about the deployment here
-        print(e)
+        print(e, file=sys.stderr)
 
         sys.exit(1)
 
@@ -133,24 +109,20 @@ def clean_up_deploy(client):
     except ValueError:
         pass
 
-    def in_deleted_state(response_json):
-        provisioning_state = response_json.get(
-            'properties', {}).get('provisioningState')
-        print("Provisioning state: {}".format(provisioning_state))
-        is_deleted = provisioning_state is None
-        return is_deleted
     print("Polling on resource group status ...")
     try:
         poll_until(tries=90,
                    initial_delay=0,
                    delay=15,
                    backoff=1,
-                   success_lambda_list=[in_deleted_state],
+                   success_lambda_list=[partial(check_state, None)],
                    failure_lambda_list=[],
                    fn=client.get_resource_group)
     except OutOfRetries:
-        print("Delete failed.")
+        print("Delete failed.", file=sys.stderr)
         sys.exit(1)
+
+    print("Clean up successful.")
 
 
 def run():
@@ -161,6 +133,8 @@ def run():
     client = AzureClient.create_from_env_creds(
         random_resource_group_name_prefix='teamcity')
 
+    # sshKeyData is the public SSH key used as the authorized key for the default cluster user (core)
+    # Set to the public SSH key for mesosphere-demo: https://mesosphere.onelogin.com/notes/18444
     dummy_template_parameters = {
         "sshKeyData": {"value": (
             "MIIDXTCCAkWgAwIBAgIJAIIFgegSdSRMMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHw"
@@ -176,7 +150,8 @@ def run():
             "DltDbssw4wIm+NPsnZ9NodtjgAFxC8HEDFTozYueHOTi4DzgRjGfTHjkhwZd/LPAYXNb8PxB82cermpqn4tn0nOT76fPGg==")},
         "authorizedSubnet": {"value": "0.0.0.0/0"},
         "numberOfMasters": {"value": 3},
-        "numberOfPrivateSlaves": {"value": 1}
+        "numberOfPrivateSlaves": {"value": 1},
+        "numberOfPublicSlaves": {"value": 1}
         }
 
     # Output resource group
@@ -184,7 +159,8 @@ def run():
     print("Deployment name: {}".format(client._deployment_name))
 
     # Create a new resource group
-    create_resource_group(client)
+    print("Creating new resource group")
+    print(client.create_resource_group())
 
     # Use RPC against azure to validate the ARM template is well-formed
     verify_template_syntax(client,
@@ -192,9 +168,11 @@ def run():
                            template_parameters=dummy_template_parameters)
 
     # Actually create a template deployment
-    create_template_deployment(client,
-                               template_body_json=json.loads(arm),
-                               template_parameters=dummy_template_parameters)
+    print("Creating template deployment ...")
+    deployment_response = client.create_template_deployment(
+        template_body_json=json.loads(arm),
+        template_parameters=dummy_template_parameters)
+    json_pretty_print(deployment_response)
 
     # Poll on the template deploy status
     poll_on_template_deploy_status(client)

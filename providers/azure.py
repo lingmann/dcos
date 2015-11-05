@@ -164,8 +164,7 @@ def do_create(tag, channel, commit, gen_arguments):
 
     # Make sure we upload the packages for both the multi-master templates as
     # well as the single-master templates.
-    extra_packages = list()
-    extra_packages.append(util.cluster_to_extra_packages(single_master.results.cluster_packages))
+    extra_packages = util.cluster_to_extra_packages(single_master.results.cluster_packages)
 
     return {
         'extra_packages': extra_packages,

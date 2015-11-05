@@ -36,7 +36,7 @@ class AzureClientException(Exception):
 class AzureClientTemplateException(AzureClientException):
 
     def __init__(self, template, errors):
-        self.message = 'Template: {}\nfailed verification: {}'.format(template,
+        self.message = 'Template: {}\nFailed Verification: {}'.format(template,
                                                                       errors)
         self.template = template
         self.errors = errors
@@ -175,9 +175,6 @@ class AzureClient(object):
 
         return r  # or None?
 
-    def check_status(self, uri):
-        return self._session.get(uri)
-
     def get_template_json(self, template_body_json, template_parameters):
         return {
             "properties":
@@ -191,9 +188,8 @@ class AzureClient(object):
     def get_resource_group(self, resource_group_name=None):
         resource_group_name = resource_group_name or self._resource_group_name
         endpoint = self._get_resource_endpoint(self.subscription_endpoint, resource_group_name)
-        r = self._session.get(endpoint)
 
-        return r.json()
+        return self._session.get(endpoint).json()
 
     def create_resource_group(self, location='East US', resource_group_name=None):
         resource_group_name = resource_group_name or self._resource_group_name
@@ -212,6 +208,8 @@ class AzureClient(object):
 
         # What happens if the resource group is deleted and then, some other action
         # like /cancel or /validate is executed?!
+        # TODO: Add docs on proper Azure client usage and Exception(s) when client
+        # is used incorrectly.
 
         endpoint = self._get_resource_endpoint(self.subscription_endpoint, resource_group_name)
         r = self._session.delete(endpoint)
@@ -220,19 +218,18 @@ class AzureClient(object):
 
     def get_random_resource_group_name(self):
         '''
-        Some random algorithm to generate random group name. First create a
-        compressed UUID4, and then pick some 10 random characters from the hex.
-
-        Append this random string to the random group name prefix
+        Generate a random group name no more than 18 characters long which
+        consists of the first 8 characters of
+        _random_resource_group_name_prefix and 10 random characters. The 18
+        char limit protects us from exceeding ARM resource ID length
+        limitations in various areas where this is used to construct a unique
+        resource identifier.
 
         @rtype: str
         '''
-        seed = uuid.uuid4().hex
-        # Not sure where "18" came from
-        reps = 18 - len(self._random_resource_group_name_prefix)
-        rand_string = ''.join(random.choice(seed) for _ in range(reps))
-        return '{}{}'.format(self._random_resource_group_name_prefix,
-                             rand_string)
+        prefix = self._random_resource_group_name_prefix[:8]
+        rand_string = ''.join(random.choice('01234567890abcdef') for n in range(10))
+        return '{}{}'.format(prefix, rand_string)
 
     def get_random_deployment_name(self):
         return 'deployment{}'.format(uuid.uuid4().hex)
@@ -281,5 +278,3 @@ def poll_until(tries, initial_delay, delay, backoff, success_lambda_list, failur
             return result
 
     raise OutOfRetries("Ran out of retries.")
-
-# TODO(mj): a function to list resource groups

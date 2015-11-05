@@ -4,8 +4,8 @@
   "single_source" : {
     "kind": "git",
     "git": "ssh://git@github.com/mesosphere/mesos-private",
-    "ref": "4ec686c8a350176ba0f319daf094e1146f658cac",
-    "ref_origin" : "dcos-1.3.1"
+    "ref": "0838a4da45d022f5648ccc226df16e3a1046d352",
+    "ref_origin" : "dcos-1.4"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

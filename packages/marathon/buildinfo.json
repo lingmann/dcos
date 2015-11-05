@@ -3,6 +3,6 @@
   "single_source": {
     "kind": "url_extract",
     "url": "http://downloads.mesosphere.io/marathon/v0.13.0-RC1/marathon-0.13.0-RC1.tgz",
-    "sha1": "252f0c0fdab343f371d9db57656cd1098c2c367b"
+    "sha1": "4127ad0ea4d278d07726a0c3123d99ad5f85d4e1"
   }
 }

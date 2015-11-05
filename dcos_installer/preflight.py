@@ -113,7 +113,7 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
     """
     Copies arbitrary things to arbitrary places.
     """
-    copy_cmd = 'scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1} {2}@{3}:{4}'.format(
+    copy_cmd = 'scp -q -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1} {2}@{3}:{4}'.format(
         key_path, 
         local_path, 
         user, 
@@ -134,7 +134,6 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
     return convert(stdout)
 
 
-
 def convert(input):
     """ 
     Converts the bytes array to utf-8 encoded string.
@@ -152,6 +151,10 @@ def get_inventory(path):
 
 
 def dump_host_results(options, host, results):
+    """
+    Dumps the results to our preflight log file. Assumes incoming results are already
+    pre-structured. 
+    """
     current_file = results
     if os.path.exists(options.preflight_results_path): 
         current_file = yaml.load(open(options.preflight_results_path)) 

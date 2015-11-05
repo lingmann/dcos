@@ -77,4 +77,14 @@ Configures JSON, example:
 }
 ```
 
+## Salt Integration
 
+```python
+python3
+Python 3.4.3 (default, Jun  9 2015, 09:04:26)
+[GCC 4.2.1 Compatible Apple LLVM 6.1.0 (clang-602.0.53)] on darwin
+Type "help", "copyright", "credits" or "license" for more information.
+>>> import salt.client.ssh.client
+>>> c = salt.client.ssh.client.SSHClient()
+>>> c.cmd('*', 'cmd.run', ['uptime'], ssh_user='vagrant', ssh_priv='/Users/malnick/dcos-installer/ssh_key', roster='roster')
+```

@@ -38,7 +38,7 @@
         </ul>
         </div>
       </nav>
-      {% for status, data in preflight_data.iteritems() %}
+      {% for host, data in preflight_data.iteritems() %}
         {% if status == 'contacted' %}
         <div class="panel panel-success">
           <div class="panel-heading">

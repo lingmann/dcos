@@ -25,5 +25,6 @@ setup(
     },
     package_data={
         '': ['*.service', '*.target']
-    }
+    },
+    zip_safe=False
 )

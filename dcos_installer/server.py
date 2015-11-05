@@ -125,7 +125,6 @@ def do_routes(app, options):
         validate_hosts_level, hosts_message = validate_hosts(options.hosts_yaml_path)
         validate_ssh_level, validate_ssh_message = validate_path(options.ssh_key_path)
         validate_user_level, validate_user_message = validate_path(options.ssh_user_path)
-        validate_ansible_level, validate_ansible_message = validate_path(options.ansible_cfg_path)
 
         return render_template(
             'preflight.html',
@@ -135,9 +134,7 @@ def do_routes(app, options):
             validate_ssh_level=validate_ssh_level,
             validate_ssh_message=validate_ssh_message,
             validate_user_level=validate_user_level,
-            validate_user_message=validate_user_message,
-            validate_ansible_level=validate_ansible_level,
-            validate_ansible_message=validate_ansible_message)
+            validate_user_message=validate_user_message)
 
 
     @app.route('/installer/v{}/preflight/check/'.format(version), methods=['GET','POST'])

@@ -1,3 +1,4 @@
+import asyncio
 import subprocess
 import logging as log
 import yaml
@@ -9,10 +10,9 @@ def check(options):
     """
     SSH via SubProcess Calls... 
     """
-
     ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
     hosts_blob = get_inventory(options.hosts_yaml_path)
-    preflight_cmd = 'bash ~/install_dcos.sh --preflight-only'
+    preflight_cmd = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
 
     for role, hosts in hosts_blob.items():
         # If our hosts list from yaml has more than 0 hosts in it...
@@ -26,27 +26,32 @@ def check(options):
     
         
             for host in host_list:
-                log.info("Copying dcos_install.sh to %s...", host)
-                
-                # Copy install_dcos.sh
-                host_copy_stdout = copy_cmd(
-                    options.ssh_key_path, 
-                    ssh_user, 
-                    host, 
-                    options.dcos_install_script_path, 
-                    '~/install_dcos.sh')
+                def async_preflight():
+                    log.info("Copying dcos_install.sh to %s...", host)
+                    
+                    # Copy install_dcos.sh
+                    host_copy_stdout = copy_cmd(
+                        options.ssh_key_path, 
+                        ssh_user, 
+                        host, 
+                        options.dcos_install_script_path, 
+                        '~/install_dcos.sh')
 
-                log.info("Executing preflight on %s role...", host)
-                
-                # Execute the preflight command
-                host_stdout = execute_cmd(
-                    options.ssh_key_path, 
-                    ssh_user, 
-                    host, 
-                    preflight_cmd)  
-                
-                # Dump to structured data
-                dump_host_results(options, host, host_stdout)
+                    log.info("Executing preflight on %s role...", host)
+                    
+                    # Execute the preflight command
+                    host_stdout = execute_cmd(
+                        options.ssh_key_path, 
+                        ssh_user, 
+                        host, 
+                        preflight_cmd)  
+                    
+                    # Dump to structured data
+                    dump_host_results(options, host, host_stdout)
+
+                loop = asyncio.get_event_loop()
+                loop.run_until_complete(async_preflight())
+                loop.close()
                 
 
         else:
@@ -71,6 +76,7 @@ def execute_cmd(key_path, user, host, cmd):
         stderr=subprocess.STDOUT)
 
     stdout, stderr = process.communicate()
+    retcode = process.returncode
     status = process.poll()
     log.info("%s: %s", host, convert(stdout))
 

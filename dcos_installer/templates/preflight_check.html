@@ -38,49 +38,30 @@
         </ul>
         </div>
       </nav>
-      {% for host, data in preflight_data.iteritems() %}
-        {% if status == 'contacted' %}
-        <div class="panel panel-success">
-          <div class="panel-heading">
-            <h3 class="panel-title">Success!</h3>
-          </div>
-          {% for host, host_data in data.iteritems() %}
-          <div class="panel-body">
-            <div class="panel panel-default">
-              <div class="panel-heading">
-                <h3 class="panel-title">{{ host }}</h3>
-              </div>
-              <div class="panel-body">
-                <pre>
-                {{ host_data['stdout'] }}
-                </pre>
-              </div>
+      {% for host, data in preflight_data.items() %}
+      <div class="panel panel-info">
+        <div class="panel-heading">
+          <h3 class="panel-title">{{ host }} </h3>
+        </div>
+        <div class="panel-body">
+          {% for timestamp, values in data.items() %}
+          <div class="panel panel-{% if values['retcode'] != 0 %}warning{% else %}info%{% endif %}">
+            <div class="panel-heading">
+              <h3 class="panel-title">{{ host }} @ {{ timestamp }}</h3>
+            </div>
+            <div class="panel-body">
+              {% for metric, result in values.items() %} 
+              {% if result  %}
+              <pre>
+                {{ metric }}: {{ result }}
+              </pre>
+              {% endif %}
+              {% endfor %}
             </div>
           </div>
           {% endfor %}
         </div>
-        {% endif %}
-        {% if status == 'dark' %}
-        <div class="panel panel-danger">
-          <div class="panel-heading">
-            <h3 class="panel-title">Unreachable</h3>
-          </div>
-          {% for host, host_data in data.iteritems() %}
-          <div class="panel-body">
-            <div class="panel panel-default">
-              <div class="panel-heading">
-                <h3 class="panel-title">{{ host }}</h3>
-              </div>
-              <div class="panel-body">
-                <pre>
-                  {{ host_data['msg'] }}
-                </pre>
-              </div>
-            </div>
-          </div>
-          {% endfor %}
-        </div>
-        {% endif %}
+      </div>
       {% endfor %}
   </body>
 </html>

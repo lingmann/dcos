@@ -148,16 +148,16 @@ def do_routes(app, options):
             from . import preflight
             preflight.check(options)
 
-        return redirect(redirect_url())       
-#        preflight_data = yaml.load(open(options.preflight_results_path))
+        #return redirect(redirect_url())       
+        preflight_data = yaml.load(open(options.preflight_results_path))
 #        for k, v in list(preflight_data.items()):
 #            print((k, v))
 #
-#        print(("PREFLIGHT DATA", preflight_data))
+        print(("PREFLIGHT DATA", preflight_data))
 #        
-#        return render_template(
-#            'preflight_check.html',
-#            preflight_data=preflight_data)
+        return render_template(
+            'preflight_check.html',
+            preflight_data=preflight_data)
    
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

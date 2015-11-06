@@ -19,7 +19,7 @@ def now(options):
     gen_opts.log_level = options.log_level
     gen_opts.config = options.config_path
     gen_opts.output_dir = options.serve_directory
-    gen_opts.assume_defaults = True
+    gen_opts.assume_defaults = True 
     gen_opts.non_interactive = True
 
     # Generate on-prem/bash configuration

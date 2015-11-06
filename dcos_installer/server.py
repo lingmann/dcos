@@ -417,7 +417,7 @@ def get_dependencies(config_path):
         },
         "exhibitor_storage_backend": {
             "zookeeper": ["exhibitor_zk_hosts", "exhibitor_zk_path"],
-            "shared_filesystem": ["exhibitor_fs_config_path"],
+            "shared_filesystem": ["exhibitor_fs_config_dir"],
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
         },
         "base": {

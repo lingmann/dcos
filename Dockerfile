@@ -16,8 +16,9 @@ COPY . /dcos-web-installer
 
 WORKDIR /dcos-web-installer
 
-RUN pip3 install -r requirements.txt
+RUN pip3 install -r container_requirements.txt
 RUN cd ext/pkgpanda && pip3 install .
+RUN cd ext/dcos-image && pip3 install .
 
 VOLUME /genconf
 

@@ -2,5 +2,5 @@
 Flask
 Paramiko
 pyyaml
-git+https://github.com/saltstack/salt/archive/develop.zip
 jinja2
+-e git+git@github.com:mesosphere/dcos-image.git@add_setup#egg=gen

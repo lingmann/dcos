@@ -116,6 +116,12 @@ class DcosInstaller:
             default=9000,
             help='Web server port number.')
 
+        parser.add_argument(
+            '--serve-directory',
+            type=str,
+            default='{}/serve'.format(installdir),
+            help='The path to the serve directory. Used to dump generated config and packages.')
+
         # TODO - implement CLI utility
         parser.add_argument(
             '-pre',

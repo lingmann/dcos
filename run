@@ -2,8 +2,11 @@
 # ENV['channelname'] && ['bootstrap_id'] need to be set here.
 
 from dcos_installer import DcosInstaller
+import os
 
 def main():
+    os.environ["CHANNEL_NAME"] = "testing/continuous"
+    os.environ["BOOTSTRAP_ID"] = 'foobar' 
     DcosInstaller()
 
 if __name__ == '__main__':

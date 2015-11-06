@@ -109,12 +109,14 @@ def do_routes(app, options):
             validate_message = message)
 
 
-    @app.route("/installer/v{}/configurator/generate".format(version),  methods=['GET'])
+    @app.route("/installer/v{}/configurator/generate".format(version),  methods=['POST','GET'])
     def generate():
         from . import generate
         if request.method == 'POST':
             generate.now(options)
             return redirect(redirect_url())       
+        
+        return redirect(redirect_url())       
 
         #gen_options=gen.get_options_object()
         #gen_options.assume_default=True
@@ -143,7 +145,7 @@ def do_routes(app, options):
         #    mixins=['bash', 'centos', 'onprem'],
         #    extra_cluster_packages=['onprem-config']
         #)
-        return render_template('generator.html', fill=gen_options.config)
+        #return render_template('generator.html', fill=gen_options.config)
 
 
     # Preflight 
@@ -415,7 +417,7 @@ def get_dependencies(config_path):
         },
         "exhibitor_storage_backend": {
             "zookeeper": ["exhibitor_zk_hosts", "exhibitor_zk_path"],
-            "shared_fs": ["exhibitor_fs_config_path"],
+            "shared_filesystem": ["exhibitor_fs_config_path"],
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
         },
         "base": {

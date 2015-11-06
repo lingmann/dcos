@@ -90,7 +90,7 @@
             {% if isset['exhibitor_storage_backend'] %}
             <p class="list-group-item disabled">{{ isset['exhibitor_storage_backend'] }}</p>
             {% else %}
-            <input name="exhibitor_storage_backend" type="text" class="form-control" placeholder="zookeeper || aws_s3 || shared_fs" aria-describedby="basic-addon1">
+            <input name="exhibitor_storage_backend" type="text" class="form-control" placeholder="zookeeper || aws_s3 || shared_filesystem" aria-describedby="basic-addon1">
             {% endif %}
           </div>
           {% for value in dependencies['exhibitor_storage_backend'] %}
@@ -107,12 +107,11 @@
           <br>
           <input class="submit" type="submit" value='Validate Configuration'> 
         </form>
-	{% if validate_level=="success"  %}
-	<br>
-        <form method="GET" action="/installer/v1.0/configurator/generate">
+	      <br>
+        <form method="POST" action="/installer/v1.0/configurator/generate">
           <input class="submit" type="submit" value='Generate Configuration'>
         </form>
-	{% endif %}
+        <br>
         <form method="POST" action="/installer/v1.0/configurator/clear">
           <input class="submit" type="submit" value='Clear'> 
         </form>

@@ -188,6 +188,7 @@
 
     "InternetGateway" : {
       "Type" : "AWS::EC2::InternetGateway",
+      "DependsOn" : "Vpc",
       "Properties" : {
         "Tags" : [
           { "Key" : "Application", "Value" : { "Ref" : "AWS::StackName" } },

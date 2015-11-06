@@ -31,13 +31,14 @@ def check(options):
                 log.info("Copying dcos_install.sh to %s...", host)
                 
                 # Copy install_dcos.sh
-                copy_cmd(
+                copy_data = copy_cmd(
                     options.ssh_key_path, 
                     ssh_user, 
                     host, 
                     options.dcos_install_script_path, 
                     '~/install_dcos.sh')
 
+                dump_host_results(options, host, copy_data)
                 log.info("Executing preflight on %s role...", host)
                 
                 # Execute the preflight command
@@ -53,6 +54,32 @@ def check(options):
         else:
             log.warn("%s is empty, skipping.", role)
 
+def get_structured_results(host, cmd, retcode, stdout, stderr):
+    """
+    Takes the output from a SSH run and returns structured output for the 
+    log file.
+    """
+    timestamp = str(datetime.datetime.now()).split('.')[0]
+    if type(stdout) is not str:
+        stdout = convert(stdout.read())
+    
+    if type(stderr) is not str:
+        stderr = convert(stderr.read())
+
+    struct_data = {
+        host: {
+            timestamp: {
+                'cmd': cmd,
+                'retcode': retcode,
+                'stdout': stdout,
+                'stderr': stderr 
+            }
+        }
+    }
+    log.debug("Structured data:")
+    print(struct_data)
+    return struct_data
+
 
 def execute_cmd(key_path, user, host, cmd):
     """
@@ -66,8 +93,9 @@ def execute_cmd(key_path, user, host, cmd):
         client.connect(
             hostname=host,
             username=user,
+            timeout=3,
             pkey=key)
-        
+            
         log.debug("Executing %s", execute_cmd)
         stdin, stdout, stderr = client.exec_command(cmd)
         retcode = stdout.channel.recv_exit_status()
@@ -78,39 +106,9 @@ def execute_cmd(key_path, user, host, cmd):
         log.error(e)
         retcode = 1
         stdout = ''
-        stderr = e
+        stderr = str(e)
         return get_structured_results(host, cmd, retcode, stdout, stderr)
 
-
-def get_structured_results(host, cmd, retcode, stdout, stderr):
-    """
-    Takes the output from a SSH run and returns structured output for the 
-    log file.
-    """
-    timestamp = str(datetime.datetime.now()).split('.')[0]
-    if type(stdout) is str:
-        pass
-    else:
-        stdout = convert(stdout.read())
-
-    #if type(stderr) is str:
-    #    pass
-    #else:
-    #    stderr = convert(stderr.read())
-
-    struct_data = {
-        host: {
-            timestamp: {
-                'cmd': cmd,
-                'retcode': retcode,
-                'stdout': stdout,
-                'stderr': '' 
-            }
-        }
-    }
-    log.debug("Structured data:")
-    print(struct_data)
-    return struct_data
 
 
 def copy_cmd(key_path, user, host, local_path, remote_path):
@@ -133,12 +131,20 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
             stderr=subprocess.STDOUT)
 
         stdout, stderr = process.communicate()
-        status = process.poll()
+        #status = process.poll()
+        process.poll()
+        retcode = process.returncode
         log.info("%s: %s", host, convert(stdout))
+        return get_structured_results(host, copy_cmd, retcode, stdout, stderr)
 
     except:
-        log.error(sys.exc_info()[0])
-        pass
+        e = sys.exc_info()[0]
+        log.error(e)
+        retcode = 1
+        stdout = '' 
+        stderr = str(stdout)
+        return get_structured_results(host, copy_cmd, retcode, stdout, stderr)
+
 
     return convert(stdout)
 
@@ -166,9 +172,14 @@ def dump_host_results(options, host, results):
     """
     if os.path.exists(options.preflight_results_path): 
         current_file = yaml.load(open(options.preflight_results_path)) 
-        for host, data in current_file.items():
-            for timestamp, values in data.items():
-                results[host][timestamp] = values
+        for fhost, data in current_file.items():
+            if host == fhost:
+                for timestamp, values in data.items():
+                    results[fhost][timestamp] = values
+
+            else:
+                results[fhost] = data
+        
 
     with open(options.preflight_results_path, 'w') as preflight_file:
         preflight_file.write(yaml.dump(results, default_flow_style=False))

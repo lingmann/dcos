@@ -9,6 +9,10 @@ import urllib.parse
 import uuid
 
 
+ZK_HOSTS = os.environ.get('ZK_HOSTS', '127.0.0.1:2181')
+ZK_IPS = set(hostport.split(':')[0] for hostport in ZK_HOSTS.split(','))
+
+
 @pytest.fixture(scope='module')
 def cluster():
     # Must set the cluster DNS address as an environment parameter
@@ -86,22 +90,18 @@ def test_if_Mesos_is_up(cluster):
 def test_if_all_Mesos_masters_have_registered(cluster):
     # Currently it is not possible to extract this information through Mesos'es
     # API, let's query zookeeper directly.
-    zk = kazoo.client.KazooClient(hosts="172.17.10.101:2181,"
-                                        "172.17.10.102:2181,"
-                                        "172.17.10.103:2181",
-                                  read_only=True)
-    masters = []
+    zk = kazoo.client.KazooClient(hosts=ZK_HOSTS, read_only=True)
+    master_ips = set()
+
     zk.start()
     for znode in zk.get_children("/mesos"):
         if not znode.startswith("json.info_"):
             continue
-        tmp = zk.get("/mesos/" + znode)[0].decode('utf-8')
-        masters.append(json.loads(tmp))
+        master = json.loads(zk.get("/mesos/" + znode)[0].decode('utf-8'))
+        master_ips.add(master['address']['ip'])
     zk.stop()
-    masters_ips = sorted(x['address']['ip'] for x in masters)
 
-    assert len(masters) == 3
-    assert masters_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
+    assert master_ips == ZK_IPS
 
 
 def test_if_Exhibitor_is_up(cluster):
@@ -118,12 +118,12 @@ def test_if_ZooKeeper_cluster_is_up(cluster):
 
     data = r.json()
     serving_zks = sum(1 for x in data if x['code'] == 3)
-    zks_ips = sorted(x['hostname'] for x in data)
+    zks_ips = set(x['hostname'] for x in data)
     zks_leaders = sum(1 for x in data if x['isLeader'])
 
-    assert serving_zks == 3
+    assert serving_zks == len(ZK_IPS)
     assert zks_leaders == 1
-    assert zks_ips == ['172.17.10.101', '172.17.10.102', '172.17.10.103']
+    assert zks_ips == ZK_IPS
 
 
 def test_if_all_exhibitors_are_in_sync(cluster):
@@ -132,8 +132,8 @@ def test_if_all_exhibitors_are_in_sync(cluster):
 
     correct_data = sorted(r.json(), key=lambda k: k['hostname'])
 
-    for ex in ['172.17.10.101', '172.17.10.102', '172.17.10.103']:
-        resp = requests.get('http://{}:8181/exhibitor/v1/cluster/status'.format(ex))
+    for zk_ip in ZK_IPS:
+        resp = requests.get('http://{}:8181/exhibitor/v1/cluster/status'.format(zk_ip))
         assert resp.status_code == 200
 
         tested_data = sorted(resp.json(), key=lambda k: k['hostname'])

@@ -568,6 +568,7 @@
     },
     "MasterServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn" : "GatewayToInternet",
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "MasterLaunchConfig" },
@@ -694,6 +695,7 @@
     },
     "ElasticLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn" : "GatewayToInternet",
       "Properties" : {
         "SecurityGroups": [{ "Ref": "LbSecurityGroup" }, { "Ref" : "AdminSecurityGroup" }],
         "Subnets": [{ "Ref": "PublicSubnet" }],
@@ -721,6 +723,7 @@
     },
     "PublicSlaveLoadBalancer" : {
       "Type" : "AWS::ElasticLoadBalancing::LoadBalancer",
+      "DependsOn" : "GatewayToInternet",
       "Properties" : {
         "SecurityGroups": [{ "Ref": "PublicSlaveSecurityGroup" }],
         "Subnets": [{ "Ref": "PublicSubnet" }],
@@ -748,6 +751,7 @@
     },
     "SlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn" : "GatewayToInternet",
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PrivateSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "SlaveLaunchConfig" },
@@ -790,6 +794,7 @@
 
     "PublicSlaveServerGroup" : {
       "Type" : "AWS::AutoScaling::AutoScalingGroup",
+      "DependsOn" : "GatewayToInternet",
       "Properties" : {
         "AvailabilityZones" : [{ "Fn::GetAtt" : [ "PublicSubnet", "AvailabilityZone" ] }],
         "LaunchConfigurationName" : { "Ref" : "PublicSlaveLaunchConfig" },

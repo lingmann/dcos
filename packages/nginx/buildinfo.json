@@ -10,7 +10,7 @@
       "adminrouter": {
           "kind": "git",
           "git": "git@github.com:mesosphere/adminrouter.git",
-          "ref": "dc13b12f0437ed16ca7f79d4736f1f4fcc6699d3",
+          "ref": "f975b4e2a87d2bb05a849e3aa503b91b6ad54837",
           "ref_origin": "master"
       }
   }

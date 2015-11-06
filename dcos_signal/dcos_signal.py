@@ -13,15 +13,18 @@ import uuid
 
 
 MASTER_LOCATION = "leader.mesos"
-ENDPOINT = "/mesos/master/state-summary"
+ENDPOINTS = ['/mesos/master/state-summary', '/metadata']
 
 EVENT_NAME = 'Cluster summary'
 
 
 def get_state_summary():
-    summary_url = "http://%s%s" % (MASTER_LOCATION, ENDPOINT)
-    response = requests.get(summary_url)
-    return response.json()
+    result = {}
+    for endpoint in ENDPOINTS:
+        summary_url = "http://%s%s" % (MASTER_LOCATION, endpoint)
+        response = requests.get(summary_url)
+        result.update(response.json())
+    return result
 
 
 def get_cluster_summary_event_from_json(summary_json):

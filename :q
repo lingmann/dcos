@@ -1,0 +1,6 @@
+DcosInstaller
+Flask
+Paramiko
+pyyaml
+#git+https://github.com/saltstack/salt/archive/develop.zip
+jinja2

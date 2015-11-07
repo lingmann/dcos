@@ -5,6 +5,7 @@ import os
 import subprocess
 import sys
 import gen
+import gen.calc
 import providers.bash as bash
 import logging as log
 from subprocess import CalledProcessError

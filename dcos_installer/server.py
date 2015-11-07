@@ -108,7 +108,6 @@ def do_routes(app, options):
             dump_config(options.config_path, userconfig)
             return redirect(redirect_url())
 
-        print("Validating %s", options.config_path)
         level, message = validate(options.config_path)
         return render_template(
             'config.html', 
@@ -300,6 +299,7 @@ def clean_config(path):
 
 def validate(path):
     config = get_config(path)
+    missing_deps = []
     if config != {}:
         dependencies = get_dependencies(path)
         log.debug("Validating configruation file %s...", path)
@@ -307,15 +307,33 @@ def validate(path):
             log.debug("Checking coniguration for %s", dk)
             for required_value in dv:
                 log.debug("Ensuring dependency %s exists in config", required_value)
+                # Ensure the key for the dependency exists
                 if not required_value in config:
                     log.warning("Unfound value for %s: %s", path, required_value)
-                    return "danger", 'Configuation is not valid: {}'.format(required_value)
+                    missing_deps.append(required_value)
+                    continue
+                    #return "danger", 'Configuation for {} is not set.'.format(required_value)
 
+                # Make sure not keys have nil / blank values
+                elif required_value in config:
+                    if not len(config[required_value]) > 0:
+                        log.warning("Value found is not set for key %s", required_value)
+                        missing_deps.append(required_value)
+                        #return "danger", 'Configuration for {} is not set.'.format(required_value)
+                        continue
+                
+                # I hate not having switch statements...
+                # Fall through to continue on values found and not being nil
                 else:
                     continue
 
-        log.info("Configuration looks good!")
-        return "success", "Configuration looks good!"
+        if len(missing_deps) > 0:
+            log.warning("Configuration for %s not found.", missing_deps)
+            return 'danger', 'Missing configuration parameters: {}'.format(missing_deps)
+            
+        else:
+            log.info("Configuration looks good!")
+            return "success", "Configuration looks good!"
     
     else:
         log.warning("Configuration file is empty")

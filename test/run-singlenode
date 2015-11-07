@@ -18,7 +18,7 @@ bash make_dcos_vagrant.sh
 echo -e "\n\$shared_folders = {'../../' => '/home/core/dcos-image'}" >> config.rb
 
 echo "Starting Vagrant VM"
-vagrant up --provider=libvirt
+vagrant up
 
 echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
 until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done

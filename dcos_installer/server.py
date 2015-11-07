@@ -14,7 +14,16 @@ import providers.bash
 """
 Global Variables 
 """
-userconfig = {}
+# Sane user config defaults
+userconfig = {
+    "num_masters": "3",
+    "weights": "slave_public=1",
+    "bootstrap_url": "localhost",
+    "roles": "slave_public",
+    "docker_remove_delay": "1hrs",
+    "gc_delay": "2days",
+}
+
 hostsconfig = {}
 
 def run(options):
@@ -54,17 +63,11 @@ def do_routes(app, options):
         return redirect(redirect_url())
 
 
-    @app.route("/installer/v{}/".format(version), methods=['POST', 'GET'])
+    @app.route("/installer/v{}/".format(version), methods=['GET'])
     def mainpage():
         """
         The mainpage handler
         """
-        if request.method == 'POST':
-            add_config(request, userconfig)
-            dump_config(options.config_path, userconfig)
-            # Redirects to correct page 
-            return redirect(redirect_url())
-
         return render_template('main.html')
     
 
@@ -98,8 +101,14 @@ def do_routes(app, options):
             validate_message=message)
         
 
-    @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET'])
+    @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET', 'POST'])
     def config():
+        if request.method == 'POST':
+            add_config(request, userconfig)
+            dump_config(options.config_path, userconfig)
+            return redirect(redirect_url())
+
+        print("Validating %s", options.config_path)
         level, message = validate(options.config_path)
         return render_template(
             'config.html', 
@@ -117,35 +126,6 @@ def do_routes(app, options):
             return redirect(redirect_url())       
         
         return redirect(redirect_url())       
-
-        #gen_options=gen.get_options_object()
-        #gen_options.assume_default=True
-        #gen_options.non_interactive=True
-        #Ensure test YAML is full of all necessary components
-        #convert YAML to JSON for gen
-        #with open(options.config_path,'r') as conf_fh:
-        #    data=yaml.load(conf_fh.read())
-        #convert_to_json_path=os.path.join(os.path.dirname(options.config_path),'dcos_config.json')
-        #with open(convert_to_json_path,'w') as json_conf_fh:
-        #    json_conf_fh.write(json.dumps(data))
-        #gen_options.config=convert_to_json_path
-
-        #Non-interactive mode usually requires gen_options.config to be the full path
-        #for a json config file, however, the validate function in this utility should
-        #cover everything intended to be provided by that file 
-        #gen_options.config='/genconf/config.json'
-        #gen_options.log_level='debug'
-        #gen_out = gen.generate(
-        #    arguments={
-        #        'ip_detect_filename': '/genconf/ip-detect',
-        #        'channel_name': 'continuous',
-        #        'bootstrap_id': 'deadbeef'
-        #    },
-        #    options=gen_options,
-        #    mixins=['bash', 'centos', 'onprem'],
-        #    extra_cluster_packages=['onprem-config']
-        #)
-        #return render_template('generator.html', fill=gen_options.config)
 
 
     # Preflight 
@@ -273,6 +253,7 @@ def dump_config(path, global_data):
     in the web console. Otherwise, if the file does no exist, create it and write the
     config passed to us from the console.
     """
+
     if os.path.exists(path):
         log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
@@ -289,7 +270,7 @@ def dump_config(path, global_data):
         with open(path, 'w') as f:
             f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
     
-    if not os.path.exists(path):
+    elif not os.path.exists(path):
         with open(path, 'w') as f:
             f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
 
@@ -326,15 +307,15 @@ def validate(path):
             log.debug("Checking coniguration for %s", dk)
             for required_value in dv:
                 log.debug("Ensuring dependency %s exists in config", required_value)
-                try:
-                    log.debug("Value: %s", config[required_value])
-                    if not config[required_value]:
-                        log.warning("Found unneccessary data in %s: %s", path, config[required_value])
-                        return "danger", 'Configuation is not valid: {}'.format(required_value)
+                if not required_value in config:
+                    log.warning("Unfound value for %s: %s", path, required_value)
+                    return "danger", 'Configuation is not valid: {}'.format(required_value)
 
-                except:
-                    log.info("Configuration looks good!")
-                    return "success", "Configuration looks good!"
+                else:
+                    continue
+
+        log.info("Configuration looks good!")
+        return "success", "Configuration looks good!"
     
     else:
         log.warning("Configuration file is empty")
@@ -424,8 +405,11 @@ def get_dependencies(config_path):
             "cluster_name": "", 
             "resolvers": "", 
             "num_masters": "",
-            "master_discovery": "",
-            "exhibitor_storage_backend": ""
+            "weights": "",
+            "bootstrap_url": "",
+            "roles": "",
+            "docker_remove_delay": "",
+            "gc_delay": ""
         },
     }
     # The final return dict 

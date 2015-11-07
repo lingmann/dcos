@@ -46,7 +46,7 @@
           <strong>{{ validate_level }}!</strong> {{ validate_message }}
         </div>
         {% endif %}
-        <form method="POST" action="/installer/v1.0/">
+        <form method="POST" action="/installer/v1.0/configurator/config">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Cluster Name</span>
             {% if isset['cluster_name'] %}
@@ -105,9 +105,13 @@
           </div>
           {% endfor %}
           <br>
-          <input class="submit" type="submit" value='Validate Configuration'> 
+          <input class="submit" type="submit" value='Save Configuration'> 
         </form>
 	      <br>
+        <form method="GET" action="/installer/v1.0/configurator/config">
+          <input class="submit" type="submit" value='Validate Configuration'>
+        </form>
+        <br>
         <form method="POST" action="/installer/v1.0/configurator/generate">
           <input class="submit" type="submit" value='Generate Configuration'>
         </form>

@@ -24,13 +24,13 @@ def now(options):
     gen_opts.non_interactive = True
 
     # Generate on-prem/bash configuration
-    gen_out = do_gen(gen_opts, bash, ['bash','centos','onprem'])
+    gen_out = do_gen(options, gen_opts, bash, ['bash','centos','onprem'])
     
     # Fetch the bootstrap tarball for our configuration
     fetch_bootstrap(gen_out.arguments['channel_name'], gen_out.arguments['bootstrap_id'])
 
 
-def do_gen(options, provider_module, mixins):
+def do_gen(options, gen_opts, provider_module, mixins):
     """
     Does on prem specific configuration generation.
     """
@@ -53,7 +53,7 @@ def do_gen(options, provider_module, mixins):
             'channel_name': channel_name,
             'bootstrap_id': bootstrap_id
         },
-        options=options,
+        options=gen_opts,
         mixins=mixins,
         extra_cluster_packages=['onprem-config']
         )

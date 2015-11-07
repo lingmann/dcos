@@ -239,7 +239,7 @@ class TestRelease(unittest.TestCase):
         mocked_s3.assert_called_with('testing/destination')
         mocked_channel_manager().upload_packages.assert_called_with(['pkg123--12345'])
         mocked_channel_manager().upload_bootstrap.assert_called_with({None: '12345'})
-        assert mocked_check_call.call_count == 2
+        assert mocked_check_call.call_count == 13
         assert mocked_channel_manager().upload_providers_and_activate.called is True
         mocked_open.assert_called_with('docker-tag')
 

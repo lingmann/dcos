@@ -49,7 +49,7 @@ def do_gen(options, provider_module, mixins):
 
     gen_out = gen.generate(
         arguments={
-            'ip_detect_filename': '/genconf/ip-detect',
+            'ip_detect_filename': options.ip_detect_path,
             'channel_name': channel_name,
             'bootstrap_id': bootstrap_id
         },

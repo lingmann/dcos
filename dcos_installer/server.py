@@ -422,7 +422,7 @@ def get_dependencies(config_path):
         },
         "base": {
             "cluster_name": "", 
-            "dns_resolvers": "", 
+            "resolvers": "", 
             "num_masters": "",
             "master_discovery": "",
             "exhibitor_storage_backend": ""

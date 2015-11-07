@@ -58,10 +58,10 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">DNS Resolvers</span>
-            {% if isset['dns_resolvers'] %}
-            <p class="list-group-item disabled">{{ isset['dns_resolvers'] }}</p>
+            {% if isset['resolvers'] %}
+            <p class="list-group-item disabled">{{ isset['resolvers'] }}</p>
             {% else %}
-            <input name="dns_resolvers" type="text" class="form-control" placeholder="8.8.8.8,8.8.4.4" aria-describedby="basic-addon1">
+            <input name="resolvers" type="text" class="form-control" placeholder="8.8.8.8,8.8.4.4" aria-describedby="basic-addon1">
             {% endif %}
           </div>
           <br>

@@ -334,6 +334,9 @@ def fetch_sources(sources):
                 raise ValidationError(
                     "Provided sha1 didn't match sha1 of downloaded file. " +
                     "Provided: {}, Download file's sha1: {}, Url: {}".format(info['sha1'], file_sha, info['url']))
+            ids[src] = {
+                "downloaded_sha1": file_sha
+            }
         else:
             raise ValidationError("Currently only packages from url and git sources are supported")
 

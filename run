@@ -6,7 +6,8 @@ import os
 
 def main():
     os.environ["CHANNEL_NAME"] = "testing/continuous"
-    os.environ["BOOTSTRAP_ID"] = 'foobar' 
+    os.environ["BOOTSTRAP_ID"] = '0026f44d8574d508104f1e7e7a163e078e69990b'
+
     DcosInstaller()
 
 if __name__ == '__main__':

@@ -1,0 +1,39 @@
+#!/bin/bash
+set -euo pipefail
+
+# Flag used so TeamCity can tell if the build passed or failed. On failure,
+# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
+rm -rf PASSED
+
+export MASTER_IP=172.17.8.101
+export DCOS_DNS_ADDRESS=http://$MASTER_IP
+
+old_pwd=$PWD
+mkdir vagrant && cd vagrant
+
+echo "Generating Vagrant config"
+cp ../../make_dcos_vagrant.sh ./
+bash make_dcos_vagrant.sh
+# Make the project available within the VM
+echo -e "\n\$shared_folders = {'../../' => '/home/core/dcos-image'}" >> config.rb
+
+echo "Starting Vagrant VM"
+vagrant up --provider=libvirt
+
+echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
+until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done
+
+echo "Waiting for WebUI to come up"
+while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS > /dev/null 2>&1; do sleep 1; done
+
+if ! vagrant ssh -c "cd dcos-image && docker build -t py.test - < test/py.test.Dockerfile && echo \"Running integration test\" && docker run -v \$PWD/integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS -e ZK_HOSTS=$MASTER_IP:2181 --net=host py.test py.test /integration_test.py"; then
+  echo "TEST FAILED"
+  exit 1
+fi
+
+echo "Cleaning up vagrant"
+vagrant destroy -f
+
+cd $old_pwd
+
+touch PASSED

@@ -256,19 +256,21 @@ def dump_config(path, global_data):
     if os.path.exists(path):
         log.debug("Configuration path exists, reading in and adding config %s", path)
         base_config = yaml.load(open(path, 'r')) 
-        for bk, bv in list(base_config.items()):
-            log.debug("Adding configuration from yaml file %s: %s", bk, bv)
-            # Overwrite the yaml config with the config from the console
-            try:
-                if not global_data[bk]:
+        try:
+            for bk, bv in list(base_config.items()):
+                log.debug("Adding configuration from yaml file %s: %s", bk, bv)
+                # Overwrite the yaml config with the config from the console
+                if not bk in global_data:
                     global_data[bk] = bv
             
-            except:
-                log.error("Configuration doesn't work %s: %s", bk, bv)
+            with open(path, 'w') as f:
+                f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
 
-        with open(path, 'w') as f:
-            f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
-    
+        except:
+            log.error("Cowardly refusing to write empty data")
+            pass
+
+            
     elif not os.path.exists(path):
         with open(path, 'w') as f:
             f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
@@ -420,6 +422,8 @@ def get_dependencies(config_path):
             "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
         },
         "base": {
+            "master_discovery":"",
+            "exhibitor_storage_backend":"",
             "cluster_name": "", 
             "resolvers": "", 
             "num_masters": "",

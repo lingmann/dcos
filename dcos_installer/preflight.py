@@ -28,9 +28,10 @@ def check(options):
     
         
             for host in host_list:
-                log.info("Copying dcos_install.sh to %s...", host)
+                log.info("Copying %s to %s...",options.dcos_install_script_path, host)
                 
                 # Copy install_dcos.sh
+                # Assumes the user given has a home directory
                 copy_data = copy_cmd(
                     options.ssh_key_path, 
                     ssh_user, 
@@ -131,10 +132,11 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
             stderr=subprocess.STDOUT)
 
         stdout, stderr = process.communicate()
-        #status = process.poll()
+        status = process.poll()
+        print("STATUS: ", status)
         process.poll()
         retcode = process.returncode
-        log.info("%s: %s", host, convert(stdout))
+        log.info("%s: %s", host, str(stdout))
         return get_structured_results(host, copy_cmd, retcode, stdout, stderr)
 
     except:

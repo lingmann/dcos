@@ -5,6 +5,10 @@ import os
 from . import server
 #from . import cli
 
+# Get the current relative directory
+project_path=os.path.dirname(os.path.realpath(__file__))
+
+
 class DcosInstaller:
     def __init__(self):
         """
@@ -44,7 +48,7 @@ class DcosInstaller:
         parser.add_argument(
             '--dcos-install-script-path',
             type=str,
-            default='install_dcos.sh',
+            default='{}/templates/install_dcos.sh'.format(project_path),
             help='The path to install_dcos.sh script. Defaults to sibling of the project repo.')
 
         parser.add_argument(

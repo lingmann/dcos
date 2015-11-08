@@ -172,9 +172,8 @@ def do_routes(app, options):
 
         #return redirect(redirect_url())       
         preflight_data = yaml.load(open(options.preflight_results_path))
-#
         print(("PREFLIGHT DATA", preflight_data))
-#        
+        
         return render_template(
             'preflight_check.html',
             preflight_data=preflight_data)

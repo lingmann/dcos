@@ -77,7 +77,7 @@ echo "Generating config packages"
 bash ../dcos_generate_config.sh --installer-format $PLATFORM --config /genconf/config.json
 
 echo "Starting Vagrant VMs"
-vagrant up --parallel --provider=libvirt
+vagrant up --parallel --provider=libvirt --debug
 
 echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
 until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done

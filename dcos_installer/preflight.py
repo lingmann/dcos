@@ -132,11 +132,10 @@ def copy_cmd(key_path, user, host, local_path, remote_path):
             stderr=subprocess.STDOUT)
 
         stdout, stderr = process.communicate()
-        status = process.poll()
-        print("STATUS: ", status)
         process.poll()
         retcode = process.returncode
-        log.info("%s: %s", host, str(stdout))
+        log.warn(retcode)
+        log.info("%s: %s", host, convert(stdout))
         return get_structured_results(host, copy_cmd, retcode, stdout, stderr)
 
     except:

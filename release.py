@@ -423,10 +423,8 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
 
 def do_promote(options):
     print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
-    destination_storage_providers = [S3StorageProvider(options.destination_channel),
-                                     AzureStorageProvider(options.destination_channel)]
-    source_storage_providers = [S3StorageProvider(options.source_channel),
-                                AzureStorageProvider(options.source_channel)]
+    destination_storage_providers = [S3StorageProvider(options.destination_channel)]
+    source_storage_providers = [S3StorageProvider(options.source_channel)]
     destination = ChannelManager(destination_storage_providers)
     source = ChannelManager(source_storage_providers)
 
@@ -663,7 +661,7 @@ def make_abs(path):
 
 def do_create(options):
     channel_name = 'testing/' + options.destination_channel
-    storage_providers = [S3StorageProvider(channel_name), AzureStorageProvider(channel_name)]
+    storage_providers = [S3StorageProvider(channel_name)]
     channel = ChannelManager(storage_providers)
     commit = util.dcos_image_commit
     print("Creating release on channel:", channel_name)

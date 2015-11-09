@@ -47,7 +47,7 @@ def do_genconf(options):
         sys.exit(1)
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
-    fetch_bootstrap(gen_out.arguments['channel_name'], gen_out.arguments['bootstrap_id'])
+    fetch_bootstrap(gen_out.arguments['bootstrap_id'])
 
 
 def do_provider(options, provider_module, mixins):
@@ -78,11 +78,8 @@ def do_provider(options, provider_module, mixins):
     return gen_out
 
 
-def fetch_bootstrap(channel_name, bootstrap_id):
+def fetch_bootstrap(bootstrap_id):
     bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
-    dl_url = "https://downloads.mesosphere.com/dcos/{}/bootstrap/{}".format(
-        channel_name,
-        bootstrap_filename)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
 
     def cleanup_and_exit():
@@ -93,29 +90,21 @@ def fetch_bootstrap(channel_name, bootstrap_id):
                 log.error(ex.strerror)
         sys.exit(1)
 
-    if not os.path.exists(save_path):
-        # Check if there is an in-container copy of the bootstrap tarball, and
-        # if so copy it across
-        local_cache_filename = "/artifacts/" + bootstrap_filename
-        if os.path.exists(local_cache_filename):
-            log.info("Copying bootstrap out of cache")
-            try:
-                subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
-                subprocess.check_call(['cp', local_cache_filename, save_path])
-                return
-            except (KeyboardInterrupt, CalledProcessError) as ex:
-                log.error("Copy failed or interrupted %s", ex.cmd)
-                cleanup_and_exit()
+    if os.path.exists(save_path):
+        return
 
-        log.info("Downloading bootstrap tarball from %s", dl_url)
-        curl_out = ""
-        try:
-            subprocess.check_call(['mkdir', '-p', '/genconf/serve/bootstrap/'])
-            curl_out = subprocess.check_output([
-                "/usr/bin/curl", "-fsSL", "-o", save_path, dl_url])
-        except (KeyboardInterrupt, CalledProcessError) as ex:
-            log.error("Download failed or interrupted %s", curl_out)
-            cleanup_and_exit()
+    # Check if there is an in-container copy of the bootstrap tarball, and
+    # if so copy it across
+    local_cache_filename = "/artifacts/" + bootstrap_filename
+    assert os.path.exists(local_cache_filename)
+    log.info("Copying bootstrap out of cache")
+    try:
+        subprocess.check_output(['mkdir', '-p', '/genconf/serve/bootstrap/'])
+        subprocess.check_output(['cp', local_cache_filename, save_path])
+    except (KeyboardInterrupt, CalledProcessError) as ex:
+        log.error("Copy failed or interrupted %s", ex.cmd)
+        log.error("Failed commandoutput: %s", ex.output)
+        cleanup_and_exit()
 
 
 def main():

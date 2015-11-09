@@ -1,6 +1,5 @@
 
 import logging
-import sys
 
 from flask import Flask, Response
 from flask.ext.compress import Compress
@@ -61,17 +60,11 @@ def _response_(content):
 
 def start(
         port=int(environ.get('PORT', '15055')),
-        urls=environ.get('MASTER_URLS', 'http://leader.mesos:5050').split(","),
         frequency=int(environ.get('FETCH_FREQUENCY', "2"))):
     global state_buffer
     logging.basicConfig(format='[%(levelname)s:%(asctime)s] %(message)s', level='INFO')
 
-    for url in urls:
-        if url[-1] == '/' or not url.startswith('http://'):
-            print("ERROR: Each url should start with 'http://' and end with '/'")
-            sys.exit(1)
-
     compress.init_app(app)
-    state_buffer = StateBuffer(urls, frequency)
+    state_buffer = StateBuffer(frequency)
     state_buffer.run()
     app.run(host='0.0.0.0', port=port)

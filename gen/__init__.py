@@ -686,6 +686,16 @@ def do_generate(
     # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)
 
+    # Validate that all keys and vlaues of arguments are strings
+    for k, v in arguments.items():
+        if not isinstance(k, str):
+            print("ERROR: all keys in arguments must be strings. '{}' isn't.".format(k))
+            sys.exit(1)
+        if not isinstance(v, str):
+            print("ERROR: all values in arguments must be strings. Value for argument ", k,
+                  " isn't. Given value: {}".format(v))
+            sys.exit(1)
+
     # Validate arguments.
     # TODO(cmaloney): Define an API for allowing multiple failures, reporting
     # more than just the first error.

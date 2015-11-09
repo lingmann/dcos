@@ -1,7 +1,0 @@
-dcos_history.egg-info/
-env/
-ovh-stage-marathon.json
-README.md
-Makefile
-.tox
-tox.ini

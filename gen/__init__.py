@@ -681,7 +681,7 @@ def do_generate(
         log.info("User Config saved to: %s", options.save_user_config)
 
     # Set arguments from command line flags.
-    arguments['mixins'] = mixins
+    arguments['mixins'] = json.dumps(mixins)
 
     # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)

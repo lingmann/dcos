@@ -10,8 +10,8 @@ def render_spot(name, arguments):
 
 defaults = {
     "resolvers": "[\"10.0.0.2\"]",
-    "num_private_slaves": 5,
-    "num_public_slaves": 1,
+    "num_private_slaves": "5",
+    "num_public_slaves": "1",
     "master_instance_type": "m3.xlarge",
     "slave_instance_type": "m3.xlarge",
     "public_slave_instance_type": "m3.xlarge",

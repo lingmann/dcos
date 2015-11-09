@@ -1,5 +1,6 @@
-
 import history
+
+from setuptools import setup
 
 config = {
   'name': 'dcos-history',
@@ -15,7 +16,7 @@ config = {
   ],
   'entry_points': {
     'console_scripts': [
-      'dcos-history = history.__main__:start'
+      'dcos-history = history.server:start'
     ]
   },
   'install_requires': [
@@ -24,5 +25,4 @@ config = {
   ]
 }
 
-from setuptools import setup
 setup(**config)

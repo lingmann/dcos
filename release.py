@@ -266,6 +266,10 @@ class S3StorageProvider(AbstractStorageProvider):
             data += chunk
         return data
 
+    def download_if_not_exist(self, name, output_filename):
+        if not os.path.exists(output_filename):
+            return self.get_object(name).download_file(output_filename)
+
     def upload_local_file(
             self,
             path,
@@ -456,6 +460,22 @@ def do_promote(options):
         options.destination_channel,
         metadata['commit'])
 
+    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
+    # Download the bootstrap if it doesn't exist
+    bootstrap_path = '/{}.bootstrap.tar.xz'.format(default_bootstrap_id)
+    source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
+
+    # Check needed configuration is set
+    pkgpanda_src = do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda')
+    dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
+
+    print("Building dcos-genconf docker container")
+    genconf_metadata = make_genconf_docker(
+        pkgpanda_src,
+        dcos_image_src,
+        options.destination_channel,
+        default_bootstrap_id)
+
     metadata_json = to_json(
         {
             'active_packages': active_packages,
@@ -463,10 +483,17 @@ def do_promote(options):
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
-            'tag': metadata['tag']})
+            'tag': metadata['tag'],
+            'genconf_docker_tag': open('docker-tag').read()})
 
     # Copy across packages, bootstrap.
     destination.copy_across(source, bootstrap_dict, active_packages)
+
+    # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
+    # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
+    # to have the channel name as a tag.
+    print("Pushing dcos-genconf docker container")
+    push_genconf_docker(genconf_metadata)
 
     # Upload provider artifacts, mark as active
     destination.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
@@ -667,6 +694,7 @@ def do_create(options):
     print("Creating release on channel:", channel_name)
     print("version tag:", options.tag)
 
+    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
     # Check needed configuration is set
     pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
     dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))

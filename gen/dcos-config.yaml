@@ -28,6 +28,7 @@ write_files:
       MESOS_ROLES={{ roles }}
       MESOS_WEIGHTS={{ weights }}
       MESOS_QUORUM={{ master_quorum }}
+      MESOS_HOSTNAME_LOOKUP=false
       SASL_PATH=/opt/mesosphere/lib/sasl2
   - path: /etc/mesos-slave-common
     content: |

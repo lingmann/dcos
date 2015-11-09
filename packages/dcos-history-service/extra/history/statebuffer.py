@@ -4,7 +4,7 @@ from math import ceil
 import threading
 from collections import deque
 from datetime import datetime, timedelta
-from urllib.request import urljoin, urlopen
+import requests
 
 
 class Schedule():
@@ -28,14 +28,12 @@ class Schedule():
 
 class StateBuffer():
 
-    def __init__(self, urls, fetchFrequencySeconds):
+    def __init__(self, fetchFrequencySeconds):
         """
         Create state buffer.
-        :param urls: the list of all master urls
         """
         if fetchFrequencySeconds > 60 or fetchFrequencySeconds < 0:
             raise Exception("Frequency must be between 0 and 60")
-        self.urls = urls
         self.fetchFrequencySeconds = fetchFrequencySeconds
         self.schedules = {
             "minute": Schedule(1, ceil(60 / fetchFrequencySeconds)),  # every fetch for one minute
@@ -45,30 +43,23 @@ class StateBuffer():
         self.timestamp = datetime.now()
         self.last = None
 
-    def _find_leader_(self):
-        """
-        Find the leading master from the list of known masters
-        :return: url of the leading master
-        """
-        for url in self.urls:
-            try:
-                return urlopen(urljoin(url, "/master/redirect")).url
-            except Exception as e:
-                logging.warning("could not access %s since %s" % (url, e))
-        return None
-
     def _fetch_state_(self):
         """
         Fetch the current state from current leader.
         :return: the state of the current leader
         """
         try:
-            url = self._find_leader_()
+            # TODO(cmaloney): Access the mesos master redirect before requesting
+            # state-summary so that we always get the "authoritative"
+            # state-summary. leader.mesos isn't updated instantly.
+            # That requires mesos stop returning hostnames from `/master/redirect`.
+            # See: https://github.com/apache/mesos/blob/master/src/master/http.cpp#L746
+            url = "http://leader.mesos/state-summary"
             logging.info("Get state from leading master %s" % url)
-            resp = urlopen(urljoin(url, "/state-summary"))
-            if (resp.code != 200):
+            resp = requests.get(url)
+            if (resp.response_code != 200):
                 raise Exception("Could not read from %s" % url)
-            return resp.readall().decode()
+            return resp.text
         except Exception as e:
             logging.warning("Could not fetch state: %s" % e)
             return "{}"

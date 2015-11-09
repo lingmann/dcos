@@ -227,10 +227,6 @@ class TestRelease(unittest.TestCase):
         options.destination_channel = 'destination'
         options.tag = 'tag'
         options.skip_upload = False
-        self.fake_storage_provider1 = unittest.mock.MagicMock()
-        self.fake_storage_provider1.name = 'aws'
-        self.fake_storage_provider2 = unittest.mock.MagicMock()
-        self.fake_storage_provider2.name = 'azure'
         mocked_do_build_packages.return_value = {None: '12345'}
         mocked_get_provider_data.return_value = ('provider_data', 'cleaned_provider_data')
         mocked_get_bootstrap_packages.return_value = set(['pkg123--12345'])
@@ -240,8 +236,66 @@ class TestRelease(unittest.TestCase):
         mocked_channel_manager().upload_packages.assert_called_with(['pkg123--12345'])
         mocked_channel_manager().upload_bootstrap.assert_called_with({None: '12345'})
         assert mocked_check_call.call_count == 13
-        assert mocked_channel_manager().upload_providers_and_activate.called is True
+        assert mocked_channel_manager().upload_providers_and_activate.called
         mocked_open.assert_called_with('docker-tag')
+
+    def test_provider_data(self):
+        repository_url = {
+            'default': 'http://testurl'
+        }
+        bootstrap_id = 'bootstartid12345'
+        tag = 'tag'
+        channel_name = 'testing/test_channel'
+        commit = 'test_commit'
+        provider_data, cleaned_provider_data = release.get_provider_data(
+            repository_url, bootstrap_id, tag, channel_name, commit)
+        assert isinstance(provider_data, dict)
+        assert isinstance(cleaned_provider_data, dict)
+
+    @patch('release.push_genconf_docker')
+    @patch('builtins.open')
+    @patch('release.S3StorageProvider')
+    @patch('release.make_genconf_docker')
+    @patch('release.get_provider_data')
+    @patch('release.ChannelManager')
+    def test_do_promote(self, mocked_channel_manager, mocked_get_provider_data, mocked_make_genconf_docker,
+                        mocked_s3storage_provider, mocked_open, mocked_push_genconf_docker):
+        options = unittest.mock.MagicMock()
+        options.source_channel = 'source/channel'
+        options.destination_channel = 'destination/channel'
+        read_file_return_json = ('{"bootstrap_dict": {"null": "123"}, "active_packages": ["pkg1--12345"], '
+                                 '"commit": "12345", "tag": "tag1"}')
+        mocked_channel_manager().read_file.return_value = bytes(read_file_return_json, encoding='utf-8')
+        mocked_channel_manager().repository_url = {'default': 'http://mocked_url'}
+        mocked_get_provider_data.return_value = ('provider_data', 'cleaned_provider_data')
+        mocked_open().read.return_value = '123'
+        release.do_promote(options)
+        mocked_s3storage_provider.assert_called_with('source/channel')
+        assert mocked_s3storage_provider.call_count == 2
+        assert mocked_channel_manager.call_count == 4
+        assert mocked_channel_manager().copy_across.call_count == 1
+        assert mocked_channel_manager().upload_providers_and_activate.call_count == 1
+        assert mocked_make_genconf_docker.call_count == 1
+        assert mocked_push_genconf_docker.call_count == 1
+        mocked_open.assert_called_with('docker-tag')
+
+    @patch('pkgpanda.build.sha1')
+    @patch('release.get_local_build')
+    @patch('subprocess.check_call')
+    def test_do_build_packages(self, mocked_check_call, mocked_get_local_build, mocked_sha1):
+        repository_url = 'http://test'
+        mocked_sha1.return_value = 'SHA123'
+        release.do_build_packages(repository_url, False)
+        assert mocked_check_call.call_count == 2
+        mocked_check_call.assert_any_call(['docker', 'pull', 'mesosphere/dcos-builder:dockerfile-SHA123'])
+        mocked_check_call.assert_called_with(
+            ['docker', 'tag', '-f', 'mesosphere/dcos-builder:dockerfile-SHA123', 'dcos-builder:latest'])
+        mocked_get_local_build.assert_called_once_with(False, 'http://test')
+
+    @patch('pkgpanda.build.get_last_bootstrap_set')
+    def test_get_local_build(self, mocked_get_last_bootstrap_set):
+        release.get_local_build(True, 'http://repo_url')
+        mocked_get_last_bootstrap_set.assert_called_once_with('packages')
 
 
 if __name__ == '__main__':

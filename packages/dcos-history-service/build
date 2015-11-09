@@ -6,11 +6,15 @@ export LD_LIBRARY_PATH=/opt/mesosphere/lib
 
 mkdir -p "$LIB_INSTALL_DIR"
 
+# Copy from the ro /pkg/extra to a rw folder.
+mkdir -p /build
+cp -r /pkg/extra /build
+pushd /build
+
 # Build the history service
-pushd /pkg/extra
 python3 setup.py install --root=/ --prefix=$PKG_PATH
 
 # Create the service file
 service="$PKG_PATH/dcos.target.wants_master/dcos-history-service.service"
 mkdir -p "$(dirname "$service")"
-cp /pkg/extra/dcos-history.service  "$service"
+cp build/dcos-history.service  "$service"

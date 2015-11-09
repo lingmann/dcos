@@ -130,13 +130,7 @@ def test_setup(tmpdir):
                 "--no-systemd"
                 ])
 
-    expect_fs(
-        "{0}/root".format(tmpdir),
-        {
-            "foo.new": None,
-            "baz": None,
-            "foobar.old": None,
-            "packages": None})
+    expect_fs("{0}".format(tmpdir), {"repository": None})
 
 
 def test_activate(tmpdir):

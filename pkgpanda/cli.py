@@ -244,6 +244,9 @@ def uninstall(install, repository):
 
     check_call(['rm', '-rf'] + all_names)
 
+    # Removing /opt/mesosphere
+    check_call(['rm', '-rf', install.root])
+
 
 def find_checks(install, repository):
     checks = {}

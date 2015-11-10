@@ -246,3 +246,15 @@ def test_if_Marathon_app_can_be_deployed(cluster):
     # delete app
     r = cluster.delete('marathon/v2/apps' + app)
     assert r.ok
+
+
+def test_if_DCOSHistoryService_is_getting_data(cluster):
+    r = cluster.get('dcos-history-service/history/last')
+    assert r.status_code == 200
+    # Make sure some basic fields are present from state-summary which the DCOS
+    # UI relies upon. Their exact content could vary so don't test the value.
+    json = r.json()
+    assert 'cluster' in json
+    assert 'frameworks' in json
+    assert 'slaves' in json
+    assert 'hostname' in json

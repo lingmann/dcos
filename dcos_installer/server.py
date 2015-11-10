@@ -16,7 +16,7 @@ Global Variables
 """
 # Sane user config defaults
 userconfig = {
-    "num_masters": "3",
+#    "num_masters": "3",
     "weights": "slave_public=1",
     "bootstrap_url": "localhost",
     "roles": "slave_public",

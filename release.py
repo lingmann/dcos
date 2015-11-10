@@ -17,11 +17,14 @@ import importlib
 import json
 import mimetypes
 import os.path
+import subprocess
 import sys
+import tempfile
 from functools import partial, partialmethod
+
 import pkgpanda
 import pkgpanda.build
-import subprocess
+import pkgpanda.util
 import aws_config
 import util
 
@@ -182,7 +185,7 @@ class AzureStorageProvider(AbstractStorageProvider):
             except azure.storage._common_error.AzureMissingResourceHttpError:
                 pass
 
-        print("Uploading {}/{}".format(path, " as {}".format(destination_path) if destination_path else ''))
+        print("Uploading {}{}".format(path, " as {}".format(destination_path) if destination_path else ''))
         self.blob_service.put_block_blob_from_path(
             container,
             destination_path,
@@ -262,6 +265,10 @@ class S3StorageProvider(AbstractStorageProvider):
         for chunk in iter(lambda: body.read(4096), b''):
             data += chunk
         return data
+
+    def download_if_not_exist(self, name, output_filename):
+        if not os.path.exists(output_filename):
+            return self.get_object(name).download_file(output_filename)
 
     def upload_local_file(
             self,
@@ -420,10 +427,8 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
 
 def do_promote(options):
     print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
-    destination_storage_providers = [S3StorageProvider(options.destination_channel),
-                                     AzureStorageProvider(options.destination_channel)]
-    source_storage_providers = [S3StorageProvider(options.source_channel),
-                                AzureStorageProvider(options.source_channel)]
+    destination_storage_providers = [S3StorageProvider(options.destination_channel)]
+    source_storage_providers = [S3StorageProvider(options.source_channel)]
     destination = ChannelManager(destination_storage_providers)
     source = ChannelManager(source_storage_providers)
 
@@ -455,6 +460,22 @@ def do_promote(options):
         options.destination_channel,
         metadata['commit'])
 
+    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
+    # Download the bootstrap if it doesn't exist
+    bootstrap_path = '/{}.bootstrap.tar.xz'.format(default_bootstrap_id)
+    source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
+
+    # Check needed configuration is set
+    pkgpanda_src = do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda')
+    dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
+
+    print("Building dcos-genconf docker container")
+    genconf_metadata = make_genconf_docker(
+        pkgpanda_src,
+        dcos_image_src,
+        options.destination_channel,
+        default_bootstrap_id)
+
     metadata_json = to_json(
         {
             'active_packages': active_packages,
@@ -462,10 +483,17 @@ def do_promote(options):
             'commit': commit,
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
-            'tag': metadata['tag']})
+            'tag': metadata['tag'],
+            'genconf_docker_tag': open('docker-tag').read()})
 
     # Copy across packages, bootstrap.
     destination.copy_across(source, bootstrap_dict, active_packages)
+
+    # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
+    # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
+    # to have the channel name as a tag.
+    print("Pushing dcos-genconf docker container")
+    push_genconf_docker(genconf_metadata)
 
     # Upload provider artifacts, mark as active
     destination.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
@@ -542,17 +570,134 @@ def do_variable_set_or_exists(env_var, path):
     sys.exit(1)
 
 
+def check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id):
+    def check_is_git_repo(path, identifier):
+        assert(path[-1] != '/')
+
+        if not os.path.exists(path + '/.git'):
+            raise ValueError(
+                identifier + "_src must be a git repository containing a .git " +
+                "folder. Given directory " + path + " isn't.")
+
+        sha1 = subprocess.check_output(['git', '-C', path, 'rev-parse', 'HEAD']).decode('utf-8')
+        assert len(sha1) > 0
+
+        return sha1
+
+    pkgpanda_sha1 = check_is_git_repo(pkgpanda_src, 'pkgpanda')
+    dcos_image_sha1 = check_is_git_repo(dcos_image_src, 'dcos_image')
+
+    docker_tag = dcos_image_sha1[:12] + '-' + pkgpanda_sha1[:12] + '-' + bootstrap_id[:12]
+    genconf_tar = "dcos-genconf." + docker_tag + ".tar"
+    bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
+    bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
+
+    return {
+        'pkgpanda_src': pkgpanda_src,
+        'dcos_image_src': dcos_image_src,
+        'bootstrap_id': bootstrap_id,
+        'docker_tag': docker_tag,
+        'genconf_tar': genconf_tar,
+        'bootstrap_filename': bootstrap_filename,
+        'bootstrap_path': bootstrap_path,
+        'docker_image_name': 'mesosphere/dcos-genconf:' + docker_tag
+    }
+
+
+def make_build_dir(metadata):
+    tmp_dir = tempfile.TemporaryDirectory()
+    assert tmp_dir.name[-1] != '/'
+    subprocess.check_call([
+        'mkdir',
+        '-p',
+        tmp_dir.name + '/pkgpanda',
+        tmp_dir.name + '/dccos-image',
+        tmp_dir.name + '/bootstrap'])
+
+    # clone the repository dropping git history other than last commit so that it
+    # is still a valid git checkout but we lose any local modifications, and don't
+    # capture any temporary files in the filesystem (package builds, etc).
+    subprocess.check_call([
+        'git',
+        'clone',
+        '--depth=1',
+        'file://' + metadata['pkgpanda_src'],
+        tmp_dir.name + '/pkgpanda'])
+
+    subprocess.check_call([
+        'git',
+        'clone',
+        '--depth=1',
+        'file://' + metadata['dcos_image_src'],
+        tmp_dir.name + '/dcos-image'])
+
+    pkgpanda.util.write_string(
+        tmp_dir.name + '/Dockerfile',
+        pkgpanda.util.load_string('docker/genconf/Dockerfile.template').format(**metadata))
+
+    pkgpanda.util.write_string(
+        'dcos_generate_config.sh',
+        pkgpanda.util.load_string('docker/genconf/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
+
+    return tmp_dir
+
+
+def make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, bootstrap_id):
+    assert len(channel_name) > 0
+    assert len(bootstrap_id) > 0
+
+    metadata = check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id)
+    metadata['channel_name'] = channel_name
+
+    with make_build_dir(metadata) as build_dir:
+        print("Pulling base docker")
+        subprocess.check_call(['docker', 'pull', 'python:3.4.3-slim'])
+
+        print("Building docker container in " + build_dir)
+        build_bootstrap_path = build_dir + '/' + metadata['bootstrap_filename']
+        subprocess.check_call(['cp', metadata['bootstrap_path'], build_bootstrap_path])
+        subprocess.check_call(['docker', 'build', '-t', metadata['docker_image_name'], build_dir])
+        # Clean up the giant bootstrap to save space
+        subprocess.check_call(['rm', build_bootstrap_path])
+        pkgpanda.util.write_string('docker-tag', metadata['docker_tag'])
+        pkgpanda.util.write_string('docker-tag.txt', metadata['docker_tag'])
+
+        print("Building dcos_generate_config.sh")
+        subprocess.check_call(
+            ['docker', 'save', metadata['docker_image_name']],
+            stdout=open(metadata['genconf_tar'], 'w'))
+        subprocess.check_call(['tar', 'cvf', '-', metadata['genconf_tar']], stdout=open('dcos_generate_config.sh', 'a'))
+        subprocess.check_call(['chmod', '+x', 'dcos_generate_config.sh'])
+
+    return metadata
+
+
+def push_genconf_docker(metadata):
+    channel_dest = "mesosphere/dcos-genconf:" + metadata['channel_name'].replace('/', '_')
+    print("Pushing: {} and {}".format(metadata['docker_image_name'], channel_dest))
+    subprocess.check_call(['docker', 'push', metadata['docker_image_name']])
+    subprocess.check_call(['docker', 'tag', '-f', metadata['docker_image_name'], channel_dest])
+    subprocess.check_call(['docker', 'push', channel_dest])
+
+
+def make_abs(path):
+    if path[0] == '/':
+        return path
+    return os.getcwd() + '/' + path
+
+
 def do_create(options):
     channel_name = 'testing/' + options.destination_channel
-    storage_providers = [S3StorageProvider(channel_name), AzureStorageProvider(channel_name)]
+    storage_providers = [S3StorageProvider(channel_name)]
     channel = ChannelManager(storage_providers)
     commit = util.dcos_image_commit
     print("Creating release on channel:", channel_name)
     print("version tag:", options.tag)
 
+    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
     # Check needed configuration is set
-    pkgpanda_src = do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda')
-    dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
+    pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
+    dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
 
     # Build packages and generate bootstrap
     print("Building packages")
@@ -574,13 +719,8 @@ def do_create(options):
 
     # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
     # bootstrap tarball inside of it.
-    print("Building dcos_genconf docker container")
-    subprocess.check_call(['docker/genconf/make.sh'], env={
-        'PKGPANDA_SRC': pkgpanda_src,
-        'DCOS_IMAGE_SRC': dcos_image_src,
-        'CHANNEL_NAME': channel_name,
-        'BOOTSTRAP_ID': default_bootstrap_id
-        })
+    print("Building dcos-genconf docker container")
+    genconf_metadata = make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, default_bootstrap_id)
 
     # Calculate the active packages merged from all the bootstraps
     active_packages = set()
@@ -609,12 +749,8 @@ def do_create(options):
     # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
     # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
     # to have the channel name as a tag.
-    subprocess.check_call(['docker/genconf/make.sh', 'push'], env={
-        'PKGPANDA_SRC': pkgpanda_src,
-        'DCOS_IMAGE_SRC': dcos_image_src,
-        'CHANNEL_NAME': channel_name,
-        'BOOTSTRAP_ID': default_bootstrap_id
-        })
+    print("Pushing dcos-genconf docker container")
+    push_genconf_docker(genconf_metadata)
 
     # Upload provider artifacts, mark as active
     channel.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)

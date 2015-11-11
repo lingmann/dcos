@@ -182,18 +182,15 @@ def test_if_Mesos_is_up(cluster):
     assert '<title>Mesos</title>' in r.text
 
 
-# FIXME: DCOS-3496
-# TLDR: there is a problem with Mesos on agent4-1. Even though the leader was
-# elected, slaves are not joining and the test is failing. Work is in progress
-# with developers on debugging it.
-# def test_if_all_Mesos_slaves_have_registered(cluster):
-    # r = cluster.get('mesos/master/slaves')
-    # data = r.json()
-    # slaves_ips = sorted(x['hostname'] for x in data['slaves'])
+def test_if_all_Mesos_slaves_have_registered(cluster):
+    r = cluster.get('mesos/master/slaves')
+    assert r.status_code == 200
 
-    # assert r.status_code == 200
-    # assert len(data['slaves']) == 2
-    # assert slaves_ips == ['172.17.10.201', '172.17.10.202']
+    data = r.json()
+    slaves_ips = sorted(x['hostname'] for x in data['slaves'])
+
+    assert len(data['slaves']) == 2
+    assert slaves_ips == ['172.17.10.201', '172.17.10.202']
 
 
 def test_if_all_Mesos_masters_have_registered(cluster):

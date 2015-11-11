@@ -79,14 +79,8 @@ bash ../dcos_generate_config.sh --installer-format $PLATFORM --config /genconf/c
 echo "Starting Vagrant VMs"
 vagrant up --parallel --provider=libvirt --debug
 
-echo "Waiting for Mesos-DNS to come up and locate an elected mesos-master"
-until dig +short leader.mesos @$MASTER_IP > /dev/null 2>&1; do sleep 1; done
-
-echo "Waiting for WebUI to come up"
-while ! curl -LfsSo /dev/null $DCOS_DNS_ADDRESS; do sleep 1; done # Wait for web ui
-
 echo "Running integration test"
-if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS -e ZK_HOSTS="172.17.10.101:2181,172.17.10.102:2181,172.17.10.103:2181" --net=host py.test py.test /integration_test.py; then
+if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS -e ZK_HOSTS="172.17.10.101:2181,172.17.10.102:2181,172.17.10.103:2181" --net=host py.test py.test -s /integration_test.py; then
   echo "TEST FAILED"
   exit 1
 fi

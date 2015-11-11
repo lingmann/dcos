@@ -205,8 +205,8 @@ def do_create(tag, channel, commit, gen_arguments):
     gen_arguments['master_discovery'] = 'cloud_dynamic'
     single_args = deepcopy(gen_arguments)
     multi_args = deepcopy(gen_arguments)
-    single_args['num_masters'] = 1
-    multi_args['num_masters'] = 3
+    single_args['num_masters'] = "1"
+    multi_args['num_masters'] = "3"
     single_master = gen_templates(single_args, gen_options)
     multi_master = gen_templates(multi_args, gen_options)
     single_master_spot = gen_templates(get_spot_args(single_args), gen_options)

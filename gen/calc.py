@@ -71,7 +71,7 @@ def calculate_ip_detect_contents(arguments):
         sys.exit(1)
 
 must = {
-    'master_quorum': lambda arguments: floor(int(arguments['num_masters']) / 2) + 1,
+    'master_quorum': lambda arguments: str(floor(int(arguments['num_masters']) / 2) + 1),
     'resolvers_str': calculate_resolvers_str,
     'dcos_image_commit': calulate_dcos_image_commit,
     'ip_detect_contents': calculate_ip_detect_contents,
@@ -95,7 +95,7 @@ def validate(arguments):
         assert arguments['channel_name'][-1] != '/'
 
 defaults = {
-    "num_masters": 3,
+    "num_masters": "3",
     "channel_name": "testing/continuous",
     "roles": "slave_public",
     "weights": "slave_public=1",

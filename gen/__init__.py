@@ -512,6 +512,22 @@ def ensure_no_repeated(mixin_objs):
         add_assert_duplicate(check_argument_names, mixin.must_fn.keys())
 
 
+def validate_arguments_strings(arguments):
+    has_error = False
+    # Validate that all keys and vlaues of arguments are strings
+    for k, v in arguments.items():
+        if not isinstance(k, str):
+            print("ERROR: all keys in arguments must be strings. '{}' isn't.".format(k))
+            has_error = True
+        if not isinstance(v, str):
+            print("ERROR: all values in arguments must be strings. Value for argument ", k,
+                  " isn't. Given value: {}".format(v))
+            has_error = True
+
+    if has_error:
+        sys.exit(1)
+
+
 def do_generate(
         options,
         mixins,
@@ -565,6 +581,9 @@ def do_generate(
         except ValueError as ex:
             log.error("%s", ex)
             sys.exit(1)
+
+    # Make sure all user provided arguments are strings.
+    validate_arguments_strings(arguments)
 
     # Empty string (top level directory) is always implicitly included
     assert '' not in mixins
@@ -686,17 +705,8 @@ def do_generate(
     # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)
 
-    # Validate that all keys and vlaues of arguments are strings
-    for k, v in arguments.items():
-        if not isinstance(k, str):
-            print("ERROR: all keys in arguments must be strings. '{}' isn't.".format(k))
-            sys.exit(1)
-        if not isinstance(v, str):
-            print("ERROR: all values in arguments must be strings. Value for argument ", k,
-                  " isn't. Given value: {}".format(v))
-            sys.exit(1)
-
     # Validate arguments.
+    validate_arguments_strings(arguments)
     # TODO(cmaloney): Define an API for allowing multiple failures, reporting
     # more than just the first error.
     for fn in validate_fn:

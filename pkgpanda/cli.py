@@ -242,6 +242,11 @@ def uninstall(install, repository):
 
     assert len(all_names) > 0
 
+    if '/' in all_names + [install.root]:
+        print("Cowardly refusing to rm -rf '/' as part of uninstall.")
+        print("Uninstall directories: ", ','.join(all_names + [install.root]))
+        sys.exit(1)
+
     check_call(['rm', '-rf'] + all_names)
 
     # Removing /opt/mesosphere

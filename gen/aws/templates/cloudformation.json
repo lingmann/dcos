@@ -14,7 +14,7 @@
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "AcceptEULA": {
-      "Description" : "Required: Read and agree to the <a href=\"https://docs.mesosphere.com/community-edition-eula/\" target=\"_blank\">EULA</a>.",
+      "Description" : "Required: Read EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
       "Type" : "String",
       "AllowedValues": ["Yes"]
     },
@@ -28,12 +28,12 @@
       "ConstraintDescription" : "must be a valid CIDR."
     },
     "SlaveInstanceCount" : {
-      "Description" : "Optional: Specify the number of private agent nodes.",
+      "Description" : "<br>Required: Specify the number of private agent nodes or accept the default.",
       "Type" : "Number",
       "Default" : "{{ num_private_slaves }}"
     },
     "PublicSlaveInstanceCount" : {
-      "Description" : "Optional: Specify the number of public agent nodes.",
+      "Description" : "Require: Specify the number of public agent nodes or accept the default.",
       "Type" : "Number",
       "Default" : "{{ num_public_slaves }}"
     }

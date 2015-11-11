@@ -425,7 +425,6 @@ def get_dependencies(config_path):
             "exhibitor_storage_backend":"",
             "cluster_name": "", 
             "resolvers": "", 
-            "num_masters": "",
             "weights": "",
             "bootstrap_url": "",
             "roles": "",

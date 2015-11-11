@@ -35,7 +35,7 @@ then
 fi
 
 # Build a docker container for running py.test inside of.
-docker build -t py.test - < py.test.Dockerfile
+docker build -t py.test - < ../docker/py.test/Dockerfile
 
 export MASTER_IP=172.17.10.101
 export DCOS_DNS_ADDRESS=http://$MASTER_IP

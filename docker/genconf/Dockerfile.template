@@ -20,9 +20,10 @@ WORKDIR /dcos-image
 VOLUME ["/genconf"]
 
 RUN mkdir -p /artifacts
-COPY {bootstrap_filename} /artifacts/${bootstrap_filename}
+COPY {bootstrap_filename} /artifacts/{bootstrap_filename}
 
 ENV CHANNEL_NAME={channel_name}
 ENV BOOTSTRAP_ID={bootstrap_id}
+ENV PYTHONUNBUFFERED="notemtpy"
 
 ENTRYPOINT ["/dcos-image/genconf.py"]

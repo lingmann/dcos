@@ -54,10 +54,10 @@ class StateBuffer():
             # state-summary. leader.mesos isn't updated instantly.
             # That requires mesos stop returning hostnames from `/master/redirect`.
             # See: https://github.com/apache/mesos/blob/master/src/master/http.cpp#L746
-            url = "http://leader.mesos/state-summary"
+            url = "http://leader.mesos:5050/state-summary"
             logging.info("Get state from leading master %s" % url)
             resp = requests.get(url)
-            if (resp.response_code != 200):
+            if resp.status_code != 200:
                 raise Exception("Could not read from %s" % url)
             return resp.text
         except Exception as e:

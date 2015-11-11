@@ -7,7 +7,7 @@ if [ "$#" -ne 1 ]; then
 fi
 
 
-grep -r "$1" gen/ docker/ diag/ docs/ scripts/ test/ fleet/
+grep -r "$1" gen/ docker/ diag/ docs/ scripts/ test/ fleet/ providers/
 grep "$1" packages/*/build
 grep "$1" packages/*/buildinfo.json
 grep "$1" *.py

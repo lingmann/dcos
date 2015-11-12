@@ -210,13 +210,15 @@ def test_if_all_Mesos_masters_have_registered(cluster):
     assert master_ips == ZK_IPS
 
 
-def test_if_Exhibitor_is_up(cluster):
+def test_if_Exhibitor_API_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/list')
     assert r.status_code == 200
 
     data = r.json()
     assert data["port"] > 0
 
+
+def test_if_Exhibitor_UI_is_up(cluster):
     r = cluster.get('exhibitor')
     assert r.status_code == 200
     assert 'Exhibitor for ZooKeeper' in r.text

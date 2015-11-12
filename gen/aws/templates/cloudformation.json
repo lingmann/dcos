@@ -199,6 +199,7 @@
 
     "GatewayToInternet" : {
       "Type" : "AWS::EC2::VPCGatewayAttachment",
+      "DependsOn": "InternetGateway",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
         "InternetGatewayId" : { "Ref" : "InternetGateway" }

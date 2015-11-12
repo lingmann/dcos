@@ -267,6 +267,14 @@ def test_if_Marathon_UI_is_up(cluster):
     assert '<title>Marathon</title>' in r.text
 
 
+def test_if_service_endpoint_works(cluster):
+    r = cluster.get('service/marathon/ui/')
+
+    assert r.status_code == 200
+    assert len(r.text) > 100
+    assert '<title>Marathon</title>' in r.text
+
+
 def test_if_Mesos_API_is_up(cluster):
     r = cluster.get('mesos_dns/v1/version')
     assert r.status_code == 200

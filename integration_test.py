@@ -1,9 +1,13 @@
 import bs4
+import dns.exception
+import dns.resolver
 import json
 import kazoo.client
+import logging
 import os
 import pytest
 import requests
+import retrying
 import time
 import urllib.parse
 import uuid
@@ -11,6 +15,7 @@ import uuid
 
 ZK_HOSTS = os.environ.get('ZK_HOSTS', '127.0.0.1:2181')
 ZK_IPS = set(hostport.split(':')[0] for hostport in ZK_HOSTS.split(','))
+LOG_LEVEL = logging.INFO
 
 
 @pytest.fixture(scope='module')
@@ -18,10 +23,113 @@ def cluster():
     # Must set the cluster DNS address as an environment parameter
     assert 'DCOS_DNS_ADDRESS' in os.environ
 
+    _setup_logging()
+
     return Cluster(os.environ['DCOS_DNS_ADDRESS'])
 
 
+def _setup_logging():
+    """Setup logging for the script"""
+    logger = logging.getLogger()
+    logger.setLevel(LOG_LEVEL)
+    fmt = logging.Formatter('[%(asctime)s] %(levelname)s: %(message)s')
+    handler = logging.StreamHandler()
+    handler.setFormatter(fmt)
+    logger.addHandler(handler)
+
+    logging.getLogger("requests").setLevel(logging.WARNING)
+
+
 class Cluster:
+    @retrying.retry(wait_fixed=1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_Marathon_up(self):
+        r = self.get('marathon/ui/')
+        # resp_code >= 500 -> backend is still down probably
+        if r.status_code < 500:
+            logging.info("Marathon is probably up")
+            return True
+        else:
+            msg = "Waiting for Marathon, resp code is: {}"
+            logging.info(msg.format(r.status_code))
+            return False
+
+    @retrying.retry(wait_fixed=1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_slaves_to_join(self):
+        r = self.get('mesos/master/slaves')
+        if r.status_code != 200:
+            msg = "Mesos master returned status code {} != 200 "
+            msg += "continuing to wait..."
+            logging.info(msg.format(r.status_code))
+            return False
+        data = r.json()
+        num_slaves = len([x['hostname'] for x in data['slaves']])
+        if num_slaves >= 2:
+            msg = "Sufficient ({} >= 2) number of slaves have joined the cluster"
+            logging.info(msg.format(num_slaves))
+            return True
+        else:
+            msg = "Curent number of slaves: {}, continuing to wait..."
+            logging.info(msg.format(num_slaves))
+            return False
+
+    @retrying.retry(wait_fixed=1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_DCOS_history_up(self):
+        r = self.get('dcos-history-service/ping')
+        # resp_code >= 500 -> backend is still down probably
+        if r.status_code <= 500:
+            logging.info("DCOS History is probably up")
+            return True
+        else:
+            msg = "Waiting for DCOS History, resp code is: {}"
+            logging.info(msg.format(r.status_code))
+            return False
+
+    @retrying.retry(wait_fixed=1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_leader_election(self):
+        mesos_resolver = dns.resolver.Resolver()
+        mesos_resolver.nameservers = list(ZK_IPS)
+        try:
+            # Yeah, we can also put it in retry_on_exception, but
+            # this way we will loose debug messages
+            mesos_resolver.query('leader.mesos', 'A')
+        except dns.exception.DNSException as e:
+            msg = "Cannot resolve leader.mesos, error string: '{}', continuing to wait"
+            logging.info(msg.format(e))
+            return False
+        else:
+            logging.info("leader.mesos dns entry is UP!")
+            return True
+
+    @retrying.retry(wait_fixed=1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_nginx_up(self):
+        try:
+            # Yeah, we can also put it in retry_on_exception, but
+            # this way we will loose debug messages
+            self.get()
+        except requests.ConnectionError as e:
+            msg = "Cannot connect to nginx, error string: '{}', continuing to wait"
+            logging.info(msg.format(e))
+            return False
+        else:
+            logging.info("Nginx is UP!")
+            return True
+
+    def _wait_for_DCOS(self):
+        self._wait_for_leader_election()
+        self._wait_for_nginx_up()
+        self._wait_for_Marathon_up()
+        self._wait_for_slaves_to_join()
+        self._wait_for_DCOS_history_up()
 
     def __init__(self, uri):
         # URI must include scheme
@@ -30,8 +138,9 @@ class Cluster:
         # Make URI always end with '/'
         if uri[-1] != '/':
             uri += '/'
-
         self.uri = uri
+
+        self._wait_for_DCOS()
 
     def get(self, path=""):
         return requests.get(self.uri + path)
@@ -73,18 +182,15 @@ def test_if_Mesos_is_up(cluster):
     assert '<title>Mesos</title>' in r.text
 
 
-# FIXME: DCOS-3496
-# TLDR: there is a problem with Mesos on agent4-1. Even though the leader was
-# elected, slaves are not joining and the test is failing. Work is in progress
-# with developers on debugging it.
-# def test_if_all_Mesos_slaves_have_registered(cluster):
-    # r = cluster.get('mesos/master/slaves')
-    # data = r.json()
-    # slaves_ips = sorted(x['hostname'] for x in data['slaves'])
+def test_if_all_Mesos_slaves_have_registered(cluster):
+    r = cluster.get('mesos/master/slaves')
+    assert r.status_code == 200
 
-    # assert r.status_code == 200
-    # assert len(data['slaves']) == 2
-    # assert slaves_ips == ['172.17.10.201', '172.17.10.202']
+    data = r.json()
+    slaves_ips = sorted(x['hostname'] for x in data['slaves'])
+
+    assert len(data['slaves']) == 2
+    assert slaves_ips == ['172.17.10.201', '172.17.10.202']
 
 
 def test_if_all_Mesos_masters_have_registered(cluster):
@@ -219,19 +325,19 @@ def test_if_Marathon_app_can_be_deployed(cluster):
         r = cluster.get('marathon/v2/apps' + app)
         if r.ok:
             json = r.json()
-            print('fetched app status {}'.format(json))
+            logging.debug('fetched app status {}'.format(json))
             tasksRunning = json['app']['tasksRunning']
             tasksHealthy = json['app']['tasksHealthy']
 
             if tasksHealthy == 1:
                 remote_host = json['app']['tasks'][0]['host']
                 remote_port = json['app']['tasks'][0]['ports'][0]
-                print('running on {}:{} with {}/{} healthy tasks'.format(
+                logging.info('running on {}:{} with {}/{} healthy tasks'.format(
                     remote_host, remote_port, tasksHealthy, tasksRunning))
                 break
 
         if time.time() > timeout:
-            print('timeout while waiting for healthy task')
+            logging.warn('timeout while waiting for healthy task')
             break
 
         time.sleep(5)

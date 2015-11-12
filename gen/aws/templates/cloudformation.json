@@ -14,7 +14,7 @@
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "AcceptEULA": {
-      "Description" : "Required: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
+      "Description" : "\nRequired: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
       "Type" : "String",
       "AllowedValues": ["Yes"]
     },

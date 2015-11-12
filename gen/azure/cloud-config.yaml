@@ -44,13 +44,3 @@ coreos:
         What=/dev/sdb1
         Where=/var/lib
         Type=ext4
-    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        Type=oneshot
-        EnvironmentFile=/etc/environment
-        # Marathon depends on `hostname` resolution working
-        ExecStart=/usr/bin/bash -c "echo $private_ipv4 $(hostname) > /etc/hosts"

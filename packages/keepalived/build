@@ -44,6 +44,7 @@ vrrp_instance DCOS_1 {
     virtual_router_id @KEEPALIVED_ROUTER_ID@
     priority 100
     advert_int 1
+    dont_track_primary
     authentication {
         auth_type PASS
         auth_pass @KEEPALIVED_PASS@

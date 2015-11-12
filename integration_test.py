@@ -217,6 +217,10 @@ def test_if_Exhibitor_is_up(cluster):
     data = r.json()
     assert data["port"] > 0
 
+    r = cluster.get('exhibitor')
+    assert r.status_code == 200
+    assert 'Exhibitor for ZooKeeper' in r.text
+
 
 def test_if_ZooKeeper_cluster_is_up(cluster):
     r = cluster.get('exhibitor/exhibitor/v1/cluster/status')

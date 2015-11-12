@@ -3,6 +3,7 @@ def render_installer(name, c)
   # so we need to add them here
   return <<-"EOF"
     yum -y install docker unzip &&
+    sed -i -e "s/OPTIONS='/OPTIONS='--insecure-registry 172.17.10.1:5000 /" /etc/sysconfig/docker &&
     systemctl enable docker &&
     systemctl start docker &&
     groupadd -g 65500 nogroup &&

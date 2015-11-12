@@ -10,16 +10,16 @@
 
   "Parameters" : {
     "KeyName" : {
-      "Description" : "Name of SSH key to link",
+      "Description" : "Required: Specify your AWS EC2 Key Pair.",
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "AcceptEULA": {
-      "Description" : "Please read and agree to our EULA: https://docs.mesosphere.com/community-edition-eula/",
+      "Description" : "\nRequired: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
       "Type" : "String",
       "AllowedValues": ["Yes"]
     },
     "AdminLocation": {
-      "Description" : "The IP range to whitelist for admin access.",
+      "Description" : "Optional: Specify the IP range to whitelist for access to the admin zone. Must be a valid CIDR.",
       "Type" : "String",
       "MinLength" : "9",
       "MaxLength" : "18",
@@ -28,12 +28,12 @@
       "ConstraintDescription" : "must be a valid CIDR."
     },
     "SlaveInstanceCount" : {
-      "Description" : "Number of slave nodes to launch",
+      "Description" : "Required: Specify the number of private agent nodes or accept the default.",
       "Type" : "Number",
       "Default" : "{{ num_private_slaves }}"
     },
     "PublicSlaveInstanceCount" : {
-      "Description" : "Number of public slave nodes to launch",
+      "Description" : "Required: Specify the number of public agent nodes or accept the default.",
       "Type" : "Number",
       "Default" : "{{ num_public_slaves }}"
     }

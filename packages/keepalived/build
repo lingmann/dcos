@@ -14,6 +14,11 @@ make -j8
 make install
 popd
 
+# move binary
+mv -f "$PKG_PATH/sbin/keepalived" "$PKG_PATH/bin/keepalived"
+chmod go+r "$PKG_PATH/bin/keepalived"
+rmdir "$PKG_PATH/sbin/"
+
 # copy libs
 mkdir -p "$PKG_PATH/lib"
 cp /lib/x86_64-linux-gnu/libnl-genl-3.so.200 "$PKG_PATH/lib/libnl-genl-3.so.200"
@@ -21,6 +26,7 @@ cp /lib/x86_64-linux-gnu/libnl-3.so.200 "$PKG_PATH/lib/libnl-3.so.200"
 
 # remove examples and unused config
 rm -rf "$PKG_PATH/etc/"
+
 
 # write keepalived config template
 keepalived_config="$PKG_PATH/conf/keepalived.conf.template"
@@ -52,18 +58,19 @@ vrrp_instance DCOS_1 {
 }
 EOF
 
-keepalived_wrapper="$PKG_PATH/sbin/keepalived.wrapper"
+keepalived_wrapper="$PKG_PATH/bin/keepalived-wrapper"
 cat <<EOF > "$keepalived_wrapper"
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
 rm -f /tmp/keepalived.conf.*
 conf="\$(mktemp -p /tmp keepalived.conf.XXXXXXXX)"
+conf_template="\${KEEPALIVED_CONF_TEMPLATE-$PKG_PATH/conf/keepalived.conf.template}"
 sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
-         -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
-         -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
-         -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
-         "$PKG_PATH/conf/keepalived.conf.template" > "\$conf"
-exec "$PKG_PATH/sbin/keepalived" -f "\$conf" \$*
+    -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \
+    -e "s/@KEEPALIVED_PASS@/\${KEEPALIVED_PASS}/" \
+    -e "s/@KEEPALIVED_VIRTUAL_IPADDRESS@/\${KEEPALIVED_VIRTUAL_IPADDRESS}/" \
+    "\$conf_template" > "\$conf"
+exec "/opt/mesosphere/bin/keepalived" -f "\$conf" \$*
 EOF
 chmod 744 "$keepalived_wrapper"
 
@@ -82,7 +89,5 @@ RestartSec=5
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/keepalived
-ExecStart=$PKG_PATH/sbin/keepalived.wrapper -n \$KEEPALIVED_OPTIONS
+ExecStart=/opt/mesosphere/bin/keepalived-wrapper -n \$KEEPALIVED_OPTIONS
 EOF
-
-chmod go+r "$PKG_PATH/sbin/keepalived"

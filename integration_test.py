@@ -193,6 +193,23 @@ def test_if_all_Mesos_slaves_have_registered(cluster):
     assert slaves_ips == ['172.17.10.201', '172.17.10.202']
 
 
+def test_if_srouter_slaves_endpoint_work(cluster):
+    r = cluster.get('mesos/master/slaves')
+    assert r.status_code == 200
+
+    data = r.json()
+    slaves_ids = sorted(x['id'] for x in data['slaves'])
+
+    for slave_id in slaves_ids:
+        uri = 'slave/{}/slave%281%29/state.json'.format(slave_id)
+        r = cluster.get(uri)
+        assert r.status_code == 200
+
+        data = r.json()
+        assert "id" in data
+        assert data["id"] == slave_id
+
+
 def test_if_all_Mesos_masters_have_registered(cluster):
     # Currently it is not possible to extract this information through Mesos'es
     # API, let's query zookeeper directly.
@@ -261,6 +278,14 @@ def test_if_DCOSHistoryService_is_up(cluster):
 
 def test_if_Marathon_UI_is_up(cluster):
     r = cluster.get('marathon/ui/')
+
+    assert r.status_code == 200
+    assert len(r.text) > 100
+    assert '<title>Marathon</title>' in r.text
+
+
+def test_if_srouter_service_endpoint_works(cluster):
+    r = cluster.get('service/marathon/ui/')
 
     assert r.status_code == 200
     assert len(r.text) > 100

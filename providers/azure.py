@@ -19,7 +19,8 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
-UPLOAD_URL = 'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{}/azure/single-master.azuredeploy.json'
+UPLOAD_URL = ("https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{channel}"
+              "/azure/azure/{config_id}.single-master.azuredeploy.json")
 
 INSTANCE_GROUPS = {
     'master': {
@@ -161,6 +162,7 @@ def do_create(tag, channel, commit, gen_arguments):
     single_args = deepcopy(gen_arguments)
     single_args['num_masters'] = '1'
     single_master = gen_templates(single_args, gen_options)
+    single_master_config_id = single_master.results.arguments['config_id']
 
     # Make sure we upload the packages for both the multi-master templates as
     # well as the single-master templates.
@@ -171,13 +173,12 @@ def do_create(tag, channel, commit, gen_arguments):
         'files': [
             {
                 'known_path': 'azure/single-master.azuredeploy.json',
-                'stable_path': 'azure/{}.single-master.azuredeploy.json'.format(
-                    single_master.results.arguments['config_id']),
+                'stable_path': 'azure/{}.single-master.azuredeploy.json'.format(single_master_config_id),
                 'content': single_master.arm
             },
             {
                 'known_path': 'azure.html',
-                'content': gen_buttons(channel, tag, commit),
+                'content': gen_buttons(channel, tag, commit, single_master_config_id),
                 'upload_args': {
                     'ContentType': 'text/html; charset=utf-8'
                 }
@@ -186,11 +187,11 @@ def do_create(tag, channel, commit, gen_arguments):
     }
 
 
-def gen_buttons(channel, tag, commit):
+def gen_buttons(channel, tag, commit, single_master_config_id):
     '''
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
-    template_upload_url = UPLOAD_URL.format(channel)
+    template_upload_url = UPLOAD_URL.format(channel=channel, config_id=single_master_config_id)
     return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
         'channel': channel,
         'tag': tag,

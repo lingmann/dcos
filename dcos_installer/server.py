@@ -74,6 +74,11 @@ def do_routes(app, options):
     # Configurator routes
     @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
     def configurator():
+        """
+        The top level configurator route. This route exposes the two options to go
+        to the configurator wizard or to upload the ip script. This will probably
+        be changed in the future.
+        """
         config_level, config_message = validate(options.config_path)
         ip_detect_level, ip_detect_message = validate_path(options.ip_detect_path)
         return render_template(
@@ -448,7 +453,7 @@ def get_dependencies(config_path):
             return_deps['exhibitor_storage_backend'] = dep_tree['exhibitor_storage_backend'][config['exhibitor_storage_backend']] 
         
         except: 
-            log.error("The specified configuration value is not valid, %s", config['master_discovery'])
+            log.error("The specified configuration value is not valid, %s", config['exhibitor_storage_backend'])
 
     return_deps['base'] = dep_tree['base']
     return return_deps

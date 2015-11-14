@@ -591,7 +591,11 @@ def test_if_service_discovery_works(cluster):
     r_data = r.json()
     assert r_data['reflector_uuid'] == test_uuid
     assert r_data['test_uuid'] == test_uuid
-    assert r_data['my_ip'] == service_points[0].host
+    if len(cluster.slaves) >= 2:
+        # When len(slaves)==1, we are connecting through docker-proxy using
+        # docker0 interface ip. This makes this assertion useless, so we skip
+        # it and rely on matching test uuid between containers only.
+        assert r_data['my_ip'] == service_points[0].host
 
     cluster.destroy_marathon_app(app_name)
 

@@ -17,6 +17,18 @@ cleanup_zookeeper_docker() {
   set -e
 }
 
+cleanup_vagrant_leftovers() {
+  echo "Cleaning up Vagrant leftovers (if any)"
+  set +e
+  for i in test_slave-01 test_slave-02 test_master-01 test_master-03 test_master-02
+  do
+    echo "Destroying Vagrant vm $i"
+    virsh destroy $i && virsh undefine --remove-all-storage $i;
+  done
+  vagrant global-status --prune
+  set -e
+}
+
 clean_all_dockers() {
   echo "Cleaning up zookeeper and nginx Docker containers"
   cleanup_nginx_docker
@@ -64,6 +76,7 @@ cat <<EOF > "genconf/config.json"
 EOF
 
 clean_all_dockers
+cleanup_vagrant_leftovers
 trap clean_all_dockers EXIT
 
 echo "Starting Nginx"
@@ -74,13 +87,21 @@ echo "Starting Zookeeper"
 docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
 
 echo "Generating config packages"
-bash ../dcos_generate_config.sh --installer-format $PLATFORM --config /genconf/config.json
+bash ../dcos_generate_config.sh --installer-format $PLATFORM
 
 echo "Starting Vagrant VMs"
-vagrant up --parallel --provider=libvirt --debug
+vagrant up --provider=libvirt --no-parallel --debug
 
 echo "Running integration test"
-if ! docker run -v $PWD/../integration_test.py:/integration_test.py -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS -e ZK_HOSTS="172.17.10.101:2181,172.17.10.102:2181,172.17.10.103:2181" --net=host py.test py.test -s /integration_test.py; then
+docker run -v $PWD/../integration_test.py:/integration_test.py \
+    -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
+    -e MASTER_HOSTS="172.17.10.101,172.17.10.102,172.17.10.103" \
+    -e SLAVE_HOSTS="172.17.10.201,172.17.10.202" \
+    -e REGISTRY_HOST="172.17.10.1" \
+    --net=host py.test py.test -s /integration_test.py
+RET=$?
+
+if [ $RET -ne 0 ]; then
   echo "TEST FAILED"
   exit 1
 fi

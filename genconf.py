@@ -17,17 +17,13 @@ def do_genconf(options):
     """
     Wraps calls to the gen library and instanciates configuration for a given provider.
     """
-    # Make sure to exit if --config is not passed when using non-interactive
-    if not options.interactive:
-        if not options.config:
-            log.error("Must pass --config when using non-interactive mode.")
-            sys.exit(1)
 
     # Interpolate the commands in genconf.py to gen library | i.e., set the args
     # in gen/__init__.py from our genconf.py commands
     gen_options = gen.get_options_object()
     gen_options.log_level = options.log_level
-    gen_options.config = options.config
+    if not options.interactive:
+        gen_options.config = "/genconf/config.json"
     gen_options.output_dir = options.output_dir
 
     if options.interactive:
@@ -36,6 +32,8 @@ def do_genconf(options):
     else:
         gen_options.assume_defaults = True
         gen_options.non_interactive = True
+
+    subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
 
     # Generate installation-type specific configuration
     if options.installer_format == 'bash':
@@ -160,13 +158,6 @@ parameters that the input paramters were expanded to as DCOS configuration.
         default='/genconf/serve',
         type=str,
         help='Output directory for genconf')
-
-    # Config file override
-    parser.add_argument(
-        '-c',
-        '--config',
-        type=str,
-        help='Path to config.json')
 
     # Set interactive mode
     parser.add_argument(

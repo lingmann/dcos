@@ -13,19 +13,20 @@ import urllib.parse
 import uuid
 
 
-ZK_HOSTS = os.environ.get('ZK_HOSTS', '127.0.0.1:2181')
-ZK_IPS = set(hostport.split(':')[0] for hostport in ZK_HOSTS.split(','))
 LOG_LEVEL = logging.INFO
 
 
 @pytest.fixture(scope='module')
 def cluster():
-    # Must set the cluster DNS address as an environment parameter
     assert 'DCOS_DNS_ADDRESS' in os.environ
+    assert 'MASTER_HOSTS' in os.environ
+    assert 'SLAVE_HOSTS' in os.environ
 
     _setup_logging()
 
-    return Cluster(os.environ['DCOS_DNS_ADDRESS'])
+    return Cluster(dcos_uri=os.environ['DCOS_DNS_ADDRESS'],
+                   masters=os.environ['MASTER_HOSTS'].split(','),
+                   slaves=os.environ['SLAVE_HOSTS'].split(','),)
 
 
 def _setup_logging():
@@ -67,13 +68,15 @@ class Cluster:
             return False
         data = r.json()
         num_slaves = len([x['hostname'] for x in data['slaves']])
-        if num_slaves >= 2:
-            msg = "Sufficient ({} >= 2) number of slaves have joined the cluster"
-            logging.info(msg.format(num_slaves))
+        # For single node setup there is only one slave node:
+        min_slaves = min(len(self.slaves), 2)
+        if num_slaves >= min_slaves:
+            msg = "Sufficient ({} >= {}) number of slaves have joined the cluster"
+            logging.info(msg.format(num_slaves, min_slaves))
             return True
         else:
-            msg = "Curent number of slaves: {}, continuing to wait..."
-            logging.info(msg.format(num_slaves))
+            msg = "Current number of slaves: {} < {}, continuing to wait..."
+            logging.info(msg.format(num_slaves, min_slaves))
             return False
 
     @retrying.retry(wait_fixed=1000,
@@ -95,7 +98,7 @@ class Cluster:
                     retry_on_exception=lambda x: False)
     def _wait_for_leader_election(self):
         mesos_resolver = dns.resolver.Resolver()
-        mesos_resolver.nameservers = list(ZK_IPS)
+        mesos_resolver.nameservers = self.masters
         try:
             # Yeah, we can also put it in retry_on_exception, but
             # this way we will loose debug messages
@@ -131,30 +134,34 @@ class Cluster:
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
 
-    def __init__(self, uri):
+    def __init__(self, dcos_uri, masters, slaves):
+        self.masters = sorted(masters)
+        self.slaves = sorted(slaves)
+        self.zk_hostports = ','.join(':'.join([host, '2181']) for host in self.masters)
+
         # URI must include scheme
-        assert uri.startswith('http')
+        assert dcos_uri.startswith('http')
 
         # Make URI always end with '/'
-        if uri[-1] != '/':
-            uri += '/'
-        self.uri = uri
+        if dcos_uri[-1] != '/':
+            dcos_uri += '/'
+        self.dcos_uri = dcos_uri
 
         self._wait_for_DCOS()
 
     def get(self, path=""):
-        return requests.get(self.uri + path)
+        return requests.get(self.dcos_uri + path)
 
     def post(self, path="", payload=None):
         if payload is None:
             payload = {}
-        return requests.post(self.uri + path, json=payload)
+        return requests.post(self.dcos_uri + path, json=payload)
 
     def delete(self, path=""):
-        return requests.delete(self.uri + path)
+        return requests.delete(self.dcos_uri + path)
 
     def head(self, path=""):
-        return requests.head(self.uri + path)
+        return requests.head(self.dcos_uri + path)
 
 
 def test_if_DCOS_UI_is_up(cluster):
@@ -189,25 +196,41 @@ def test_if_all_Mesos_slaves_have_registered(cluster):
     data = r.json()
     slaves_ips = sorted(x['hostname'] for x in data['slaves'])
 
-    assert len(data['slaves']) == 2
-    assert slaves_ips == ['172.17.10.201', '172.17.10.202']
+    assert slaves_ips == cluster.slaves
+
+
+def test_if_srouter_slaves_endpoint_work(cluster):
+    r = cluster.get('mesos/master/slaves')
+    assert r.status_code == 200
+
+    data = r.json()
+    slaves_ids = sorted(x['id'] for x in data['slaves'])
+
+    for slave_id in slaves_ids:
+        uri = 'slave/{}/slave%281%29/state.json'.format(slave_id)
+        r = cluster.get(uri)
+        assert r.status_code == 200
+
+        data = r.json()
+        assert "id" in data
+        assert data["id"] == slave_id
 
 
 def test_if_all_Mesos_masters_have_registered(cluster):
     # Currently it is not possible to extract this information through Mesos'es
     # API, let's query zookeeper directly.
-    zk = kazoo.client.KazooClient(hosts=ZK_HOSTS, read_only=True)
-    master_ips = set()
+    zk = kazoo.client.KazooClient(hosts=cluster.zk_hostports, read_only=True)
+    master_ips = []
 
     zk.start()
     for znode in zk.get_children("/mesos"):
         if not znode.startswith("json.info_"):
             continue
         master = json.loads(zk.get("/mesos/" + znode)[0].decode('utf-8'))
-        master_ips.add(master['address']['ip'])
+        master_ips.append(master['address']['ip'])
     zk.stop()
 
-    assert master_ips == ZK_IPS
+    assert sorted(master_ips) == cluster.masters
 
 
 def test_if_Exhibitor_API_is_up(cluster):
@@ -230,12 +253,12 @@ def test_if_ZooKeeper_cluster_is_up(cluster):
 
     data = r.json()
     serving_zks = sum(1 for x in data if x['code'] == 3)
-    zks_ips = set(x['hostname'] for x in data)
+    zks_ips = sorted(x['hostname'] for x in data)
     zks_leaders = sum(1 for x in data if x['isLeader'])
 
-    assert serving_zks == len(ZK_IPS)
+    assert zks_ips == cluster.masters
+    assert serving_zks == len(cluster.masters)
     assert zks_leaders == 1
-    assert zks_ips == ZK_IPS
 
 
 def test_if_all_exhibitors_are_in_sync(cluster):
@@ -244,7 +267,7 @@ def test_if_all_exhibitors_are_in_sync(cluster):
 
     correct_data = sorted(r.json(), key=lambda k: k['hostname'])
 
-    for zk_ip in ZK_IPS:
+    for zk_ip in cluster.masters:
         resp = requests.get('http://{}:8181/exhibitor/v1/cluster/status'.format(zk_ip))
         assert resp.status_code == 200
 
@@ -261,6 +284,14 @@ def test_if_DCOSHistoryService_is_up(cluster):
 
 def test_if_Marathon_UI_is_up(cluster):
     r = cluster.get('marathon/ui/')
+
+    assert r.status_code == 200
+    assert len(r.text) > 100
+    assert '<title>Marathon</title>' in r.text
+
+
+def test_if_srouter_service_endpoint_works(cluster):
+    r = cluster.get('service/marathon/ui/')
 
     assert r.status_code == 200
     assert len(r.text) > 100

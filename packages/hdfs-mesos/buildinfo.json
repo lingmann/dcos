@@ -2,7 +2,7 @@
   "requires": ["java","hadoop"],
   "single_source" : {
     "kind": "url_extract",
-    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/artifacts/dcos/0.1.4/hdfs-mesos-0.1.4.tgz",
+    "url": "https://s3.amazonaws.com/downloads.mesosphere.io/hdfs/artifacts/dcos/0.1.7/hdfs-mesos-0.1.7.tgz",
     "sha1": "5dced78ff3f71e85ad2f7eeedcb6aad9907b6e91"
   },
   "environment": {

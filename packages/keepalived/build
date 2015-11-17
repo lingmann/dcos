@@ -63,8 +63,8 @@ keepalived_wrapper="$PKG_PATH/bin/keepalived-wrapper"
 cat <<EOF > "$keepalived_wrapper"
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
-rm -f /tmp/keepalived.conf.*
-conf="\$(mktemp -p /tmp keepalived.conf.XXXXXXXX)"
+mkdir -p /tmp/keepalived
+conf="\$(mktemp -p /tmp/keepalived keepalived.conf.XXXXXXXX)"
 conf_template="\${KEEPALIVED_CONF_TEMPLATE-$PKG_PATH/conf/keepalived.conf.template}"
 sed -e "s/@KEEPALIVED_INTERFACE@/\${KEEPALIVED_INTERFACE}/" \
     -e "s/@KEEPALIVED_ROUTER_ID@/\${KEEPALIVED_ROUTER_ID}/" \

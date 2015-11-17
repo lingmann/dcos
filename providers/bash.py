@@ -70,7 +70,7 @@ function setup_directories() {
 
 function setup_dcos_roles() {
     # Set DCOS roles
-    for role in "$ROLES"
+    for role in $ROLES
     do
         echo "Creating role file for ${role}"
         touch "/etc/mesosphere/roles/$role"

@@ -21,6 +21,19 @@ echo "Starting Vagrant VM"
 vagrant up
 
 CMD="cd dcos-image && \
+    sudo mkdir -v /etc/systemd/system/docker.service.d/ && \
+    sudo cp -v test/insecure-docker-registry.systemd.conf /etc/systemd/system/docker.service.d/50-insecure-registry.conf && \
+    sudo systemctl daemon-reload && \
+    sudo systemctl restart docker.service && \
+    echo 'Running registry container' && \
+    docker run -d -p 5000:5000 --restart=always --name registry registry:2 && \
+    echo 'Building test_server container' && \
+    docker build -t $MASTER_IP:5000/test_server \
+        -f ./docker/test_server/Dockerfile \
+        ./docker/test_server/ && \
+    echo 'Pushing test_server container' && \
+    docker push $MASTER_IP:5000/test_server && \
+    echo 'Building integration tests container' && \
     docker build -t py.test - < docker/py.test/Dockerfile && \
     echo 'Running integration tests' && \
     docker run  \
@@ -28,10 +41,10 @@ CMD="cd dcos-image && \
         -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
         -e MASTER_HOSTS=$MASTER_IP \
         -e SLAVE_HOSTS=$MASTER_IP \
-        -e REGISTRY_HOST=172.17.8.1 \
+        -e REGISTRY_HOST=$MASTER_IP \
         -e TEAMCITY_VERSION=\"${TEAMCITY_VERSION:-''}\" \
         --net=host \
-        py.test py.test -s $CI_FLAGS /integration_test.py"
+        py.test py.test -s ${CI_FLAGS:-} /integration_test.py"
 
 if ! vagrant ssh -c "$CMD"; then
   echo "TEST FAILED"

@@ -10,7 +10,8 @@ Use cases:
    basic vagrant clusters"""
 
 import gen
-import util
+import providers.util as util
+from pkg_resources import resource_string
 
 
 def make_vagrant(gen_out):
@@ -18,10 +19,10 @@ def make_vagrant(gen_out):
     cloud_config = gen_out.utils.add_services(cloud_config)
     cloud_config = gen_out.utils.add_roles(cloud_config, ['master', 'slave', 'vagrant'])
 
-    vagrant_script = util.jinja_env.from_string(open('gen/vagrant/make_vagrant').read()).render({
+    vagrant_script = gen.env.get_template('vagrant/make_vagrant').render({
         'user_data_body': gen_out.utils.render_cloudconfig(cloud_config),
-        'vagrantfile_body': open('gen/vagrant/Vagrantfile').read(),
-        'config_body': open('gen/vagrant/config.rb').read(),
+        'vagrantfile_body': resource_string('gen', 'vagrant/Vagrantfile').decode(),
+        'config_body': resource_string('gen', 'vagrant/config.rb').decode(),
         'dcos_image_commit': util.dcos_image_commit,
         'template_generation_date': util.template_generation_date
         })

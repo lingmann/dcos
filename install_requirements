@@ -14,7 +14,5 @@ pkgpanda_commit=$(jq -r '.single_source.ref' packages/pkgpanda/buildinfo.json)
 
 pushd ext/pkgpanda
 git checkout -qf $pkgpanda_commit
-python3 setup.py install
+pip install .
 popd
-
-pip3 install -r requirements.txt

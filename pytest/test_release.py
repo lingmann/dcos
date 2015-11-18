@@ -1,7 +1,7 @@
 from azure.storage._common_error import AzureMissingResourceHttpError
 from unittest.mock import patch
 import unittest
-import release
+import providers.release as release
 import os
 
 
@@ -79,7 +79,7 @@ class TestAzureStorageProvider(unittest.TestCase):
 
 
 class TestS3StorageProvider(unittest.TestCase):
-    @patch('aws_config.session_prod.resource')
+    @patch('providers.aws_config.session_prod.resource')
     def setUp(self, mocked_s3_resource):
         os.environ.update({
             'AWS_ACCESS_KEY_ID': 'secretKeyId',
@@ -214,13 +214,13 @@ class TestChannelManager(unittest.TestCase):
 
 
 class TestRelease(unittest.TestCase):
-    @patch('release.S3StorageProvider')
+    @patch('providers.release.S3StorageProvider')
     @patch('builtins.open')
-    @patch('release.ChannelManager')
-    @patch('release.get_bootstrap_packages')
+    @patch('providers.release.ChannelManager')
+    @patch('providers.release.get_bootstrap_packages')
     @patch('subprocess.check_call')
-    @patch('release.get_provider_data')
-    @patch('release.do_build_packages')
+    @patch('providers.release.get_provider_data')
+    @patch('providers.release.do_build_packages')
     def test_do_create(self, mocked_do_build_packages, mocked_get_provider_data, mocked_check_call,
                        mocked_get_bootstrap_packages, mocked_channel_manager, mocked_open, mocked_s3):
         options = unittest.mock.MagicMock()
@@ -253,10 +253,10 @@ class TestRelease(unittest.TestCase):
         assert isinstance(cleaned_provider_data, dict)
 
     @patch('builtins.open')
-    @patch('release.S3StorageProvider')
-    @patch('release.make_genconf_docker')
-    @patch('release.get_provider_data')
-    @patch('release.ChannelManager')
+    @patch('providers.release.S3StorageProvider')
+    @patch('providers.release.make_genconf_docker')
+    @patch('providers.release.get_provider_data')
+    @patch('providers.release.ChannelManager')
     def test_do_promote(self, mocked_channel_manager, mocked_get_provider_data, mocked_make_genconf_docker,
                         mocked_s3storage_provider, mocked_open):
         options = unittest.mock.MagicMock()
@@ -278,7 +278,7 @@ class TestRelease(unittest.TestCase):
         mocked_open.assert_called_with('docker-tag')
 
     @patch('pkgpanda.build.sha1')
-    @patch('release.get_local_build')
+    @patch('providers.release.get_local_build')
     @patch('subprocess.check_call')
     def test_do_build_packages(self, mocked_check_call, mocked_get_local_build, mocked_sha1):
         repository_url = 'http://test'

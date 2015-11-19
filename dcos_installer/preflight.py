@@ -21,8 +21,9 @@ def check(options):
     preflight.command = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
     err = preflight.validate()
     if err:
-        log.error("Could not execute preflight, errors encountered during validation.")
-        log.error(err)
+        log.error("Could not execute preflight, errors encountered during validation.", err)
+        return err
 
     else:
         preflight.execute()
+        return False 

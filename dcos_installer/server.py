@@ -176,20 +176,24 @@ def do_routes(app, options):
         if request.method == 'POST':
             log.debug("Kicking off preflight check...")
             from . import preflight
-            preflight.check(options)
+            preflight_validation = preflight.check(options)
 
-        #return redirect(redirect_url())       
-        preflight_data = {}
-        for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
-            log_data = yaml.load(open(preflight_log, 'r+'))
-            for k, v in log_data.items():
-                preflight_data[k] = v
+        # preflight.check returns the errors from ssh.validate() or False if no
+        # errors were returned. Later, we can use this data to drop into a page
+        # reload instead of executing the preflight checks. 
+        if preflight_validation:
+            return redirect(redirect_url())
+         
+        else:
+            preflight_data = {}
+            for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
+                log_data = yaml.load(open(preflight_log, 'r+'))
+                for k, v in log_data.items():
+                    preflight_data[k] = v
 
-        print(("PREFLIGHT DATA", preflight_data))
-        
-        return render_template(
-            'preflight_check.html',
-            preflight_data=preflight_data)
+            return render_template(
+                'preflight_check.html',
+                preflight_data=preflight_data)
    
 
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])

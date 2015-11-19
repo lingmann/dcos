@@ -1,13 +1,18 @@
 import paramiko
 import multiprocessing as mp
-from multiprocessing import Process, Lock, Pool
+from multiprocessing import Process
 import sys
 import subprocess
-import logging as log
+import time
+import logging
 import yaml
 import os
 import datetime
 
+# Setup logging for multiprocess
+mp.log_to_stderr()
+log = mp.get_logger()
+log.setLevel(logging.INFO)
 
 def check(options):
     """
@@ -16,7 +21,6 @@ def check(options):
     hosts_blob = get_inventory(options.hosts_yaml_path)
     
     # Multiprocessing 
-    mp.set_start_method('spawn')
     concurrent_procs = 10
     running_procs = [] 
     for role, hosts in hosts_blob.items():
@@ -26,6 +30,7 @@ def check(options):
             if len(running_procs) <= concurrent_procs:
                 
                 log.debug("Rendering inventory %s role with hosts %s", role, hosts)
+
 
                 if type(hosts) is str:
                     host_list = [hosts]
@@ -39,10 +44,13 @@ def check(options):
                     running_procs.append(p)
                     #p.daemon = True
                     p.start()
+                    print("running: ", running_procs)
             
             else:
                 for proc in running_procs:
+                    print("PROC: ", proc)
                     if not proc.is_alive():
+                        print("REMOVING ", proc)
                         running_procs.remove(proc)
 
 
@@ -81,7 +89,8 @@ def execute_preflight(options, host):
     # Dump to structured data
     # Also a child process which retains a lock to ensure we do not 
     # create a race condition on the log file
-    Process(target=dump_host_results, args=(options, host, host_data)).start()
+    dump_host_results(options, host, host_data)
+    time.sleep(50)
 
         
 def get_structured_results(host, cmd, retcode, stdout, stderr):

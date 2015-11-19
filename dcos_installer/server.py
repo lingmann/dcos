@@ -6,6 +6,7 @@ import os
 import yaml
 import time
 import sys
+from glob import glob
 
 import gen
 import providers.bash
@@ -176,7 +177,12 @@ def do_routes(app, options):
             preflight.check(options)
 
         #return redirect(redirect_url())       
-        preflight_data = yaml.load(open(options.preflight_results_path))
+        preflight_data = {}
+        for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
+            with yaml.load(open(preflight_log)) as log_data:
+                for k, v in log_data.items():
+                    preflight_data[k] = v
+
         print(("PREFLIGHT DATA", preflight_data))
         
         return render_template(

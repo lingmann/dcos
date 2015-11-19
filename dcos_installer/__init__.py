@@ -40,10 +40,10 @@ class DcosInstaller:
         
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         parser.add_argument(
-            '--preflight-results-path',
+            '--log-directory',
             type=str,
-            default='{}/preflight-results.log'.format(installdir),
-            help='Path to the preflight-results.log.')
+            default='{}/logs'.format(installdir),
+            help='Path to the logging directory. Used for preflight.log and deploy.log..')
 
         parser.add_argument(
             '--dcos-install-script-path',
@@ -147,9 +147,19 @@ class DcosInstaller:
         """
         try:
             os.stat(options.install_directory)
+        
         except:
             log.info('{} does not exist, creating.'.format(options.install_directory))
             os.mkdir(options.install_directory)       
+
+        # Logging directory
+        try: 
+            os.stat(options.log_directory)
+
+        except:
+            log.info('{} does not exist, creating.'.format(options.log_directory))
+            os.mkdir(options.log_directory)
+            
 
 
     def set_log_level(self,options):

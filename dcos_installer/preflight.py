@@ -17,31 +17,34 @@ def check(options):
     
     # Multiprocessing 
     mp.set_start_method('spawn')
-
+    concurrent_procs = 10
+    running_procs = [] 
     for role, hosts in hosts_blob.items():
+
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
-            log.debug("Rendering inventory %s role with hosts %s", role, hosts)
-            host_list = []
+            if len(running_procs) <= concurrent_procs:
+                
+                log.debug("Rendering inventory %s role with hosts %s", role, hosts)
 
-            # Set initial pool size.
-            if len(hosts) > 10:
-                p = Pool(10)
-            else:
-                p = Pool(len(hosts))
-
-
-            if type(hosts) is str:
-                host_list.append(hosts)
-            if type(hosts) is list:
-                host_list = hosts
-    
+                if type(hosts) is str:
+                    host_list = [hosts]
+                if type(hosts) is list:
+                    host_list = hosts
         
-            for host in host_list:
-                # Spawn a subprocess for preflight
-                p.map(execute_preflight, options, host)
-                p.start()
-                p.join()
+            
+                for host in host_list:
+                    # Spawn a subprocess for preflight
+                    p = Process(name='{}_preflight_worker'.format(host), target=execute_preflight, args=(options, host,))
+                    running_procs.append(p)
+                    #p.daemon = True
+                    p.start()
+            
+            else:
+                for proc in running_procs:
+                    if not proc.is_alive():
+                        running_procs.remove(proc)
+
 
         else:
             log.warn("%s is empty, skipping.", role)
@@ -52,9 +55,8 @@ def execute_preflight(options, host):
     Executes SCPing and SSHing to execute preflight on host
     machines.
     """
-    preflight_cmd = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
     ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
-
+    preflight_cmd = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
     log.info("Copying %s to %s...",options.dcos_install_script_path, host)
     
     # Copy install_dcos.sh
@@ -198,8 +200,9 @@ def dump_host_results(options, host, results):
     Dumps the results to our preflight log file. Assumes incoming results are already
     pre-structured. 
     """
-    if os.path.exists(options.preflight_results_path): 
-        current_file = yaml.load(open(options.preflight_results_path)) 
+    log_file = '{}/{}_preflight.log'.format(options.log_directory, host)
+    if os.path.exists(log_file): 
+        current_file = yaml.load(open(log_file)) 
         for fhost, data in current_file.items():
             if host == fhost:
                 for timestamp, values in data.items():
@@ -209,5 +212,5 @@ def dump_host_results(options, host, results):
                 results[fhost] = data
         
 
-    with open(options.preflight_results_path, 'w+') as preflight_file:
+    with open(log_file, 'w') as preflight_file:
         preflight_file.write(yaml.dump(results, default_flow_style=False))

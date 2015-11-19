@@ -174,30 +174,29 @@ class DCOSRemoteCmd(object):
             host,
             self.command)
 
-        try:
-            log.info("Executing %s on %s.", self.command, host)
-            process = subprocess.Popen(
-                ssh_cmd,
-                shell=True,
-                stdout=subprocess.STDOUT,
-                stderr=subprocess.STDERR)
+        log.info("Executing %s on %s.", self.command, host)
+        process = subprocess.Popen(
+            ssh_cmd,
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT)
 
-            stdout, stderr = process.communicate
-            process.poll()
+        try:
+            stdout, stderr = process.communicate(timeout=15)
             retcode = process.returncode
             self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
             log.info("%s STDOUT: %s", host, self.convert(stdout))
             log.info("%s STDERR: %s", host, self.convert(stderr))
             
         except:
-            e = sys.exc_info()[0]
-            retcode = 1
-            stdout = ''
-            stderr = str(e)
+            process.kill()
+            stdout, stderr = process.communicate()
+            retcode = process.returncode
             self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
-            log.error("%s STDOUT: %s", host, self.convert(stdout))
-            log.error("%s STDERR: %s", host, self.convert(stderr))
+            log.info("%s STDOUT: %s", host, self.convert(stdout))
+            log.info("%s STDERR: %s", host, self.convert(stderr))
 
+            
     def get_structured_results(self, host, retcode, stdout, stderr):
         """
         Takes the output from a SSH run and returns structured output for the
@@ -206,10 +205,18 @@ class DCOSRemoteCmd(object):
         cmd = self.command
         timestamp = str(datetime.datetime.now()).split('.')[0]
         if type(stdout) is not str:
-            stdout = self.convert(stdout.read())
+            try:
+                stdout = self.convert(stdout.read())
+
+            except: 
+                stdout = str(stdout)
 
         if type(stderr) is not str:
-            stderr = self.convert(stderr.read())
+            try:
+                stderr = self.convert(stderr.read())
+
+            except:
+                stderr = str(stderr)
 
         struct_data = {
             host: {
@@ -221,7 +228,6 @@ class DCOSRemoteCmd(object):
                 }
             }
         }
-        log.debug("Structured data:")
         return struct_data
 
 
@@ -238,7 +244,11 @@ class DCOSRemoteCmd(object):
         """
         Converts the bytes array to utf-8 encoded string.
         """
-        return input.decode('utf-8') 
+        if input != None:
+            return input.decode('utf-8') 
+
+        else:
+            return ""
 
 
     def dump_host_results(self, host, results):

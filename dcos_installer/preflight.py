@@ -25,10 +25,18 @@ def check(options):
     preflight = DCOSRemoteCmd()
     preflight.ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
     preflight.ssh_key_path = options.ssh_key_path
-    preflight.inventory_path = options.host_yaml_path
+    preflight.inventory_path = options.hosts_yaml_path
+    preflight.log_directory = options.log_directory
+    preflight.ssh_user_path = options.ssh_user_path
     preflight.command = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(options.ssh_user)
-    preflight.execute()
+    err = prefligth.validate()
+    if err:
+        log.error("Could not execute preflight, errors encountered during validation.")
+        log.error(err)
 
+    else:
+        preflight.execute()
+      
 
 #    hosts_blob = get_inventory(options.hosts_yaml_path)
 #    

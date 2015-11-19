@@ -4,7 +4,6 @@ import sys
 import threading
 import time
 import os
-import Queue
 import yaml
 
 from dcos_installer.log import DCOSLog
@@ -16,22 +15,115 @@ class DCOSRemoteCmd(object):
     Executes commands on machines remotely by shelling out 
     to SSH and leveraging threading for concurrent sessions. 
     """
-    def __init__(self, options):
+    def __init__(self):
         """
         Setup the remote command class.
         """
         # Defaults from CLI
-        self.log_directory = options.log_directory
-        self.concurrent_sessions = options.concurrent_sessions
-        self.inventory_path = options.host_yaml_path
+        self.log_directory = None
+        self.concurrent_sessions = 10 
+        self.inventory_path = None 
         self.ssh_user = None
-        self.ssh_user_path = options.ssh_user_path
         self.ssh_key_path = None         
 
         # Class defaults
-        self.response_queue = Queue.Queue()
-        self.command = ''
+        self.command = None 
         
+    def validate(self):
+        """
+        Sanity check the ssh_user and ssh_key_paths and if not set, do the right thing (tm)
+        """
+        # Command
+        if self.command == None:
+            error = "DCOSRemoteCmd.command unset, please set this before continuing."
+            log.error(error)
+            return error
+
+        elif type(self.command) != str:
+            error = "DCOSRemoteCmd.command must be a string."
+            log.error(error)
+            return error
+
+        # Concurrent Sessions
+        if self.concurrent_sessions == None:
+            log.warning("DCOSRemoteCmd.concurrent_sessions unset, using default of 10.")
+        
+        elif type(self.concurrent_sessions) != int:
+            error = "DCOSRemoteCmd.concurrent_sessions must be a integer."
+            log.error(error)
+            return error
+
+        # SSH Key Path
+        if self.ssh_key_path == None:
+            error = "DCOSRemoteCmd.ssh_key_path unset, please set this before continuing."
+            log.error(error)
+            return error
+        
+        elif type(self.ssh_key_path) != str:
+            error = "DCOSRemoteCmd.ssh_user must be a string."
+            log.error(error)
+            return error
+
+        else:
+            try:
+                os.stat(self.ssh_key_path)
+
+            except:
+                error = 'DCOSRemoteCmd.ssh_key_path not found. Please ensure {} exists.'.format(self.ssh_key_path)
+                log.error(error)
+                return error
+
+        # SSH User checks
+        if self.ssh_user == None:
+            error = "DCOSRemoteCmd.ssh_user unset, please set this before continuing."
+            log.error(error)
+            return error
+        
+        elif type(self.ssh_user) != str:
+            error = "DCOSRemoteCmd.ssh_user must be a string."
+            log.error(error)
+            return error
+
+        # Log directory
+        if self.log_directory == None:
+            error = "DCOSRemoteCmd.log_directory unset, please set this before continuing."
+            log.error(error)
+            return error
+        
+        elif type(self.log_directory) != str:
+            error = "DCOSRemoteCmd.log_directory must be a string."
+            log.error(error)
+            return error
+
+        else:
+            try:
+                os.stat(self.log_directory)
+
+            except:
+                error = 'DCOSRemoteCmd.log_directory not found. Please ensure {} exists.'.format(self.log_directory)
+                log.error(error)
+                return error
+        
+        # Inventory Path
+        if self.inventory_path == None:
+            error = "DCOSRemoteCmd.inventory_path unset, please set this before continuing."
+            log.error(error)
+            return error
+        
+        elif type(self.inventory_path) != str:
+            error = "DCOSRemoteCmd.inventory_path must be a string."
+            log.error(error)
+            return error
+
+        else:
+            try:
+                os.stat(self.inventory_path)
+
+            except:
+                error = 'DCOSRemoteCmd.inventory_path not found. Please ensure {} exists.'.format(self.inventory_path)
+                log.error(error)
+                return error
+
 
     def execute(self):
         """
@@ -41,33 +133,7 @@ class DCOSRemoteCmd(object):
         inventory = self.get_inventory() 
         running_threads = []
 
-        # Sanity check the ssh_user and ssh_key_paths and if not set, do the right thing (tm)
-        if self.ssh_user == None:
-            log.warning("SSH user left unset, attempting to load from default %s", self.ssh_user_path)
-            try:
-                self.ssh_user = open(self.ssh_user_path, 'r').read().lstrip().rstrip()
-
-            except:
-                log.error("Unable to get a valid user for SSH session. DCOSRemoteCmd.ssh_user is unset and %s is not found", self.ssh_user_path)
-
-
-        elif self.ssh_key_path == None: 
-            log.warning("SSH key path left unset, attempting to load from default %s", self.ssh_key_path)
-            try:
-                os.stat(self.ssh_key_path)
-
-            except:
-                log.error("Unable to set a valid SSH key path. DCOSRemoteCmd.ssh_key_path is unset and %s is not found", self.ssh_key_path)
-        
-        elif self.ssh_key_path != None:
-            try:
-                os.stat(self.ssh_key_path) 
-
-            except:
-                log.error("Unable to stat %s. Please make sure it exists.", self.ssh_key_path)
-
-
-        else:
+                else:
             # If the user path isn't none, we can continue
             for role, hosts in inventory.items():
                 # If our hosts list from yaml has more than 0 hosts in it...

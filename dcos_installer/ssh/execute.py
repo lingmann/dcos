@@ -1,3 +1,20 @@
+# Example Usage:
+# ssh_user = 'vagrant' 
+#
+# preflight = DCOSRemoteCmd()
+# preflight.ssh_user = ssh_user
+# preflight.ssh_key_path = options.ssh_key_path
+# preflight.inventory_path = options.hosts_yaml_path
+# preflight.log_directory = options.log_directory
+# preflight.command = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
+# err = preflight.validate()
+# if err:
+#   log.error("Could not execute preflight, errors encountered during validation.")
+#   log.error(err)
+#
+# else:
+#   preflight.execute()
+
 import datetime
 import subprocess
 import sys

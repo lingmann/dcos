@@ -69,8 +69,12 @@ class DCOSRemoteCmd(object):
 
         def file_does_exist(keys):
             for key, value in keys.items():
-                if not os.stat(value):
-                    errors[key] = '{} is not present on the filesystem.'.format(value)
+                if value is not None:
+                    if not os.stat(value):
+                        errors[key] = '{} is not present on the filesystem.'.format(value)
+                
+                else:
+                    errors[key] = '{} is set to None, please set it to an actual path.'.format(key)
 
 
         is_not_none({

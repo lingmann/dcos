@@ -179,9 +179,9 @@ def do_routes(app, options):
         #return redirect(redirect_url())       
         preflight_data = {}
         for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
-            with yaml.load(open(preflight_log)) as log_data:
-                for k, v in log_data.items():
-                    preflight_data[k] = v
+            log_data = yaml.load(open(preflight_log, 'r+'))
+            for k, v in log_data.items():
+                preflight_data[k] = v
 
         print(("PREFLIGHT DATA", preflight_data))
         

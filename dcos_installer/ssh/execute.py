@@ -1,4 +1,6 @@
+import datetime
 import subprocess
+import sys
 import threading
 import time
 import os
@@ -82,9 +84,9 @@ class DCOSRemoteCmd(object):
                         for host in host_list:
                             # Spawn a subprocess for preflight
                             t = threading.Thread(name='{}_execute_cmd'.format(host), target=self.do_thread, args=(options, host,))
-                            running_threads.append(p)
+                            running_threads.append(t)
                             t.daemon = True
-                            p.start()
+                            t.start()
 
                     else:
                         for thread in running_threads:
@@ -118,8 +120,44 @@ class DCOSRemoteCmd(object):
             stdout, stderr = process.communicate
             process.poll()
             retcode = process.returncode
-            log.info("%s: %s", host, convert(stdout))
+            self.dump_host_results(options, host, self.get_structured_results(host, retcode, stdout, stderr))
+            log.info("%s STDOUT: %s", host, self.convert(stdout))
+            log.info("%s STDERR: %s", host, self.convert(stderr))
             
+        except:
+            e = sys.exc_info()[0]
+            retcode = 1
+            stdout = ''
+            stderr = str(e)
+            self.dump_host_results(options, host, self.get_structured_results(host, retcode, stdout, stderr))
+            log.error("%s STDOUT: %s", host, self.convert(stdout))
+            log.error("%s STDERR: %s", host, self.convert(stderr))
+
+    def get_structured_results(self, host, retcode, stdout, stderr):
+        """
+        Takes the output from a SSH run and returns structured output for the
+        log file.
+        """
+        cmd = self.command
+        timestamp = str(datetime.datetime.now()).split('.')[0]
+        if type(stdout) is not str:
+            stdout = self.convert(stdout.read())
+
+        if type(stderr) is not str:
+            stderr = self.convert(stderr.read())
+
+        struct_data = {
+            host: {
+                timestamp: {
+                    'cmd': cmd,
+                    'retcode': retcode,
+                    'stdout': stdout,
+                    'stderr': stderr
+                }
+            }
+        }
+        log.debug("Structured data:")
+        return struct_data
 
 
     def get_inventory(self):
@@ -129,3 +167,30 @@ class DCOSRemoteCmd(object):
         log.debug("Getting host inventory from %s", self.inventory_path)
         hosts = yaml.load(open(self.inventory_path, 'r'))
         return hosts
+
+
+    def convert(self, input):
+        """
+        Converts the bytes array to utf-8 encoded string.
+        """
+        return input.decode('utf-8') 
+
+
+    def dump_host_results(self, options, host, results):
+        """
+        Dumps the results to our preflight log file. Assumes incoming results are already
+        pre-structured.
+        """
+        log_file = '{}/{}_preflight.log'.format(options.log_directory, host)
+        if os.path.exists(log_file):
+            current_file = yaml.load(open(log_file))
+            for fhost, data in current_file.items():
+                if host == fhost:
+                    for timestamp, values in data.items():
+                        results[fhost][timestamp] = values
+
+                else:
+                    results[fhost] = data
+
+        with open(log_file, 'w') as preflight_file:
+            preflight_file.write(yaml.dump(results, default_flow_style=False))

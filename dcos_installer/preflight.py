@@ -1,7 +1,8 @@
-import asyncio
 import paramiko
-import subprocess
+import multiprocessing as mp
+from multiprocessing import Process, Lock, Pool
 import sys
+import subprocess
 import logging as log
 import yaml
 import os
@@ -12,15 +13,24 @@ def check(options):
     """
     SSH via SubProcess Calls... 
     """
-    ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
     hosts_blob = get_inventory(options.hosts_yaml_path)
-    preflight_cmd = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
+    
+    # Multiprocessing 
+    mp.set_start_method('spawn')
 
     for role, hosts in hosts_blob.items():
         # If our hosts list from yaml has more than 0 hosts in it...
         if len(hosts) > 0:
             log.debug("Rendering inventory %s role with hosts %s", role, hosts)
             host_list = []
+
+            # Set initial pool size.
+            if len(hosts) > 10:
+                p = Pool(10)
+            else:
+                p = Pool(len(hosts))
+
+
             if type(hosts) is str:
                 host_list.append(hosts)
             if type(hosts) is list:
@@ -28,33 +38,50 @@ def check(options):
     
         
             for host in host_list:
-                log.info("Copying %s to %s...",options.dcos_install_script_path, host)
-                
-                # Copy install_dcos.sh
-                # Assumes the user given has a home directory
-                copy_data = copy_cmd(
-                    options.ssh_key_path, 
-                    ssh_user, 
-                    host, 
-                    options.dcos_install_script_path, 
-                    '~/install_dcos.sh')
-
-                dump_host_results(options, host, copy_data)
-                log.info("Executing preflight on %s role...", host)
-                
-                # Execute the preflight command
-                host_data = execute_cmd(
-                    options.ssh_key_path, 
-                    ssh_user, 
-                    host, 
-                    preflight_cmd)  
-                
-                # Dump to structured data
-                dump_host_results(options, host, host_data)
+                # Spawn a subprocess for preflight
+                p.map(execute_preflight, options, host)
+                p.start()
+                p.join()
 
         else:
             log.warn("%s is empty, skipping.", role)
 
+
+def execute_preflight(options, host):
+    """
+    Executes SCPing and SSHing to execute preflight on host
+    machines.
+    """
+    preflight_cmd = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(ssh_user)
+    ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
+
+    log.info("Copying %s to %s...",options.dcos_install_script_path, host)
+    
+    # Copy install_dcos.sh
+    # Assumes the user given has a home directory
+    copy_data = copy_cmd(
+        options.ssh_key_path, 
+        ssh_user, 
+        host, 
+        options.dcos_install_script_path, 
+        '~/install_dcos.sh')
+
+    dump_host_results(options, host, copy_data)
+    log.info("Executing preflight on %s role...", host)
+    
+    # Execute the preflight command
+    host_data = execute_cmd(
+        options.ssh_key_path, 
+        ssh_user, 
+        host, 
+        preflight_cmd)  
+    
+    # Dump to structured data
+    # Also a child process which retains a lock to ensure we do not 
+    # create a race condition on the log file
+    Process(target=dump_host_results, args=(options, host, host_data)).start()
+
+        
 def get_structured_results(host, cmd, retcode, stdout, stderr):
     """
     Takes the output from a SSH run and returns structured output for the 
@@ -182,5 +209,5 @@ def dump_host_results(options, host, results):
                 results[fhost] = data
         
 
-    with open(options.preflight_results_path, 'w') as preflight_file:
+    with open(options.preflight_results_path, 'w+') as preflight_file:
         preflight_file.write(yaml.dump(results, default_flow_style=False))

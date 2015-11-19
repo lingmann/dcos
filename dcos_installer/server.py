@@ -1,13 +1,15 @@
-from copy import deepcopy
-import paramiko
 from flask import Flask, request, render_template, url_for, redirect, Response
-import logging as log
 import os
 import yaml
 import time
 import sys
 from glob import glob
 
+# Logging
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
+
+# From dcos-image
 import gen
 import providers.bash
 

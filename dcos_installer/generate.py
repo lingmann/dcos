@@ -7,8 +7,11 @@ import sys
 import gen
 import gen.calc
 import providers.bash as bash
-import logging as log
 from subprocess import CalledProcessError
+
+# Setup logger
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
 
 
 def now(options):

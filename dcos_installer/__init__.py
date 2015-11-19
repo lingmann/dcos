@@ -1,7 +1,10 @@
 import argparse
-import logging as log
 import sys
 import os
+
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
+
 from . import server
 #from . import cli
 
@@ -167,13 +170,14 @@ class DcosInstaller:
         Given a map of options, parse for log level flag and set the 
         default logging level.
         """
-        if options.log_level == "debug":
-            log.basicConfig(level=log.DEBUG)
-            log.debug("Log level set to DEBUG")
-        elif options.log_level == "info":
-            log.basicConfig(level=log.INFO)
-            log.info("Log level set to INFO")
-        else:
-            log.error("Logging option not available: %s", options.log_level)
-            sys.exit(1)
+        log.log_level = options.log_level
+#        if options.log_level == "debug":
+#            log.basicConfig(level=log.DEBUG)
+#            log.debug("Log level set to DEBUG")
+#        elif options.log_level == "info":
+#            log.basicConfig(level=log.INFO)
+#            log.info("Log level set to INFO")
+#        else:
+#            log.error("Logging option not available: %s", options.log_level)
+#            sys.exit(1)
 

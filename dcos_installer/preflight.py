@@ -4,15 +4,16 @@ from multiprocessing import Process
 import sys
 import subprocess
 import time
-import logging
+#import logging
 import yaml
 import os
 import datetime
 
 # Setup logging for multiprocess
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
 mp.log_to_stderr()
-log = mp.get_logger()
-log.setLevel(logging.INFO)
+
 
 def check(options):
     """
@@ -44,13 +45,10 @@ def check(options):
                     running_procs.append(p)
                     #p.daemon = True
                     p.start()
-                    print("running: ", running_procs)
             
             else:
                 for proc in running_procs:
-                    print("PROC: ", proc)
                     if not proc.is_alive():
-                        print("REMOVING ", proc)
                         running_procs.remove(proc)
 
 
@@ -116,7 +114,6 @@ def get_structured_results(host, cmd, retcode, stdout, stderr):
         }
     }
     log.debug("Structured data:")
-    print(struct_data)
     return struct_data
 
 

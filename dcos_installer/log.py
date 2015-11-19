@@ -1,6 +1,6 @@
 import logging
 
-class DCOSInstallerLogger(object):
+class DCOSLog(object):
     def __init__(self, submodule_name=__name__):
         levels = {
             'debug': logging.DEBUG,

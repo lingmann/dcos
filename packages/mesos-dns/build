@@ -1,26 +1,9 @@
 #!/bin/bash
 set -x
 
-# Setup go environment
-mkdir -p /go/src/github.com/mesosphere
-ln -s /pkg/src/mesos-dns /go/src/github.com/mesosphere/mesos-dns
-export GOPATH=/go
-export GOROOT=/pkg/src/go/
-export PATH=$PATH:$GOROOT/bin:$GOPATH/bin
-
-# Get the dependencies
-go get github.com/tools/godep
-
-# Build mesos-dns
-pushd /go/src/github.com/mesosphere/mesos-dns
-godep go build -ldflags="-X main.Version=v0.4.0" -o mesos-dns
-popd
-
-# TODO(cmaloney): PKG_PATH should always exist in the container
-# Install to pkg-path
 mkdir -p $PKG_PATH/bin
-cp /go/src/github.com/mesosphere/mesos-dns/mesos-dns $PKG_PATH/bin/mesos-dns
-
+cp /pkg/src/mesos-dns/mesos-dns-v0.5.0-linux-amd64 $PKG_PATH/bin/mesos-dns
+chmod 755 $PKG_PATH/bin/mesos-dns
 
 # Create the service file
 service="$PKG_PATH/dcos.target.wants_master/dcos-mesos-dns.service"

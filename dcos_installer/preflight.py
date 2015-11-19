@@ -14,7 +14,7 @@ def check(options):
     ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
 
     preflight = DCOSRemoteCmd()
-    preflight.ssh_user = ssh_user 
+    #preflight.ssh_user = ssh_user 
     preflight.ssh_key_path = options.ssh_key_path
     preflight.inventory_path = options.hosts_yaml_path
     preflight.log_directory = options.log_directory

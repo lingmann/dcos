@@ -50,96 +50,58 @@ class DCOSRemoteCmd(object):
         """
         Sanity check the ssh_user and ssh_key_paths and if not set, do the right thing (tm)
         """
-        # Command
-        if self.command == None:
-            error = "DCOSRemoteCmd.command unset, please set this before continuing."
-            log.error(error)
-            return error
-
-        elif type(self.command) != str:
-            error = "DCOSRemoteCmd.command must be a string."
-            log.error(error)
-            return error
-
-        # Concurrent Sessions
-        if self.concurrent_sessions == None:
-            log.warning("DCOSRemoteCmd.concurrent_sessions unset, using default of 10.")
+        errors = {} 
         
-        elif type(self.concurrent_sessions) != int:
-            error = "DCOSRemoteCmd.concurrent_sessions must be a integer."
-            log.error(error)
-            return error
+        def is_not_none(keys):
+            for key in keys:
+                if key == None:
+                    errors[str(key)] = '{} is unset, please set it before continuing'.format(str(key))
 
-        # SSH Key Path
-        if self.ssh_key_path == None:
-            error = "DCOSRemoteCmd.ssh_key_path unset, please set this before continuing."
-            log.error(error)
-            return error
+        def is_string(keys):
+            for key in keys:
+                if type(key) != str:
+                    errors[str(key)] = '{} must be a string.'.format(str(key))
+
+        def is_int(keys):
+            for key in keys:
+                if type(key) != int:
+                    errors[str(key)] = '{} must be an integer.'.format(str(key))
+
+        def file_does_exist(keys):
+            for key in keys:
+                if not os.stat(str(key)):
+                    errors[str(key)] = '{} is not present on the filesystem.'.format(str(key))
+
+
+        is_not_none([
+            self.log_directory, 
+            self.concurrent_sessions, 
+            self.inventory_path, 
+            self.ssh_user, 
+            self.ssh_key_path, 
+            self.command])
         
-        elif type(self.ssh_key_path) != str:
-            error = "DCOSRemoteCmd.ssh_user must be a string."
-            log.error(error)
-            return error
+        is_string([
+            self.log_directory,
+            self.inventory_path,
+            self.ssh_user,
+            self.ssh_key_path,
+            self.command])
 
+        is_int([
+            self.concurrent_sessions])
+
+        file_does_exist([
+            self.log_directory,
+            self.inventory_path,
+            self.ssh_key_path])
+
+
+        if len(errors) > 0:
+            return errors
+        
         else:
-            try:
-                os.stat(self.ssh_key_path)
-
-            except:
-                error = 'DCOSRemoteCmd.ssh_key_path not found. Please ensure {} exists.'.format(self.ssh_key_path)
-                log.error(error)
-                return error
-
-        # SSH User checks
-        if self.ssh_user == None:
-            error = "DCOSRemoteCmd.ssh_user unset, please set this before continuing."
-            log.error(error)
-            return error
-        
-        elif type(self.ssh_user) != str:
-            error = "DCOSRemoteCmd.ssh_user must be a string."
-            log.error(error)
-            return error
-
-        # Log directory
-        if self.log_directory == None:
-            error = "DCOSRemoteCmd.log_directory unset, please set this before continuing."
-            log.error(error)
-            return error
-        
-        elif type(self.log_directory) != str:
-            error = "DCOSRemoteCmd.log_directory must be a string."
-            log.error(error)
-            return error
-
-        else:
-            try:
-                os.stat(self.log_directory)
-
-            except:
-                error = 'DCOSRemoteCmd.log_directory not found. Please ensure {} exists.'.format(self.log_directory)
-                log.error(error)
-                return error
-        
-        # Inventory Path
-        if self.inventory_path == None:
-            error = "DCOSRemoteCmd.inventory_path unset, please set this before continuing."
-            log.error(error)
-            return error
-        
-        elif type(self.inventory_path) != str:
-            error = "DCOSRemoteCmd.inventory_path must be a string."
-            log.error(error)
-            return error
-
-        else:
-            try:
-                os.stat(self.inventory_path)
-
-            except:
-                error = 'DCOSRemoteCmd.inventory_path not found. Please ensure {} exists.'.format(self.inventory_path)
-                log.error(error)
-                return error
+            return True
 
 
     def execute(self):

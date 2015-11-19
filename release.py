@@ -386,6 +386,13 @@ class ChannelManager():
                 return provider.read_file(name)
 
 
+def all_storage_providers(channel):
+    """
+    Return a list of all StorageProviders initialized with the channel name.
+    """
+    return [S3StorageProvider(channel), AzureStorageProvider(channel)]
+
+
 # Generate provider templates against the bootstrap id, capturing the
 # needed packages.
 # {
@@ -427,8 +434,8 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
 
 def do_promote(options):
     print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
-    destination_storage_providers = [S3StorageProvider(options.destination_channel)]
-    source_storage_providers = [S3StorageProvider(options.source_channel)]
+    destination_storage_providers = all_storage_providers(options.destination_channel)
+    source_storage_providers = all_storage_providers(options.source_channel)
     destination = ChannelManager(destination_storage_providers)
     source = ChannelManager(source_storage_providers)
 
@@ -688,7 +695,7 @@ def make_abs(path):
 
 def do_create(options):
     channel_name = 'testing/' + options.destination_channel
-    storage_providers = [S3StorageProvider(channel_name)]
+    storage_providers = all_storage_providers(channel_name)
     channel = ChannelManager(storage_providers)
     commit = util.dcos_image_commit
     print("Creating release on channel:", channel_name)

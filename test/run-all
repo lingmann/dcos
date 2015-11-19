@@ -29,15 +29,20 @@ cleanup_vagrant_leftovers() {
   set -e
 }
 
+cleanup_registry_docker() {
+  echo "Cleaning up Registry container"
+  set +e
+  docker kill registry
+  docker rm registry
+  set -e
+}
+
 clean_all_dockers() {
   echo "Cleaning up zookeeper and nginx Docker containers"
   cleanup_nginx_docker
   cleanup_zookeeper_docker
+  cleanup_registry_docker
 }
-
-# Flag used so TeamCity can tell if the build passed or failed. On failure,
-# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
-rm -rf PASSED
 
 # Make sure we're running inside the test directory which contains the Vagrantfile
 if [ ! -f Vagrantfile ]
@@ -46,8 +51,9 @@ then
   exit 1
 fi
 
-# Build a docker container for running py.test inside of.
-docker build -t py.test - < ../docker/py.test/Dockerfile
+# Flag used so TeamCity can tell if the build passed or failed. On failure,
+# TeamCity will get logs from vagrant if possible then cleanup all artifacts.
+rm -rf PASSED
 
 export MASTER_IP=172.17.10.101
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
@@ -58,6 +64,23 @@ if [ -z "${HOST_IP// }" ]; then
     echo "Host ip has not been identified, aborting."
     exit 1
 fi
+
+clean_all_dockers
+cleanup_vagrant_leftovers
+trap clean_all_dockers EXIT
+
+# Build a docker container for running py.test inside of.
+echo "Building py.test container"
+docker build -t py.test - < ../docker/py.test/Dockerfile
+
+# Provide a local docker registry for testing purposes:
+echo "Running registry container"
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+# Build and push test server to local registry:
+echo "Building&pushing test_server container"
+docker build -t 172.17.10.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
+docker push 172.17.10.1:5000/test_server
 
 mkdir -p genconf
 
@@ -74,10 +97,6 @@ cat <<EOF > "genconf/config.json"
   "master_list": "[\"172.17.10.101\", \"172.17.10.102\", \"172.17.10.103\"]"
 }
 EOF
-
-clean_all_dockers
-cleanup_vagrant_leftovers
-trap clean_all_dockers EXIT
 
 echo "Starting Nginx"
 mkdir -p $PWD/genconf/serve
@@ -98,8 +117,8 @@ docker run -v $PWD/../integration_test.py:/integration_test.py \
     -e MASTER_HOSTS="172.17.10.101,172.17.10.102,172.17.10.103" \
     -e SLAVE_HOSTS="172.17.10.201,172.17.10.202" \
     -e REGISTRY_HOST="172.17.10.1" \
-    -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-''}" \
-    --net=host py.test py.test -s $CI_FLAGS /integration_test.py
+    -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-}" \
+    --net=host py.test py.test -s ${CI_FLAGS:-} /integration_test.py
 RET=$?
 
 if [ $RET -ne 0 ]; then

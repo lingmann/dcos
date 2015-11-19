@@ -7,6 +7,7 @@ def render_installer(name, c)
   return <<-"EOF"
     source /etc/environment
     yum -y install docker unzip &&
+    sed -i -e "s/OPTIONS='/OPTIONS='--insecure-registry 172.17.10.1:5000 /" /etc/sysconfig/docker &&
     systemctl enable docker &&
     systemctl start docker &&
     groupadd -g 65500 nogroup

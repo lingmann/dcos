@@ -1,4 +1,5 @@
 import bs4
+import collections
 import dns.exception
 import dns.resolver
 import json
@@ -8,12 +9,13 @@ import os
 import pytest
 import requests
 import retrying
-import time
 import urllib.parse
 import uuid
 
 
 LOG_LEVEL = logging.INFO
+TEST_APP_NAME_FMT = '/integration-test-{}'
+MESOS_DNS_ENTRY_UPDATE_TIMEOUT = 60  # in seconds
 
 
 @pytest.fixture(scope='module')
@@ -26,7 +28,8 @@ def cluster():
 
     return Cluster(dcos_uri=os.environ['DCOS_DNS_ADDRESS'],
                    masters=os.environ['MASTER_HOSTS'].split(','),
-                   slaves=os.environ['SLAVE_HOSTS'].split(','),)
+                   slaves=os.environ['SLAVE_HOSTS'].split(','),
+                   registry=os.environ['REGISTRY_HOST'],)
 
 
 def _setup_logging():
@@ -134,10 +137,11 @@ class Cluster:
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
 
-    def __init__(self, dcos_uri, masters, slaves):
+    def __init__(self, dcos_uri, masters, slaves, registry):
         self.masters = sorted(masters)
         self.slaves = sorted(slaves)
         self.zk_hostports = ','.join(':'.join([host, '2181']) for host in self.masters)
+        self.registry = registry
 
         # URI must include scheme
         assert dcos_uri.startswith('http')
@@ -149,8 +153,8 @@ class Cluster:
 
         self._wait_for_DCOS()
 
-    def get(self, path=""):
-        return requests.get(self.dcos_uri + path)
+    def get(self, path="", params=None):
+        return requests.get(self.dcos_uri + path, params=params)
 
     def post(self, path="", payload=None):
         if payload is None:
@@ -162,6 +166,78 @@ class Cluster:
 
     def head(self, path=""):
         return requests.head(self.dcos_uri + path)
+
+    def deploy_marathon_app(self, app_definition, timeout=300):
+        """Deploy an app to marathon
+
+        This function deploys an an application and then waits for marathon to
+        aknowledge it's successfull creation or fails the test.
+
+        The wait for application is immediatelly aborted if Marathon returns
+        nonempty 'lastTaskFailure' field. Otherwise it waits until all the
+        instances reach tasksRunning and then tasksHealthy state.
+
+        Args:
+            app_definition: a dict with application definition as specified in
+                            Marathon API (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-apps)
+            timeout: a time to wait for the application to reach 'Healthy' status
+                     after which the test should be failed.
+
+        Returns:
+            A list of named tuples which represent service points of deployed
+            applications. I.E:
+                [Endpoint(host='172.17.10.202', port=10464), Endpoint(host='172.17.10.201', port=1630)]
+        """
+        r = self.post('marathon/v2/apps', app_definition)
+        assert r.ok
+
+        @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
+                        retry_on_result=lambda ret: ret is None,
+                        retry_on_exception=lambda x: False)
+        def _pool_for_marathon_app(app_id):
+            Endpoint = collections.namedtuple("Endpoint", ["host", "port"])
+            # Some of the counters need to be explicitly enabled now and/or in
+            # future versions of Marathon:
+            req_params = (('embed', 'apps.lastTaskFailure'),
+                          ('embed', 'apps.counts'))
+            req_uri = 'marathon/v2/apps' + app_id
+
+            r = self.get(req_uri, req_params)
+            assert r.ok
+
+            data = r.json()
+
+            assert 'lastTaskFailure' not in data['app'], "Application " + \
+                'deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
+
+            tasksRunning = data['app']['tasksRunning']
+            tasksHealthy = data['app']['tasksHealthy']
+
+            if tasksHealthy == app_definition['instances'] and \
+                    tasksRunning == app_definition['instances']:
+                res = [Endpoint(t['host'], t['ports'][0]) for t in data['app']['tasks']]
+                logging.info('Application deployed, running on {}'.format(res))
+                return res
+            else:
+                logging.info('Waiting for application to be deployed')
+                return None
+
+        try:
+            return _pool_for_marathon_app(app_definition['id'])
+        except retrying.RetryError:
+            pytest.fail("Application deployment failed - operation was not "
+                        "completed in {} seconds.".format(timeout))
+
+    def destroy_marathon_app(self, app_name):
+        """Remove a marathon app
+
+        Abort the test if the removal was unsuccesful.
+
+        Args:
+            app_name: name of the applicatoin to remove
+        """
+        r = self.delete('marathon/v2/apps' + app_name)
+        assert r.ok
 
 
 def test_if_DCOS_UI_is_up(cluster):
@@ -316,79 +392,212 @@ def test_if_PkgPanda_metadata_is_available(cluster):
 
 
 def test_if_Marathon_app_can_be_deployed(cluster):
-    rnd = uuid.uuid4().hex
-    app = '/integrationtest-{}'.format(rnd)
+    """Marathon app deployment integration test
 
-    payload = {
-        'id': app,
+    This test verifies that marathon app can be deployed, and that service points
+    returned by Marathon indeed point to the app that was deployed.
+
+    The application being deployed is a simple http server written in python.
+    Please check test/dockers/test_server for more details.
+
+    This is done by assigning an unique UUID to each app and passing it to the
+    docker container as an env variable. After successfull deployment, the
+    "GET /test_uuid" request is issued to the app. If the returned UUID matches
+    the one assigned to test - test succeds.
+    """
+    test_uuid = uuid.uuid4().hex
+    app_name = TEST_APP_NAME_FMT.format(test_uuid)
+
+    app_definition = {
+        'id': app_name,
         'container': {
             'type': 'DOCKER',
             'docker': {
-                'image': 'nginx',
+                'image': '{}:5000/test_server'.format(cluster.registry),
+                "forcePullImage": True,
                 'network': 'BRIDGE',
                 'portMappings': [
-                    {'containerPort':  80, 'hostPort': 0, 'servicePort': 0, 'protocol': 'tcp'}
+                    {'containerPort':  9080,
+                     'hostPort': 0,
+                     'servicePort': 0,
+                     'protocol': 'tcp'}
                 ]
             }
         },
-        'cpus': 0.01,
+        'cpus': 0.1,
         'mem': 64,
         'instances': 1,
-        'ports': [0],
         'healthChecks':
         [
             {
                 'protocol': 'HTTP',
-                'path': '/',
+                'path': '/ping',
                 'portIndex': 0,
                 'gracePeriodSeconds': 5,
                 'intervalSeconds': 10,
                 'timeoutSeconds': 10,
                 'maxConsecutiveFailures': 3
             }
-        ]
+        ],
+        "env": {
+            "DCOS_TEST_UUID": test_uuid
+        },
     }
 
-    # create app
-    r = cluster.post('marathon/v2/apps', payload)
-    assert r.ok
+    service_points = cluster.deploy_marathon_app(app_definition)
 
-    # wait for app to run
-    tasksRunning = 0
-    tasksHealthy = 0
+    r = requests.get('http://{}:{}/test_uuid'.format(service_points[0].host,
+                                                     service_points[0].port))
+    if r.status_code != 200:
+        msg = "Test server replied with non-200 reply: '{0} {1}. "
+        msg += "Detailed explanation of the problem: {2}"
+        pytest.fail(msg.format(r.status_code, r.reason, r.text))
 
-    timeout = time.time() + 300
-    while tasksRunning != 1 or tasksHealthy != 1:
-        r = cluster.get('marathon/v2/apps' + app)
-        if r.ok:
-            json = r.json()
-            logging.debug('fetched app status {}'.format(json))
-            tasksRunning = json['app']['tasksRunning']
-            tasksHealthy = json['app']['tasksHealthy']
+    r_data = r.json()
+    assert r_data['test_uuid'] == test_uuid
 
-            if tasksHealthy == 1:
-                remote_host = json['app']['tasks'][0]['host']
-                remote_port = json['app']['tasks'][0]['ports'][0]
-                logging.info('running on {}:{} with {}/{} healthy tasks'.format(
-                    remote_host, remote_port, tasksHealthy, tasksRunning))
-                break
+    cluster.destroy_marathon_app(app_name)
 
-        if time.time() > timeout:
-            logging.warn('timeout while waiting for healthy task')
-            break
 
-        time.sleep(5)
+def test_if_service_discovery_works(cluster):
+    """Service discovery integration test
 
-    assert tasksRunning == 1
-    assert tasksHealthy == 1
+    This test verifies if service discovery works, by comparing marathon data
+    with information from mesos-dns and from containers themselves.
 
-    # fetch test file from launched app
-    r = requests.get('http://{}:{}/'.format(remote_host, str(remote_port)))
-    assert r.ok
+    This is achieved by deploying an application to marathon with two instances
+    , and ["hostname", "UNIQUE"] contraint set. This should result in containers
+    being deployed to two different slaves.
 
-    # delete app
-    r = cluster.delete('marathon/v2/apps' + app)
-    assert r.ok
+    The application being deployed is a simple http server written in python.
+    Please check test/dockers/test_server for more details.
+
+    Next thing is comparing the service points provided by marathon with those
+    reported by mesos-dns. The tricky part here is that may take some time for
+    mesos-dns to catch up with changes in the cluster.
+
+    And finally, one of service points is verified in as-seen-by-other-containers
+    fashion.
+
+                        +------------------------+   +------------------------+
+                        |          Slave 1       |   |         Slave 2        |
+                        |                        |   |                        |
+                        | +--------------------+ |   | +--------------------+ |
+    +--------------+    | |                    | |   | |                    | |
+    |              |    | |   App instance A   +------>+   App instance B   | |
+    |   TC Agent   +<---->+                    | |   | |                    | |
+    |              |    | |   "test server"    +<------+    "reflector"     | |
+    +--------------+    | |                    | |   | |                    | |
+                        | +--------------------+ |   | +--------------------+ |
+                        +------------------------+   +------------------------+
+
+    Code running on TC agent connects to one of the containers (let's call it
+    "test server") and makes a POST request with IP and PORT service point of
+    the second container as parameters (let's call it "reflector"). The test
+    server in turn connects to other container and makes a "GET /reflect"
+    request. The reflector responds with test server's IP as seen by it and
+    the session UUID as provided to it by Marathon. This data is then returned
+    to TC agent in response to POST request issued earlier.
+
+    The test succeds if test UUIDs of the test server, reflector and the test
+    itself match and the IP of the test server matches the service point of that
+    container as reported by Marathon.
+    """
+    test_uuid = uuid.uuid4().hex
+    app_name = TEST_APP_NAME_FMT.format(test_uuid)
+
+    app_definition = {
+        'id': app_name,
+        'container': {
+            'type': 'DOCKER',
+            'docker': {
+                'image': '{}:5000/test_server'.format(cluster.registry),
+                "forcePullImage": True,
+                'network': 'BRIDGE',
+                'portMappings': [
+                    {'containerPort':  9080,
+                     'hostPort': 0,
+                     'servicePort': 0,
+                     'protocol': 'tcp'}
+                ]
+            }
+        },
+        'cpus': 0.1,
+        'mem': 64,
+        'instances': 2,
+        'healthChecks':
+        [
+            {
+                'protocol': 'HTTP',
+                'path': '/ping',
+                'portIndex': 0,
+                'gracePeriodSeconds': 5,
+                'intervalSeconds': 10,
+                'timeoutSeconds': 10,
+                'maxConsecutiveFailures': 3
+            }
+        ],
+        "env": {
+            "DCOS_TEST_UUID": test_uuid
+        },
+    }
+
+    if len(cluster.slaves) >= 2:
+        app_definition["constraints"] = [["hostname", "UNIQUE"], ]
+
+    service_points = cluster.deploy_marathon_app(app_definition)
+
+    # Verify if Mesos-DNS agrees with Marathon:
+    @retrying.retry(wait_fixed=1000,
+                    stop_max_delay=MESOS_DNS_ENTRY_UPDATE_TIMEOUT*1000,
+                    retry_on_result=lambda ret: ret is None,
+                    retry_on_exception=lambda x: False)
+    def _pool_for_mesos_dns():
+        r = cluster.get('mesos_dns/v1/services/_{}._tcp.marathon.mesos'.format(
+                        app_name.lstrip('/')))
+        assert r.status_code == 200
+
+        r_data = r.json()
+        if r_data == [{'host': '', 'port': '', 'service': '', 'ip': ''}] or \
+                len(r_data) < len(service_points):
+            logging.info("Waiting for Mesos-DNS to update entries")
+            return None
+        else:
+            logging.info("Mesos-DNS entries have been updated!")
+            return r_data
+
+    try:
+        r_data = _pool_for_mesos_dns()
+    except retrying.RetryError:
+        msg = "Mesos DNS has failed to update entries in {} seconds."
+        pytest.fail(msg.format(MESOS_DNS_ENTRY_UPDATE_TIMEOUT))
+
+    marathon_provided_servicepoints = sorted((x.host, x.port) for x in service_points)
+    mesosdns_provided_servicepoints = sorted((x['ip'], int(x['port'])) for x in r_data)
+    assert marathon_provided_servicepoints == mesosdns_provided_servicepoints
+
+    # Verify if containers themselves confirm what Marathon says:
+    payload = {"reflector_ip": service_points[1].host,
+               "reflector_port": service_points[1].port}
+    r = requests.post('http://{}:{}/your_ip'.format(service_points[0].host,
+                                                    service_points[0].port),
+                      payload)
+    if r.status_code != 200:
+        msg = "Test server replied with non-200 reply: '{status_code} {reason}. "
+        msg += "Detailed explanation of the problem: {text}"
+        pytest.fail(msg.format(status_code=r.status_code, reason=r.reason,
+                               text=r.text))
+
+    r_data = r.json()
+    assert r_data['reflector_uuid'] == test_uuid
+    assert r_data['test_uuid'] == test_uuid
+    if len(cluster.slaves) >= 2:
+        # When len(slaves)==1, we are connecting through docker-proxy using
+        # docker0 interface ip. This makes this assertion useless, so we skip
+        # it and rely on matching test uuid between containers only.
+        assert r_data['my_ip'] == service_points[0].host
+
+    cluster.destroy_marathon_app(app_name)
 
 
 def test_if_DCOSHistoryService_is_getting_data(cluster):

@@ -133,38 +133,37 @@ class DCOSRemoteCmd(object):
         inventory = self.get_inventory() 
         running_threads = []
 
-                else:
-            # If the user path isn't none, we can continue
-            for role, hosts in inventory.items():
-                # If our hosts list from yaml has more than 0 hosts in it...
-                if len(hosts) > 0:
-                    if len(running_threads) <= self.concurrent_sessions:
+        # If the user path isn't none, we can continue
+        for role, hosts in inventory.items():
+            # If our hosts list from yaml has more than 0 hosts in it...
+            if len(hosts) > 0:
+                if len(running_threads) <= self.concurrent_sessions:
 
-                        log.debug("Rendering inventory %s role with hosts %s", role, hosts)
+                    log.debug("Rendering inventory %s role with hosts %s", role, hosts)
 
-                        if type(hosts) is str:
-                            host_list = [hosts]
-                        if type(hosts) is list:
-                            host_list = hosts
+                    if type(hosts) is str:
+                        host_list = [hosts]
+                    if type(hosts) is list:
+                        host_list = hosts
 
-                        for host in host_list:
-                            # Spawn a subprocess for preflight
-                            t = threading.Thread(name='{}_execute_cmd'.format(host), target=self.do_thread, args=(options, host,))
-                            running_threads.append(t)
-                            t.daemon = True
-                            t.start()
-
-                    else:
-                        for thread in running_threads:
-                            if not thread.is_alive():
-                                running_threads.remove(thread)
-
+                    for host in host_list:
+                        # Spawn a subprocess for preflight
+                        t = threading.Thread(name='{}_execute_cmd'.format(host), target=self.do_thread, args=(host,))
+                        running_threads.append(t)
+                        t.daemon = True
+                        t.start()
 
                 else:
-                    log.warn("%s is empty, skipping.", role)
+                    for thread in running_threads:
+                        if not thread.is_alive():
+                            running_threads.remove(thread)
+
+
+            else:
+                log.warn("%s is empty, skipping.", role)
  
 
-    def do_thread(self, options, host):
+    def do_thread(self, host):
         """
         Execute a SSH thread and run a command on an arbitrary host.
         """
@@ -186,7 +185,7 @@ class DCOSRemoteCmd(object):
             stdout, stderr = process.communicate
             process.poll()
             retcode = process.returncode
-            self.dump_host_results(options, host, self.get_structured_results(host, retcode, stdout, stderr))
+            self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
             log.info("%s STDOUT: %s", host, self.convert(stdout))
             log.info("%s STDERR: %s", host, self.convert(stderr))
             
@@ -195,7 +194,7 @@ class DCOSRemoteCmd(object):
             retcode = 1
             stdout = ''
             stderr = str(e)
-            self.dump_host_results(options, host, self.get_structured_results(host, retcode, stdout, stderr))
+            self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
             log.error("%s STDOUT: %s", host, self.convert(stdout))
             log.error("%s STDERR: %s", host, self.convert(stderr))
 
@@ -242,12 +241,12 @@ class DCOSRemoteCmd(object):
         return input.decode('utf-8') 
 
 
-    def dump_host_results(self, options, host, results):
+    def dump_host_results(self, host, results):
         """
         Dumps the results to our preflight log file. Assumes incoming results are already
         pre-structured.
         """
-        log_file = '{}/{}_preflight.log'.format(options.log_directory, host)
+        log_file = '{}/{}_preflight.log'.format(self.log_directory, host)
         if os.path.exists(log_file):
             current_file = yaml.load(open(log_file))
             for fhost, data in current_file.items():

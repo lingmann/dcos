@@ -53,49 +53,49 @@ class DCOSRemoteCmd(object):
         errors = {} 
         
         def is_not_none(keys):
-            for key in keys:
-                if key == None:
-                    errors[str(key)] = '{} is unset, please set it before continuing'.format(str(key))
+            for key, value in keys.items():
+                if value == None:
+                    errors[key] = 'Is set to {}, please set it before continuing'.format(value)
 
         def is_string(keys):
-            for key in keys:
-                if type(key) != str:
-                    errors[str(key)] = '{} must be a string.'.format(str(key))
+            for key, value in keys.items():
+                if type(value) != str:
+                    errors[key] = '{} must be a string.'.format(key)
 
         def is_int(keys):
-            for key in keys:
-                if type(key) != int:
-                    errors[str(key)] = '{} must be an integer.'.format(str(key))
+            for key, value in keys.items():
+                if type(value) != int:
+                    errors[key] = '{} must be an integer.'.format(key)
 
         def file_does_exist(keys):
-            for key in keys:
-                if not os.stat(str(key)):
-                    errors[str(key)] = '{} is not present on the filesystem.'.format(str(key))
+            for key, value in keys.items():
+                if not os.stat(value):
+                    errors[key] = '{} is not present on the filesystem.'.format(value)
 
 
-        is_not_none([
-            self.log_directory, 
-            self.concurrent_sessions, 
-            self.inventory_path, 
-            self.ssh_user, 
-            self.ssh_key_path, 
-            self.command])
+        is_not_none({
+            'DCOSRemoteCmd.log_directory': self.log_directory, 
+            'DCOSRemoteCmd.concurrent_sessions': self.concurrent_sessions, 
+            'DCOSRemoteCmd.inventory_path': self.inventory_path, 
+            'DCOSRemoteCmd.ssh_user': self.ssh_user, 
+            'DCOSRemoteCmd.ssh_key_path': self.ssh_key_path, 
+            'DCOSRemoteCmd.command': self.command})
         
-        is_string([
-            self.log_directory,
-            self.inventory_path,
-            self.ssh_user,
-            self.ssh_key_path,
-            self.command])
+        is_string({
+            'DCOSRemoteCmd.log_directory': self.log_directory, 
+            'DCOSRemoteCmd.inventory_path': self.inventory_path, 
+            'DCOSRemoteCmd.ssh_user': self.ssh_user, 
+            'DCOSRemoteCmd.ssh_key_path': self.ssh_key_path, 
+            'DCOSRemoteCmd.command': self.command})
 
-        is_int([
-            self.concurrent_sessions])
 
-        file_does_exist([
-            self.log_directory,
-            self.inventory_path,
-            self.ssh_key_path])
+        is_int({
+            'DCOSRemoteCmd.concurrent_sessions': self.concurrent_sessions})
 
+        file_does_exist({
+            'DCOSRemoteCmd.log_directory': self.log_directory, 
+            'DCOSRemoteCmd.inventory_path': self.inventory_path, 
+            'DCOSRemoteCmd.ssh_key_path': self.ssh_key_path})
 
         if len(errors) > 0:
             return errors

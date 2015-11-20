@@ -166,7 +166,6 @@ class DCOSRemoteCmd(object):
 
         try:
             stdout, stderr = process.communicate(timeout=15)
-            print("CMD ", ssh_cmd)
             process.poll()
             retcode = process.returncode
             self.dump_host_results(host, self.get_structured_results(
@@ -180,7 +179,6 @@ class DCOSRemoteCmd(object):
             
         except:
             process.kill()
-            print("STDOUT ", stdout)
             stdout, stderr = process.communicate()
             retcode = process.returncode
             self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))

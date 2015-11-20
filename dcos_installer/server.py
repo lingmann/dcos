@@ -9,11 +9,6 @@ from glob import glob
 from dcos_installer.log import DCOSLog
 log = DCOSLog(__name__).log
 
-# From dcos-image
-import gen
-import providers.bash
-
-
 """
 Global Variables 
 """

@@ -117,6 +117,13 @@ def parse_args():
         default=False,
         help='Execute the preflight checks on a series of nodes. Assumes $INSTALL_DIR/hosts.yaml exists.')
 
+    parser.add_argument(
+        '-t',
+        '--test',
+        action='store_true',
+        default=False,
+        help='Performs tests on the dcos_installer application')
+
     options = parser.parse_args()
 
     return options
@@ -125,7 +132,18 @@ def main():
     os.environ["CHANNEL_NAME"] = "testing/continuous"
     os.environ["BOOTSTRAP_ID"] = '0026f44d8574d508104f1e7e7a163e078e69990b'
 
-    DcosInstaller(parse_args())
+    options=parse_args()
+    print(options)
+    input()
+
+    if options.test:
+        print("Testing!")
+        import subprocess
+        import sys
+        errno=subprocess.call('tox')
+        raise SystemExit(errno)
+
+    DcosInstaller(options)
 
 if __name__ == '__main__':
     main()

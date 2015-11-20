@@ -1,6 +1,4 @@
 *.pyc
-test/
 __pycache__/
 *.py[cdo]
 *.egg
-

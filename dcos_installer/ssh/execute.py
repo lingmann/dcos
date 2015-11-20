@@ -151,7 +151,7 @@ class DCOSRemoteCmd(object):
         Execute a SSH thread and run a command on an arbitrary host.
         """
         # Define the SSH command to run
-        ssh_cmd = 'ssh -q -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1}@{2} {3}'.format(
+        ssh_cmd = 'ssh -o ConnectTimeout=3 -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i {0} {1}@{2} \'{3}\''.format(
             self.ssh_key_path,
             self.ssh_user,
             host,
@@ -162,17 +162,25 @@ class DCOSRemoteCmd(object):
             ssh_cmd,
             shell=True,
             stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT)
+            stderr=subprocess.PIPE)
 
         try:
             stdout, stderr = process.communicate(timeout=15)
+            print("CMD ", ssh_cmd)
+            process.poll()
             retcode = process.returncode
-            self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
+            self.dump_host_results(host, self.get_structured_results(
+                host, 
+                retcode, 
+                self.convert(stdout), 
+                self.convert(stderr)))
+
             log.info("%s STDOUT: %s", host, self.convert(stdout))
             log.info("%s STDERR: %s", host, self.convert(stderr))
             
         except:
             process.kill()
+            print("STDOUT ", stdout)
             stdout, stderr = process.communicate()
             retcode = process.returncode
             self.dump_host_results(host, self.get_structured_results(host, retcode, stdout, stderr))
@@ -227,11 +235,7 @@ class DCOSRemoteCmd(object):
         """
         Converts the bytes array to utf-8 encoded string.
         """
-        if input != None:
-            return input.decode('utf-8') 
-
-        else:
-            return ""
+        return input.decode('utf-8') 
 
 
     def dump_host_results(self, host, results):

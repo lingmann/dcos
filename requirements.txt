@@ -3,5 +3,5 @@ Flask
 Paramiko
 pyyaml
 jinja2
--e git+git@github.com:mesosphere/dcos-image.git@DCOS-3738#egg=gen
+-e git+git@github.com:mesosphere/dcos-image.git@DCOS-3738#egg=dcos_image
 

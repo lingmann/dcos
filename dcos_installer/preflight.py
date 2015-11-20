@@ -1,7 +1,8 @@
 import paramiko
 import multiprocessing as mp
 from multiprocessing import Process
-from dcos_installer.ssh.execute import DCOSRemoteCmd
+#from dcos_installer.ssh.execute import DCOSRemoteCmd
+from ssh.execute import DCOSRemoteCmd
 from dcos_installer.log import DCOSLog
 log = DCOSLog(__name__).log
 

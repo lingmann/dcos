@@ -11,7 +11,7 @@ log = DCOSLog(__name__).log
 
 # From dcos-image
 import gen
-import providers.bash
+#from providers import bash
 
 
 """

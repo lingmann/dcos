@@ -44,3 +44,17 @@ coreos:
         What=/dev/sdb1
         Where=/var/lib
         Type=ext4
+    - name: config-writer.service
+      command: start
+      content: |
+        [Unit]
+        Description=Write out dynamic config values
+        [Service]
+        Type=oneshot
+        EnvironmentFile=/etc/environment
+        # Various DCOS universe packages depend on local hostname resolution
+        # working (e.g. `ping $(hostname)` must work). The config-writer
+        # service can be removed when we are certain that all DCOS packages
+        # work properly in environments where hostname DNS resolution is not
+        # functional. See: DCOS-3719
+        ExecStart=/usr/bin/bash -c "echo $private_ipv4 $(hostname) > /etc/hosts"

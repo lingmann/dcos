@@ -372,7 +372,7 @@ def validate_key_exists(path, key):
     """
     Validate that a key has a value in a config file.
     """
-    log.debug("Testing %s", key)
+    log.debug("Verifying SSH Key Exists: ", key)
     test_me = get_config(path)
     try:
         if test_me[key] and test_me[key] != '':
@@ -380,7 +380,7 @@ def validate_key_exists(path, key):
             return "success", '{} exists in {}'.format(key,path)
         elif test_me[key] == '':
             log.debug("%s exists but is empty", key)
-            return "warning", '{} existt but is empty'.format(key)
+            return "warning", '{} exists but is empty'.format(key)
     
     except:
         log.debug("%s not found in %s", key, path)

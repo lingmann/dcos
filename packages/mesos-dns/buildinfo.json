@@ -1,16 +1,9 @@
 {
-  "docker": "dcos-builder",
   "sources": {
-    "go": {
-      "kind": "url_extract",
-      "url": "https://storage.googleapis.com/golang/go1.5.1.linux-amd64.tar.gz",
-      "sha1": "46eecd290d8803887dec718c691cc243f2175fe0"
-    },
     "mesos-dns": {
-      "kind": "git",
-      "git": "https://github.com/mesosphere/mesos-dns.git",
-      "ref": "681a136ac45c129d10cdbd6a023cf6edf87fea54",
-      "ref_origin": "v0.4.0"
+      "kind": "url",
+      "url": "https://github.com/mesosphere/mesos-dns/releases/download/v0.5.0/mesos-dns-v0.5.0-linux-amd64",
+      "sha1": "813fc8f4314b4ab37d8dca4c4be3c1b552e1098d"
     }
   }
 }

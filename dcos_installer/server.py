@@ -13,13 +13,13 @@ log = DCOSLog(__name__).log
 
 # Helper submodules
 from dcos_installer.config import DCOSConfig
-from dcos_installer.validate import ext_helpers
+from dcos_installer.validate import ext_helpers, DCOSValidateConfig
 
 """
 Global Variables 
 """
 # Sane user config defaults
-userconfig = DCOSConfig()
+userconfig = DCOSConfig({'install_type': 'onprem'})
 
 def run(options):
     """
@@ -108,11 +108,11 @@ def do_routes(app, options):
             dump_config(options.config_path, userconfig)
             return redirect(redirect_url())
 
-        level, message = validate(options.config_path)
+        level, message = validate_for_web(options.config_path)
         return render_template(
             'config.html', 
             isset=get_config(options.config_path),
-            dependencies=get_dependencies(options.config_path),
+            dependencies=validate_config(options.config_path),
             validate_level = level,
             validate_message = message)
 
@@ -305,59 +305,55 @@ def clean_config(path):
 
 
 
-def validate(path):
-    config = get_config(path)
-    missing_deps = []
-    if config != {}:
-        dependencies = get_dependencies(path)
-        log.debug("Validating configruation file %s...", path)
-        for dk, dv in list(dependencies.items()):
-            log.debug("Checking coniguration for %s", dk)
-            for required_value in dv:
-                log.debug("Ensuring dependency %s exists in config", required_value)
-                # Ensure the key for the dependency exists
-                if not required_value in config:
-                    log.warning("Unfound value for %s: %s", path, required_value)
-                    missing_deps.append(required_value)
-                    continue
-                    #return "danger", 'Configuation for {} is not set.'.format(required_value)
+def validate_for_web(path):
+    errors, messages = validate_config(path)
+    if errors:
+        return 'danger', 'Some configuration needs work: {}'.format(messages['errors'].keys)
 
-                # Make sure not keys have nil / blank values
-                elif required_value in config:
-                    if not len(config[required_value]) > 0:
-                        log.warning("Value found is not set for key %s", required_value)
-                        missing_deps.append(required_value)
-                        #return "danger", 'Configuration for {} is not set.'.format(required_value)
-                        continue
-                
-                # I hate not having switch statements...
-                # Fall through to continue on values found and not being nil
-                else:
-                    continue
-
-        if len(missing_deps) > 0:
-            log.warning("Configuration for %s not found.", missing_deps)
-            return 'danger', 'Missing configuration parameters: {}'.format(missing_deps)
-            
-        else:
-            log.info("Configuration looks good!")
-            return "success", "Configuration looks good!"
+    else:
+        return 'success', 'Configuration looks good!'
+        
     
-    else:
-        log.warning("Configuration file is empty")
-        return "warning", "Configuration file appears empty."
+#    missing_deps = []
+#    if config != {}:
+#        dependencies = validate_config(path)
+#        log.debug("Validating configruation file %s...", path)
+#        for dk, dv in list(dependencies.items()):
+#            log.debug("Checking coniguration for %s", dk)
+#            for required_value in dv:
+#                log.debug("Ensuring dependency %s exists in config", required_value)
+#                # Ensure the key for the dependency exists
+#                if not required_value in config:
+#                    log.warning("Unfound value for %s: %s", path, required_value)
+#                    missing_deps.append(required_value)
+#                    continue
+#                    #return "danger", 'Configuation for {} is not set.'.format(required_value)
+#
+#                # Make sure not keys have nil / blank values
+#                elif required_value in config:
+#                    if not len(config[required_value]) > 0:
+#                        log.warning("Value found is not set for key %s", required_value)
+#                        missing_deps.append(required_value)
+#                        #return "danger", 'Configuration for {} is not set.'.format(required_value)
+#                        continue
+#                
+#                # I hate not having switch statements...
+#                # Fall through to continue on values found and not being nil
+#                else:
+#                    continue
+#
+#        if len(missing_deps) > 0:
+#            log.warning("Configuration for %s not found.", missing_deps)
+#            return 'danger', 'Missing configuration parameters: {}'.format(missing_deps)
+#            
+#        else:
+#            log.info("Configuration looks good!")
+#            return "success", "Configuration looks good!"
+#    
+#    else:
+#        log.warning("Configuration file is empty")
+#        return "warning", "Configuration file appears empty."
    
-
-def validate_path(path):
-    """
-    Validate the ip-detect script exists and report back.
-    """
-    if os.path.exists(path):
-        return "success", 'File exists {}'.format(path)
-
-    else:
-        return "danger", 'File does not exist {}'.format(path)
-
 
 def validate_key_exists(path, key):
     """
@@ -407,55 +403,13 @@ def redirect_url(default='mainpage'):
         url_for(default)
 
 
-def get_dependencies(config_path):
+def validate_config(config_path):
     """
     Defines our redirect logic. In the case of the installer,
     we have several parameters that require other paramters in the tree. 
     This method ensures the user gets redirected to the proper URI based
     on their initial top-level input to the installer.
     """
-    config = get_config(config_path)
-
-    dep_tree = {
-        "master_discovery": {
-            "static":  ["master_list"],
-            "keepalived": ["keepalived_router_id", "keepalived_interface", "keepalived_pass", "keepalived_virtual_ipaddress"],
-            "cloud_dynamic": ["num_masters"],
-        },
-        "exhibitor_storage_backend": {
-            "zookeeper": ["exhibitor_zk_hosts", "exhibitor_zk_path"],
-            "shared_filesystem": ["exhibitor_fs_config_dir"],
-            "aws_s3": ["aws_access_key_id", "aws_secret_access_key", "aws_region", "s3_bucket", "s3_prefix"],
-        },
-        "base": {
-            "master_discovery":"",
-            "exhibitor_storage_backend":"",
-            "cluster_name": "", 
-            "resolvers": "", 
-            "weights": "",
-            "bootstrap_url": "",
-            "roles": "",
-            "docker_remove_delay": "",
-            "gc_delay": ""
-        },
-    }
-    # The final return dict 
-    return_deps = {}
-    # Get the master discovery deps
-    if config.get('master_discovery'):
-        try: 
-            return_deps['master_discovery'] = dep_tree['master_discovery'][config['master_discovery']] 
-        
-        except: 
-            log.error("The specified configuration value is not valid, %s", config['master_discovery'])
-    
-    # Get exhibitor storage deps
-    if config.get('exhibitor_storage_backend'):
-        try:
-            return_deps['exhibitor_storage_backend'] = dep_tree['exhibitor_storage_backend'][config['exhibitor_storage_backend']] 
-        
-        except: 
-            log.error("The specified configuration value is not valid, %s", config['exhibitor_storage_backend'])
-
-    return_deps['base'] = dep_tree['base']
-    return return_deps
+    config = DCOSValidateConfig(get_config(config_path)) 
+    errors, messages = config.validate()
+    return errors, messages

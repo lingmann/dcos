@@ -41,9 +41,9 @@ def get_onprem_dependencies(config):
     """
     # Init our return messages
     messages = {
-        'errors': [],
-        'success': [],
-        'warning': [],
+        'errors': {},
+        'success': {},
+        'warning': {},
     }
 
     # Dependency tree: validation of the given config is done from the funcs
@@ -105,21 +105,21 @@ def get_onprem_dependencies(config):
         # Here we access the level 1 vars in the dep tree.
         if not rk in config:
             log.error("%s: required parameter missing.", rk)
-            messages['errors'].append('{}: required parameter missing.'.format(rk))
+            messages['errors'][rk] = 'Required parameter missing.'
 
         else:
             log.debug("%s: required parameter found.", rk)
-            messages['success'].append('{}: required parameter found.'.format(rk))
+            messages['success'][rk] = 'Required parameter found.'
             # Test validity of value given
 
         if type(rv) == list:
             if rv[0]:
                 log.debug("%s: %s", rk, rv[1])
-                messages['success'].append('{}: {}'.format(rk, rv[1]))
+                messages['success'][rk] = '{}'.format(rv[1])
             
             else:
                 log.error("%s: %s", rk, rv[1])
-                messages['errors'].append('{}: {}'.format(rk, rv[1]))
+                messages['errors'][rk] = '{}'.format(rv[1])
 
         if type(rv) == dict:
             # Ensure the value in the config for the parameter is actually available
@@ -130,7 +130,7 @@ def get_onprem_dependencies(config):
             try:
                 if config[rk] in rv:
                     log.debug("%s: is a valid entry for %s", config[rk], rk)
-                    messages['success'].append('{}: is a valid entry for {}.'.format(config[rk], rk))
+                    messages['success'][config[rk]] = 'Is a valid entry for {}.'.format(rk)
                     
                     for rk2, rv2 in rv[config[rk]].items():
                         # If the child of required key (rk) is present in the config, test
@@ -138,7 +138,7 @@ def get_onprem_dependencies(config):
                         # error to messages[errors].
                         if not rk2 in config:
                             log.debug("%s: required for %s type %s and is not present.", rk2, rk, config[rk])
-                            messages['errors'].append('{}: required for {} type {} and is not present.'.format(rk2, rk, config[rk]))
+                            messages['errors'][rk2] = 'Required for {} type {} and is not present.'.format(rk, config[rk])
 
                         else: 
                             # Test the value of required key and dump that to the messages log. 
@@ -146,20 +146,20 @@ def get_onprem_dependencies(config):
                             # can test on [0] to validate our return.
                             if rv2[0]:
                                 log.debug("%s: %s", rk2, rv2[1])
-                                messages['success'].append('{}: {}'.format(rk2, rv2[1]))
+                                messages['success'][rk2] = '{}'.format(rv2[1])
 
                             else:
                                 log.error("%s: %s", rk2, rv2[1])
-                                messages['errors'].append('{}: {}'.format(rk2, rv2[1]))
+                                messages['errors'][rk2] = '{}'.format(rv2[1])
 
                 else:
                     # If the level 2 key isn't present in the dep_tree, dump the error. 
                     log.error("%s: is not a valid entry for %s.", config[rk], rk)
-                    messages['errors'].append('{}: is not a valid entry for {}.'.format(config[rk], rk))
+                    messages['errors'][config[rk]] = 'Is not a valid entry for {}.'.format(rk)
                 
             except KeyError as e:
                 log.error("%s: is missing a valid value.", e.args[0])
-                messages['errors'].append('{}: is missing a valid value.'.format(e.args[0]))
+                messages['errors'][e.args[0]] = 'Is missing a valid value.'
                 pass 
 
     return messages

@@ -30,6 +30,7 @@ class DCOSConfig(dict):
             'available_install_types': ['onprem'],
             'install_type': 'onprem',
             'config_dir': '{}/dcos-installer'.format(os.path.expanduser('~')),
+            'ip_detect_path': '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~')),
             "num_masters": 3,
             "master_discovery": 'static',
             "master_list": ['127.0.0.1'],
@@ -43,9 +44,9 @@ class DCOSConfig(dict):
             "docker_remove_delay": "1hrs",
             "gc_delay": "2days",
             'resolvers': ['8.8.8.8', '8.8.4.4'],
-            'ssh_username': '',
+            'ssh_user': None, 
             'ssh_port': 22,
-            'ssh_key_path': '',
+            'ssh_key_path': '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~')),
         }   
 
         # Setting the passed in options as the overrides for the instance of the class. 

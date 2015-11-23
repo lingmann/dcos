@@ -89,11 +89,12 @@ def get_onprem_dependencies(config):
         "docker_remove_delay": helpers.validate_string('docker_remove_delay', config),
         "gc_delay": helpers.validate_string('docker_remove_delay', config),
         "install_type": helpers.validate_install_type('install_type', config),
-        "ssh_port": helpers.validate_int('port', config),
+        "ssh_port": helpers.validate_int('ssh_port', config),
         "ssh_key_path": helpers.validate_path('ssh_key_path', config),
-        "ssh_username": helpers.validate_string('username', config),
+        "ssh_user": helpers.validate_string('ssh_user', config),
         "master_list": helpers.validate_ip_list('master_list', config),
-        "agent_list": helpers.validate_ip_list('agent_list', config)
+        "agent_list": helpers.validate_ip_list('agent_list', config),
+        "ip_detect_path": helpers.validate_path('ip_detect_path', config),
     }
 
             

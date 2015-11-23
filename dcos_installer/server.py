@@ -67,54 +67,50 @@ def do_routes(app, options):
     
 
     # Configurator routes
-    @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
+    @app.route("/installer/v{}/configurator/".format(version), methods=['GET', 'POST'])
     def configurator():
         """
         The top level configurator route. This route exposes the two options to go
         to the configurator wizard or to upload the ip script. This will probably
         be changed in the future.
         """
-        config_level, config_message = ext_helpers.is_path_exists(options.config_path)
-        ip_detect_level, ip_detect_message = ext_helpers.is_path_exists(options.ip_detect_path)
+        if request.method == 'POST':
+            # Save or upload configuration posted
+            if 'ssh_key' in request.files:
+                log.info("Upload SSH key")
+                save_file(
+                    request.files['ssh_key'],
+                    options.ssh_key_path)
+
+            if 'ip_detect' in request.files:
+                log.info("Uploading ip-detect script.")
+                save_file(
+                    request.form['ip_detect'], 
+                    options.ip_detect_path)
+
+            if 'master_list' in request.form or 'agent_list' in request.form or 'ssh_user' in request.form or 'ssh_port' in request.form or 'resolvers' in request.form:
+                log.info("Uploading and saving new configuration")
+                add_config(request, userconfig)
+                dump_config(options.config_path, userconfig)
+
+   
+        # Ensure the files exist
+        config_path_level, config_path_message = ext_helpers.is_path_exists(options.config_path)
+
+        # Validate configuration
+        config_level, config_message = validate_for_web(options.config_path)
+        isset = get_config(options.config_path)
+        dependencies = validate_config(options.config_path)
+
         return render_template(
-            'configurator.html',
+            'config.html',
+            isset=isset,
+            dependencies=dependencies,
             config_level=config_level,
             config_message=config_message,
-            ip_detect_message=ip_detect_message,
-            ip_detect_level=ip_detect_level)
+            config_path_level=config_path_level,
+            config_path_message=config_path_message)
 
-
-    @app.route("/installer/v{}/configurator/ip-detect/".format(version),  methods=['GET', 'POST'])
-    def ip_detect():
-        save_to_path = options.ip_detect_path
-        if request.method == 'POST':
-            save_file(
-               request.form['ip_detect'], 
-                save_to_path)
-            # TODO: basic ip-detect script validation 
-
-        validate_level, message = validate_path(save_to_path)
-
-        return render_template(
-            'ip_detect.html',
-            validate_level=validate_level,
-            validate_message=message)
-        
-
-    @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET', 'POST'])
-    def config():
-        if request.method == 'POST':
-            add_config(request, userconfig)
-            dump_config(options.config_path, userconfig)
-            return redirect(redirect_url())
-
-        level, message = validate_for_web(options.config_path)
-        return render_template(
-            'config.html', 
-            isset=get_config(options.config_path),
-            dependencies=validate_config(options.config_path),
-            validate_level = level,
-            validate_message = message)
 
 
     @app.route("/installer/v{}/configurator/generate".format(version),  methods=['POST','GET'])
@@ -127,39 +123,7 @@ def do_routes(app, options):
         return redirect(redirect_url())       
 
 
-    # Preflight 
-    @app.route("/installer/v{}/preflight/".format(version),  methods=['GET', 'POST'])
-    def preflight():
-        """
-        If the request is a POST, check for the preflight_check form key. If that key exists
-        execute the preflight.check library. If it doesn't, save hosts.yaml config. If
-        the method is a GET, serve the template.
-        """
-        if request.method == 'POST':
-            """ 
-            If request is a POST then we assume it's updating the hosts.yaml.
-            """
-            add_config(request, hostsconfig)
-            dump_config(options.hosts_yaml_path, hostsconfig)
-            # TODO: basic host validation??
-
-        # Validate hosts file, ssh key file and ssh username file
-        validate_hosts_level, hosts_message = validate_hosts(options.hosts_yaml_path)
-        validate_ssh_level, validate_ssh_message = validate_path(options.ssh_key_path)
-        validate_user_level, validate_user_message = validate_path(options.ssh_user_path)
-
-        return render_template(
-            'preflight.html',
-            isset=get_config('{}/hosts.yaml'.format(options.install_directory)),
-            validate_hosts_level=validate_hosts_level,
-            validate_hosts_message=hosts_message,
-            validate_ssh_level=validate_ssh_level,
-            validate_ssh_message=validate_ssh_message,
-            validate_user_level=validate_user_level,
-            validate_user_message=validate_user_message)
-
-
-    @app.route('/installer/v{}/preflight/check/'.format(version), methods=['GET','POST'])
+    @app.route('/installer/v{}/preflight/'.format(version), methods=['GET','POST'])
     def preflight_check():
         """
         Execute the preflight checks and stream the SSH output back to the 
@@ -187,31 +151,7 @@ def do_routes(app, options):
             preflight_data=preflight_data)
    
 
-    @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
-    def preflight_ssh_key():
-        ssh_key_path = options.ssh_key_path
-        ssh_user_path = options.ssh_user_path
-        if 'ssh_user' in request.form: 
-            log.info("Adding SSH user %s", request.form['ssh_user'])
-            save_file(
-                request.form['ssh_user'],
-                ssh_user_path)
-
-        elif 'ssh_key' in request.files:
-            log.info("Adding SSH key")
-            save_file(
-                request.files['ssh_key'],
-                ssh_key_path)
-
-        else:
-            log.error("Unknown POST to /ssh_key route.")
-            pass
-
-        
-        return redirect(redirect_url())
     
-    # TODO Move hosts down here too
-
     # Deploy
     @app.route('/installer/v{}/deploy/'.format(version), methods=['POST','GET'])
     def deploy():
@@ -308,53 +248,12 @@ def clean_config(path):
 def validate_for_web(path):
     errors, messages = validate_config(path)
     if errors:
-        return 'danger', 'Some configuration needs work: {}'.format(messages['errors'].keys)
+        return 'danger', 'Some configuration needs work: {}'.format(messages['errors'])
 
     else:
         return 'success', 'Configuration looks good!'
         
-    
-#    missing_deps = []
-#    if config != {}:
-#        dependencies = validate_config(path)
-#        log.debug("Validating configruation file %s...", path)
-#        for dk, dv in list(dependencies.items()):
-#            log.debug("Checking coniguration for %s", dk)
-#            for required_value in dv:
-#                log.debug("Ensuring dependency %s exists in config", required_value)
-#                # Ensure the key for the dependency exists
-#                if not required_value in config:
-#                    log.warning("Unfound value for %s: %s", path, required_value)
-#                    missing_deps.append(required_value)
-#                    continue
-#                    #return "danger", 'Configuation for {} is not set.'.format(required_value)
-#
-#                # Make sure not keys have nil / blank values
-#                elif required_value in config:
-#                    if not len(config[required_value]) > 0:
-#                        log.warning("Value found is not set for key %s", required_value)
-#                        missing_deps.append(required_value)
-#                        #return "danger", 'Configuration for {} is not set.'.format(required_value)
-#                        continue
-#                
-#                # I hate not having switch statements...
-#                # Fall through to continue on values found and not being nil
-#                else:
-#                    continue
-#
-#        if len(missing_deps) > 0:
-#            log.warning("Configuration for %s not found.", missing_deps)
-#            return 'danger', 'Missing configuration parameters: {}'.format(missing_deps)
-#            
-#        else:
-#            log.info("Configuration looks good!")
-#            return "success", "Configuration looks good!"
-#    
-#    else:
-#        log.warning("Configuration file is empty")
-#        return "warning", "Configuration file appears empty."
    
-
 def validate_key_exists(path, key):
     """
     Validate that a key has a value in a config file.
@@ -375,28 +274,6 @@ def validate_key_exists(path, key):
 
 
 
-def validate_hosts(path):
-    """
-    Validate that the host file exists and the keys are available.
-    """
-    if validate_path(path) == 'danger':
-        return 'danger', 'hosts.yaml does not exist: {}'.format(path)
-
-    
-    for key in ['ssh_user', 'ssh_key_path', 'master', 'slave_public', 'slave_private']:    
-        validation, message = validate_key_exists(path, key)
-        # Catch dangers first
-        if validation == 'danger':
-            return validation, message 
-       
-        # Catch warnings last
-        if validation == 'warning':
-            return validation, message 
-
-        else:
-            return validation, 'hosts.yaml looks good!' 
-
-
 def redirect_url(default='mainpage'):
     return request.args.get('next') or \
         request.referrer or \
@@ -410,6 +287,9 @@ def validate_config(config_path):
     This method ensures the user gets redirected to the proper URI based
     on their initial top-level input to the installer.
     """
-    config = DCOSValidateConfig(get_config(config_path)) 
+    if get_config(config_path):
+        config = DCOSValidateConfig(get_config(config_path)) 
+    else: 
+        config = DCOSValidateConfig(userconfig)
     errors, messages = config.validate()
     return errors, messages

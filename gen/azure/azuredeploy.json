@@ -58,7 +58,7 @@
   },
   "variables": {
     "adminUsername": "core",
-    "uniqueName": "[resourceGroup().name]",
+    "uniqueName": "[replace(resourceGroup().name,'-','')]",
     "storageAccountName": "[concat(variables('uniqueName'), 'dcsan')]",
     "virtualNetworkName": "[concat(variables('uniqueName'), 'dcvn')]",
     "masterSecurityGroupName": "[concat(variables('uniqueName'), 'mstrsg')]",

@@ -1,8 +1,6 @@
 from flask import Flask, request, render_template, url_for, redirect, Response
 import os
 import yaml
-import time
-import sys
 from glob import glob
 
 # Logging
@@ -10,24 +8,17 @@ from dcos_installer.log import DCOSLog
 log = DCOSLog(__name__).log
 
 # From dcos-image
-import gen
+#import gen
 #from providers import bash
 
+# Helper submodules
+from dcos_installer.config import DCOSConfig
 
 """
 Global Variables 
 """
 # Sane user config defaults
-userconfig = {
-    "num_masters": "3",
-    "weights": "slave_public=1",
-    "bootstrap_url": "localhost",
-    "roles": "slave_public",
-    "docker_remove_delay": "1hrs",
-    "gc_delay": "2days",
-}
-
-hostsconfig = {}
+userconfig = DCOSConfig()
 
 def run(options):
     """
@@ -199,7 +190,6 @@ def do_routes(app, options):
     def preflight_ssh_key():
         ssh_key_path = options.ssh_key_path
         ssh_user_path = options.ssh_user_path
-        print((request.files))
         if 'ssh_user' in request.form: 
             log.info("Adding SSH user %s", request.form['ssh_user'])
             save_file(

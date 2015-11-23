@@ -19,10 +19,10 @@
 #
 # else:
 #     print("Errors found: ", validate_out)
-from dcosgen import DCOSLogger
-log = DCOSLogger(__name__).log
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
 
-from dcosgen.validate import onprem 
+from dcos_installer.validate import onprem 
 #from dcosgen.validate import $some_other_installation_type
 
 

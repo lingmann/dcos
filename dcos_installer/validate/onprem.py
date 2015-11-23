@@ -1,10 +1,10 @@
 # Dependencies for DCOS installations. Functions in this library are intended to accept a given 
 # set of configuration, and returns a boolean plus a dict of values (if any) that are missing 
 # for the given set of config.
-from dcosgen import DCOSLogger
-log = DCOSLogger(__name__).log
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
 
-from dcosgen.validate import helpers
+from dcos_installer.validate import helpers
 
 def check_dependencies(config):
     """
@@ -14,7 +14,6 @@ def check_dependencies(config):
     errors, validate_messages = return_data(config)
 
     return errors, validate_messages
-
 
 
 def return_data(config):
@@ -89,7 +88,12 @@ def get_onprem_dependencies(config):
         "roles": helpers.validate_string('roles', config),
         "docker_remove_delay": helpers.validate_string('docker_remove_delay', config),
         "gc_delay": helpers.validate_string('docker_remove_delay', config),
-        "install_type": helpers.validate_install_type('install_type', config)
+        "install_type": helpers.validate_install_type('install_type', config),
+        "ssh_port": helpers.validate_int('port', config),
+        "ssh_key_path": helpers.validate_path('ssh_key_path', config),
+        "ssh_username": helpers.validate_string('username', config),
+        "master_list": helpers.validate_ip_list('master_list', config),
+        "agent_list": helpers.validate_ip_list('agent_list', config)
     }
 
             

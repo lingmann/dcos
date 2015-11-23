@@ -4,7 +4,7 @@
 #     'config_dir':  '/tmp'
 # }
 #
-# c = DcosConfigObject().set(my_opts)
+# c = DcosConfig()
 # print(c)
 
 import datetime
@@ -14,9 +14,9 @@ import os
 import sys
 import yaml
 
-from dcosgen.validate import DCOSValidateConfig
-from dcosgen import DCOSLogger
-log = DCOSLogger(__name__).log
+from dcos_installer.validate import DCOSValidateConfig
+from dcos_installer.log import DCOSLog
+log = DCOSLog(__name__).log
 
 
 class DCOSConfig(dict):
@@ -26,13 +26,14 @@ class DCOSConfig(dict):
     def __init__(self, options={}):
         # Default configuration
         self.defaults = {
+            'cluster_name': 'New Cluster {}'.format(str(datetime.datetime.now())),
             'available_install_types': ['onprem'],
-            'cluster_name': str(datetime.datetime.now()),
             'install_type': 'onprem',
             'config_dir': '{}/dcos-installer'.format(os.path.expanduser('~')),
             "num_masters": 3,
             "master_discovery": 'static',
             "master_list": ['127.0.0.1'],
+            "agent_list": ["127.0.0.1"],
             "exhibitor_storage_backend": "zookeeper",
             "exhibitor_zk_hosts": ['127.0.0.1'],
             "exhibitor_zk_path": '/exhibitor',
@@ -42,6 +43,9 @@ class DCOSConfig(dict):
             "docker_remove_delay": "1hrs",
             "gc_delay": "2days",
             'resolvers': ['8.8.8.8', '8.8.4.4'],
+            'ssh_username': '',
+            'ssh_port': 22,
+            'ssh_key_path': '',
         }   
 
         # Setting the passed in options as the overrides for the instance of the class. 

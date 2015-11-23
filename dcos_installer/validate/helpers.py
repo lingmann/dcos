@@ -16,6 +16,7 @@
 # to those should follow a 'is_something_..' construct as to be able to use
 # them in other validate methods. 
 import socket
+import os
 
 
 def is_valid_ipv4_address(address):
@@ -105,3 +106,19 @@ def validate_list(key=None, config=None):
             return [False, '{} is not a valid list.'.format(key)]
 
     return [False, None]
+
+
+def validate_path(key=None, config=None):
+    """
+    Validate a path exists. 
+    """
+    if key in config:
+        key = config[key]
+        if os.path.exists(key):
+            return [True, 'File exists {}'.format(key)]
+
+        else:
+            return [False, 'File does not exist {}'.format(key)]
+
+    return [False, None]
+

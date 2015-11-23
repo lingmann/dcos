@@ -15,12 +15,6 @@ log = DCOSLog(__name__).log
 from dcos_installer.config import DCOSConfig
 from dcos_installer.validate import ext_helpers, DCOSValidateConfig
 
-"""
-Global Variables 
-"""
-# Sane user config defaults
-userconfig = DCOSConfig({'install_type': 'onprem'})
-
 def run(options):
     """
     Define some routes and execute the Flask server. Currently
@@ -52,11 +46,6 @@ def do_routes(app, options):
         return redirect(url_for('mainpage'))
 
 
-    @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
-    def clear():
-        clean_config(options.config_path)
-        return redirect(redirect_url())
-
 
     @app.route("/installer/v{}/".format(version), methods=['GET'])
     def mainpage():
@@ -67,7 +56,7 @@ def do_routes(app, options):
     
 
     # Configurator routes
-    @app.route("/installer/v{}/configurator/".format(version), methods=['GET', 'POST'])
+    @app.route("/installer/v{}/configurator".format(version), methods=['GET', 'POST'])
     def configurator():
         """
         The top level configurator route. This route exposes the two options to go
@@ -75,6 +64,8 @@ def do_routes(app, options):
         be changed in the future.
         """
         if request.method == 'POST':
+            log.info("POST to configurator...")
+            log.info(request)
             # Save or upload configuration posted
             if 'ssh_key' in request.files:
                 log.info("Upload SSH key")
@@ -90,8 +81,7 @@ def do_routes(app, options):
 
             if 'master_list' in request.form or 'agent_list' in request.form or 'ssh_user' in request.form or 'ssh_port' in request.form or 'resolvers' in request.form:
                 log.info("Uploading and saving new configuration")
-                add_config(request, userconfig)
-                dump_config(options.config_path, userconfig)
+                add_form_config(request, options.config_path)
 
    
         # Ensure the files exist
@@ -100,17 +90,20 @@ def do_routes(app, options):
         # Validate configuration
         config_level, config_message = validate_for_web(options.config_path)
         isset = get_config(options.config_path)
-        dependencies = validate_config(options.config_path)
 
         return render_template(
             'config.html',
             isset=isset,
-            dependencies=dependencies,
             config_level=config_level,
             config_message=config_message,
             config_path_level=config_path_level,
             config_path_message=config_path_message)
 
+
+    @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
+    def clear():
+        clean_config(options.config_path)
+        return redirect(redirect_url())
 
 
     @app.route("/installer/v{}/configurator/generate".format(version),  methods=['POST','GET'])
@@ -173,53 +166,47 @@ def save_file(data, path):
         f.write(str(data))
 
 
-def add_config(data, global_data):
+def add_form_config(data, path):
     """
     Updates the global userconfig{} map with the latest data from 
     the web console.
     """
-    log.info("Adding user config from form POST")
-    log.debug("Received raw data: %s", data.form)
+    log.info("Adding configuration...")
+    
+    # Turn form data from POST into dict for DCOSConfig overrides
+    new_data = {}
+    
     for key in list(data.form.keys()):
         log.debug("%s: %s",key, data.form[key])
-        # If the string is actually a list from the POST...
-        if len(data.form[key].split(',')) > 1:
-            global_data[key] = []
-            for value in data.form[key].split(','):
-                global_data[key].append(value.rstrip().lstrip())
+        if len(data.form[key]) > 0:
+            # If the string is actually a list from the POST...
+            if len(data.form[key].split(',')) > 1:
+                new_data[key] = []
+                for value in data.form[key].split(','):
+                    new_data[key].append(value.rstrip().lstrip())
+            else:
+                new_data[key] = data.form[key]
         else:
-            global_data[key] = data.form[key]
+            log.info("Refusing to write null data for %s", key)
 
+    
+    config = DCOSConfig(overrides=new_data, config_path=path)
+    print("FUCKING DATTA RIGHT HERE")
+    print(config)
+    write_config(config, path)
 
-def dump_config(path, global_data):
-    """
-    Dumps our configuration to the config path specific in CLI flags. If the file 
-    already exists, add configuration to it from the userconfig presented to us 
-    in the web console. Otherwise, if the file does no exist, create it and write the
-    config passed to us from the console.
-    """
-
-    if os.path.exists(path):
-        log.debug("Configuration path exists, reading in and adding config %s", path)
-        base_config = yaml.load(open(path, 'r')) 
-        try:
-            for bk, bv in list(base_config.items()):
-                log.debug("Adding configuration from yaml file %s: %s", bk, bv)
-                # Overwrite the yaml config with the config from the console
-                if not bk in global_data:
-                    global_data[bk] = bv
-            
-            with open(path, 'w') as f:
-                f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
-
-        except:
-            log.error("Cowardly refusing to write empty data")
-            pass
-
-            
-    elif not os.path.exists(path):
-        with open(path, 'w') as f:
-            f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
+   
+def write_config(config, path):
+    log.warning("NEW CONFIGURATION WRITTEN:")
+    log.warning(config)
+    with open(path, 'w') as f:
+        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
+    
+  
+def redirect_url(default='mainpage'):
+    return request.args.get('next') or \
+        request.referrer or \
+        url_for(default)
 
 
 def get_config(path):
@@ -227,11 +214,12 @@ def get_config(path):
     Returns the config file as a dict.
     """
     if os.path.exists(path):
-        log.debug("Reading in config file from %s", path)
-        return yaml.load(open(path, 'r'))
-    else:
-        log.error("The configuration path does not exist %s", path)
-        return {}
+        config = yaml.load(open(path, 'r'))
+    
+    else: 
+        config = {}
+
+    return config
 
 
 def clean_config(path):
@@ -242,42 +230,15 @@ def clean_config(path):
     userconfig = {}
     with open(path, 'w') as f:
         f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
-
-
+ 
 
 def validate_for_web(path):
     errors, messages = validate_config(path)
     if errors:
-        return 'danger', 'Some configuration needs work: {}'.format(messages['errors'])
+        return 'danger', messages['errors']
 
     else:
         return 'success', 'Configuration looks good!'
-        
-   
-def validate_key_exists(path, key):
-    """
-    Validate that a key has a value in a config file.
-    """
-    log.debug("Verifying SSH Key Exists: ", key)
-    test_me = get_config(path)
-    try:
-        if test_me[key] and test_me[key] != '':
-            log.debug("%s exists in %s", key, path)
-            return "success", '{} exists in {}'.format(key,path)
-        elif test_me[key] == '':
-            log.debug("%s exists but is empty", key)
-            return "warning", '{} exists but is empty'.format(key)
-    
-    except:
-        log.debug("%s not found in %s", key, path)
-        return "danger", '{} not found in {}'.format(key, path)
-
-
-
-def redirect_url(default='mainpage'):
-    return request.args.get('next') or \
-        request.referrer or \
-        url_for(default)
 
 
 def validate_config(config_path):
@@ -289,7 +250,16 @@ def validate_config(config_path):
     """
     if get_config(config_path):
         config = DCOSValidateConfig(get_config(config_path)) 
+        errors, messages = config.validate()
+    
     else: 
-        config = DCOSValidateConfig(userconfig)
-    errors, messages = config.validate()
+        # If not found, write defualts
+        log.error('Configuration file not found, setting default config.')
+        default_config = DCOSConfig()
+        write_config(default_config, config_path)
+        
+        # Validate new default config
+        config = DCOSValidateConfig(get_config(config_path)) 
+        errors, messages = config.validate()
+
     return errors, messages

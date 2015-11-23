@@ -44,19 +44,9 @@ class DCOSValidateConfig():
 
 
     def validate(self):
-        if 'install_type' in self.dcos_config:
-            if self.dcos_config['install_type'] == 'onprem':
-                log.info("Detected %s validation type", self.dcos_config['install_type'])
-                errors, messages = self.onprem_config()
-                return errors, messages
+        errors, messages = self.onprem_config()
+        return errors, messages
 
-            # else if some other type of install...
-            else:
-                log.error("Unsupported install type %s", self.dcos_config['install_type'])
-                raise ValueError("Unsupported install type %s. Supported types: %s", self.dcos_config['install_type'], self.dcos_config['available_install_types'])
-        else:
-            log.error("Must pass 'install_type' in DCOS configuration.")
-            raise ValueError("Must pass 'install_type' in DCOS configuration")
 
     def onprem_config(self):
         """

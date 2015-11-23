@@ -88,7 +88,6 @@ def get_onprem_dependencies(config):
         "roles": helpers.validate_string('roles', config),
         "docker_remove_delay": helpers.validate_string('docker_remove_delay', config),
         "gc_delay": helpers.validate_string('docker_remove_delay', config),
-        "install_type": helpers.validate_install_type('install_type', config),
         "ssh_port": helpers.validate_int('ssh_port', config),
         "ssh_key_path": helpers.validate_path('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),

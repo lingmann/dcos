@@ -27,8 +27,6 @@ class DCOSConfig(dict):
         # Default configuration
         self.defaults = {
             'cluster_name': 'New Cluster {}'.format(str(datetime.datetime.now())),
-            'available_install_types': ['onprem'],
-            'install_type': 'onprem',
             'config_dir': '{}/dcos-installer'.format(os.path.expanduser('~')),
             'ip_detect_path': '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~')),
             "num_masters": 3,
@@ -54,12 +52,6 @@ class DCOSConfig(dict):
         self.overrides = overrides
         self._update()
 
-        # Ensure our install_type is available
-        if not self['install_type'] in self['available_install_types']:
-            raise ValueError('Install type {} not available. Available types: {}'.format(self['install_type'], ['self.available_install_types']))
-
-        
-        
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)

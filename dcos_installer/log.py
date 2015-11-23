@@ -1,5 +1,6 @@
 import logging
 
+
 class DCOSLog(object):
     def __init__(self, submodule_name=__name__):
         levels = {

@@ -1,16 +1,15 @@
-
 #!/usr/bin/env python3
 """Generates DCOS packages and configuration."""
 import os
 import subprocess
 import sys
+from subprocess import CalledProcessError
+
 import gen
 import gen.calc
 import providers.bash as bash
-from subprocess import CalledProcessError
-
-# Setup logger
 from dcos_installer.log import DCOSLog
+
 log = DCOSLog(__name__).log
 
 
@@ -23,12 +22,12 @@ def now(options):
     gen_opts.log_level = options.log_level
     gen_opts.config = options.config_path
     gen_opts.output_dir = options.serve_directory
-    gen_opts.assume_defaults = False 
+    gen_opts.assume_defaults = False
     gen_opts.non_interactive = True
 
     # Generate on-prem/bash configuration
-    gen_out = do_gen(options, gen_opts, bash, ['bash','centos','onprem'])
-    
+    gen_out = do_gen(options, gen_opts, bash, ['bash', 'centos', 'onprem'])
+
     # Fetch the bootstrap tarball for our configuration
     fetch_bootstrap(gen_out.arguments['channel_name'], gen_out.arguments['bootstrap_id'])
 
@@ -108,4 +107,3 @@ def fetch_bootstrap(channel_name, bootstrap_id):
         except (KeyboardInterrupt, CalledProcessError) as ex:
             log.error("Download failed or interrupted %s", curl_out)
             cleanup_and_exit()
-

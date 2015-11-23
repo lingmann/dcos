@@ -23,4 +23,4 @@ RUN cd ext/dcos-image && pip3 install .
 VOLUME /genconf
 
 EXPOSE 9000
-ENTRYPOINT /dcos-web-installer/run
+ENTRYPOINT /dcos-web-installer/run.py

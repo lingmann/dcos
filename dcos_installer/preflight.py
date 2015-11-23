@@ -1,13 +1,12 @@
-#from dcos_installer.ssh.execute import DCOSRemoteCmd
 from ssh.remote_cmd import RemoteCmd
 from dcos_installer.log import DCOSLog
-log = DCOSLog(__name__).log
 
+log = DCOSLog(__name__).log
 
 
 def check(options):
     """
-    SSH via SubProcess Calls... 
+    SSH via SubProcess Calls...
     """
     # Set our SSH user, already validated.
     ssh_user = open(options.ssh_user_path, 'r').read().lstrip().rstrip()
@@ -29,7 +28,6 @@ def check(options):
         for key, value in errors.items():
             log.error("%s: %s", key, value)
         return errors 
-
     else:
         preflight.execute()
-        return False 
+        return False

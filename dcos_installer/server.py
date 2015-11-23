@@ -195,9 +195,20 @@ def add_form_config(data, path):
 
     
     config = DCOSConfig(overrides=new_data, config_path=path)
-    print("FUCKING DATTA RIGHT HERE")
-    print(config)
-    write_config(config, path)
+    # Deserialize the class pieces we want since cnfig and overrides end up in dict
+    write_config(unbind_configuration(config), path)
+
+
+def unbind_configuration(data):
+    """
+    Unbinds the methods and class variables from the DCOSConfig
+    object and returns a simple dictionary.
+    """
+    dictionary = {}
+    for k, v in data.items():
+        dictionary[k] = v
+
+    return dictionary
 
    
 def write_config(config, path):
@@ -260,7 +271,7 @@ def validate_config(config_path):
         # If not found, write defualts
         log.error('Configuration file not found, setting default config.')
         default_config = DCOSConfig()
-        write_config(default_config, config_path)
+        write_config(unbind_configuration(default_config), config_path)
         
         # Validate new default config
         config = DCOSValidateConfig(get_config(config_path)) 

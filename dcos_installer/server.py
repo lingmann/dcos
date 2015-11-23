@@ -13,6 +13,7 @@ log = DCOSLog(__name__).log
 
 # Helper submodules
 from dcos_installer.config import DCOSConfig
+from dcos_installer.validate import ext_helpers
 
 """
 Global Variables 
@@ -73,8 +74,8 @@ def do_routes(app, options):
         to the configurator wizard or to upload the ip script. This will probably
         be changed in the future.
         """
-        config_level, config_message = validate(options.config_path)
-        ip_detect_level, ip_detect_message = validate_path(options.ip_detect_path)
+        config_level, config_message = ext_helpers.is_path_exists(options.config_path)
+        ip_detect_level, ip_detect_message = ext_helpers.is_path_exists(options.ip_detect_path)
         return render_template(
             'configurator.html',
             config_level=config_level,
@@ -88,7 +89,7 @@ def do_routes(app, options):
         save_to_path = options.ip_detect_path
         if request.method == 'POST':
             save_file(
-                request.form['ip_detect'], 
+               request.form['ip_detect'], 
                 save_to_path)
             # TODO: basic ip-detect script validation 
 

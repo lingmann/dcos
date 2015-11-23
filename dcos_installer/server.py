@@ -175,7 +175,11 @@ def add_form_config(data, path):
     
     # Turn form data from POST into dict for DCOSConfig overrides
     new_data = {}
-    
+    current_config = get_config(path)
+    if current_config:
+        for k, v in current_config.items():
+            new_data[k] = v
+        
     for key in list(data.form.keys()):
         log.debug("%s: %s",key, data.form[key])
         if len(data.form[key]) > 0:
@@ -197,8 +201,8 @@ def add_form_config(data, path):
 
    
 def write_config(config, path):
-    log.warning("NEW CONFIGURATION WRITTEN:")
-    log.warning(config)
+    log.info("NEW CONFIGURATION WRITTEN:")
+    log.info(config)
     with open(path, 'w') as f:
         f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
     

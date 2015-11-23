@@ -362,7 +362,7 @@ def validate_hosts(path):
     """
     if validate_path(path) == 'danger':
         return 'danger', 'hosts.yaml does not exist: {}'.format(path)
-    for key in ['master', 'slave_public', 'slave_private']:
+    for key in ['ssh_user', 'ssh_key_path', 'master', 'slave_public', 'slave_private']:    
         validation, message = validate_key_exists(path, key)
         # Catch dangers first
         if validation == 'danger':

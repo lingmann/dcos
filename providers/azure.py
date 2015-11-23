@@ -19,7 +19,7 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
-UPLOAD_URL = ("https://mesospheredownloads.blob.core.windows.net/dcos/{channel}"
+UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{channel}"
               "/azure/azure/{config_id}.single-master.azuredeploy.json")
 
 INSTANCE_GROUPS = {

@@ -3,24 +3,15 @@ from glob import glob
 
 import yaml
 from dcos_installer.log import DCOSLog
-from flask import Flask, redirect, render_template, request, url_for
-
 log = DCOSLog(__name__).log
 
-"""
-Global Variables
-"""
-# Sane user config defaults
-userconfig = {
-    "num_masters": "3",
-    "weights": "slave_public=1",
-    "bootstrap_url": "localhost",
-    "roles": "slave_public",
-    "docker_remove_delay": "1hrs",
-    "gc_delay": "2days",
-}
+# From dcos-image
+#import gen
+#from providers import bash
 
-hostsconfig = {}
+# Helper submodules
+from dcos_installer.config import DCOSConfig
+from dcos_installer.validate import ext_helpers, DCOSValidateConfig
 
 
 def run(options):
@@ -53,10 +44,14 @@ def do_routes(app, options):
     def redirectslash():
         return redirect(url_for('mainpage'))
 
+<<<<<<< HEAD
     @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
     def clear():
         clean_config(options.config_path)
         return redirect(redirect_url())
+=======
+
+>>>>>>> ssh_consolidation
 
     @app.route("/installer/v{}/".format(version), methods=['GET'])
     def mainpage():
@@ -66,13 +61,14 @@ def do_routes(app, options):
         return render_template('main.html')
 
     # Configurator routes
-    @app.route("/installer/v{}/configurator/".format(version), methods=['GET'])
+    @app.route("/installer/v{}/configurator".format(version), methods=['GET', 'POST'])
     def configurator():
         """
         The top level configurator route. This route exposes the two options to go
         to the configurator wizard or to upload the ip script. This will probably
         be changed in the future.
         """
+<<<<<<< HEAD
         config_level, config_message = validate(options.config_path)
         ip_detect_level, ip_detect_message = validate_path(options.ip_detect_path)
         return render_template(
@@ -90,21 +86,52 @@ def do_routes(app, options):
                 request.form['ip_detect'],
                 save_to_path)
             # TODO: basic ip-detect script validation
+=======
+        if request.method == 'POST':
+            log.info("POST to configurator...")
+            log.info(request)
+            # Save or upload configuration posted
+            if 'ssh_key' in request.files:
+                log.info("Upload SSH key")
+                save_file(
+                    request.files['ssh_key'],
+                    options.ssh_key_path)
 
-        validate_level, message = validate_path(save_to_path)
+            if 'ip_detect' in request.files:
+                log.info("Uploading ip-detect script.")
+                save_file(
+                    request.form['ip_detect'], 
+                    options.ip_detect_path)
+
+            if 'master_list' in request.form or 'agent_list' in request.form or 'ssh_user' in request.form or 'ssh_port' in request.form or 'resolvers' in request.form:
+                log.info("Uploading and saving new configuration")
+                add_form_config(request, options.config_path)
+
+   
+        # Ensure the files exist
+        config_path_level, config_path_message = ext_helpers.is_path_exists(options.config_path)
+>>>>>>> ssh_consolidation
+
+        # Validate configuration
+        config_level, config_message = validate_for_web(options.config_path)
+        isset = get_config(options.config_path)
 
         return render_template(
+<<<<<<< HEAD
             'ip_detect.html',
             validate_level=validate_level,
             validate_message=message)
+=======
+            'config.html',
+            isset=isset,
+            config_level=config_level,
+            config_message=config_message,
+            config_path_level=config_path_level,
+            config_path_message=config_path_message)
+>>>>>>> ssh_consolidation
 
-    @app.route("/installer/v{}/configurator/config".format(version),  methods=['GET', 'POST'])
-    def config():
-        if request.method == 'POST':
-            add_config(request, userconfig)
-            dump_config(options.config_path, userconfig)
-            return redirect(redirect_url())
 
+<<<<<<< HEAD
         level, message = validate(options.config_path)
         return render_template(
             'config.html',
@@ -112,6 +139,13 @@ def do_routes(app, options):
             dependencies=get_dependencies(options.config_path),
             validate_level=level,
             validate_message=message)
+=======
+    @app.route("/installer/v{}/configurator/clear".format(version), methods=['POST'])
+    def clear():
+        clean_config(options.config_path)
+        return redirect(redirect_url())
+
+>>>>>>> ssh_consolidation
 
     @app.route("/installer/v{}/configurator/generate".format(version), methods=['POST', 'GET'])
     def generate():
@@ -121,6 +155,7 @@ def do_routes(app, options):
             return redirect(redirect_url())
         return redirect(redirect_url())
 
+<<<<<<< HEAD
     # Preflight
     @app.route("/installer/v{}/preflight/".format(version),  methods=['GET', 'POST'])
     def preflight():
@@ -153,6 +188,9 @@ def do_routes(app, options):
             validate_user_message=validate_user_message)
 
     @app.route('/installer/v{}/preflight/check/'.format(version), methods=['GET', 'POST'])
+=======
+    @app.route('/installer/v{}/preflight/'.format(version), methods=['GET','POST'])
+>>>>>>> ssh_consolidation
     def preflight_check():
         """
         Execute the preflight checks and stream the SSH output back to the
@@ -179,6 +217,7 @@ def do_routes(app, options):
             'preflight_check.html',
             preflight_data=preflight_data)
 
+<<<<<<< HEAD
     @app.route('/installer/v{}/preflight/ssh_key/'.format(version), methods=['POST'])
     def preflight_ssh_key():
         ssh_key_path = options.ssh_key_path
@@ -201,6 +240,9 @@ def do_routes(app, options):
 
     # TODO Move hosts down here too
 
+=======
+    
+>>>>>>> ssh_consolidation
     # Deploy
     @app.route('/installer/v{}/deploy/'.format(version), methods=['POST', 'GET'])
     def deploy():
@@ -222,26 +264,51 @@ def save_file(data, path):
         f.write(str(data))
 
 
-def add_config(data, global_data):
+def add_form_config(data, path):
     """
     Updates the global userconfig{} map with the latest data from
     the web console.
     """
-    log.info("Adding user config from form POST")
-    log.debug("Received raw data: %s", data.form)
+    log.info("Adding configuration...")
+    
+    # Turn form data from POST into dict for DCOSConfig overrides
+    new_data = {}
+    current_config = get_config(path)
+    if current_config:
+        for k, v in current_config.items():
+            new_data[k] = v
+        
     for key in list(data.form.keys()):
+<<<<<<< HEAD
         log.debug("%s: %s", key, data.form[key])
         # If the string is actually a list from the POST...
         if len(data.form[key].split(',')) > 1:
             global_data[key] = []
             for value in data.form[key].split(','):
                 global_data[key].append(value.rstrip().lstrip())
+=======
+        log.debug("%s: %s",key, data.form[key])
+        if len(data.form[key]) > 0:
+            # If the string is actually a list from the POST...
+            if len(data.form[key].split(',')) > 1:
+                new_data[key] = []
+                for value in data.form[key].split(','):
+                    new_data[key].append(value.rstrip().lstrip())
+            else:
+                new_data[key] = data.form[key]
+>>>>>>> ssh_consolidation
         else:
-            global_data[key] = data.form[key]
+            log.info("Refusing to write null data for %s", key)
+
+    
+    config = DCOSConfig(overrides=new_data, config_path=path)
+    # Deserialize the class pieces we want since cnfig and overrides end up in dict
+    write_config(unbind_configuration(config), path)
 
 
-def dump_config(path, global_data):
+def unbind_configuration(data):
     """
+<<<<<<< HEAD
     Dumps our configuration to the config path specific in CLI flags. If the file
     already exists, add configuration to it from the userconfig presented to us
     in the web console. Otherwise, if the file does no exist, create it and write the
@@ -264,6 +331,29 @@ def dump_config(path, global_data):
     elif not os.path.exists(path):
         with open(path, 'w') as f:
             f.write(yaml.dump(global_data, default_flow_style=False, explicit_start=True))
+=======
+    Unbinds the methods and class variables from the DCOSConfig
+    object and returns a simple dictionary.
+    """
+    dictionary = {}
+    for k, v in data.items():
+        dictionary[k] = v
+
+    return dictionary
+
+   
+def write_config(config, path):
+    log.info("NEW CONFIGURATION WRITTEN:")
+    log.info(config)
+    with open(path, 'w') as f:
+        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
+    
+  
+def redirect_url(default='mainpage'):
+    return request.args.get('next') or \
+        request.referrer or \
+        url_for(default)
+>>>>>>> ssh_consolidation
 
 
 def get_config(path):
@@ -271,11 +361,12 @@ def get_config(path):
     Returns the config file as a dict.
     """
     if os.path.exists(path):
-        log.debug("Reading in config file from %s", path)
-        return yaml.load(open(path, 'r'))
-    else:
-        log.error("The configuration path does not exist %s", path)
-        return {}
+        config = yaml.load(open(path, 'r'))
+    
+    else: 
+        config = {}
+
+    return config
 
 
 def clean_config(path):
@@ -286,7 +377,9 @@ def clean_config(path):
     userconfig = {}
     with open(path, 'w') as f:
         f.write(yaml.dump(userconfig, default_flow_style=False, explicit_start=True))
+ 
 
+<<<<<<< HEAD
 
 def validate(path):
     config = get_config(path)
@@ -334,10 +427,18 @@ def validate_path(path):
     """
     if os.path.exists(path):
         return "success", 'File exists {}'.format(path)
+=======
+def validate_for_web(path):
+    errors, messages = validate_config(path)
+    if errors:
+        return 'danger', messages['errors']
+
+>>>>>>> ssh_consolidation
     else:
-        return "danger", 'File does not exist {}'.format(path)
+        return 'success', 'Configuration looks good!'
 
 
+<<<<<<< HEAD
 def validate_key_exists(path, key):
     """
     Validate that a key has a value in a config file.
@@ -381,12 +482,16 @@ def redirect_url(default='mainpage'):
 
 
 def get_dependencies(config_path):
+=======
+def validate_config(config_path):
+>>>>>>> ssh_consolidation
     """
     Defines our redirect logic. In the case of the installer,
     we have several parameters that require other paramters in the tree.
     This method ensures the user gets redirected to the proper URI based
     on their initial top-level input to the installer.
     """
+<<<<<<< HEAD
     config = get_config(config_path)
 
     dep_tree = {
@@ -434,6 +539,20 @@ def get_dependencies(config_path):
             return_deps[esb] = dep_tree[esb][config[esb]]
         except:
             log.error("The specified configuration value is not valid, %s", config[esb])
+=======
+    if get_config(config_path):
+        config = DCOSValidateConfig(get_config(config_path)) 
+        errors, messages = config.validate()
+    
+    else: 
+        # If not found, write defualts
+        log.error('Configuration file not found, setting default config.')
+        default_config = DCOSConfig()
+        write_config(unbind_configuration(default_config), config_path)
+        
+        # Validate new default config
+        config = DCOSValidateConfig(get_config(config_path)) 
+        errors, messages = config.validate()
+>>>>>>> ssh_consolidation
 
-    return_deps['base'] = dep_tree['base']
-    return return_deps
+    return errors, messages

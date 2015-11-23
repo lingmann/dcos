@@ -5,22 +5,33 @@ TODO:
 -test case for set_install_dir
 -test case for set_log_level
 """
-
-import pytest
 import multiprocessing
 
+import pytest
+
+
+# method to test multiple cmdline options across all tests
+# @pytest.fixture(params=["",["-l","debug"]])
 @pytest.fixture
-def setup_default_installer(request):
+def test_options():
+    import run
+    options=run.parse_args("")
+    return options
+
+@pytest.fixture
+def default_installer(request, test_options):
     import dcos_installer
     import run
-    test_options=run.parse_args("")
-    test_server=multiprocessing.Process(target=dcos_installer.DcosInstaller, args=(test_options,))
+    #test_options=run.parse_args(request.param)
+    test_server=multiprocessing.Process(
+        target=dcos_installer.DcosInstaller,
+        args=(test_options,))
     test_server.start()
     def tear_down():
         test_server.terminate()
     request.addfinalizer(tear_down)
     return test_server
 
-def test_basic_start(setup_default_installer):
-    test_installer=setup_default_installer
+def test_basic_start(default_installer):
+    test_installer=default_installer
     assert test_installer.is_alive()

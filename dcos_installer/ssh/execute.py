@@ -16,14 +16,15 @@
 #   preflight.execute()
 
 import datetime
+import os
 import subprocess
 import sys
 import threading
 import time
-import os
-import yaml
 
+import yaml
 from dcos_installer.log import DCOSLog
+
 log = DCOSLog(__name__).log
 
 

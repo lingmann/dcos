@@ -163,7 +163,7 @@ class AzureStorageProvider(AbstractStorageProvider):
 
     @property
     def repository_url(self):
-        return 'http://mesospheredownloads.blob.core.windows.net/dcos/{}'.format(self.__channel)
+        return 'http://az837203.vo.msecnd.net/dcos/{}'.format(self.__channel)
 
     def upload_local_file(self, path, destination_path=None, container=None, args={}, no_cache=False,
                           if_not_exists=False):

@@ -17,7 +17,7 @@
     [Service]
     EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
     Type=oneshot
-    ExecStartPre=/usr/bin/curl -f --retry 20 -C - -o /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
+    ExecStartPre=/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
     ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
     ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
     ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz

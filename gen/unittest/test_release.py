@@ -19,8 +19,8 @@ class TestAzureStorageProvider(unittest.TestCase):
         self.mocked_blob_service = None
 
     def test_repository_url(self):
-        """Validate Azure repository URL"""
-        assert self.azure.repository_url == 'http://mesospheredownloads.blob.core.windows.net/dcos/test'
+        """Validate Azure repository URL ends with channel name test"""
+        self.assertRegex(self.azure.repository_url, '/test$')
 
     def test_upload_local_file_blob_exists(self):
         """Test `upload_local_file` if blob exists"""

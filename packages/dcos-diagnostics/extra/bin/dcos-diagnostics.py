@@ -14,7 +14,7 @@ import re
 
 def dcos_units():
     units = ["dcos-setup.service",
-             "link-env.service",
+             "dcos-link-env.service",
              "dcos-download.service"]
     for u in os.listdir("/etc/systemd/system/dcos.target.wants"):
         units.append(os.path.basename(u))

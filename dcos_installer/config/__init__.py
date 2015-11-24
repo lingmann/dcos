@@ -26,7 +26,7 @@ class DCOSConfig(dict):
     def __init__(self, overrides={}, config_path=None):
         # Default configuration
         self.defaults = {
-            'cluster_name': 'New Cluster {}'.format(str(datetime.datetime.now())),
+            'cluster_name': 'Mesosphere: The Data Center Operating System', #'New Cluster {}'.format(str(datetime.datetime.now())),
             'config_dir': '{}/dcos-installer'.format(os.path.expanduser('~')),
             'ip_detect_path': '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~')),
             "num_masters": 3,

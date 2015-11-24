@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generates a chef cookbook for installing DCOS On-Prem"""
 
-import yaml
 import logging as log
+
+import yaml
 
 import gen
 import providers.util as util

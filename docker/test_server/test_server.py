@@ -2,13 +2,13 @@
 import json
 import logging
 import os
-import requests
 import signal
 import socket
 import sys
 import urllib.parse
-
 from http.server import BaseHTTPRequestHandler, HTTPServer
+
+import requests
 
 HOST_PORT = 9080
 LOG_LEVEL = logging.DEBUG

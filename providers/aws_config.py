@@ -1,5 +1,6 @@
-import boto3
 import os
+
+import boto3
 
 if 'ENV_AWS_CONFIG' in os.environ:
     session_prod = boto3.session.Session(

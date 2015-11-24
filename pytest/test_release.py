@@ -1,8 +1,10 @@
-from azure.storage._common_error import AzureMissingResourceHttpError
-from unittest.mock import patch
-import unittest
-import providers.release as release
 import os
+import unittest
+from unittest.mock import patch
+
+from azure.storage._common_error import AzureMissingResourceHttpError
+
+import providers.release as release
 
 
 class TestAzureStorageProvider(unittest.TestCase):

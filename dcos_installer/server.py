@@ -189,7 +189,13 @@ def add_form_config(data, path):
                 for value in data.form[key].split(','):
                     new_data[key].append(value.rstrip().lstrip())
             else:
-                new_data[key] = data.form[key]
+                # master and agent list have to always be an array
+                if key == 'master_list' or key == 'agent_list':
+                    new_data[key] = [data.form[key]]
+
+                else:
+                    new_data[key] = data.form[key]
+
         else:
             log.info("Refusing to write null data for %s", key)
 

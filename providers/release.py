@@ -36,7 +36,42 @@ METADATA_FILE = 'metadata.json'
 
 
 def to_json(data):
-    return json.dumps(data, indent=2, sort_keys=True)
+    """Return a JSON string representation of data.
+
+    If data is a dictionary, None is replaced with 'null' in its keys and,
+    recursively, in the keys of any dictionary it contains. This is done to
+    allow the dictionary to be sorted by key before being written to JSON.
+
+    """
+    def none_to_null(obj):
+        try:
+            items = obj.items()
+        except AttributeError:
+            return obj
+        return {'null' if key is None else key: none_to_null(val) for key, val in items}
+
+    return json.dumps(none_to_null(data), indent=2, sort_keys=True)
+
+
+def variant_str(variant):
+    """Return a string representation of variant."""
+    if variant is None:
+        return ''
+    return variant
+
+
+def variant_name(variant):
+    """Return a human-readable string representation of variant."""
+    if variant is None:
+        return '<default>'
+    return variant
+
+
+def variant_extension(variant):
+    """Return a filename extension for variant."""
+    if variant is None:
+        return ''
+    return '.' + variant
 
 
 def get_bootstrap_packages(bootstrap_id):
@@ -86,6 +121,8 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
     def upload_provider_files(self, provider_data, path_key, prefix):
         for provider_name, data in provider_data.items():
             for file_info in data['files']:
+                assert not ('content' in file_info and 'content_file' in file_info)
+
                 if path_key not in file_info:
                     continue
 
@@ -97,21 +134,26 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
                     paths = [paths]
 
                 for path in paths:
-                    if prefix:
+                    if prefix and provider_name is not None:
                         path = provider_name + '/' + path
 
-                    if 'upload_args' in file_info:
-                        self.upload_string(
-                            path,
-                            file_info['content'],
-                            args=file_info['upload_args'])
+                    if 'content' in file_info:
+                        if 'upload_args' in file_info:
+                            self.upload_string(
+                                path,
+                                file_info['content'],
+                                args=file_info['upload_args'])
+                        else:
+                            self.put_text(path, file_info['content'])
+                    elif 'content_file' in file_info:
+                        self.upload_local_file(file_info['content_file'], path, args=file_info.get('upload_args', {}))
                     else:
-                        self.put_text(path, file_info['content'])
+                        raise ValueError("file_info must contain one of either 'content' or 'content_file'")
 
     def upload_provider_packages(self, provider_data):
         extra_packages = list()
         for data in provider_data.values():
-            extra_packages += data['extra_packages']
+            extra_packages += data.get('extra_packages', [])
         self.upload_packages(extra_packages)
 
     def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
@@ -135,11 +177,6 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
 
         self.put_json(METADATA_FILE, metadata_json)
         self.upload_provider_files(provider_data, 'known_path', prefix=False)
-        # TODO(cmaloney): Make a stable location version of this like
-        # provider_files does. Not extending provider_files currently because
-        # those are all in-memory, and this one is a couple hundred MB of data.
-        # TODO(cmaloney): Make at a reliable name so caching can be enabled.
-        self.upload_local_file('dcos_generate_config.sh', no_cache=True)
 
     def _copy_across(self, bootstrap_dict, active_packages, do_copy):
         # Copy across all the active packages
@@ -402,10 +439,12 @@ def all_storage_providers(channel):
 #     'files': [{
 #        # NOTE: May specify a list of known_names
 #       'known_path': 'cloudformation/single-master.cloudformation.json',
-#       'stable_path': 'cloudformation/{}.cloudformation.json'
-#       'content': ''
+#       'stable_path': 'cloudformation/{}.cloudformation.json',
+#        # NOTE: Only one of content or content_file is allowed
+#       'content': '',
+#       'content_file': '',
 #       }]}}
-def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
+def get_provider_data(repository_url, bootstrap_dict, genconfs, tag, channel_name, commit):
     provider_data = {}
     providers = load_providers()
     bootstrap_url = repository_url['default']
@@ -413,21 +452,32 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
         if name in repository_url:
             bootstrap_url = repository_url[name]
 
+        # Add templates for the default variant.
         # Use keyword args to make not matching ordering a loud error around changes.
         provider_data[name] = module.do_create(
             tag=tag,
             channel=channel_name,
             commit=commit,
             gen_arguments=copy.deepcopy({
-                'bootstrap_id': bootstrap_id,
+                'bootstrap_id': bootstrap_dict[None],
                 'channel_name': tag,
                 'bootstrap_url': bootstrap_url
             }))
 
+    # Add genconf scripts for all bootstraps.
+    default_provider_files = provider_data.setdefault(None, {}).setdefault('files', [])
+    for variant, (genconf_version, genconf_filename) in genconfs.items():
+        default_provider_files.append({
+            'known_path': 'dcos_generate_config{}.sh'.format(variant_extension(variant)),
+            'stable_path': 'dcos_generate_config.{}.sh'.format(genconf_version),
+            'content_file': genconf_filename,
+        })
+
     cleaned = copy.deepcopy(provider_data)
     for data in cleaned.values():
         for file_info in data['files']:
-            file_info.pop('content')
+            file_info.pop('content', None)
+            file_info.pop('content_file', None)
             file_info.pop('upload_args', None)
 
     return provider_data, cleaned
@@ -467,26 +517,24 @@ def do_promote(options):
 
     print("version tag:", metadata['tag'])
 
+    # Download the bootstraps if they don't exist.
+    for bootstrap_id in bootstrap_dict.values():
+        bootstrap_path = '/{}.bootstrap.tar.xz'.format(bootstrap_id)
+        source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
+
+    genconfs = build_genconfs(bootstrap_dict, options.destination_channel)
+
     # TODO(cmaloney): Run against all bootstrap variants / allow providers to
     # make multiple variants for the multiple variants of DCOS available.
     # Run providers against repository_url for destination channel
     print("Running providers to generate new provider config")
     provider_data, cleaned_provider_data = get_provider_data(
         destination.repository_url,
-        default_bootstrap_id,
+        bootstrap_dict,
+        genconfs,
         metadata['tag'],
         options.destination_channel,
         metadata['commit'])
-
-    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
-    # Download the bootstrap if it doesn't exist
-    bootstrap_path = '/{}.bootstrap.tar.xz'.format(default_bootstrap_id)
-    source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
-
-    print("Building dcos-genconf docker container")
-    make_genconf_docker(
-        options.destination_channel,
-        default_bootstrap_id)
 
     metadata_json = to_json(
         {
@@ -496,7 +544,7 @@ def do_promote(options):
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
             'tag': metadata['tag'],
-            'genconf_docker_tag': open('docker-tag').read()})
+            'genconf_docker_tag': genconfs[None][0]})
 
     # Copy across packages, bootstrap.
     destination.copy_across(source, bootstrap_dict, active_packages)
@@ -592,7 +640,7 @@ def get_git_commit_sha1(path, identifier):
     return sha1
 
 
-def make_genconf_docker(channel_name, bootstrap_id):
+def make_genconf_docker(channel_name, variant, bootstrap_id):
     assert len(channel_name) > 0
     assert len(bootstrap_id) > 0
 
@@ -609,18 +657,20 @@ def make_genconf_docker(channel_name, bootstrap_id):
     pkgpanda_sha1 = get_git_commit_sha1(pkgpanda_src, 'pkgpanda')
     dcos_image_sha1 = get_git_commit_sha1(dcos_image_src, 'dcos-image')
 
-    docker_tag = dcos_image_sha1[:12] + '-' + pkgpanda_sha1[:12] + '-' + bootstrap_id[:12]
-    genconf_tar = "dcos-genconf." + docker_tag + ".tar"
+    genconf_version = dcos_image_sha1[:12] + '-' + pkgpanda_sha1[:12] + '-' + bootstrap_id[:12]
+    genconf_tar = "dcos-genconf." + genconf_version + ".tar"
+    genconf_filename = "dcos_generate_config" + variant_extension(variant) + ".sh"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
     bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
 
     metadata = {
+        'variant': variant_name(variant),
         'bootstrap_id': bootstrap_id,
-        'docker_tag': docker_tag,
+        'docker_tag': genconf_version,
         'genconf_tar': genconf_tar,
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
-        'docker_image_name': 'mesosphere/dcos-genconf:' + docker_tag,
+        'docker_image_name': 'mesosphere/dcos-genconf:' + genconf_version,
         'dcos_image_commit': dcos_image_sha1,
         'channel_name': channel_name
     }
@@ -633,7 +683,7 @@ def make_genconf_docker(channel_name, bootstrap_id):
             pkgpanda.util.load_string('docker/genconf/Dockerfile.template').format(**metadata))
 
         pkgpanda.util.write_string(
-            'dcos_generate_config.sh',
+            genconf_filename,
             pkgpanda.util.load_string('docker/genconf/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
 
         # Copy across the wheelhouse
@@ -645,18 +695,32 @@ def make_genconf_docker(channel_name, bootstrap_id):
         print("Building docker container in " + build_dir)
         subprocess.check_call(['cp', metadata['bootstrap_path'], build_dir + '/' + metadata['bootstrap_filename']])
         subprocess.check_call(['docker', 'build', '-t', metadata['docker_image_name'], build_dir])
-        # Clean up the giant bootstrap to save space
-        pkgpanda.util.write_string('docker-tag', metadata['docker_tag'])
-        pkgpanda.util.write_string('docker-tag.txt', metadata['docker_tag'])
 
-        print("Building dcos_generate_config.sh")
+        print("Building", genconf_filename)
         subprocess.check_call(
             ['docker', 'save', metadata['docker_image_name']],
             stdout=open(metadata['genconf_tar'], 'w'))
-        subprocess.check_call(['tar', 'cvf', '-', metadata['genconf_tar']], stdout=open('dcos_generate_config.sh', 'a'))
-        subprocess.check_call(['chmod', '+x', 'dcos_generate_config.sh'])
+        subprocess.check_call(['tar', 'cvf', '-', metadata['genconf_tar']], stdout=open(genconf_filename, 'a'))
+        subprocess.check_call(['chmod', '+x', genconf_filename])
 
-    return metadata
+    return genconf_version, genconf_filename
+
+
+def build_genconfs(bootstrap_dict, channel_name):
+    """Create a genconf script for each variant in bootstrap_dict.
+
+    Writes a dcos_generate_config.<variant>.sh for each variant in
+    bootstrap_dict to the working directory, except for the default variant's
+    script, which is written to dcos_generate_config.sh. Returns a dict mapping
+    variants to (genconf_version, genconf_filename) tuples.
+
+    """
+    genconfs = {}
+    # Variants are sorted for stable ordering.
+    for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: variant_str(kv[0])):
+        print("Building genconf for variant:", variant_name(variant))
+        genconfs[variant] = make_genconf_docker(channel_name, variant, bootstrap_id)
+    return genconfs
 
 
 def make_abs(path):
@@ -678,7 +742,11 @@ def do_create(options):
     # Build the standard docker build container, then build all the packages and bootstrap with it
     bootstrap_dict = do_build_packages(channel.repository_url, options.skip_build)
 
-    default_bootstrap_id = bootstrap_dict[None]
+    genconfs = build_genconfs(bootstrap_dict, channel_name)
+
+    # Write out default variant's genconf version.
+    pkgpanda.util.write_string('docker-tag', genconfs[None][0])
+    pkgpanda.util.write_string('docker-tag.txt', genconfs[None][0])
 
     # Build all the per-provider templates
     # TODO(cmaloney): Allow making provider templates with non-default bootstrap
@@ -686,15 +754,11 @@ def do_create(options):
     print("Gathering per-provider additional files")
     provider_data, cleaned_provider_data = get_provider_data(
         channel.repository_url,
-        default_bootstrap_id,
+        bootstrap_dict,
+        genconfs,
         options.tag,
         channel_name,
         commit)
-
-    # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
-    # bootstrap tarball inside of it.
-    print("Building dcos-genconf docker container")
-    make_genconf_docker(channel_name, default_bootstrap_id)
 
     # Calculate the active packages merged from all the bootstraps
     active_packages = set()
@@ -709,15 +773,16 @@ def do_create(options):
             'date': util.template_generation_date,
             'provider_data': cleaned_provider_data,
             'tag': options.tag,
-            'genconf_docker_tag': open('docker-tag').read()
+            'genconf_docker_tag': genconfs[None][0]
         })
 
-    # Upload packages, bootstrap.
-    print("Uploading packages")
     if options.skip_upload:
+        print("Skipping upload")
         return
 
+    print("Uploading packages")
     channel.upload_packages(list(active_packages))
+    print("Uploading bootstrap tarballs")
     channel.upload_bootstrap(bootstrap_dict)
 
     # Upload provider artifacts, mark as active

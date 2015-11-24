@@ -1,3 +1,4 @@
+import copy
 import os
 import unittest
 from unittest.mock import patch
@@ -217,14 +218,13 @@ class TestChannelManager(unittest.TestCase):
 
 class TestRelease(unittest.TestCase):
     @patch('providers.release.S3StorageProvider')
-    @patch('builtins.open')
     @patch('providers.release.ChannelManager')
     @patch('providers.release.get_bootstrap_packages')
     @patch('subprocess.check_call')
     @patch('providers.release.get_provider_data')
     @patch('providers.release.do_build_packages')
     def test_do_create(self, mocked_do_build_packages, mocked_get_provider_data, mocked_check_call,
-                       mocked_get_bootstrap_packages, mocked_channel_manager, mocked_open, mocked_s3):
+                       mocked_get_bootstrap_packages, mocked_channel_manager, mocked_s3):
         options = unittest.mock.MagicMock()
         options.destination_channel = 'destination'
         options.tag = 'tag'
@@ -232,35 +232,32 @@ class TestRelease(unittest.TestCase):
         mocked_do_build_packages.return_value = {None: '12345'}
         mocked_get_provider_data.return_value = ('provider_data', 'cleaned_provider_data')
         mocked_get_bootstrap_packages.return_value = set(['pkg123--12345'])
-        mocked_open().read.return_value = 'test'
         release.do_create(options)
         mocked_s3.assert_called_with('testing/destination')
         mocked_channel_manager().upload_packages.assert_called_with(['pkg123--12345'])
         mocked_channel_manager().upload_bootstrap.assert_called_with({None: '12345'})
         assert mocked_check_call.call_count == 9
         assert mocked_channel_manager().upload_providers_and_activate.called
-        mocked_open.assert_called_with('docker-tag')
 
     def test_provider_data(self):
         repository_url = {
             'default': 'http://testurl'
         }
-        bootstrap_id = 'bootstartid12345'
+        bootstrap_dict = {None: 'bootstartid12345'}
         tag = 'tag'
         channel_name = 'testing/test_channel'
         commit = 'test_commit'
         provider_data, cleaned_provider_data = release.get_provider_data(
-            repository_url, bootstrap_id, tag, channel_name, commit)
+            repository_url, bootstrap_dict, {}, tag, channel_name, commit)
         assert isinstance(provider_data, dict)
         assert isinstance(cleaned_provider_data, dict)
 
-    @patch('builtins.open')
     @patch('providers.release.S3StorageProvider')
     @patch('providers.release.make_genconf_docker')
     @patch('providers.release.get_provider_data')
     @patch('providers.release.ChannelManager')
     def test_do_promote(self, mocked_channel_manager, mocked_get_provider_data, mocked_make_genconf_docker,
-                        mocked_s3storage_provider, mocked_open):
+                        mocked_s3storage_provider):
         options = unittest.mock.MagicMock()
         options.source_channel = 'source/channel'
         options.destination_channel = 'destination/channel'
@@ -269,7 +266,6 @@ class TestRelease(unittest.TestCase):
         mocked_channel_manager().read_file.return_value = bytes(read_file_return_json, encoding='utf-8')
         mocked_channel_manager().repository_url = {'default': 'http://mocked_url'}
         mocked_get_provider_data.return_value = ('provider_data', 'cleaned_provider_data')
-        mocked_open().read.return_value = '123'
         release.do_promote(options)
         mocked_s3storage_provider.assert_called_with('source/channel')
         assert mocked_s3storage_provider.call_count == 2
@@ -277,7 +273,6 @@ class TestRelease(unittest.TestCase):
         assert mocked_channel_manager().copy_across.call_count == 1
         assert mocked_channel_manager().upload_providers_and_activate.call_count == 1
         assert mocked_make_genconf_docker.call_count == 1
-        mocked_open.assert_called_with('docker-tag')
 
     @patch('pkgpanda.build.sha1')
     @patch('providers.release.get_local_build')
@@ -296,6 +291,38 @@ class TestRelease(unittest.TestCase):
     def test_get_local_build(self, mocked_get_last_bootstrap_set):
         release.get_local_build(True, 'http://repo_url')
         mocked_get_last_bootstrap_set.assert_called_once_with('packages')
+
+
+class TestToJson(unittest.TestCase):
+
+    def test_to_json(self):
+        assert release.to_json('foo') == '"foo"'
+        assert release.to_json(['foo', 'bar']) == '[\n  "foo",\n  "bar"\n]'
+        assert release.to_json(('foo', 'bar')) == '[\n  "foo",\n  "bar"\n]'
+        assert release.to_json({'foo': 'bar', 'baz': 'qux'}) == '{\n  "baz": "qux",\n  "foo": "bar"\n}'
+
+        # Sets aren't JSON serializable.
+        with self.assertRaises(TypeError):
+            release.to_json({'foo', 'bar'})
+
+    def test_dict_to_json(self):
+        # None in keys is converted to "null".
+        assert release.to_json({None: 'foo'}) == '{\n  "null": "foo"\n}'
+
+        # Keys in resulting objects are sorted.
+        assert release.to_json({None: 'baz', 'foo': 'bar'}) == '{\n  "foo": "bar",\n  "null": "baz"\n}'
+
+        # Nested dicts are processed too.
+        assert (
+            release.to_json({'foo': {'bar': 'baz', None: 'qux'}, None: 'quux'}) ==
+            '{\n  "foo": {\n    "bar": "baz",\n    "null": "qux"\n  },\n  "null": "quux"\n}'
+        )
+
+        # Input isn't mutated.
+        actual = {'foo': 'bar', None: {'baz': 'qux', None: 'quux'}}
+        expected = copy.deepcopy(actual)
+        release.to_json(actual)
+        assert actual == expected
 
 
 if __name__ == '__main__':

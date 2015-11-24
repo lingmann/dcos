@@ -1,7 +1,9 @@
-from flask import Flask, request, render_template, url_for, redirect, Response
-import os
-import yaml
+from flask import Flask, request, render_template, url_for, redirect
+import threading
 from glob import glob
+import os
+import queue
+import yaml
 
 # Logging
 from dcos_installer.log import DCOSLog
@@ -11,9 +13,10 @@ log = DCOSLog(__name__).log
 #import gen
 #from providers import bash
 
-# Helper submodules
+from dcos_installer import preflight
 from dcos_installer.config import DCOSConfig
 from dcos_installer.validate import ext_helpers, DCOSValidateConfig
+
 
 def run(options):
     """
@@ -108,6 +111,7 @@ def do_routes(app, options):
 
     @app.route("/installer/v{}/configurator/generate".format(version),  methods=['POST','GET'])
     def generate():
+        # HACKING THIS IN FOR NOW
         from . import generate
         if request.method == 'POST':
             generate.now(options)
@@ -122,17 +126,14 @@ def do_routes(app, options):
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
         """
-        if request.method == 'POST':
-            log.debug("Kicking off preflight check...")
-            from . import preflight
-            preflight_validation = preflight.check(options)
+        log.debug("Kicking off preflight check...")
+        preflight_queue = queue.Queue()
+        p = threading.Thread(target=do_preflight, args=(options, preflight_queue))
+        p.daemon = True
+        p.start()
 
-            # preflight.check returns the errors from ssh.validate() or False if no
-            # errors were returned. Later, we can use this data to drop into a page
-            # reload instead of executing the preflight checks. 
-            if preflight_validation:
-                return redirect(redirect_url())
-         
+        # preflight_validate = preflight_queue.get()
+
         preflight_data = {}
         for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
             log_data = yaml.load(open(preflight_log, 'r+'))
@@ -154,6 +155,9 @@ def do_routes(app, options):
         elif request.method == 'GET':
             return render_template('deploy.html')
 
+
+def do_preflight(options, queue):
+    queue.put(preflight.check(options, get_config(options.config_path)))
 
 def save_file(data, path):
     """

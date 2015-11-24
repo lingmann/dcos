@@ -79,24 +79,6 @@ class DcosInstaller:
             help='The path to install_dcos.sh script. Defaults to sibling of the project repo.')
 
         parser.add_argument(
-            '--ssh-key-path',
-            type=str,
-            default='{}/ssh_key'.format(installdir),
-            help='The path to the private ssh key for preflight and deploy functionality.')
-
-        parser.add_argument(
-            '--hosts-yaml-path',
-            type=str,
-            default='{}/hosts.yaml'.format(installdir),
-            help='The path to the hosts.yaml for preflight and deploy functionlity.')
-
-        parser.add_argument(
-            '--ssh-user-path',
-            type=str,
-            default='{}/ssh_user'.format(installdir),
-            help='The path to ssh_user file containing the name of the user for SSH access. Required for preflight and deploy functionality.')
-
-        parser.add_argument(
             '--ip-detect-path',
             type=str,
             default='{}/ip-detect'.format(installdir),
@@ -109,7 +91,6 @@ class DcosInstaller:
             default='{}/dcos_config.yaml'.format(installdir),
             help='The path to dcos_config.yaml.')
 
-        # TODO - implement CLI utility
         parser.add_argument(
             '-d',
             '--deploy',
@@ -136,7 +117,7 @@ class DcosInstaller:
             '-m',
             '--mode',
             type=str,
-            choices=['non-interactive', 'interactive', 'web'],
+            choices=['cli', 'web'],
             default='web',
             help='Installation mode.')
 
@@ -153,7 +134,6 @@ class DcosInstaller:
             default='{}/serve'.format(installdir),
             help='The path to the serve directory. Used to dump generated config and packages.')
 
-        # TODO - implement CLI utility
         parser.add_argument(
             '-pre',
             '--preflight',

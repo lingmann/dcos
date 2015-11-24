@@ -2,8 +2,8 @@
   "sources": {
     "mesos-dns": {
       "kind": "url",
-      "url": "https://github.com/mesosphere/mesos-dns/releases/download/v0.5.0/mesos-dns-v0.5.0-linux-amd64",
-      "sha1": "813fc8f4314b4ab37d8dca4c4be3c1b552e1098d"
+      "url": "https://github.com/mesosphere/mesos-dns/releases/download/v0.5.1/mesos-dns-v0.5.1-linux-amd64",
+      "sha1": "dac22ba096c7cf855e8bea38ddea7f3cf1400319"
     }
   }
 }

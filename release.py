@@ -610,12 +610,6 @@ def check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id):
 def make_build_dir(metadata):
     tmp_dir = tempfile.TemporaryDirectory()
     assert tmp_dir.name[-1] != '/'
-    subprocess.check_call([
-        'mkdir',
-        '-p',
-        tmp_dir.name + '/pkgpanda',
-        tmp_dir.name + '/dccos-image',
-        tmp_dir.name + '/bootstrap'])
 
     # clone the repository dropping git history other than last commit so that it
     # is still a valid git checkout but we lose any local modifications, and don't

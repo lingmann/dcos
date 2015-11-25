@@ -43,6 +43,7 @@ CMD="cd dcos-image && \
         -e SLAVE_HOSTS=$MASTER_IP \
         -e REGISTRY_HOST=$MASTER_IP \
         -e TEAMCITY_VERSION=\"${TEAMCITY_VERSION:-''}\" \
+        -e DNS_SEARCH=false \
         --net=host \
         py.test py.test -s ${CI_FLAGS:-} /integration_test.py"
 

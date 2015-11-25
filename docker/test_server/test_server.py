@@ -76,6 +76,22 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
         bytes_arr = bytes(body_str, "utf-8")
         self.wfile.write(bytes_arr)
 
+    def _handle_path_dns_search(self):
+        """Respond to a dns resolution request with the dns results for a name"""
+
+        def get_hostbyname_json(hostname):
+            try:
+                return socket.gethostbyname(hostname)
+            except socket.gaierror as ex:
+                return {"error": str(ex)}
+
+        data = {
+            "search_hit_leader": get_hostbyname_json("leader"),
+            "always_miss": get_hostbyname_json("notasubdomainofmesos"),
+            "always_hit_leader": get_hostbyname_json("leader.mesos"),
+        }
+        self._send_reply(data)
+
     def _handle_path_ping(self):
         """Respond to PING request with PONG reply"""
         data = {"pong": True}
@@ -206,12 +222,15 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         """Mini service router handling GET requests"""
+        # TODO(cmaloney): Alphabetize these.
         if self.path == '/ping':
             self._handle_path_ping()
         elif self.path == '/test_uuid':
             self._handle_path_uuid()
         elif self.path == '/reflect':
             self._handle_path_reflect()
+        elif self.path == '/dns_search':
+            self._handle_path_dns_search()
         else:
             self.send_error(404, 'Not found', 'Endpoint is not supported')
 

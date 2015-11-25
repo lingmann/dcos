@@ -89,6 +89,7 @@ cat <<EOF > "genconf/config.json"
 {
   "cluster_name":"test_cluster",
   "bootstrap_url":"http://$HOST_IP:8080",
+  "dns_search": "mesos",
   "resolvers":"[\"8.8.8.8\"]",
   "exhibitor_storage_backend": "zookeeper",
   "exhibitor_zk_hosts": "$HOST_IP:2181",
@@ -118,6 +119,7 @@ docker run -v $PWD/../integration_test.py:/integration_test.py \
     -e SLAVE_HOSTS="172.17.10.201,172.17.10.202" \
     -e REGISTRY_HOST="172.17.10.1" \
     -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-}" \
+    -e "DNS_SEARCH=true" \
     --net=host py.test py.test -s ${CI_FLAGS:-} /integration_test.py
 RET=$?
 

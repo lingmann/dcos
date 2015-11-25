@@ -70,13 +70,21 @@ def calculate_ip_detect_contents(arguments):
         log.error("Ip-detect script: %s. Does not exist.", arguments['ip_detect_filename'])
         sys.exit(1)
 
+
+def calculate_gen_resolvconf_search(arguments):
+    if len(arguments['dns_search']) > 0:
+        return "SEARCH=" + arguments['dns_search']
+    else:
+        return ""
+
 must = {
     'master_quorum': lambda arguments: str(floor(int(arguments['num_masters']) / 2) + 1),
     'resolvers_str': calculate_resolvers_str,
     'dcos_image_commit': calulate_dcos_image_commit,
     'ip_detect_contents': calculate_ip_detect_contents,
     'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-    'dcos_version': lambda arguments: "1.4"
+    'dcos_version': lambda arguments: "1.4",
+    'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search
 }
 
 can = {
@@ -94,16 +102,25 @@ def validate(arguments):
         assert arguments['channel_name'][0] != '/'
         assert arguments['channel_name'][-1] != '/'
 
+    assert '\n' not in arguments['dns_search']
+    assert ',' not in arguments['dns_search']
+
+    # TODO(cmaloney): Check dns_search:
+    #   - is < 256 characters
+    #   - Contains at most 6 search domains
+    #   - Each search domain is space separated
+
 defaults = {
     "num_masters": "3",
     "channel_name": "testing/continuous",
     "roles": "slave_public",
     "weights": "slave_public=1",
     "docker_remove_delay": "1hrs",
-    "gc_delay": "2days"
+    "gc_delay": "2days",
+    "dns_search": ""
 }
 
-parameters = ["channel_name", "ip_detect_filename", "resolvers"]
+parameters = ["channel_name", "dns_search", "ip_detect_filename", "resolvers"]
 
 implies = {
     "master_discovery": {

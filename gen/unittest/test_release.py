@@ -235,7 +235,7 @@ class TestRelease(unittest.TestCase):
         mocked_s3.assert_called_with('testing/destination')
         mocked_channel_manager().upload_packages.assert_called_with(['pkg123--12345'])
         mocked_channel_manager().upload_bootstrap.assert_called_with({None: '12345'})
-        assert mocked_check_call.call_count == 13
+        assert mocked_check_call.call_count == 10
         assert mocked_channel_manager().upload_providers_and_activate.called
         mocked_open.assert_called_with('docker-tag')
 
@@ -252,14 +252,13 @@ class TestRelease(unittest.TestCase):
         assert isinstance(provider_data, dict)
         assert isinstance(cleaned_provider_data, dict)
 
-    @patch('release.push_genconf_docker')
     @patch('builtins.open')
     @patch('release.S3StorageProvider')
     @patch('release.make_genconf_docker')
     @patch('release.get_provider_data')
     @patch('release.ChannelManager')
     def test_do_promote(self, mocked_channel_manager, mocked_get_provider_data, mocked_make_genconf_docker,
-                        mocked_s3storage_provider, mocked_open, mocked_push_genconf_docker):
+                        mocked_s3storage_provider, mocked_open):
         options = unittest.mock.MagicMock()
         options.source_channel = 'source/channel'
         options.destination_channel = 'destination/channel'
@@ -276,7 +275,6 @@ class TestRelease(unittest.TestCase):
         assert mocked_channel_manager().copy_across.call_count == 1
         assert mocked_channel_manager().upload_providers_and_activate.call_count == 1
         assert mocked_make_genconf_docker.call_count == 1
-        assert mocked_push_genconf_docker.call_count == 1
         mocked_open.assert_called_with('docker-tag')
 
     @patch('pkgpanda.build.sha1')

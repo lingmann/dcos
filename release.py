@@ -477,7 +477,7 @@ def do_promote(options):
     dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
 
     print("Building dcos-genconf docker container")
-    genconf_metadata = make_genconf_docker(
+    make_genconf_docker(
         pkgpanda_src,
         dcos_image_src,
         options.destination_channel,
@@ -495,12 +495,6 @@ def do_promote(options):
 
     # Copy across packages, bootstrap.
     destination.copy_across(source, bootstrap_dict, active_packages)
-
-    # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
-    # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
-    # to have the channel name as a tag.
-    print("Pushing dcos-genconf docker container")
-    push_genconf_docker(genconf_metadata)
 
     # Upload provider artifacts, mark as active
     destination.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
@@ -526,6 +520,8 @@ def do_build_packages(repository_url, skip_build):
     print("Attempting to pull dcos-builder docker:", container_name)
     pulled = False
     try:
+        # TODO(cmaloney): Rather than pushing / pulling from Docker Hub upload as a build artifact.
+        # the exported tarball.
         subprocess.check_call(['docker', 'pull', container_name])
         pulled = True
         # TODO(cmaloney): Differentiate different failures of running the process better here
@@ -679,14 +675,6 @@ def make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, bootstrap_id
     return metadata
 
 
-def push_genconf_docker(metadata):
-    channel_dest = "mesosphere/dcos-genconf:" + metadata['channel_name'].replace('/', '_')
-    print("Pushing: {} and {}".format(metadata['docker_image_name'], channel_dest))
-    subprocess.check_call(['docker', 'push', metadata['docker_image_name']])
-    subprocess.check_call(['docker', 'tag', '-f', metadata['docker_image_name'], channel_dest])
-    subprocess.check_call(['docker', 'push', channel_dest])
-
-
 def make_abs(path):
     if path[0] == '/':
         return path
@@ -727,7 +715,7 @@ def do_create(options):
     # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
     # bootstrap tarball inside of it.
     print("Building dcos-genconf docker container")
-    genconf_metadata = make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, default_bootstrap_id)
+    make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, default_bootstrap_id)
 
     # Calculate the active packages merged from all the bootstraps
     active_packages = set()
@@ -752,12 +740,6 @@ def do_create(options):
 
     channel.upload_packages(list(active_packages))
     channel.upload_bootstrap(bootstrap_dict)
-
-    # TODO(cmaloney): Allow pushing multiple dcos-genconf docker, one for each bootstrap variant.
-    # TODO(cmaloney): push the genconf docker into upload_providers_and_activate. Also copy the image
-    # to have the channel name as a tag.
-    print("Pushing dcos-genconf docker container")
-    push_genconf_docker(genconf_metadata)
 
     # Upload provider artifacts, mark as active
     channel.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)

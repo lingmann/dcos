@@ -9,6 +9,7 @@ def check(options, config):
     SSH via SubProcess Calls...
     """
     # Get a remote cmd object and set it up to execute the preflight script for masters
+    log.info("Executing Preflight on Masters...")
     preflight = RemoteCmd()
     preflight.ssh_user = config['ssh_user'] 
     preflight.ssh_key_path = config['ssh_key_path']
@@ -20,7 +21,7 @@ def check(options, config):
 
     # If we got errors, show them; if not, execute preflight
     if len(errors) > 0:
-        log.error("Could not execute preflight, errors encountered during validation.")
+        log.error("Could not execute preflight on masters, errors encountered during validation.")
         for key, value in errors.items():
             log.error("%s: %s", key, value)
         return errors 
@@ -28,5 +29,25 @@ def check(options, config):
         preflight.execute()
         return False
 
+    # Run it again on slaves...
+    log.info("Executing Preflight on Slaves...")
+    preflight = RemoteCmd()
+    preflight.ssh_user = config['ssh_user'] 
+    preflight.ssh_key_path = config['ssh_key_path']
+    preflight.inventory = config['agent_list']
+    preflight.log_directory = options.log_directory
+    preflight.command = 'sudo bash /home/{}/install_dcos.sh --preflight-only'.format(config['ssh_user'])
+    # Validate our inputs for the object are ok
+    errors = preflight.validate()
+
+    # If we got errors, show them; if not, execute preflight
+    if len(errors) > 0:
+        log.error("Could not execute preflight on agents, errors encountered during validation.")
+        for key, value in errors.items():
+            log.error("%s: %s", key, value)
+        return errors 
+    else:
+        preflight.execute()
+        return False
 
 

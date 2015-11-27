@@ -12,7 +12,7 @@ log = DCOSLog(__name__).log
 # From dcos-image
 #import gen
 #from providers import bash
-
+from dcos_installer import copy
 from dcos_installer import preflight
 from dcos_installer.config import DCOSConfig
 from dcos_installer.validate import ext_helpers, DCOSValidateConfig
@@ -157,6 +157,13 @@ def do_routes(app, options):
 
 
 def do_preflight(options, queue):
+    config = get_config(options.config_path)
+    queue.put(copy.copy_to_targets(
+        config, 
+        options.log_directory, 
+        '{}/install_dcos.sh'.format(options.serve_directory), 
+        '/home/{}'.format(config['ssh_user'])))
+    
     queue.put(preflight.check(options, get_config(options.config_path)))
 
 def save_file(data, path):

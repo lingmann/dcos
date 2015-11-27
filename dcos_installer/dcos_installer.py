@@ -45,6 +45,13 @@ class DcosInstaller:
         except:
             log.info('{} does not exist, creating.'.format(options.log_directory))
             os.mkdir(options.log_directory)
+        # Serve directory
+        try:
+            os.stat(options.serve_directory)
+        except:
+            log.info('{} does not exist, creating.'.format(options.serve_directory))
+            os.mkdir(options.serve_directory)
+
 
     def set_log_level(self, options):
         """

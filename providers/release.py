@@ -17,16 +17,16 @@ import importlib
 import json
 import mimetypes
 import os.path
+import pkgpanda
+import pkgpanda.build
+import pkgpanda.util
 import subprocess
 import sys
 import tempfile
 from functools import partial, partialmethod
 
-import pkgpanda
-import pkgpanda.build
-import pkgpanda.util
-import aws_config
-import util
+import providers.aws_config as aws_config
+import providers.util as util
 
 provider_names = ['aws', 'azure', 'vagrant']
 
@@ -603,7 +603,8 @@ def check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id):
         'genconf_tar': genconf_tar,
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
-        'docker_image_name': 'mesosphere/dcos-genconf:' + docker_tag
+        'docker_image_name': 'mesosphere/dcos-genconf:' + docker_tag,
+        'dcos_image_commit': dcos_image_sha1
     }
 
 

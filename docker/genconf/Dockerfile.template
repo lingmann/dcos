@@ -12,10 +12,10 @@ RUN apt-get update && \
 COPY dcos-image /dcos-image
 COPY pkgpanda /pkgpanda
 
-RUN cd /pkgpanda && python3 setup.py install && rm -rf /pkgpanda
-RUN cd /dcos-image && pip install -r requirements.txt
+RUN pip install /pkgpanda && rm -rf /pkgpanda
+RUN pip install /dcos-image && rm -rf /dcos-image
 
-WORKDIR /dcos-image
+WORKDIR /
 
 VOLUME ["/genconf"]
 
@@ -25,5 +25,6 @@ COPY {bootstrap_filename} /artifacts/{bootstrap_filename}
 ENV CHANNEL_NAME={channel_name}
 ENV BOOTSTRAP_ID={bootstrap_id}
 ENV PYTHONUNBUFFERED="notemtpy"
+ENV DCOS_IMAGE_COMMIT={dcos_image_commit}
 
-ENTRYPOINT ["/dcos-image/genconf.py"]
+ENTRYPOINT ["genconf"]

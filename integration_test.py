@@ -167,6 +167,44 @@ class Cluster:
     def head(self, path=""):
         return requests.head(self.dcos_uri + path)
 
+    def get_base_testapp_definition(self):
+        test_uuid = uuid.uuid4().hex
+        return {
+            'id': TEST_APP_NAME_FMT.format(test_uuid),
+            'container': {
+                'type': 'DOCKER',
+                'docker': {
+                    'image': '{}:5000/test_server'.format(self.registry),
+                    "forcePullImage": True,
+                    'network': 'BRIDGE',
+                    'portMappings': [
+                        {'containerPort':  9080,
+                         'hostPort': 0,
+                         'servicePort': 0,
+                         'protocol': 'tcp'}
+                    ]
+                }
+            },
+            'cpus': 0.1,
+            'mem': 64,
+            'instances': 1,
+            'healthChecks':
+            [
+                {
+                    'protocol': 'HTTP',
+                    'path': '/ping',
+                    'portIndex': 0,
+                    'gracePeriodSeconds': 5,
+                    'intervalSeconds': 10,
+                    'timeoutSeconds': 10,
+                    'maxConsecutiveFailures': 3
+                }
+            ],
+            "env": {
+                "DCOS_TEST_UUID": test_uuid
+            },
+        }, test_uuid
+
     def deploy_marathon_app(self, app_definition, timeout=300):
         """Deploy an app to marathon
 
@@ -405,44 +443,7 @@ def test_if_Marathon_app_can_be_deployed(cluster):
     "GET /test_uuid" request is issued to the app. If the returned UUID matches
     the one assigned to test - test succeds.
     """
-    test_uuid = uuid.uuid4().hex
-    app_name = TEST_APP_NAME_FMT.format(test_uuid)
-
-    app_definition = {
-        'id': app_name,
-        'container': {
-            'type': 'DOCKER',
-            'docker': {
-                'image': '{}:5000/test_server'.format(cluster.registry),
-                "forcePullImage": True,
-                'network': 'BRIDGE',
-                'portMappings': [
-                    {'containerPort':  9080,
-                     'hostPort': 0,
-                     'servicePort': 0,
-                     'protocol': 'tcp'}
-                ]
-            }
-        },
-        'cpus': 0.1,
-        'mem': 64,
-        'instances': 1,
-        'healthChecks':
-        [
-            {
-                'protocol': 'HTTP',
-                'path': '/ping',
-                'portIndex': 0,
-                'gracePeriodSeconds': 5,
-                'intervalSeconds': 10,
-                'timeoutSeconds': 10,
-                'maxConsecutiveFailures': 3
-            }
-        ],
-        "env": {
-            "DCOS_TEST_UUID": test_uuid
-        },
-    }
+    app_definition, test_uuid = cluster.get_base_testapp_definition()
 
     service_points = cluster.deploy_marathon_app(app_definition)
 
@@ -456,7 +457,7 @@ def test_if_Marathon_app_can_be_deployed(cluster):
     r_data = r.json()
     assert r_data['test_uuid'] == test_uuid
 
-    cluster.destroy_marathon_app(app_name)
+    cluster.destroy_marathon_app(app_definition['id'])
 
 
 def test_if_service_discovery_works(cluster):
@@ -503,44 +504,8 @@ def test_if_service_discovery_works(cluster):
     itself match and the IP of the test server matches the service point of that
     container as reported by Marathon.
     """
-    test_uuid = uuid.uuid4().hex
-    app_name = TEST_APP_NAME_FMT.format(test_uuid)
-
-    app_definition = {
-        'id': app_name,
-        'container': {
-            'type': 'DOCKER',
-            'docker': {
-                'image': '{}:5000/test_server'.format(cluster.registry),
-                "forcePullImage": True,
-                'network': 'BRIDGE',
-                'portMappings': [
-                    {'containerPort':  9080,
-                     'hostPort': 0,
-                     'servicePort': 0,
-                     'protocol': 'tcp'}
-                ]
-            }
-        },
-        'cpus': 0.1,
-        'mem': 64,
-        'instances': 2,
-        'healthChecks':
-        [
-            {
-                'protocol': 'HTTP',
-                'path': '/ping',
-                'portIndex': 0,
-                'gracePeriodSeconds': 5,
-                'intervalSeconds': 10,
-                'timeoutSeconds': 10,
-                'maxConsecutiveFailures': 3
-            }
-        ],
-        "env": {
-            "DCOS_TEST_UUID": test_uuid
-        },
-    }
+    app_definition, test_uuid = cluster.get_base_testapp_definition()
+    app_definition['instances'] = 2
 
     if len(cluster.slaves) >= 2:
         app_definition["constraints"] = [["hostname", "UNIQUE"], ]
@@ -554,7 +519,7 @@ def test_if_service_discovery_works(cluster):
                     retry_on_exception=lambda x: False)
     def _pool_for_mesos_dns():
         r = cluster.get('mesos_dns/v1/services/_{}._tcp.marathon.mesos'.format(
-                        app_name.lstrip('/')))
+                        app_definition['id'].lstrip('/')))
         assert r.status_code == 200
 
         r_data = r.json()
@@ -597,7 +562,7 @@ def test_if_service_discovery_works(cluster):
         # it and rely on matching test uuid between containers only.
         assert r_data['my_ip'] == service_points[0].host
 
-    cluster.destroy_marathon_app(app_name)
+    cluster.destroy_marathon_app(app_definition['id'])
 
 
 def test_if_DCOSHistoryService_is_getting_data(cluster):

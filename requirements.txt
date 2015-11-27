@@ -1,7 +1,0 @@
-azure-storage==0.20.2
-boto3
-botocore
-jinja2
-requests
-pyyaml
-pytest

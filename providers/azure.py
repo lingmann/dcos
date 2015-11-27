@@ -6,11 +6,10 @@ import re
 import sys
 import urllib
 import yaml
-
 from copy import deepcopy
 
 import gen
-import util
+import providers.util as util
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
 late_services = ""
@@ -83,12 +82,11 @@ def transform(cloud_config_yaml_str):
 
 
 def render_arm(
-        arm_template_json_str,
         master_cloudconfig_yaml_str,
         slave_cloudconfig_yaml_str,
         slave_public_cloudconfig_yaml_str):
 
-    template_str = util.jinja_env.from_string(arm_template_json_str).render({
+    template_str = gen.env.get_template('azure/azuredeploy.json').render({
         'master_cloud_config': transform(master_cloudconfig_yaml_str),
         'slave_cloud_config': transform(slave_cloudconfig_yaml_str),
         'slave_public_cloud_config': transform(slave_public_cloudconfig_yaml_str)
@@ -131,7 +129,7 @@ def gen_templates(user_args, options):
         # TODO(cmaloney): Add the dcos-arm-signal service here
         # cc_variant = results.utils.add_units(
         #     cc_variant,
-        #     yaml.load(util.jinja_env.from_string(late_services).render(params)))
+        #     yaml.load(gen.env.from_string(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['azure'])
@@ -143,7 +141,6 @@ def gen_templates(user_args, options):
 
     # Render the arm
     arm = render_arm(
-        open('gen/azure/azuredeploy.json').read(),
         variant_cloudconfig['master'],
         variant_cloudconfig['slave'],
         variant_cloudconfig['slave_public']
@@ -192,7 +189,7 @@ def gen_buttons(channel, tag, commit, single_master_config_id):
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
     template_upload_url = UPLOAD_URL.format(channel=channel, config_id=single_master_config_id)
-    return util.jinja_env.from_string(open('gen/azure/templates/azure.html').read()).render({
+    return gen.env.get_template('azure/templates/azure.html').render({
         'channel': channel,
         'tag': tag,
         'commit': commit,

@@ -11,8 +11,8 @@ import yaml
 from copy import deepcopy
 
 import gen
-from aws_config import session_dev, session_prod
-import util
+from providers.aws_config import session_dev, session_prod
+import providers.util as util
 
 aws_region_names = [
     {
@@ -117,7 +117,7 @@ def render_cloudformation(
     def transform_lines(text):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
-    template_str = util.jinja_env.from_string(cf_template).render(
+    template_str = gen.env.from_string(cf_template).render(
         {
             'master_cloud_config': transform_lines(master_cloudconfig),
             'slave_cloud_config': transform_lines(slave_cloudconfig),
@@ -136,7 +136,7 @@ def gen_templates(arguments, options):
     results = gen.generate(
         options=options,
         mixins=['aws', 'coreos', 'coreos-aws'],
-        extra_templates={'cloudformation': ['gen/aws/templates/cloudformation.json']},
+        extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
         arguments=arguments
         )
 
@@ -153,7 +153,7 @@ def gen_templates(arguments, options):
         # Specialize the dcos-cfn-signal service
         cc_variant = results.utils.add_units(
             cc_variant,
-            yaml.load(util.jinja_env.from_string(late_services).render(params)))
+            yaml.load(gen.env.from_string(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['aws'])
@@ -183,7 +183,8 @@ def gen_templates(arguments, options):
 
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
-    return util.jinja_env.from_string(open('gen/aws/templates/aws.html').read()).render(
+    # TODO(cmaloney): Switch to package_resources
+    return gen.env.get_template('aws/templates/aws.html').render(
         {
             'channel': channel,
             'tag': tag,

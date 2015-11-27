@@ -1,11 +1,7 @@
-import jinja2
 import os
 import shutil
 from datetime import datetime
 from subprocess import check_output
-
-
-jinja_env = jinja2.Environment(undefined=jinja2.StrictUndefined)
 
 dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 

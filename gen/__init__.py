@@ -26,6 +26,7 @@ import yaml
 import logging as log
 from copy import copy, deepcopy
 from itertools import chain
+from pkg_resources import resource_string
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
@@ -37,9 +38,25 @@ role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
 
+
+# Function to allow jinja to load our templates folder layout. This uses
+# resource_string from pkg_resources which is the recommended way of getting
+# files out of a package however it is distributed
+# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
+# For the jinja function loader documentation, see:
+# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
+def load_template(name):
+    contents = resource_string(__name__, name).decode()
+
+    # The templates from our perspective are always invalidated / never cacheable.
+    def false_func():
+        return False
+
+    return (contents, name, false_func)
+
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(
-    loader=jinja2.FileSystemLoader(os.getcwd()),
+    loader=jinja2.FunctionLoader(load_template),
     undefined=jinja2.StrictUndefined)
 
 
@@ -124,9 +141,9 @@ def load_json(filename):
 # too early will break some configurations).
 def get_name(mixin_name, target, sep='/'):
     if mixin_name:
-        return 'gen' + sep + mixin_name + sep + target
+        return mixin_name + sep + target
     else:
-        return 'gen' + sep + target
+        return target
 
 
 # Render the Jinja/YAML into YAML, then load the YAML and merge it to make the
@@ -136,10 +153,13 @@ def render_templates(template_names, arguments):
     for name, templates in template_names.items():
         full_template = None
         for template in templates:
-            if not os.path.exists(template):
-                continue
 
-            rendered_template = env.get_template(template).render(arguments)
+            # Render the template. If the file doesn't exist that just means the
+            # current mixin doesn't have it, which is fine.
+            try:
+                rendered_template = env.get_template(template).render(arguments)
+            except FileNotFoundError:
+                continue
 
             # If not yaml, just treat opaquely.
             if not template.endswith('.yaml'):
@@ -170,7 +190,7 @@ def get_parameters(template_dict):
         for template in template_list:
             assert isinstance(template, str)
             try:
-                ast = env.parse(open(template).read())
+                ast = env.parse(*env.loader.get_source(env, template))
                 template_parameters = jinja2.meta.find_undeclared_variables(ast)
                 parameters |= set(template_parameters)
             except FileNotFoundError as ex:
@@ -427,7 +447,7 @@ class Mixin:
         self.parameters = get_parameters(self.templates)
 
         # Module for loading functions to calculate, validate arguments as well as defaults.
-        self.modulename = get_name(name, 'calc', sep='.')
+        self.modulename = 'gen.' + get_name(name, 'calc', sep='.')
         # Merge calc into the base portions.
 
         # Specifying all these is optional, as is having a module at all so we

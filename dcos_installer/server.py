@@ -126,16 +126,16 @@ def do_routes(app, options):
         Execute the preflight checks and stream the SSH output back to the 
         web interface.
         """
-        log.debug("Kicking off preflight check...")
-        preflight_queue = queue.Queue()
-        p = threading.Thread(target=do_preflight, args=(options, preflight_queue))
-        p.daemon = True
-        p.start()
-
-        # preflight_validate = preflight_queue.get()
+        if request.method == 'POST':
+            log.debug("Kicking off preflight check...")
+            preflight_queue = queue.Queue()
+            p = threading.Thread(target=do_preflight, args=(options, preflight_queue))
+            p.daemon = True
+            p.start()
+            return redirect(redirect_url())
 
         preflight_data = {}
-        for preflight_log in glob('{}/*_preflight.log'.format(options.log_directory)): 
+        for preflight_log in glob('{}/*.log'.format(options.log_directory)): 
             log_data = yaml.load(open(preflight_log, 'r+'))
             for k, v in log_data.items():
                 preflight_data[k] = v

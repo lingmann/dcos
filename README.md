@@ -7,47 +7,48 @@
 
 ## Manpage
 
-usage: run [-h] [--log-directory LOG_DIRECTORY]
-           [--dcos-install-script-path DCOS_INSTALL_SCRIPT_PATH]
-           [--ip-detect-path IP_DETECT_PATH] [-c CONFIG_PATH] [-d]
-           [-i INSTALL_DIRECTORY] [-l {info,debug}] [-m {cli,web}] [-p PORT]
-           [--serve-directory SERVE_DIRECTORY] [-pre] [-t]
+  usage: run [-h] [--log-directory LOG_DIRECTORY]
+             [--dcos-install-script-path DCOS_INSTALL_SCRIPT_PATH]
+             [--ip-detect-path IP_DETECT_PATH] [-c CONFIG_PATH] [-d]
+             [-i INSTALL_DIRECTORY] [-l {info,debug}] [-m {cli,web}] [-p PORT]
+             [--serve-directory SERVE_DIRECTORY] [-pre] [-t]
 
 **NAME**
 
-run_dcos_installer -- run the DCOS installer
+  ./run -- run the DCOS installer
 
 **SYNOPSIS**
 
-run_dcos_installer [-h | --help] [ -l | --log-level ] [ -p | --port ] [ -m | --mode ] [ -c | --config-path ] [ -d | --install-directory ] 
+  ./run [-h | --help] [ -l | --log-level ] [ -p | --port ] [ -m | --mode ] [ -c | --config-path ] [ -d | --install-directory ] 
 
 **DESCRIPTION**
 
 The DCOS installer runs a web or CLI utility to build DCOS configuration files for your cluster and exposes several deployment options.
 
 **FLAGS**
-  
-  -c                | Configuration Path - Set the configuration path, default is $HOME/dcos/dcos-config.yaml: Accepts a valid /path/to/config.yaml.
 
-  -d                | Install Directory - Set hte configuration directory used to store and build the bootstrap tarball, defaults to $HOME/dcos: Accepts a valid /path/to/install/stuff. 
-  
-  -h                | Help - Show the help menu
+```pre 
+-c                | Configuration Path - Set the configuration path, default is $HOME/dcos/dcos-config.yaml: Accepts a valid /path/to/config.yaml.
 
-  -l                | Log Level - Set the loglevel: 'info' or 'debug'
+-d                | Install Directory - Set hte configuration directory used to store and build the bootstrap tarball, defaults to $HOME/dcos: Accepts a valid /path/to/install/stuff. 
 
-  --log-directory   | The path to the directory to store log data from preflight and deploy modes
+-h                | Help - Show the help menu
 
-  -m                | Mode - Set the isntaller mode, defualt is 'web': 'cli' or 'web'
+-l                | Log Level - Set the loglevel: 'info' or 'debug'
 
-  -p                | Port - Override the default port of :5000. Accepts an integer.
+--log-directory   | The path to the directory to store log data from preflight and deploy modes
 
-  --serve-directory | The directory to find the tarball and installer script to ship to target hosts.
-  
+-m                | Mode - Set the isntaller mode, defualt is 'web': 'cli' or 'web'
+
+-p                | Port - Override the default port of :5000. Accepts an integer.
+
+--serve-directory | The directory to find the tarball and installer script to ship to target hosts.
+```
 
 ### Configuration File 
 Yaml configuration file located at `$INSTALL_DIRECTORY/dcos_config.yaml`
 
-**EXAMPLE CONFIGURATION
+**EXAMPLE CONFIGURATION**
 
 ```yaml
 ---

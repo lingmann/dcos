@@ -8,12 +8,8 @@ RUN apt-get update && \
     git && \
   rm -rf /var/lib/apt/lists/* && apt-get clean
 
-# Image build is performed in a tmpdir set up by make.sh
-COPY dcos-image /dcos-image
-COPY pkgpanda /pkgpanda
-
-RUN pip install /pkgpanda && rm -rf /pkgpanda
-RUN pip install /dcos-image && rm -rf /dcos-image
+COPY wheelhouse /wheelhouse
+RUN pip install --no-index --find-links=/wheelhouse dcos-image pkgpanda && rm -rf /wheelhouse
 
 WORKDIR /
 

@@ -60,6 +60,33 @@ def validate_ip_list(key=None, config=None):
     return [False, None]
     
 
+def validate_target_hosts(key=None, config=None):
+    if key in config:
+        key = config[key]
+        if type(key) == list:
+            for ip in key:
+                if is_valid_ipv4_address(ip):
+                    continue
+
+                else:
+                    return [False, '{} is not valid IPv4 address.'.format(key)]
+        else:
+            return [False, '{} is not of type list.'.format(key)]
+
+        # Ensure the master list IPs are in the target_hosts
+        if config['cluster_config']['master_list']:
+            for ip in config['cluster_config']['master_list']:
+                if ip in key:
+                    continue
+
+                else: 
+                    return [False, '{} from master_list is not in target_hosts: {}'.format(ip, key)]
+
+        return [True, '{} is a valid list of IPv4 addresses and contains master_list IPs'.format(key)]
+
+    return [False, None]
+
+ 
 def validate_string(key=None, config=None):
     if key in config:
         key = config[key]

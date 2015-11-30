@@ -74,10 +74,10 @@ def get_onprem_dependencies(config):
             "ssh_port": helpers.validate_int('ssh_port', ssh_config),
             "ssh_key_path": helpers.validate_path('ssh_key_path', ssh_config),
             "ssh_user": helpers.validate_string('ssh_user', ssh_config),
-            "agent_list": helpers.validate_ip_list('agent_list', ssh_config),
+            "target_hosts": helpers.validate_ip_list('target_hosts', ssh_config),
         }
     }
-    print(dep_tree)
+
     # For each dependency, read its validation helper func and return 
     for tk, tv in dep_tree.items():
         for rk, rv in tv.items():

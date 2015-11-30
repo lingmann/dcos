@@ -88,10 +88,16 @@ ssh_config:
             for key, value in self.overrides.items():
                 self[key] = value
 
-        # Update num_masters 
+        # Update num_masters and target_hosts with master_list data
         if self['cluster_config']['master_list']:
             self['cluster_config']['num_masters'] = len(self['cluster_config']['master_list'])
+            if self['cluster_config']['master_list'] != None:
+                if self['ssh_config']['target_hosts'] == None:
+                    self['ssh_config']['target_hosts'] = []
 
+                for ip in self['cluster_config']['master_list']:
+                    if ip not in self['ssh_config']['target_hosts']:
+                        self['ssh_config']['target_hosts'].append(ip)
 
     def validate(self):
         # Convienience function to validate this object

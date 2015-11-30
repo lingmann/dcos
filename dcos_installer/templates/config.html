@@ -82,7 +82,7 @@
           </div>
           <br>
           <div class="input-group">
-            <span class="input-group-addon" id="basic-addon1">Agent List</span>
+            <span class="input-group-addon" id="basic-addon1">Target Hosts</span>
             {% if isset['ssh_config']['target_hosts'] %}
             <input name="target_hosts" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['target_hosts'] }}" aria-describedby="basic-addon1">
             {% else %}

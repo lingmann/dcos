@@ -56,8 +56,8 @@
         <form method="POST" action="/installer/v1.0/configurator">
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Cluster Name</span>
-            {% if isset['cluster_name'] %}
-            <input name="cluster_name" type="text" class="form-control" placeholder="Already Set: {{ isset['cluster_name'] }}" aria-describedby="basic-addon1">
+            {% if isset['cluster_config']['cluster_name'] %}
+            <input name="cluster_name" type="text" class="form-control" placeholder="Already Set: {{ isset['cluster_config']['cluster_name'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="cluster_name" type="text" class="form-control" placeholder="foo_cluster" aria-describedby="basic-addon1">
             {% endif %}
@@ -65,8 +65,8 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">DNS Resolvers</span>
-            {% if isset['resolvers'] %}
-            <input name="resolvers" type="text" class="form-control" placeholder="Already Set: {{ isset['resolvers'] }}" aria-describedby="basic-addon1">
+            {% if isset['cluster_config']['resolvers'] %}
+            <input name="resolvers" type="text" class="form-control" placeholder="Already Set: {{ isset['cluster_config']['resolvers'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="resolvers" type="text" class="form-control" placeholder="8.8.8.8, 8.8.4.4" aria-describedby="basic-addon1">
             {% endif %}
@@ -74,8 +74,8 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Master List</span>
-            {% if isset['master_list'] %}
-            <input name="master_list" type="text" class="form-control" placeholder="Already Set: {{ isset['master_list'] }}" aria-describedby="basic-addon1">
+            {% if isset['cluster_config']['master_list'] %}
+            <input name="master_list" type="text" class="form-control" placeholder="Already Set: {{ isset['cluster_config']['master_list'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="master_list" type="text" class="form-control" placeholder="10.0.0.1, 10.0.0.2..." aria-describedby="basic-addon1">
             {% endif %}
@@ -83,8 +83,8 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Agent List</span>
-            {% if isset['agent_list'] %}
-            <input name="agent_list" type="text" class="form-control" placeholder="Already Set: {{ isset['agent_list'] }}" aria-describedby="basic-addon1">
+            {% if isset['ssh_config']['agent_list'] %}
+            <input name="agent_list" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['agent_list'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="agent_list" type="text" class="form-control" placeholder="10.0.0.1, 10.0.0.2..." aria-describedby="basic-addon1">
             {% endif %}
@@ -92,8 +92,8 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">SSH Username</span>
-            {% if isset['ssh_user'] %}
-            <input name="ssh_user" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_user'] }}" aria-describedby="basic-addon1">
+            {% if isset['ssh_config']['ssh_user'] %}
+            <input name="ssh_user" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['ssh_user'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="ssh_user" type="text" class="form-control" placeholder="$my_user" aria-describedby="basic-addon1">
             {% endif %}
@@ -101,8 +101,8 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">SSH Port</span>
-            {% if isset['ssh_port'] %}
-            <input name="ssh_port" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_port'] }}" aria-describedby="basic-addon1">
+            {% if isset['ssh_config']['ssh_port'] %}
+            <input name="ssh_port" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['ssh_port'] }}" aria-describedby="basic-addon1">
             {% else %}
             <input name="ssh_port" type="text" class="form-control" placeholder="22" aria-describedby="basic-addon1">
             {% endif %}

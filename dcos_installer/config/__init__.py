@@ -25,28 +25,38 @@ class DCOSConfig(dict):
     """
     def __init__(self, overrides={}, config_path=None):
         # Default configuration
-        self.defaults = {
-            'cluster_name': 'Mesosphere: The Data Center Operating System', #'New Cluster {}'.format(str(datetime.datetime.now())),
-            'config_dir': '{}/dcos-installer'.format(os.path.expanduser('~')),
-            'ip_detect_path': '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~')),
-            "num_masters": 3,
-            "master_discovery": 'static',
-            "master_list": None,
-            "agent_list": None,
-            "exhibitor_storage_backend": "zookeeper",
-            "exhibitor_zk_hosts": ['127.0.0.1'],
-            "exhibitor_zk_path": '/exhibitor',
-            "weights": "slave_public=1",
-            "bootstrap_url": "localhost",
-            "roles": "slave_public",
-            "docker_remove_delay": "1hrs",
-            "gc_delay": "2days",
-            'resolvers': ['8.8.8.8', '8.8.4.4'],
-            'ssh_user': None, 
-            'ssh_port': 22,
-            'ssh_key_path': '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~')),
-        }   
+        defaults = """ 
+---
+cluster_config:
+  cluster_name: 'Mesosphere: The Data Center Operating System'
+  config_dir: None
+  ip_detect_path: None
+  num_masters: 3
+  master_discovery: static
+  master_list: None
+  exhibitor_storage_backend: zookeeper
+  exhibitor_zk_hosts:
+    - 127.0.0.1
+  exhibitor_zk_path: /exhibitor
+  weights: slave_public=1
+  bootstrap_url: localhost
+  roles: slave_public
+  docker_remove_delay: 1hrs
+  gc_delay: 2days
+  resolvers:
+    - 8.8.8.8
+    - 8.8.4.4
 
+ssh_config:
+  agent_list: None
+  ssh_user: None
+  ssh_port: 22
+  ssh_key_path: None
+"""
+        self.defaults = yaml.load(defaults)
+        self.defaults['ssh_config']['ssh_key_path'] = '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~'))
+        self.defaults['cluster_config']['config_dir'] = '{}/dcos-installer'.format(os.path.expanduser('~'))
+        self.defaults['cluster_config']['ip_detect_path'] = '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~'))
         # Setting the passed in options as the overrides for the instance of the class. 
         self.config_path = config_path
         self.overrides = overrides

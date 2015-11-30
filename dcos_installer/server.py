@@ -82,11 +82,11 @@ def do_routes(app, options):
                     request.form['ip_detect'], 
                     options.ip_detect_path)
 
-            if 'master_list' in request.form or 'agent_list' in request.form or 'ssh_user' in request.form or 'ssh_port' in request.form or 'resolvers' in request.form:
+            if 'master_list' in request.form or 'resolvers' in request.form or 'agent_list' in request.form or 'ssh_user' in request.form or 'ssh_port' in request.form:
                 log.info("Uploading and saving new configuration")
                 add_form_config(request, options.config_path)
 
-   
+
         # Ensure the files exist
         config_path_level, config_path_message = ext_helpers.is_path_exists(options.config_path)
 
@@ -193,22 +193,41 @@ def add_form_config(data, path):
         
     for key in list(data.form.keys()):
         log.debug("%s: %s",key, data.form[key])
-        if len(data.form[key]) > 0:
-            # If the string is actually a list from the POST...
-            if len(data.form[key].split(',')) > 1:
-                new_data[key] = []
-                for value in data.form[key].split(','):
-                    new_data[key].append(value.rstrip().lstrip())
-            else:
-                # master and agent list have to always be an array
-                if key == 'master_list' or key == 'agent_list':
-                    new_data[key] = [data.form[key]]
-
+        if key in ['resolvers', 'master_list', 'cluster_name']:
+            if len(data.form[key]) > 0:
+                # If the string is actually a list from the POST...
+                if len(data.form[key].split(',')) > 1:
+                    new_data['cluster_config'][key] = []
+                    for value in data.form[key].split(','):
+                        new_data[key].append(value.rstrip().lstrip())
                 else:
-                    new_data[key] = data.form[key]
+                    # master and agent list have to always be an array
+                    if key == 'master_list':
+                        new_data['cluster_config'][key] = [data.form[key]]
+                    
+                    else:
+                        new_data['cluster_config'][key] = data.form[key]
 
-        else:
-            log.info("Refusing to write null data for %s", key)
+            else:
+                log.info("Refusing to write null data for %s", key)
+
+        elif key in ['agent_list', 'ssh_user', 'ssh_port']:
+            if len(data.form[key]) > 0:
+                # If the string is actually a list from the POST...
+                if len(data.form[key].split(',')) > 1:
+                    new_data['ssh_config'][key] = []
+                    for value in data.form[key].split(','):
+                        new_data[key].append(value.rstrip().lstrip())
+                else:
+                    # master and agent list have to always be an array
+                    if key == 'agent_list':
+                        new_data['ssh_config'][key] = [data.form[key]]
+                    
+                    else:
+                        new_data['ssh_config'][key] = data.form[key]
+
+            else:
+                log.info("Refusing to write null data for %s", key)
 
     
     config = DCOSConfig(overrides=new_data, config_path=path)

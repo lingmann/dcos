@@ -122,3 +122,33 @@ def validate_path(key=None, config=None):
 
     return [False, None]
 
+
+def validate_master_discovery(key=None, config=None):
+    """
+    Validate master discovery method.
+    """
+    if key in config:
+        key = config[key]
+        options = ['static']
+        if key in options:
+            return [True, 'master_discovery method is valid.']
+        
+        else:
+            return [False, 'master_discovery method is not valid. Valid options are {}'.format(options)]
+
+    return [False, None]
+
+def validate_exhibitor_storage_backend(key=None, config=None):
+    """
+    Validate master discovery method.
+    """
+    if key in config:
+        key = config[key]
+        options = ['zookeeper']
+        if key in options:
+            return [True, 'exhibitor_storage_backend is valid.']
+        
+        else:
+            return [False, 'exhibitor_storage_backend is not valid. Valid options are {}'.format(options)]
+
+    return [False, None]

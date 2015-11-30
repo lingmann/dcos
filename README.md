@@ -54,90 +54,94 @@ Yaml configuration file located at `$INSTALL_DIRECTORY/dcos_config.yaml`
 
 ```yaml
 ---
+# Used for configuration generation
+cluster_config:
+  # The URL to download the tarball - not used in deploy mode
+  # Defualt: localhost
+  bootstrap_url: localhost
+
+  # The name of the DCOS cluster
+  # Default: Mesosphere: The Data Center Operating System
+  cluster_name: 'Mesosphere: The Data Center Operating System'
+
+  # The installer configuration directory
+  # Default: $HOME/dcos-installer/
+  config_dir: /Users/malnick/dcos-installer
+
+  # Docker garbage collection
+  # Default: 1hrs
+  docker_remove_delay: 1hrs
+
+  # Zookeeper exhibitor backend
+  # Default: zookeeper
+  exhibitor_storage_backend: zookeeper
+
+  # Exhibitor zookeeper hosts
+  # Default: 127.0.0.1
+  exhibitor_zk_hosts:
+  - 127.0.0.1
+
+  # The exhibitor storage file
+  # Default: /exhibitor
+  exhibitor_zk_path: /exhibitor
+
+  # Garbage collection delay
+  # Default: 2days
+  gc_delay: 2days
+
+  # The path to the ip-detect script
+  # Default: $HOME/dcos-installer/ip-detect
+  ip_detect_path: /Users/malnick/dcos-installer/ip-detect
+
+  # The master discovery method
+  # Default: static list (master_list)
+  master_discovery: static
+
+  # The list of target hosts that will run Mesos Masters
+  # Default: []
+  master_list:
+  - 10.33.2.20
+  - 10.0.0.2
+  - 10.0.0.3
+
+  # Deprecated value; the number of running masters
+  # Calculated from master_list
+  num_masters: 3
+
+  # Upstream DNS resolvers for Mesos DNS
+  # Default: TBD
+  resolvers:
+  - 8.8.8.8
+  - 8.8.4.4
+
+  # Default Mesos roles to install on target hosts
+  # Default: slave_public
+  roles: slave_public
+
+  # Mesos weights setting
+  # Default: slave_public=1
+  weights: slave_public=1
+
+# Used for SSH configuration
+ssh_config:
 # The list of target hosts that will run Mesos Agents
-# Default: []
-agent_list:
-- 10.0.0.222
-- 10.0.0.235
-- 10.0.0.223
-- 10.0.0.224
+  # Default: []
+  agent_list:
+  - 10.0.0.222
+  - 10.0.0.235
+  - 10.0.0.223
+  - 10.0.0.224
 
-# The URL to download the tarball - not used in deploy mode
-# Defualt: localhost
-bootstrap_url: localhost
+  # The path to the private SSH key to execute remote installation on target hosts
+  # Key must have root access on target hosts for installation
+  # Default: $HOME/dcos-installer/ssh_key
+  ssh_key_path: /Users/malnick/dcos-installer/ssh_key
 
-# The name of the DCOS cluster
-# Default: Mesosphere: The Data Center Operating System
-cluster_name: 'Mesosphere: The Data Center Operating System'
+  # The port to execute SSH access
+  # Default: 22
+  ssh_port: 22
 
-# The installer configuration directory
-# Default: $HOME/dcos-installer/
-config_dir: /Users/malnick/dcos-installer
-
-# Docker garbage collection
-# Default: 1hrs
-docker_remove_delay: 1hrs
-
-# Zookeeper exhibitor backend
-# Default: zookeeper
-exhibitor_storage_backend: zookeeper
-
-# Exhibitor zookeeper hosts
-# Default: 127.0.0.1
-exhibitor_zk_hosts:
-- 127.0.0.1
-
-# The exhibitor storage file
-# Default: /exhibitor
-exhibitor_zk_path: /exhibitor
-
-# Garbage collection delay
-# Default: 2days
-gc_delay: 2days
-
-# The path to the ip-detect script
-# Default: $HOME/dcos-installer/ip-detect
-ip_detect_path: /Users/malnick/dcos-installer/ip-detect
-
-# The master discovery method
-# Default: static list (master_list)
-master_discovery: static
-
-# The list of target hosts that will run Mesos Masters
-# Default: []
-master_list:
-- 10.33.2.20
-- 10.0.0.2
-- 10.0.0.3
-
-# Deprecated value; the number of running masters
-# Calculated from master_list
-num_masters: 3
-
-# Upstream DNS resolvers for Mesos DNS
-# Default: TBD
-resolvers:
-- 8.8.8.8
-- 8.8.4.4
-
-# Default Mesos roles to install on target hosts
-# Default: slave_public
-roles: slave_public
-
-# The path to the private SSH key to execute remote installation on target hosts
-# Key must have root access on target hosts for installation
-# Default: $HOME/dcos-installer/ssh_key
-ssh_key_path: /Users/malnick/dcos-installer/ssh_key
-
-# The port to execute SSH access
-# Default: 22
-ssh_port: 22
-
-# The user to execute SSH and copy DCOS tarball to $HOME on taget hosts
-# Default: vagrant
-ssh_user: vagrant
-
-# Mesos weights setting
-# Default: slave_public=1
-weights: slave_public=1
+  # The user to execute SSH and copy DCOS tarball to $HOME on taget hosts
+  # Default: vagrant
+  ssh_user: vagrant
 ```

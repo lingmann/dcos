@@ -124,9 +124,10 @@ cluster_config:
 
 # Used for SSH configuration
 ssh_config:
-# The list of target hosts that will run Mesos Agents
+  # The list of target hosts that will run Mesos Agents. The ip's from master_list are 
+  # automagically added to this list when used via the config library in the web installer.
   # Default: []
-  agent_list:
+  target_hosts:
   - 10.0.0.222
   - 10.0.0.235
   - 10.0.0.223

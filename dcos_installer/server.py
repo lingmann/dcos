@@ -199,7 +199,7 @@ def add_form_config(data, path):
                 if len(data.form[key].split(',')) > 1:
                     new_data['cluster_config'][key] = []
                     for value in data.form[key].split(','):
-                        new_data[key].append(value.rstrip().lstrip())
+                        new_data['cluster_config'][key].append(value.rstrip().lstrip())
                 else:
                     # master and agent list have to always be an array
                     if key == 'master_list':
@@ -211,13 +211,13 @@ def add_form_config(data, path):
             else:
                 log.info("Refusing to write null data for %s", key)
 
-        elif key in ['agent_list', 'ssh_user', 'ssh_port']:
+        elif key in ['target_hosts', 'ssh_user', 'ssh_port']:
             if len(data.form[key]) > 0:
                 # If the string is actually a list from the POST...
                 if len(data.form[key].split(',')) > 1:
                     new_data['ssh_config'][key] = []
                     for value in data.form[key].split(','):
-                        new_data[key].append(value.rstrip().lstrip())
+                        new_data['ssh_config'][key].append(value.rstrip().lstrip())
                 else:
                     # master and agent list have to always be an array
                     if key == 'agent_list':

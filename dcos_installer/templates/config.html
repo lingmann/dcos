@@ -83,10 +83,10 @@
           <br>
           <div class="input-group">
             <span class="input-group-addon" id="basic-addon1">Agent List</span>
-            {% if isset['ssh_config']['agent_list'] %}
-            <input name="agent_list" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['agent_list'] }}" aria-describedby="basic-addon1">
+            {% if isset['ssh_config']['target_hosts'] %}
+            <input name="target_hosts" type="text" class="form-control" placeholder="Already Set: {{ isset['ssh_config']['target_hosts'] }}" aria-describedby="basic-addon1">
             {% else %}
-            <input name="agent_list" type="text" class="form-control" placeholder="10.0.0.1, 10.0.0.2..." aria-describedby="basic-addon1">
+            <input name="target_hosts" type="text" class="form-control" placeholder="10.0.0.1, 10.0.0.2..." aria-describedby="basic-addon1">
             {% endif %}
           </div>
           <br>

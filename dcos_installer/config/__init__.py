@@ -29,11 +29,11 @@ class DCOSConfig(dict):
 ---
 cluster_config:
   cluster_name: 'Mesosphere: The Data Center Operating System'
-  config_dir: None
-  ip_detect_path: None
+  config_dir: 
+  ip_detect_path: 
   num_masters: 3
   master_discovery: static
-  master_list: None
+  master_list: 
   exhibitor_storage_backend: zookeeper
   exhibitor_zk_hosts:
     - 127.0.0.1
@@ -48,10 +48,10 @@ cluster_config:
     - 8.8.4.4
 
 ssh_config:
-  agent_list: None
-  ssh_user: None
+  agent_list: 
+  ssh_user: 
   ssh_port: 22
-  ssh_key_path: None
+  ssh_key_path: 
 """
         self.defaults = yaml.load(defaults)
         self.defaults['ssh_config']['ssh_key_path'] = '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~'))

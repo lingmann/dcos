@@ -432,12 +432,22 @@ def get_provider_data(repository_url, bootstrap_id, tag, channel_name, commit):
     return provider_data, cleaned
 
 
+def get_src_dirs():
+    pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
+    dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
+
+    return pkgpanda_src, dcos_image_src
+
+
 def do_promote(options):
     print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
     destination_storage_providers = all_storage_providers(options.destination_channel)
     source_storage_providers = all_storage_providers(options.source_channel)
     destination = ChannelManager(destination_storage_providers)
     source = ChannelManager(source_storage_providers)
+
+    # Validate src_dirs are set
+    get_src_dirs()
 
     # Download source channel metadata
     metadata = json.loads(source.read_file(METADATA_FILE).decode('utf-8'))
@@ -472,14 +482,8 @@ def do_promote(options):
     bootstrap_path = '/{}.bootstrap.tar.xz'.format(default_bootstrap_id)
     source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
 
-    # Check needed configuration is set
-    pkgpanda_src = do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda')
-    dcos_image_src = do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd())
-
     print("Building dcos-genconf docker container")
     make_genconf_docker(
-        pkgpanda_src,
-        dcos_image_src,
         options.destination_channel,
         default_bootstrap_id)
 
@@ -573,90 +577,74 @@ def do_variable_set_or_exists(env_var, path):
     sys.exit(1)
 
 
-def check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id):
-    def check_is_git_repo(path, identifier):
-        assert(path[-1] != '/')
+def get_git_commit_sha1(path, identifier):
+    assert(path[-1] != '/')
 
-        if not os.path.exists(path + '/.git'):
-            raise ValueError(
-                identifier + "_src must be a git repository containing a .git " +
-                "folder. Given directory " + path + " isn't.")
+    if not os.path.exists(path + '/.git'):
+        raise ValueError(
+            identifier + "_src must be a git repository containing a .git " +
+            "folder. Given directory " + path + " isn't.")
 
-        sha1 = subprocess.check_output(['git', '-C', path, 'rev-parse', 'HEAD']).decode('utf-8')
-        assert len(sha1) > 0
+    sha1 = subprocess.check_output(['git', '-C', path, 'rev-parse', 'HEAD']).decode('utf-8')
+    assert len(sha1) > 0
 
-        return sha1
+    return sha1
 
-    pkgpanda_sha1 = check_is_git_repo(pkgpanda_src, 'pkgpanda')
-    dcos_image_sha1 = check_is_git_repo(dcos_image_src, 'dcos_image')
+
+def make_genconf_docker(channel_name, bootstrap_id):
+    assert len(channel_name) > 0
+    assert len(bootstrap_id) > 0
+
+    # TODO(cmaloney): Move wheel building outside of release.py (release is inside of one of the
+    # packages we build...
+    pkgpanda_src, dcos_image_src = get_src_dirs()
+    wheel_dir = os.getcwd() + '/wheelhouse'
+    print("Building wheels for dcos-image, pkgpanda, and all dependencies")
+
+    # Make the wheels
+    subprocess.check_call(['pip', 'wheel', pkgpanda_src])
+    subprocess.check_call(['pip', 'wheel', dcos_image_src])
+
+    pkgpanda_sha1 = get_git_commit_sha1(pkgpanda_src, 'pkgpanda')
+    dcos_image_sha1 = get_git_commit_sha1(dcos_image_src, 'dcos-image')
 
     docker_tag = dcos_image_sha1[:12] + '-' + pkgpanda_sha1[:12] + '-' + bootstrap_id[:12]
     genconf_tar = "dcos-genconf." + docker_tag + ".tar"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
     bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
 
-    return {
-        'pkgpanda_src': pkgpanda_src,
-        'dcos_image_src': dcos_image_src,
+    metadata = {
         'bootstrap_id': bootstrap_id,
         'docker_tag': docker_tag,
         'genconf_tar': genconf_tar,
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
         'docker_image_name': 'mesosphere/dcos-genconf:' + docker_tag,
-        'dcos_image_commit': dcos_image_sha1
+        'dcos_image_commit': dcos_image_sha1,
+        'channel_name': channel_name
     }
 
+    with tempfile.TemporaryDirectory() as build_dir:
+        assert build_dir[-1] != '/'
 
-def make_build_dir(metadata):
-    tmp_dir = tempfile.TemporaryDirectory()
-    assert tmp_dir.name[-1] != '/'
+        pkgpanda.util.write_string(
+            build_dir + '/Dockerfile',
+            pkgpanda.util.load_string('docker/genconf/Dockerfile.template').format(**metadata))
 
-    # clone the repository dropping git history other than last commit so that it
-    # is still a valid git checkout but we lose any local modifications, and don't
-    # capture any temporary files in the filesystem (package builds, etc).
-    subprocess.check_call([
-        'git',
-        'clone',
-        '--depth=1',
-        'file://' + metadata['pkgpanda_src'],
-        tmp_dir.name + '/pkgpanda'])
+        pkgpanda.util.write_string(
+            'dcos_generate_config.sh',
+            pkgpanda.util.load_string('docker/genconf/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
 
-    subprocess.check_call([
-        'git',
-        'clone',
-        '--depth=1',
-        'file://' + metadata['dcos_image_src'],
-        tmp_dir.name + '/dcos-image'])
+        # Copy across the wheelhouse
+        subprocess.check_call(['cp', '-r', wheel_dir, build_dir + '/wheelhouse'])
 
-    pkgpanda.util.write_string(
-        tmp_dir.name + '/Dockerfile',
-        pkgpanda.util.load_string('docker/genconf/Dockerfile.template').format(**metadata))
-
-    pkgpanda.util.write_string(
-        'dcos_generate_config.sh',
-        pkgpanda.util.load_string('docker/genconf/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
-
-    return tmp_dir
-
-
-def make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, bootstrap_id):
-    assert len(channel_name) > 0
-    assert len(bootstrap_id) > 0
-
-    metadata = check_genconf_prereqs(pkgpanda_src, dcos_image_src, bootstrap_id)
-    metadata['channel_name'] = channel_name
-
-    with make_build_dir(metadata) as build_dir:
         print("Pulling base docker")
         subprocess.check_call(['docker', 'pull', 'python:3.4.3-slim'])
 
         print("Building docker container in " + build_dir)
-        build_bootstrap_path = build_dir + '/' + metadata['bootstrap_filename']
-        subprocess.check_call(['cp', metadata['bootstrap_path'], build_bootstrap_path])
+        subprocess.check_call(['cp', metadata['bootstrap_path'], build_dir + '/' + metadata['bootstrap_filename']])
         subprocess.check_call(['docker', 'build', '-t', metadata['docker_image_name'], build_dir])
         # Clean up the giant bootstrap to save space
-        subprocess.check_call(['rm', build_bootstrap_path])
         pkgpanda.util.write_string('docker-tag', metadata['docker_tag'])
         pkgpanda.util.write_string('docker-tag.txt', metadata['docker_tag'])
 
@@ -684,11 +672,6 @@ def do_create(options):
     print("Creating release on channel:", channel_name)
     print("version tag:", options.tag)
 
-    # TODO(cmaloney): Extract building genconf, checking these variables to a function.
-    # Check needed configuration is set
-    pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
-    dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
-
     # Build packages and generate bootstrap
     print("Building packages")
     # Build the standard docker build container, then build all the packages and bootstrap with it
@@ -710,7 +693,7 @@ def do_create(options):
     # TODO(cmaloney): Allow making a dcos-genconf docker which has a non-default
     # bootstrap tarball inside of it.
     print("Building dcos-genconf docker container")
-    make_genconf_docker(pkgpanda_src, dcos_image_src, channel_name, default_bootstrap_id)
+    make_genconf_docker(channel_name, default_bootstrap_id)
 
     # Calculate the active packages merged from all the bootstraps
     active_packages = set()

@@ -39,8 +39,8 @@ setup(
             'azure/azuredeploy-parameters.json',
             'azure/templates/azure.html',
             'chef/chef.yaml',
-            'vagrant/make_vagrant',
             'vagrant/config.rb',
+            'vagrant/make_dcos_vagrant.sh.in',
             'vagrant/Vagrantfile']
     },
     zip_safe=False

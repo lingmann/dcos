@@ -19,7 +19,7 @@ def make_vagrant(gen_out):
     cloud_config = gen_out.utils.add_services(cloud_config)
     cloud_config = gen_out.utils.add_roles(cloud_config, ['master', 'slave', 'vagrant'])
 
-    vagrant_script = gen.env.get_template('vagrant/make_vagrant').render({
+    vagrant_script = gen.env.get_template('vagrant/make_dcos_vagrant.sh.in').render({
         'user_data_body': gen_out.utils.render_cloudconfig(cloud_config),
         'vagrantfile_body': resource_string('gen', 'vagrant/Vagrantfile').decode(),
         'config_body': resource_string('gen', 'vagrant/config.rb').decode(),

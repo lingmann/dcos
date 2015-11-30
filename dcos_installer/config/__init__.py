@@ -31,7 +31,7 @@ cluster_config:
   cluster_name: 'Mesosphere: The Data Center Operating System'
   config_dir: 
   ip_detect_path: 
-  num_masters: 3
+  num_masters: 
   master_discovery: static
   master_list: 
   exhibitor_storage_backend: zookeeper
@@ -48,7 +48,7 @@ cluster_config:
     - 8.8.4.4
 
 ssh_config:
-  agent_list: 
+  target_hosts: 
   ssh_user: 
   ssh_port: 22
   ssh_key_path: 
@@ -87,6 +87,10 @@ ssh_config:
         if len(self.overrides) > 0:
             for key, value in self.overrides.items():
                 self[key] = value
+
+        # Update num_masters 
+        if self['cluster_config']['master_list']:
+            self['cluster_config']['num_masters'] = len(self['cluster_config']['master_list'])
 
 
     def validate(self):

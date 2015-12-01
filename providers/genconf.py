@@ -2,15 +2,16 @@
 """Generates DCOS packages and configuration."""
 
 import argparse
+import logging as log
 import os
 import subprocess
 import sys
+from argparse import RawTextHelpFormatter
+from subprocess import CalledProcessError
+
 import gen
 import providers.bash as bash
 import providers.chef as chef
-import logging as log
-from argparse import RawTextHelpFormatter
-from subprocess import CalledProcessError
 
 
 def do_genconf(options):

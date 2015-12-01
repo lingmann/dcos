@@ -2,17 +2,18 @@
 """AWS Image Creation, Management, Testing"""
 
 import argparse
-import botocore.exceptions
 import json
 import re
-import requests
 import sys
-import yaml
 from copy import deepcopy
 
+import botocore.exceptions
+import requests
+import yaml
+
 import gen
-from providers.aws_config import session_dev, session_prod
 import providers.util as util
+from providers.aws_config import session_dev, session_prod
 
 aws_region_names = [
     {

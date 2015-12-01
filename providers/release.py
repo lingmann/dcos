@@ -8,22 +8,23 @@ Co-ordinates across all providers.
 """
 
 import abc
-import azure.storage
-import azure.storage.blob
 import argparse
-import botocore.client
 import copy
 import importlib
 import json
 import mimetypes
 import os.path
-import pkgpanda
-import pkgpanda.build
-import pkgpanda.util
 import subprocess
 import sys
 import tempfile
 from functools import partial, partialmethod
+
+import azure.storage
+import azure.storage.blob
+import botocore.client
+import pkgpanda
+import pkgpanda.build
+import pkgpanda.util
 
 import providers.aws_config as aws_config
 import providers.util as util

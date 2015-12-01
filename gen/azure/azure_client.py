@@ -2,11 +2,11 @@
 """Azure Image Creation, Management, Testing"""
 
 import os
-
 import random
-import requests
 import time
 import uuid
+
+import requests
 
 OAUTH_ENDPOINT_TEMPLATE = 'https://login.microsoftonline.com/{}/oauth2/token'
 

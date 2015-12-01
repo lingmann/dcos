@@ -5,8 +5,9 @@ import json
 import re
 import sys
 import urllib
-import yaml
 from copy import deepcopy
+
+import yaml
 
 import gen
 import providers.util as util

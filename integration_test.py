@@ -1,17 +1,17 @@
-import bs4
 import collections
-import dns.exception
-import dns.resolver
 import json
-import kazoo.client
 import logging
 import os
-import pytest
-import requests
-import retrying
 import urllib.parse
 import uuid
 
+import bs4
+import dns.exception
+import dns.resolver
+import kazoo.client
+import pytest
+import requests
+import retrying
 
 LOG_LEVEL = logging.INFO
 TEST_APP_NAME_FMT = '/integration-test-{}'

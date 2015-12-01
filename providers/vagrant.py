@@ -9,9 +9,10 @@ Use cases:
 2) Generate a make_vagrant script which can be shipped to customers to launch
    basic vagrant clusters"""
 
+from pkg_resources import resource_string
+
 import gen
 import providers.util as util
-from pkg_resources import resource_string
 
 
 def make_vagrant(gen_out):

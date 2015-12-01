@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Generates a bash script for installing DCOS On-Prem."""
 
-import gen
 from pkgpanda.util import write_string
+
+import gen
 import providers.util as util
 
 

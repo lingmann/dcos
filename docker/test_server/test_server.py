@@ -89,6 +89,7 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
             "search_hit_leader": get_hostbyname_json("leader"),
             "always_miss": get_hostbyname_json("notasubdomainofmesos"),
             "always_hit_leader": get_hostbyname_json("leader.mesos"),
+            "test_uuid": os.environ[TEST_UUID_VARNAME],
         }
         self._send_reply(data)
 

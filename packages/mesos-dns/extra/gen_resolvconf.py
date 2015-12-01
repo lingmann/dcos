@@ -7,6 +7,8 @@ import json
 import codecs
 import random
 import urllib.request
+from socket import inet_aton, error as socket_error
+from subprocess import check_output, CalledProcessError
 
 import dns.query
 
@@ -20,6 +22,24 @@ if len(sys.argv) != 2:
 resolvconf_path = sys.argv[1]
 dns_test_query = 'master.mesos'
 dns_timeout = 5
+
+
+# TODO(cmaloney): Pull out into a utility library. Copied in both start_exhibitor.py
+# and here.
+def invoke_detect_ip():
+    try:
+        ip = check_output(
+            ['/opt/mesosphere/bin/detect_ip']).strip().decode('utf-8')
+    except CalledProcessError as e:
+        print("check_output exited with {}".format(e))
+        sys.exit(1)
+    try:
+        inet_aton(ip)
+        return ip
+    except socket_error as e:
+        print(
+            "inet_aton exited with {}. {} is not a valid IPv4 address".format(e, ip))
+        sys.exit(1)
 
 
 def get_masters_exhibitor():
@@ -83,9 +103,14 @@ final_nameservers = []
 
 # If try_localhost, always give that as first option
 if os.environ.get('TRY_LOCALHOST', "false") == "true":
-    if check_server("127.0.0.1"):
-        final_nameservers.append("127.0.0.1")
+    ip = invoke_detect_ip()
+    if check_server(ip):
+        final_nameservers.append(ip)
         needed_server_count -= 1
+
+    # Make sure we don't add the same IP twice
+    if ip in up_master_nameservers:
+        up_master_nameservers.remove(ip)
 
 # Pick up to two servers at random, giving us a max three total servers per
 # resolv.h MAXNS, with a good fallback dns server always present as the last in

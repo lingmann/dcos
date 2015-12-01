@@ -18,6 +18,8 @@ def write_str(filename, contents):
         f.write(contents)
 
 
+# TODO(cmaloney): Pull out into a utility library. Copied in both gen_resolvconf.py
+# and here.
 def invoke_detect_ip():
     try:
         ip = check_output(

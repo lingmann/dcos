@@ -23,13 +23,18 @@ def cluster():
     assert 'DCOS_DNS_ADDRESS' in os.environ
     assert 'MASTER_HOSTS' in os.environ
     assert 'SLAVE_HOSTS' in os.environ
+    assert 'DNS_SEARCH' in os.environ
+
+    # dns_search must be true or false (prevents misspellings)
+    assert os.environ['DNS_SEARCH'] in ['true', 'false']
 
     _setup_logging()
 
     return Cluster(dcos_uri=os.environ['DCOS_DNS_ADDRESS'],
                    masters=os.environ['MASTER_HOSTS'].split(','),
                    slaves=os.environ['SLAVE_HOSTS'].split(','),
-                   registry=os.environ['REGISTRY_HOST'],)
+                   registry=os.environ['REGISTRY_HOST'],
+                   dns_search_set=os.environ['DNS_SEARCH'])
 
 
 def _setup_logging():
@@ -137,11 +142,12 @@ class Cluster:
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
 
-    def __init__(self, dcos_uri, masters, slaves, registry):
+    def __init__(self, dcos_uri, masters, slaves, registry, dns_search_set):
         self.masters = sorted(masters)
         self.slaves = sorted(slaves)
         self.zk_hostports = ','.join(':'.join([host, '2181']) for host in self.masters)
         self.registry = registry
+        self.dns_search_set = dns_search_set == 'true'
 
         # URI must include scheme
         assert dcos_uri.startswith('http')
@@ -561,6 +567,49 @@ def test_if_service_discovery_works(cluster):
         # docker0 interface ip. This makes this assertion useless, so we skip
         # it and rely on matching test uuid between containers only.
         assert r_data['my_ip'] == service_points[0].host
+
+    cluster.destroy_marathon_app(app_definition['id'])
+
+
+def test_if_search_is_working(cluster):
+    """Test if custom set search is working.
+
+    Verifies that a marathon app running on the cluster can resolve names using
+    searching the "search" the cluster was launched with (if any). It also tests
+    that absolute searches still work, and search + things that aren't
+    subdomains fails properly.
+
+    The application being deployed is a simple http server written in python.
+    Please check test/dockers/test_server for more details.
+    """
+    # Launch the app
+    app_definition, test_uuid = cluster.get_base_testapp_definition()
+    service_points = cluster.deploy_marathon_app(app_definition)
+
+    # Get the status
+    r = requests.get('http://{}:{}/dns_search'.format(service_points[0].host,
+                                                      service_points[0].port))
+    if r.status_code != 200:
+        msg = "Test server replied with non-200 reply: '{0} {1}. "
+        msg += "Detailed explanation of the problem: {2}"
+        pytest.fail(msg.format(r.status_code, r.reason, r.text))
+
+    r_data = r.json()
+
+    # Make sure we hit the app we expected
+    assert r_data['test_uuid'] == test_uuid
+
+    expected_error = {'error': '[Errno -2] Name or service not known'}
+
+    # Check that result matches expectations for this cluster
+    if cluster.dns_search_set:
+        assert r_data['search_hit_leader'] in cluster.masters
+        assert r_data['always_hit_leader'] in cluster.masters
+        assert r_data['always_miss'] == expected_error
+    else:  # No dns search, search hit should miss.
+        assert r_data['search_hit_leader'] == expected_error
+        assert r_data['always_hit_leader'] in cluster.masters
+        assert r_data['always_miss'] == expected_error
 
     cluster.destroy_marathon_app(app_definition['id'])
 

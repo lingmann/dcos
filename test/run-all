@@ -69,19 +69,6 @@ clean_all_dockers
 cleanup_vagrant_leftovers
 trap clean_all_dockers EXIT
 
-# Build a docker container for running py.test inside of.
-echo "Building py.test container"
-docker build -t py.test - < ../docker/py.test/Dockerfile
-
-# Provide a local docker registry for testing purposes:
-echo "Running registry container"
-docker run -d -p 5000:5000 --restart=always --name registry registry:2
-
-# Build and push test server to local registry:
-echo "Building&pushing test_server container"
-docker build -t 127.0.0.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
-docker push 127.0.0.1:5000/test_server
-
 mkdir -p genconf
 
 cp ip-detect genconf/ip-detect
@@ -111,6 +98,21 @@ bash ../dcos_generate_config.sh --installer-format $PLATFORM
 
 echo "Starting Vagrant VMs"
 vagrant up --provider=libvirt --no-parallel --debug
+
+# Prep for the integration test after vagrant up so that it happens in parallel
+# with DCOS assembling itself to save some time.
+# Build a docker container for running py.test inside of.
+echo "Building py.test container"
+docker build -t py.test - < ../docker/py.test/Dockerfile
+
+# Provide a local docker registry for testing purposes:
+echo "Running registry container"
+docker run -d -p 5000:5000 --restart=always --name registry registry:2
+
+# Build and push test server to local registry:
+echo "Building&pushing test_server container"
+docker build -t 127.0.0.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
+docker push 127.0.0.1:5000/test_server
 
 echo "Running integration test"
 docker run -v $PWD/../integration_test.py:/integration_test.py \

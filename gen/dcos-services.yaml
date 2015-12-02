@@ -5,6 +5,8 @@
     Before=dcos.target
     [Service]
     Type=oneshot
+    StandardOutput=journal+console
+    StandardError=journal+console
     ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
     ExecStart=/usr/bin/ln -sf /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
 - name: dcos-download.service
@@ -17,6 +19,8 @@
     [Service]
     EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
     Type=oneshot
+    StandardOutput=journal+console
+    StandardError=journal+console
     ExecStartPre=/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
     ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
     ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
@@ -31,6 +35,8 @@
     After=dcos-download.service
     [Service]
     Type=oneshot
+    StandardOutput=journal+console
+    StandardError=journal+console
     EnvironmentFile=/opt/mesosphere/environment
     ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
     [Install]

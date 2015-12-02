@@ -57,7 +57,8 @@ def load_template(name):
 # NOTE: Strict undefined behavior since we're doing generation / validation here.
 env = jinja2.Environment(
     loader=jinja2.FunctionLoader(load_template),
-    undefined=jinja2.StrictUndefined)
+    undefined=jinja2.StrictUndefined,
+    keep_trailing_newline=True)
 
 
 def add_roles(cloudconfig, roles):

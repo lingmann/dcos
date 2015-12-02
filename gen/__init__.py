@@ -33,6 +33,8 @@ from pkgpanda.util import make_tar
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
+import gen.template
+
 # List of all roles all templates should have.
 role_names = {"master", "slave", "slave_public"}
 
@@ -159,6 +161,9 @@ def render_templates(template_names, arguments):
             # current mixin doesn't have it, which is fine.
             try:
                 rendered_template = env.get_template(template).render(arguments)
+                new_rendered_template = gen.template.parse_resources(template).render(arguments)
+                assert rendered_template == new_rendered_template
+
             except FileNotFoundError:
                 continue
 
@@ -193,6 +198,15 @@ def get_parameters(template_dict):
             try:
                 ast = env.parse(*env.loader.get_source(env, template))
                 template_parameters = jinja2.meta.find_undeclared_variables(ast)
+
+                new_tmpl = gen.template.parse_resources(template)
+                new_parameters = new_tmpl.get_scoped_arguments()
+
+                assert new_parameters == {
+                    'variables': set(template_parameters),
+                    'sub_scopes': {}
+                }
+
                 parameters |= set(template_parameters)
             except FileNotFoundError as ex:
                 # Needs to be implemented with a logger

@@ -79,8 +79,8 @@ docker run -d -p 5000:5000 --restart=always --name registry registry:2
 
 # Build and push test server to local registry:
 echo "Building&pushing test_server container"
-docker build -t 172.17.10.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
-docker push 172.17.10.1:5000/test_server
+docker build -t 127.0.0.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
+docker push 127.0.0.1:5000/test_server
 
 mkdir -p genconf
 

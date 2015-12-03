@@ -94,7 +94,7 @@ echo "Starting Zookeeper"
 docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
 
 echo "Generating config packages"
-bash ../dcos_generate_config.sh --installer-format $PLATFORM
+bash ../dcos_generate_config.sh
 
 echo "Starting Vagrant VMs"
 vagrant up --provider=libvirt --no-parallel --debug

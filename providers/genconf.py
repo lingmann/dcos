@@ -11,7 +11,6 @@ from subprocess import CalledProcessError
 
 import gen
 import providers.bash as bash
-import providers.chef as chef
 
 
 def do_genconf(options):
@@ -36,14 +35,7 @@ def do_genconf(options):
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
 
-    # Generate installation-type specific configuration
-    if options.installer_format == 'bash':
-        gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'])
-    elif options.installer_format == 'chef':
-        gen_out = do_provider(gen_options, chef, ['chef', 'centos', 'onprem'])
-    else:
-        log.error("No such installer format: %s", options.installer_format)
-        sys.exit(1)
+    gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'])
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
@@ -134,14 +126,6 @@ parameters that the input paramters were expanded to as DCOS configuration.
 '''
     parser = argparse.ArgumentParser(
         description=desc, formatter_class=RawTextHelpFormatter)
-
-    # Whether to output chef or bash
-    parser.add_argument(
-        '--installer-format',
-        default='bash',
-        type=str,
-        choices=['bash', 'chef'],
-        help='Type of installation. Bash or chef currently supported.')
 
     # Log level
     parser.add_argument(

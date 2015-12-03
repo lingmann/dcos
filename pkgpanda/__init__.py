@@ -33,7 +33,7 @@ from pkgpanda.util import extract_tarball, if_exists, load_json, write_json, wri
 reserved_env_vars = ["LD_LIBRARY_PATH", "PATH"]
 env_header = """# Pandapkg provided environment variables
 LD_LIBRARY_PATH={0}/lib
-PATH={0}/bin:/usr/bin\n\n"""
+PATH={0}/bin:/usr/bin:/bin:/sbin\n\n"""
 env_export_header = """# Pandapkg provided environment variables
 export LD_LIBRARY_PATH={0}/lib
 export PATH="{0}/bin:$PATH"\n\n"""

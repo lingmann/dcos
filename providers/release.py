@@ -461,7 +461,8 @@ def get_provider_data(repository_url, bootstrap_dict, genconfs, tag, channel_nam
             gen_arguments=copy.deepcopy({
                 'bootstrap_id': bootstrap_dict[None],
                 'channel_name': tag,
-                'bootstrap_url': bootstrap_url
+                'bootstrap_url': bootstrap_url,
+                'provider': name
             }))
 
     # Add genconf scripts for all bootstraps.

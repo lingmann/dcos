@@ -1,4 +1,4 @@
-write_files:
+root:
   - path: /etc/mesosphere/setup-flags/repository-url
     permissions: 0644
     owner: root

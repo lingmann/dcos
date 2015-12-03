@@ -1,4 +1,4 @@
-write_files:
+package:
   - path: /etc_master/dns_config_master
     content: |
       TRY_LOCALHOST=true

@@ -74,7 +74,7 @@
     "privateSubnetPrefix": "10.0.0.0/22",
     "addressPrefix": "10.0.0.0/16",
     "vmSize": "Standard_A5",
-    "coreosVersion": "766.4.0",
+    "coreosVersion": "835.8.0",
     "vmsPerStorageAccount": 10,
     "storageAccountsCount": "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),variables('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),1)))]",
     "storageAccountType": "Standard_LRS",

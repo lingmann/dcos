@@ -2,6 +2,7 @@
 """Generates DCOS packages and configuration."""
 
 import argparse
+import json
 import logging as log
 import os
 import subprocess
@@ -9,10 +10,39 @@ import sys
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
-from pkgpanda.util import load_json
+import yaml
 
 import gen
 import providers.bash as bash
+
+
+def stringify_dict(data):
+    """
+    For a given set of structured data, return a list as a json array in
+    but in string format so it can be ingested by gen.
+    """
+    for key, values in data.items():
+        if type(values) == list:
+            log.debug("Caught list, transforming to JSON string: %s", list)
+            data[key] = json.dumps(values)
+        else:
+            pass
+
+    log.debug("Stringified data: %s", data)
+    return data
+
+
+# NOTE: yaml_load_content can be a filename or a yaml document because yaml.load
+# takes both.
+def load_yaml_stringify(yaml_load_content):
+    # Load config
+    config = yaml.load(yaml_load_content)
+
+    # Error if top level isn't a yaml dictionary
+    if not isinstance(config, dict):
+        log.error("YAML configuration must be a dictionary at the top level.")
+        sys.exit(1)
+    return stringify_dict(config)
 
 
 def do_genconf(options):
@@ -28,15 +58,16 @@ def do_genconf(options):
     if not options.interactive:
         # Load in /genconf/config.json arguments
         try:
-            user_arguments = load_json("/genconf/config.json")
+            user_arguments = load_yaml_stringify(open("/genconf/config.yaml").read().decode())
 
             # Check a value always / only in computed configs to give a cleaner
             # message to users when they try just feeding a computed config back
             # into the generation library.
             if 'dcos_image_commit' in user_arguments:
                 log.error(
-                    "The configuration saved by --save-config cannot be fed directly back as `--config`. "
-                    "It is the full computed configuration used to flesh out the various templates, and contains "
+                    "The expanded configuration produced by the gen library cannot be fed directly"
+                    "back into this library as a config file. It is the full computed "
+                    "configuration used to flesh out the various templates, and contains "
                     "multiple derived / calculated values that are asserted to be calculated "
                     "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
                     "before the saved config can be used.")

@@ -31,7 +31,6 @@ def parse_ip(ip):
 
 
 def run_cmd_return_tuple(host, cmd):
-    print(cmd)
     exec = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdout, stderr = exec.communicate()
     return {
@@ -65,6 +64,9 @@ class MultiRunner():
         port_option = '-p' if bin_name is self.ssh_bin else '-P'
         return [
             bin_name,
+            '-oConnectTimeout=3',
+            '-oStrictHostKeyChecking=no',
+            '-oUserKnownHostsFile=/dev/null',
             '{}{}'.format(port_option, host['port']),
             '-i', self.ssh_key_path
         ]

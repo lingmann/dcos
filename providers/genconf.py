@@ -9,6 +9,8 @@ import sys
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
+from pkgpanda.util import load_json
+
 import gen
 import providers.bash as bash
 
@@ -22,8 +24,30 @@ def do_genconf(options):
     # in gen/__init__.py from our genconf.py commands
     gen_options = gen.get_options_object()
     gen_options.log_level = options.log_level
+    user_arguments = {}
     if not options.interactive:
-        gen_options.config = "/genconf/config.json"
+        # Load in /genconf/config.json arguments
+        try:
+            user_arguments = load_json("/genconf/config.json")
+
+            # Check a value always / only in computed configs to give a cleaner
+            # message to users when they try just feeding a computed config back
+            # into the generation library.
+            if 'dcos_image_commit' in user_arguments:
+                log.error(
+                    "The configuration saved by --save-config cannot be fed directly back as `--config`. "
+                    "It is the full computed configuration used to flesh out the various templates, and contains "
+                    "multiple derived / calculated values that are asserted to be calculated "
+                    "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
+                    "before the saved config can be used.")
+                sys.exit(1)
+        except FileNotFoundError:
+            log.error("Specified config file '" + options.config + "' does not exist")
+            sys.exit(1)
+        except ValueError as ex:
+            log.error("%s", ex)
+            sys.exit(1)
+
     gen_options.output_dir = options.output_dir
 
     if options.interactive:
@@ -35,13 +59,13 @@ def do_genconf(options):
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
 
-    gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'])
+    gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'], user_arguments)
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
 
 
-def do_provider(options, provider_module, mixins):
+def do_provider(options, provider_module, mixins, user_arguments):
     # We set the channel_name, bootstrap_id in env as to not expose it to users but still make it switchable
     if 'CHANNEL_NAME' in os.environ:
         channel_name = os.environ['CHANNEL_NAME']
@@ -55,12 +79,25 @@ def do_provider(options, provider_module, mixins):
         log.error("BOOTSTRAP_ID must be set in environment to run.")
         sys.exit(1)
 
+    arguments = {
+        'ip_detect_filename': '/genconf/ip-detect',
+        'channel_name': channel_name,
+        'bootstrap_id': bootstrap_id}
+
+    # Make sure there are no overlaps between arguments and user_arguments.
+    # TODO(cmaloney): Switch to a better dictionary diff here which will
+    # show all the errors at once.
+    for k in user_arguments.keys():
+        if k in arguments.keys():
+            log.error("User config contains option `{}` already ".format(k) +
+                      "provided by caller of gen.generate()")
+            sys.exit(1)
+
+    # update arguments with the user_arguments
+    arguments.update(user_arguments)
+
     gen_out = gen.generate(
-        arguments={
-            'ip_detect_filename': '/genconf/ip-detect',
-            'channel_name': channel_name,
-            'bootstrap_id': bootstrap_id
-        },
+        arguments=arguments,
         options=options,
         mixins=mixins,
         extra_cluster_packages=['onprem-config']

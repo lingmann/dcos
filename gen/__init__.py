@@ -306,9 +306,6 @@ def write_to_non_taken(base_filename, json):
 
 
 def add_arguments(parser):
-    parser.add_argument('--config',
-                        type=str,
-                        help='JSON configuration file to load')
     parser.add_argument('--assume-defaults', action='store_true')
     parser.add_argument('--non-interactive', action='store_true')
     parser.add_argument(
@@ -323,7 +320,6 @@ def add_arguments(parser):
 
 def get_options_object():
     return Bunch({
-        'config': None,
         'assume_defaults': True,
         'non_interactive': True,
         'log_level': 'info',
@@ -576,42 +572,6 @@ def do_generate(
     can_calc = dict()
     validate_fn = list()
     defaults = dict()
-
-    # Load user specified arguments.
-    # TODO(cmaloney): Repeating a set argument should be a hard error.
-    if options.config:
-        try:
-            user_arguments = load_json(options.config)
-
-            # Check a value always / only in computed configs to give a cleaner
-            # message to users when they try just feeding a computed config back
-            # into the generation library.
-            if 'dcos_image_commit' in user_arguments:
-                log.error(
-                    "The configuration saved by --save-config cannot be fed directly back as `--config`. "
-                    "It is the full computed configuration used to flesh out the various templates, and contains "
-                    "multiple derived / calculated values that are asserted to be calculated "
-                    "(dcos_image_commit, master_quorum, etc.). All computed parameters need to be removed "
-                    "before the saved config can be used.")
-                sys.exit(1)
-
-            # Make sure there are no overlaps between arguments and user_arguments.
-            # TODO(cmaloney): Switch to a better dictionary diff here which will
-            # show all the errors at once.
-            for k in user_arguments.keys():
-                if k in arguments.keys():
-                    log.error("User config contains option `{}` already ".format(k) +
-                              "provided by caller of gen.generate()")
-                    sys.exit(1)
-
-            # update arguments with the user_arguments
-            arguments.update(user_arguments)
-        except FileNotFoundError:
-            log.error("Specified config file '" + options.config + "' does not exist")
-            sys.exit(1)
-        except ValueError as ex:
-            log.error("%s", ex)
-            sys.exit(1)
 
     # Make sure all user provided arguments are strings.
     validate_arguments_strings(arguments)

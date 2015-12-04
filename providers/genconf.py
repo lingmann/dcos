@@ -22,7 +22,7 @@ def stringify_dict(data):
     but in string format so it can be ingested by gen.
     """
     for key, values in data.items():
-        if type(values) == list:
+        if isinstance(values, list):
             log.debug("Caught list, transforming to JSON string: %s", list)
             data[key] = json.dumps(values)
         else:
@@ -34,15 +34,15 @@ def stringify_dict(data):
 
 # NOTE: yaml_load_content can be a filename or a yaml document because yaml.load
 # takes both.
-def load_yaml_stringify(yaml_load_content):
+def load_yaml_dict(yaml_str):
     # Load config
-    config = yaml.load(yaml_load_content)
+    config = yaml.load(yaml_str)
 
     # Error if top level isn't a yaml dictionary
     if not isinstance(config, dict):
         log.error("YAML configuration must be a dictionary at the top level.")
         sys.exit(1)
-    return stringify_dict(config)
+    return config
 
 
 def do_genconf(options):
@@ -58,7 +58,17 @@ def do_genconf(options):
     if not options.interactive:
         # Load in /genconf/config.json arguments
         try:
-            user_arguments = load_yaml_stringify(open("/genconf/config.yaml").read().decode())
+            config = load_yaml_dict(open("/genconf/config.yaml").read())
+
+            if 'cluster_config' not in config:
+                log.error('Cluster configuration file must contain a section "cluster_config" '
+                          'that contains all the configuration for DCOS in the cluster.')
+                sys.exit(1)
+            if not isinstance(config['cluster_config'], dict):
+                log.error('"cluster_config" section of configuration must contain a YAML dictionary.')
+                sys.exit(1)
+
+            user_arguments = stringify_dict(config['cluster_config'])
 
             # Check a value always / only in computed configs to give a cleaner
             # message to users when they try just feeding a computed config back

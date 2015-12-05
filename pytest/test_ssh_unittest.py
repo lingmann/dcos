@@ -150,8 +150,9 @@ class TestSSHRunner(unittest.TestCase):
                                               ssh_key_path='/home/ubuntu/.ssh/id_rsa')
         mocked_multirunner().run.assert_called_with(['uname', '-a'])
 
+    @unittest.mock.patch('time.strftime')
     @unittest.mock.patch('ssh.helpers.dump_host_results')
-    def test_save_log(self, mocked_dump_host_results):
+    def test_save_log(self, mocked_dump_host_results, mocked_time_strftime):
         mock_struct_data = [
             {
                 'host': {
@@ -159,7 +160,44 @@ class TestSSHRunner(unittest.TestCase):
                 }
             }
         ]
+        mocked_time_strftime.return_value = '123'
         self.ssh_runner.save_logs(mock_struct_data)
+        mocked_dump_host_results.assert_called_with('/tmp', '127.0.0.1',
+                                                    {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}})
+
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
+    def test_wrapped_run_no_cache(self, mocked_save_logs):
+        func = lambda: [{'returncode': 0}]
+        self.ssh_runner.use_cache = False
+        self.ssh_runner.wrapped_run(func)
+        mocked_save_logs.assert_called_with([{'returncode': 0}])
+
+    @unittest.mock.patch('json.dump')
+    @unittest.mock.patch('json.load')
+    @unittest.mock.patch('builtins.open')
+    @unittest.mock.patch('os.path.isfile')
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
+    def test_wrapped_run_use_cache(self, mocked_save_logs, mocked_isfile, mocked_open, mocked_json_load,
+                                   mocked_json_dump):
+        func = lambda: [{'returncode': 0, 'host': {'ip': '127.0.0.1'}}]
+        self.ssh_runner.use_cache = True
+        mocked_isfile.return_value = True
+
+        self.ssh_runner.wrapped_run(func)
+        mocked_save_logs.assert_called_with([{'returncode': 0, 'host': {'ip': '127.0.0.1'}}])
+        assert mocked_open.call_count == 2
+        mocked_open.assert_any_call('./.cache.json')
+        mocked_open.assert_called_with('./.cache.json', 'w')
+        assert mocked_json_load.call_count == 1
+        assert mocked_json_dump.call_count == 1
+
+    @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy_recursive')
+    @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy')
+    def test_copy_cmd(self, mocked_copy, mocked_copy_recursive):
+        self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp')
+        mocked_copy.assert_called_with('/tmp/test.txt', '/tmp')
+        self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp', recursive=True)
+        mocked_copy_recursive.assert_called_with('/tmp/test.txt', '/tmp')
 
 
 if __name__ == '__main__':

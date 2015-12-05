@@ -1,0 +1,107 @@
+import getpass
+import os
+import random
+import socket
+import subprocess
+import threading
+import time
+import uuid
+
+import pkgpanda.util
+
+from ssh.ssh_runner import MultiRunner
+
+sshd_config = [
+    'Protocol 1,2',
+    'RSAAuthentication yes',
+    'PubkeyAuthentication yes',
+    'StrictModes no'
+]
+
+
+def start_random_sshd_servers(count, workspace):
+    # Get unique number of vailable TCP ports on the system
+    sshd_ports = []
+    for try_port in random.sample(range(10000, 11000), count):
+        while not is_free_port(try_port):
+            try_port += 1
+        sshd_ports.append(try_port)
+
+    # Run sshd servers in parallel
+    for sshd_server_index in range(count):
+        t = threading.Thread(target=create_ssh_server, args=(sshd_ports[sshd_server_index], workspace))
+        t.start()
+    return sshd_ports
+
+
+def is_free_port(port):
+    sock = socket.socket()
+    try:
+        sock.connect(('127.0.0.1', port))
+        return False
+    except socket.error:
+        return True
+
+
+def create_ssh_server(port, workspace):
+    try:
+        subprocess.check_call(['/usr/sbin/sshd', '-p{}'.format(port), '-f{}'.format(workspace + '/sshd_config'), '-d'])
+    except subprocess.CalledProcessError:
+        pass
+
+
+def generate_fixtures(workspace):
+    subprocess.check_call(['ssh-keygen', '-f', workspace + '/host_key', '-t', 'rsa', '-N', ''])
+
+    local_sshd_config = sshd_config.copy()
+    local_sshd_config.append('AuthorizedKeysFile {}'.format(workspace + '/host_key.pub'))
+    local_sshd_config.append('HostKey {}'.format(workspace + '/host_key'))
+
+    with open(workspace + '/sshd_config', 'w') as fh:
+        fh.writelines(['{}\n'.format(line) for line in local_sshd_config])
+
+    assert os.path.isfile(os.path.join(workspace, 'host_key'))
+    assert os.path.isfile(os.path.join(workspace, 'host_key.pub'))
+    assert os.path.isfile(os.path.join(workspace, 'sshd_config'))
+
+
+def test_ssh(tmpdir):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(20, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(3)
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key')
+    results = runner.run(['uname', '-a'])
+    assert len(results) == 20
+    for result in results:
+        assert result['returncode'] == 0, result['stderr']
+        assert result['host']['ip'] == '127.0.0.1'
+        assert result['host']['port'] in sshd_ports
+        assert '/usr/bin/ssh' in result['cmd']
+        assert 'uname' in result['cmd']
+
+
+def test_scp(tmpdir):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(1)
+
+    id = uuid.uuid4().hex
+    pkgpanda.util.write_string(workspace + '/pilot.txt', id)
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key')
+    copy_results = runner.copy(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
+    assert os.path.isfile(workspace + '/pilot.txt.copied')
+    assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
+    for result in copy_results:
+        assert result['returncode'] == 0, result['stderr']
+        assert result['host']['ip'] == '127.0.0.1'
+        assert result['host']['port'] in sshd_ports
+        assert '/usr/bin/scp' in result['cmd']
+        assert workspace + '/pilot.txt' in result['cmd']

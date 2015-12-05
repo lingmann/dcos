@@ -559,10 +559,7 @@ def do_generate(
         options,
         mixins,
         extra_templates,
-        arguments,
-        extra_cluster_packages):
-    assert isinstance(extra_cluster_packages, list)
-    assert not isinstance(extra_cluster_packages, str)
+        arguments):
 
     # TODO(cmaloney): Remove flattening and teach lower code to operate on list
     # of mixins.
@@ -581,8 +578,7 @@ def do_generate(
     assert None not in mixins
 
     cluster_packages = list(sorted(set(
-        ['dcos-config', 'dcos-detect-ip', 'dcos-metadata']
-        + extra_cluster_packages)))
+        ['dcos-config', 'dcos-detect-ip', 'dcos-metadata'])))
     core_templates = ['cloud-config', 'dcos-services']
 
     # Add the empty mixin so we pick up top-level config.
@@ -797,9 +793,7 @@ def generate(
         # Arbitrary jinja template to parse
         extra_templates=dict(),
         # config.json parameters
-        arguments=dict(),
-        # Additional YAML to load and merge into pkgpanda
-        extra_cluster_packages=[]):
+        arguments=dict()):
     try:
         # Set the logging level
         if options.log_level == "debug":
@@ -813,7 +807,7 @@ def generate(
             sys.exit(1)
 
         log.info("Generating configuration files...")
-        return do_generate(options, mixins, extra_templates, arguments, extra_cluster_packages)
+        return do_generate(options, mixins, extra_templates, arguments)
     except jinja2.TemplateSyntaxError as ex:
         log.error("Jinja2 TemplateSyntaxError")
         log.error("{}:{} - {}".format(

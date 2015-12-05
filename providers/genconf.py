@@ -141,8 +141,7 @@ def do_provider(options, provider_module, mixins, user_arguments):
     gen_out = gen.generate(
         arguments=arguments,
         options=options,
-        mixins=mixins,
-        extra_cluster_packages=['onprem-config']
+        mixins=mixins
         )
     provider_module.generate(gen_out, options.output_dir)
     return gen_out

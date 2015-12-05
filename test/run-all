@@ -72,18 +72,22 @@ trap clean_all_dockers EXIT
 mkdir -p genconf
 
 cp ip-detect genconf/ip-detect
-cat <<EOF > "genconf/config.json"
-{
-  "cluster_name":"test_cluster",
-  "bootstrap_url":"http://$HOST_IP:8080",
-  "dns_search": "mesos",
-  "resolvers":"[\"8.8.8.8\"]",
-  "exhibitor_storage_backend": "zookeeper",
-  "exhibitor_zk_hosts": "$HOST_IP:2181",
-  "exhibitor_zk_path": "/test-cluster-discovery",
-  "master_discovery": "static",
-  "master_list": "[\"172.17.10.101\", \"172.17.10.102\", \"172.17.10.103\"]"
-}
+cat <<EOF > "genconf/config.yaml"
+---
+cluster_config:
+  cluster_name: test_cluster
+  bootstrap_url: http://$HOST_IP:8080
+  dns_search: mesos
+  resolvers:
+    - 8.8.8.8
+  exhibitor_storage_backend: zookeeper
+  exhibitor_zk_hosts: $HOST_IP:2181
+  exhibitor_zk_path: /test-cluster-discovery
+  master_discovery: static
+  master_list:
+    - 172.17.10.101
+    - 172.17.10.102
+    - 172.17.10.103
 EOF
 
 echo "Starting Nginx"

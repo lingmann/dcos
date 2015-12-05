@@ -1,3 +1,8 @@
+root:
+  - path: /etc/mesosphere/cluster-id
+    permissions: "0644"
+    content: |
+      { "Ref" : "AWS::StackId" }
 package:
   - path: /pkginfo.json
     content: |

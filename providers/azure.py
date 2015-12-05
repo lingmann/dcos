@@ -117,6 +117,11 @@ def gen_templates(user_args, options):
         mixins=['azure', 'coreos'],
         # jinja template
         arguments=user_args,
+        cc_package_files=[
+            '/etc/dns_config',
+            '/etc/exhibitor',
+            '/etc/exhibitor.properties',
+            '/etc/mesos-master-provider']
         )
 
     # Add general services

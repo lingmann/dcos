@@ -39,7 +39,8 @@ def do_create(tag, channel, commit, gen_arguments):
     gen_out = gen.generate(
         options=gen_options,
         mixins=['vagrant', 'coreos'],
-        arguments=gen_arguments
+        arguments=gen_arguments,
+        cc_package_files=['/etc/mesos-master-provider']
         )
 
     vagrant_script = make_vagrant(gen_out)

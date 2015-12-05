@@ -138,7 +138,13 @@ def gen_templates(arguments, options):
         options=options,
         mixins=['aws', 'coreos', 'coreos-aws'],
         extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
-        arguments=arguments)
+        arguments=arguments,
+        cc_package_files=[
+            '/etc/cloudenv',
+            '/etc/dns_config',
+            '/etc/exhibitor',
+            '/etc/exhibitor.properties',
+            '/etc/mesos-master-provider'])
 
     cloud_config = results.templates['cloud-config']
 

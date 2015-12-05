@@ -555,11 +555,32 @@ def validate_arguments_strings(arguments):
         sys.exit(1)
 
 
+def extract_files_with_path(start_files, paths):
+    found_files = []
+    found_file_paths = []
+    left_files = []
+
+    for file_info in deepcopy(start_files):
+        if file_info['path'] in paths:
+            found_file_paths.append(file_info['path'])
+            found_files.append(file_info)
+        else:
+            left_files.append(file_info)
+
+    # Assert all files were found. If not it was a programmer error of some form.
+    assert set(found_file_paths) == set(paths)
+    # All files still belong somewhere
+    assert len(found_files) + len(left_files) == len(start_files)
+
+    return found_files, left_files
+
+
 def do_generate(
         options,
         mixins,
         extra_templates,
-        arguments):
+        arguments,
+        cc_package_files):
 
     # TODO(cmaloney): Remove flattening and teach lower code to operate on list
     # of mixins.
@@ -730,6 +751,30 @@ def do_generate(
             log.debug("validating template file %s", name)
             assert template.keys() <= {'coreos', 'package', 'root'}
 
+    # Extract cc_package_files out of the dcos-config template and put them into
+    # the cloud-config package.
+    cc_package_files, dcos_config_files = extract_files_with_path(rendered_templates['dcos-config']['package'],
+                                                                  cc_package_files)
+    rendered_templates['dcos-config'] = {'package': dcos_config_files}
+
+    # Add a empty pkginfo.json to the cc_package_files.
+    # Also assert there isn't one already (can only write out a file once).
+    for item in cc_package_files:
+        assert item['path'] != '/pkginfo.json'
+
+    # If there aren't any files for a cloud-config package don't make one start
+    # existing adding a pkginfo.json
+    if len(cc_package_files) > 0:
+        cc_package_files.append({
+            "path": "/pkginfo.json",
+            "content": "{}"})
+
+    for item in cc_package_files:
+        assert item['path'].startswith('/')
+        item['path'] = '/etc/mesosphere/setup-packages/dcos-provider-{}--setup'.format(
+            arguments['provider']) + item['path']
+        rendered_templates['cloud-config']['root'].append(item)
+
     cluster_package_info = {}
 
     # Render all the cluster packages
@@ -747,9 +792,12 @@ def do_generate(
             'filename': package_filename
         }
 
-    # Convert cloud-config to just contain write_files rather than package + root
+    # Convert cloud-config to just contain write_files rather than root
     cc = rendered_templates['cloud-config']
-    cc_packages = cc.pop('package', [])
+
+    # Shouldn't contain any packages. Providers should pull what they need to
+    # late bind out of other packages via cc_package_file.
+    assert 'package' not in cc
     cc_root = cc.pop('root', [])
     # Make sure write_files exists.
     assert 'write_files' not in cc
@@ -757,11 +805,6 @@ def do_generate(
     # Validate there are no unexpected top level directives
     assert cc.keys() <= {'write_files', 'coreos'}
     # Do the transform
-    for item in cc_packages:
-        assert item['path'].startswith('/')
-        item['path'] = '/etc/mesosphere/setup-packages/dcos-provider-{}--setup'.format(
-            arguments['provider']) + item['path']
-        cc['write_files'].append(item)
     for item in cc_root:
         assert item['path'].startswith('/')
         cc['write_files'].append(item)
@@ -793,7 +836,8 @@ def generate(
         # Arbitrary jinja template to parse
         extra_templates=dict(),
         # config.json parameters
-        arguments=dict()):
+        arguments=dict(),
+        cc_package_files=[]):
     try:
         # Set the logging level
         if options.log_level == "debug":
@@ -807,7 +851,7 @@ def generate(
             sys.exit(1)
 
         log.info("Generating configuration files...")
-        return do_generate(options, mixins, extra_templates, arguments)
+        return do_generate(options, mixins, extra_templates, arguments, cc_package_files)
     except jinja2.TemplateSyntaxError as ex:
         log.error("Jinja2 TemplateSyntaxError")
         log.error("{}:{} - {}".format(

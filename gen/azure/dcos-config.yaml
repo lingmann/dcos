@@ -1,0 +1,23 @@
+package:
+  - path: /etc/cloudenv
+    content: |
+      # TODO(cmaloney): Add cluster general info for analytics here
+      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
+  - path: /etc/mesos-master-provider
+    content: |
+      MESOS_CLUSTER=[[[variables('uniqueName')]]]
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_BACKEND=AZURE
+      AZURE_CONTAINER=dcos-exhibitor
+      AZURE_PREFIX=[[[variables('uniqueName')]]]
+  - path: /etc/exhibitor.properties
+    content: |
+      com.netflix.exhibitor.azure.account-name=[[[variables('storageAccountName')]]]
+      com.netflix.exhibitor.azure.account-key=[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', variables('storageAccountName')), '2015-05-01-preview').key1]]]
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      # TODO(cmaloney): Switch to VRRP or an internal master load balancer
+      EXHIBITOR_ADDRESS=[[[reference('masterNodeNic0').ipConfigurations[0].properties.privateIPAddress]]]
+      RESOLVERS={{ resolvers_str }}

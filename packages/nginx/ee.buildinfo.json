@@ -1,0 +1,17 @@
+{
+  "docker": "dcos-builder",
+  "requires": ["openssl"],
+  "sources" :{
+      "nginx": {
+          "kind": "url_extract",
+          "url": "https://s3.amazonaws.com/downloads.mesosphere.io/openresty_mirror/ngx_openresty-1.7.10.2.tar.gz",
+          "sha1": "79b086d55ba8a323e36f939026769d16072a7f27"
+      },
+      "adminrouter": {
+          "kind": "git",
+          "git": "git@github.com:mesosphere/adminrouter.git",
+          "ref": "6e08dc6491629ac87732c0a4e9d96e709bdc6863",
+          "ref_origin": "ee"
+      }
+  }
+}

@@ -1,7 +1,9 @@
+import tempfile
 import unittest
 import unittest.mock
 
 import ssh.ssh_runner
+import ssh.validate
 
 
 class TestMultiRunner(unittest.TestCase):
@@ -121,8 +123,10 @@ class TestSSHRunner(unittest.TestCase):
         self.ssh_runner.ssh_key_path = '/home/ubuntu/.ssh/id_rsa'
         self.ssh_runner.targets = ['127.0.0.1', '10.10.10.10:22022']
 
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
     @unittest.mock.patch('ssh.ssh_runner.MultiRunner')
-    def test_execute_cmd(self, mocked_multirunner):
+    def test_execute_cmd(self, mocked_multirunner, mocked_validate):
+        mocked_validate.return_value = True
         mocked_multirunner().run.return_result = [
             {
                 "stdout": ["stdout", "newline"],
@@ -191,13 +195,67 @@ class TestSSHRunner(unittest.TestCase):
         assert mocked_json_load.call_count == 1
         assert mocked_json_dump.call_count == 1
 
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
     @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy_recursive')
     @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy')
-    def test_copy_cmd(self, mocked_copy, mocked_copy_recursive):
+    def test_copy_cmd(self, mocked_copy, mocked_copy_recursive, mocked_validate):
+        mocked_validate.return_value = True
         self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp')
         mocked_copy.assert_called_with('/tmp/test.txt', '/tmp')
         self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp', recursive=True)
         mocked_copy_recursive.assert_called_with('/tmp/test.txt', '/tmp')
+
+    def test_validate_dont_raise_exception(self):
+        runner = ssh.ssh_runner.SSHRunner()
+        runner.targets = ['127.0.0.0.01']
+        validation_result = runner.validate(throw_if_errors=False)
+        assert len(validation_result) == 10
+        assert 'log_directory must not be None' in validation_result
+        assert 'ssh_user must not be None' in validation_result
+        assert 'ssh_key_path must not be None' in validation_result
+        assert 'log_directory must be str' in validation_result
+        assert 'ssh_user must be str' in validation_result
+        assert 'ssh_key_path must be str' in validation_result
+        assert 'ssh_key_path file None does not exist on filesystem' in validation_result
+        assert 'log_directory directory None does not exist on filesystem' in validation_result
+        assert '127.0.0.0.01 is not a valid IPv4 address, field: targets' in validation_result
+        assert '127.0.0.0.01 is not a valid IPv6 address, field: targets' in validation_result
+
+    def test_validate_raise_exception(self):
+        runner = ssh.ssh_runner.SSHRunner()
+        runner.ssh_key_path = '/no_file_exists'
+        runner.log_directory = '/no_dir_exists'
+
+        try:
+            runner.validate()
+        except ssh.validate.ValidationException as err:
+            assert len(err.args[0]) == 5
+            assert 'ssh_user must not be None' in err.args[0]
+            assert 'ssh_user must be str' in err.args[0]
+            assert 'ssh_key_path file /no_file_exists does not exist on filesystem' in err.args[0]
+            assert 'log_directory directory /no_dir_exists does not exist on filesystem' in err.args[0]
+            assert 'targets list should not be empty' in err.args[0]
+
+    def test_validate(self):
+        runner = ssh.ssh_runner.SSHRunner()
+        with tempfile.NamedTemporaryFile() as tmp:
+            runner.ssh_key_path = tmp.name
+            runner.log_directory = '/tmp'
+            runner.ssh_user = 'ubuntu'
+            runner.targets = ['127.0.0.1']
+            runner.validate()
+
+
+class TestValidate(unittest.TestCase):
+    def test_is_valid_ipv4_address(self):
+        assert ssh.validate.is_valid_ipv4_address('127.0.0.1') is True
+        assert ssh.validate.is_valid_ipv4_address('FE80:0000:0000:0000:0202:B3FF:FE1E:8329') is False
+        assert ssh.validate.is_valid_ipv4_address('foo') is False
+
+    def test_is_valid_ipv6_address(self):
+        assert ssh.validate.is_valid_ipv6_address('FE80:0000:0000:0000:0202:B3FF:FE1E:8329') is True
+        assert ssh.validate.is_valid_ipv6_address('10.10.10.10') is False
+        assert ssh.validate.is_valid_ipv6_address('bar') is False
 
 
 if __name__ == '__main__':

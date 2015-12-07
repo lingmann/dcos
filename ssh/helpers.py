@@ -6,10 +6,6 @@ import os
 import yaml
 
 
-class ValidateException(Exception):
-    """ValidateException class"""
-
-
 def get_structured_results(command_result):
     """
     Takes the output from a SSH run and returns structured output for the

@@ -217,26 +217,33 @@ class TestChannelManager(unittest.TestCase):
 
 
 class TestRelease(unittest.TestCase):
+    @patch('pkgpanda.util.write_string')
     @patch('providers.release.S3StorageProvider')
     @patch('providers.release.ChannelManager')
     @patch('providers.release.get_bootstrap_packages')
-    @patch('subprocess.check_call')
     @patch('providers.release.get_provider_data')
+    @patch('providers.release.build_genconfs')
     @patch('providers.release.do_build_packages')
-    def test_do_create(self, mocked_do_build_packages, mocked_get_provider_data, mocked_check_call,
-                       mocked_get_bootstrap_packages, mocked_channel_manager, mocked_s3):
+    def test_do_create(self, mocked_do_build_packages, mocked_build_genconfs, mocked_get_provider_data,
+                       mocked_get_bootstrap_packages, mocked_channel_manager, mocked_s3, mocked_write_string):
+        bootstrap_dict = {None: '12345'}
+        packages = set(['pkg123--12345'])
+        genconfs = {None: ('genconf_version', 'dcos_generate_config.sh')}
+
         options = unittest.mock.MagicMock()
         options.destination_channel = 'destination'
         options.tag = 'tag'
         options.skip_upload = False
-        mocked_do_build_packages.return_value = {None: '12345'}
+        mocked_do_build_packages.return_value = bootstrap_dict
+        mocked_build_genconfs.return_value = genconfs
         mocked_get_provider_data.return_value = ('provider_data', 'cleaned_provider_data')
-        mocked_get_bootstrap_packages.return_value = set(['pkg123--12345'])
+        mocked_get_bootstrap_packages.return_value = packages
         release.do_create(options)
         mocked_s3.assert_called_with('testing/destination')
-        mocked_channel_manager().upload_packages.assert_called_with(['pkg123--12345'])
-        mocked_channel_manager().upload_bootstrap.assert_called_with({None: '12345'})
-        assert mocked_check_call.call_count == 9
+        mocked_channel_manager().upload_packages.assert_called_with(list(packages))
+        mocked_channel_manager().upload_bootstrap.assert_called_with(bootstrap_dict)
+        mocked_write_string.assert_any_call('docker-tag.txt', genconfs[None][0])
+        mocked_write_string.assert_any_call('docker-tag', genconfs[None][0])
         assert mocked_channel_manager().upload_providers_and_activate.called
 
     def test_provider_data(self):

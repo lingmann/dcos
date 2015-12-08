@@ -16,6 +16,7 @@ from multiprocessing import Pool
 import ssh.helpers
 import json
 import os
+import ssh.validate
 
 
 def parse_ip(ip):
@@ -110,12 +111,11 @@ class MultiRunner():
 
 
 class SSHRunner():
-    ssh_key_path = None
-    ssh_user = None
-    targets = []
-    log_directory = None
-
     def __init__(self, use_cache=False):
+        self.ssh_key_path = None
+        self.ssh_user = None
+        self.targets = []
+        self.log_directory = None
         self.use_cache = use_cache
         self.__cache_file = './.cache.json'
 
@@ -145,24 +145,39 @@ class SSHRunner():
             return results
         return self.save_logs(dump_success_hosts(eval_command()))
 
-    def validate(self, fail_on_error=False):
-        # TODO(mnaboka): improve validation
-        errors = []
-        if self.ssh_user is None:
-            errors.append('ssh_user must be set')
-        if self.ssh_key_path is None:
-            errors.append('ssh_key_path must be set')
-        if len(self.targets) == 0:
-            errors.append('targets must be set')
-        if self.log_directory is None:
-            errors.append('log_directory must be set')
-        if fail_on_error:
-            if len(errors) > 0:
-                raise ssh.helpers.ValidateException(','.join(errors))
-        return errors
+    def validate(self, throw_if_errors=True):
+        with ssh.validate.ErrorsCollector(throw_if_errors=throw_if_errors) as ec:
+            ec.is_not_none(self, [
+                'log_directory',
+                'ssh_user',
+                'ssh_key_path'
+            ])
+
+            ec.is_string(self, [
+                'log_directory',
+                'ssh_user',
+                'ssh_key_path'
+            ])
+
+            ec.is_file(self, [
+                'ssh_key_path'
+            ])
+
+            ec.is_dir(self, [
+                'log_directory'
+            ])
+
+            ec.is_list_not_empty(self, [
+                'targets'
+            ])
+
+            ec.is_valid_ip(self, [
+                'targets'
+            ])
+            return ec.validate()
 
     def execute_cmd(self, cmd):
-        self.validate(fail_on_error=True)
+        self.validate()
         runner = MultiRunner(self.exclude_cached(self.targets), ssh_user=self.ssh_user, ssh_key_path=self.ssh_key_path)
         return self.wrapped_run(lambda: runner.run(cmd.split()))
 
@@ -177,7 +192,7 @@ class SSHRunner():
         return list(filter(lambda x: x not in dump['success_hosts'], hosts))
 
     def copy_cmd(self, local_path, remote_path, recursive=False):
-        self.validate(fail_on_error=True)
+        self.validate()
         runner = MultiRunner(self.exclude_cached(self.targets), ssh_user=self.ssh_user, ssh_key_path=self.ssh_key_path)
         if recursive:
             return self.wrapped_run(lambda: runner.copy_recursive(local_path, remote_path))

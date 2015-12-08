@@ -95,5 +95,8 @@ class ErrorsCollector():
             for ip in getattr(cls, key):
                 if not is_valid_ipv4_address(ip):
                     self.errors.append('{} is not a valid IPv4 address, field: {}'.format(ip, key))
-                    if not is_valid_ipv6_address(ip):
-                        self.errors.append('{} is not a valid IPv6 address, field: {}'.format(ip, key))
+                    # cmaloney: I think we should actually hard-error on IPv6 addresses, at this point in time
+                    # (And for the forseeable future) Mesos is IPv4 only, and some of our software falls apart in
+                    # dual-stack environments (Although more of it works now than it used to).
+                    if is_valid_ipv6_address(ip):
+                        self.errors.append('{} IPv6 is currently not supported, field: {}'.format(ip, key))

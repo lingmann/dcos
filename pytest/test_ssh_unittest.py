@@ -207,7 +207,7 @@ class TestSSHRunner(unittest.TestCase):
 
     def test_validate_dont_raise_exception(self):
         runner = ssh.ssh_runner.SSHRunner()
-        runner.targets = ['127.0.0.0.01']
+        runner.targets = ['FE80:0000:0000:0000:0202:B3FF:FE1E:8329']
         validation_result = runner.validate(throw_if_errors=False)
         assert len(validation_result) == 10
         assert 'log_directory must not be None' in validation_result
@@ -218,8 +218,10 @@ class TestSSHRunner(unittest.TestCase):
         assert 'ssh_key_path must be str' in validation_result
         assert 'ssh_key_path file None does not exist on filesystem' in validation_result
         assert 'log_directory directory None does not exist on filesystem' in validation_result
-        assert '127.0.0.0.01 is not a valid IPv4 address, field: targets' in validation_result
-        assert '127.0.0.0.01 is not a valid IPv6 address, field: targets' in validation_result
+        assert ('FE80:0000:0000:0000:0202:B3FF:FE1E:8329 '
+                'is not a valid IPv4 address, field: targets') in validation_result
+        assert ('FE80:0000:0000:0000:0202:B3FF:FE1E:8329 '
+                'IPv6 is currently not supported, field: targets') in validation_result
 
     def test_validate_raise_exception(self):
         runner = ssh.ssh_runner.SSHRunner()

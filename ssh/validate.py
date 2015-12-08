@@ -13,6 +13,10 @@ class ValidationException(Exception):
     """Validation Exception class"""
 
 
+class ExecuteException(Exception):
+    """Raised when commend execution fails"""
+
+
 def is_valid_ipv4_address(address):
     try:
         socket.inet_pton(socket.AF_INET, address)

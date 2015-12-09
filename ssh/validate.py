@@ -1,5 +1,8 @@
+import pwd
 import os
 import socket
+
+import ssh.ssh_runner
 
 
 class ValidationException(Exception):
@@ -15,14 +18,6 @@ def is_valid_ipv4_address(address):
         except socket.error:
             return False
         return address.count('.') == 3
-    except socket.error:  # not a valid address
-        return False
-    return True
-
-
-def is_valid_ipv6_address(address):
-    try:
-        socket.inet_pton(socket.AF_INET6, address)
     except socket.error:  # not a valid address
         return False
     return True
@@ -93,10 +88,34 @@ class ErrorsCollector():
     def is_valid_ip(self, cls, keys):
         for key in keys:
             for ip in getattr(cls, key):
+                ip = ssh.ssh_runner.parse_ip(ip)['ip']
                 if not is_valid_ipv4_address(ip):
                     self.errors.append('{} is not a valid IPv4 address, field: {}'.format(ip, key))
                     # cmaloney: I think we should actually hard-error on IPv6 addresses, at this point in time
                     # (And for the forseeable future) Mesos is IPv4 only, and some of our software falls apart in
                     # dual-stack environments (Although more of it works now than it used to).
-                    if is_valid_ipv6_address(ip):
-                        self.errors.append('{} IPv6 is currently not supported, field: {}'.format(ip, key))
+
+    def is_valid_private_key_permission(self, cls, keys, ssh_key_owner=None):
+        # root is a default private key owner
+        if ssh_key_owner is None:
+            ssh_key_owner = 'root'
+
+        for key in keys:
+            check_value = getattr(cls, key)
+            try:
+                uid = os.stat(check_value).st_uid
+            except FileNotFoundError:
+                self.errors.append('No such file or directory: {}'.format(check_value))
+                continue
+            except TypeError:
+                self.errors.append('Cannot specify {} for path argument'.format(check_value))
+                continue
+
+            user = pwd.getpwuid(uid).pw_name
+            if ssh_key_owner != user:
+                self.errors.append('{} owner should be {}, field: {}'.format(check_value, ssh_key_owner, key))
+
+            # bitmask 0b111111 is used to check that only owner permissions set
+            if os.stat(check_value).st_mode & 0b111111 > 0:
+                oct_permissions = oct(os.stat(check_value).st_mode & 0b111111111)
+                self.errors.append('permissions {} for {} are too open'.format(oct_permissions, check_value))

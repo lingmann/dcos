@@ -143,7 +143,7 @@ class SSHRunner():
             return results
         return self.save_logs(dump_success_hosts(eval_command()))
 
-    def validate(self, throw_if_errors=True):
+    def validate(self, throw_if_errors=True, ssh_key_owner=None):
         with ssh.validate.ErrorsCollector(throw_if_errors=throw_if_errors) as ec:
             ec.is_not_none(self, [
                 'log_directory',
@@ -172,6 +172,10 @@ class SSHRunner():
             ec.is_valid_ip(self, [
                 'targets'
             ])
+
+            ec.is_valid_private_key_permission(self, [
+                'ssh_key_path'
+            ], ssh_key_owner=ssh_key_owner)
             return ec.validate()
 
     def execute_cmd(self, cmd):

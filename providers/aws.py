@@ -138,8 +138,7 @@ def gen_templates(arguments, options):
         options=options,
         mixins=['aws', 'coreos', 'coreos-aws'],
         extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
-        arguments=arguments
-        )
+        arguments=arguments)
 
     cloud_config = results.templates['cloud-config']
 

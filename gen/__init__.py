@@ -335,12 +335,12 @@ def do_gen_package(config, package_filename):
 
     with TemporaryDirectory("gen_tmp_pkg") as tmpdir:
 
-        # Only contains write_files
-        assert len(config) == 1
+        # Only contains package, root
+        assert config.keys() == {"package"}
 
         # Write out the individual files
-        for file_info in config["write_files"]:
-            if file_info['path'][0] == '/':
+        for file_info in config["package"]:
+            if file_info['path'].startswith('/'):
                 path = tmpdir + file_info['path']
             else:
                 path = tmpdir + '/' + file_info['path']
@@ -723,6 +723,17 @@ def do_generate(
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)
 
+    # Validate there aren't any unexpected top level directives in any of the files
+    # (likely indicates a misspelling)
+    for name, template in rendered_templates.items():
+        if name == 'dcos-services':  # yaml list of the service files
+            assert isinstance(template, list)
+        elif isinstance(template, str):  # Not a yaml template
+            pass
+        else:  # yaml template file
+            log.debug("validating template file %s", name)
+            assert template.keys() <= {'coreos', 'package', 'root'}
+
     cluster_package_info = {}
 
     # Render all the cluster packages
@@ -739,6 +750,29 @@ def do_generate(
             'id': package_id,
             'filename': package_filename
         }
+
+    # Convert cloud-config to just contain write_files rather than package + root
+    cc = rendered_templates['cloud-config']
+    cc_packages = cc.pop('package', [])
+    cc_root = cc.pop('root', [])
+    # Make sure write_files exists.
+    assert 'write_files' not in cc
+    cc['write_files'] = []
+    # Validate there are no unexpected top level directives
+    assert cc.keys() <= {'write_files', 'coreos'}
+    # Do the transform
+    for item in cc_packages:
+        assert item['path'].startswith('/')
+        item['path'] = '/etc/mesosphere/setup-packages/dcos-provider-{}--setup'.format(
+            arguments['provider']) + item['path']
+        cc['write_files'].append(item)
+    for item in cc_root:
+        assert item['path'].startswith('/')
+        cc['write_files'].append(item)
+    rendered_templates['cloud-config'] = cc
+
+    # Validate there are no unexpected top level directives
+    assert rendered_templates['cloud-config'].keys() <= {'write_files', 'coreos'}
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters

@@ -1,4 +1,4 @@
-write_files:
+package:
   - path: /pkginfo.json
     content: |
       {

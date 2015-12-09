@@ -1,18 +1,18 @@
-write_files:
-  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/pkginfo.json
+package:
+  - path: /pkginfo.json
     content: |
       {
         "environment": {
-          "PROVIDER": "vagrant"
+          "PROVIDER": "{{ provider }}"
         }
       }
-  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/cloudenv
+  - path: /etc/cloudenv
     content: |
       ZOOKEEPER_CLUSTER_SIZE=1
-  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/mesos-master-provider
+  - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}
-  - path: /etc/mesosphere/setup-packages/dcos-provider-vagrant--setup/etc/exhibitor
+  - path: /etc/exhibitor
     content: |
       EXHIBITOR_BACKEND=SHARED_FS
       ZOOKEEPER_CLUSTER_SIZE=1

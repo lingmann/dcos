@@ -123,7 +123,8 @@ def do_provider(options, provider_module, mixins, user_arguments):
     arguments = {
         'ip_detect_filename': '/genconf/ip-detect',
         'channel_name': channel_name,
-        'bootstrap_id': bootstrap_id}
+        'bootstrap_id': bootstrap_id,
+        'provider': 'onprem'}
 
     # Make sure there are no overlaps between arguments and user_arguments.
     # TODO(cmaloney): Switch to a better dictionary diff here which will

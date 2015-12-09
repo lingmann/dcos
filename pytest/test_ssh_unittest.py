@@ -92,7 +92,7 @@ class TestMultiRunner(unittest.TestCase):
         mocked_popen().communicate.return_value = ('stdout\nnewline'.encode(), 'stderr\nnewline'.encode())
         mocked_popen().pid = 1111
         mocked_popen().returncode = 0
-        assert self.multirunner.copy_recursive('/tmp/pilot.txt', '/usr') == [
+        assert self.multirunner.copy('/tmp/pilot.txt', '/usr', recursive=True) == [
             {
                 "stdout": ["stdout", "newline"],
                 "returncode": 0,
@@ -196,14 +196,15 @@ class TestSSHRunner(unittest.TestCase):
         assert mocked_json_dump.call_count == 1
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
-    @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy_recursive')
     @unittest.mock.patch('ssh.ssh_runner.MultiRunner.copy')
-    def test_copy_cmd(self, mocked_copy, mocked_copy_recursive, mocked_validate):
+    def test_copy_cmd(self, mocked_copy, mocked_validate):
         mocked_validate.return_value = True
         self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp')
-        mocked_copy.assert_called_with('/tmp/test.txt', '/tmp')
+        mocked_copy.assert_called_with('/tmp/test.txt', '/tmp', remote_to_local=False, recursive=False)
         self.ssh_runner.copy_cmd('/tmp/test.txt', '/tmp', recursive=True)
-        mocked_copy_recursive.assert_called_with('/tmp/test.txt', '/tmp')
+        mocked_copy.assert_called_with('/tmp/test.txt', '/tmp', remote_to_local=False, recursive=True)
+        self.ssh_runner.copy_cmd('/tmp/local.txt', '/tmp/remote.txt', remote_to_local=True)
+        mocked_copy.assert_called_with('/tmp/local.txt', '/tmp/remote.txt', remote_to_local=True, recursive=False)
 
     def test_validate_dont_raise_exception(self):
         runner = ssh.ssh_runner.SSHRunner()

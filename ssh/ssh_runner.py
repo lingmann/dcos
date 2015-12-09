@@ -72,20 +72,18 @@ class MultiRunner():
             '-i', self.ssh_key_path
         ]
 
-    def copy(self, local_path, remote_path):
+    def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
         def build_scp(host):
-            return self._get_base_args(self.scp_bin, host) + [
-                local_path,
-                '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)]
+            copy_command = []
+            if recursive:
+                copy_command += ['-r']
+            remote_full_path = '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)
+            if remote_to_local:
+                copy_command += [remote_full_path, local_path]
+            else:
+                copy_command += [local_path, remote_full_path]
+            return self._get_base_args(self.scp_bin, host) + copy_command
         return self.__run_on_hosts(build_scp)
-
-    def copy_recursive(self, local_dir, remote_dir):
-        def build_scp_recursive(host):
-            return self._get_base_args(self.scp_bin, host) + [
-                '-r',
-                local_dir,
-                '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_dir)]
-        return self.__run_on_hosts(build_scp_recursive)
 
     def __run_on_hosts(self, cmd_builder):
         host_cmd_tuples = [(host, cmd_builder(host)) for host in self.__targets]
@@ -191,10 +189,8 @@ class SSHRunner():
             return hosts
         return list(filter(lambda x: x not in dump['success_hosts'], hosts))
 
-    def copy_cmd(self, local_path, remote_path, recursive=False):
+    def copy_cmd(self, local_path, remote_path, recursive=False, remote_to_local=False):
         self.validate()
         runner = MultiRunner(self.exclude_cached(self.targets), ssh_user=self.ssh_user, ssh_key_path=self.ssh_key_path)
-        if recursive:
-            return self.wrapped_run(lambda: runner.copy_recursive(local_path, remote_path))
-        else:
-            return self.wrapped_run(lambda: runner.copy(local_path, remote_path))
+        return self.wrapped_run(lambda: runner.copy(local_path, remote_path, remote_to_local=remote_to_local,
+                                                    recursive=recursive))

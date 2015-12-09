@@ -84,6 +84,29 @@ def test_ssh(tmpdir):
         assert 'uname' in result['cmd']
 
 
+def test_scp_remote_to_local(tmpdir):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(1)
+
+    id = uuid.uuid4().hex
+    pkgpanda.util.write_string(workspace + '/pilot.txt', id)
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key')
+    copy_results = runner.copy(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
+    assert os.path.isfile(workspace + '/pilot.txt.copied')
+    assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
+    for result in copy_results:
+        assert result['returncode'] == 0, result['stderr']
+        assert result['host']['ip'] == '127.0.0.1'
+        assert result['host']['port'] in sshd_ports
+        assert '/usr/bin/scp' in result['cmd']
+        assert workspace + '/pilot.txt.copied' in result['cmd']
+
+
 def test_scp(tmpdir):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
@@ -105,3 +128,28 @@ def test_scp(tmpdir):
         assert result['host']['port'] in sshd_ports
         assert '/usr/bin/scp' in result['cmd']
         assert workspace + '/pilot.txt' in result['cmd']
+
+
+def test_scp_recursive(tmpdir):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(1)
+
+    id = uuid.uuid4().hex
+    pkgpanda.util.write_string(workspace + '/recursive_pilot.txt', id)
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key')
+    copy_results = runner.copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied',
+                               recursive=True)
+    assert os.path.isfile(workspace + '/recursive_pilot.txt.copied')
+    assert pkgpanda.util.load_string(workspace + '/recursive_pilot.txt.copied') == id
+    for result in copy_results:
+        assert result['returncode'] == 0, result['stderr']
+        assert result['host']['ip'] == '127.0.0.1'
+        assert result['host']['port'] in sshd_ports
+        assert '/usr/bin/scp' in result['cmd']
+        assert '-r' in result['cmd']
+        assert workspace + '/recursive_pilot.txt' in result['cmd']

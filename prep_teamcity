@@ -1,0 +1,11 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+./fetch_pkgpanda
+
+# Make the wheels, they will be output into the folder `wheelhouse` by default.
+pip wheel ext/pkgpanda
+pip wheel .
+
+# Install the wheels
+pip install --no-index --find-links=wheelhouse dcos-image pkgpanda

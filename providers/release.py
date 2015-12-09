@@ -649,11 +649,12 @@ def make_genconf_docker(channel_name, variant, bootstrap_id):
     # packages we build...
     pkgpanda_src, dcos_image_src = get_src_dirs()
     wheel_dir = os.getcwd() + '/wheelhouse'
-    print("Building wheels for dcos-image, pkgpanda, and all dependencies")
+    if not os.path.exists(os.getcwd() + '/wheelhouse'):
+        print("Building wheels for dcos-image, pkgpanda, and all dependencies")
 
-    # Make the wheels
-    subprocess.check_call(['pip', 'wheel', pkgpanda_src])
-    subprocess.check_call(['pip', 'wheel', dcos_image_src])
+        # Make the wheels
+        subprocess.check_call(['pip', 'wheel', pkgpanda_src])
+        subprocess.check_call(['pip', 'wheel', dcos_image_src])
 
     pkgpanda_sha1 = get_git_commit_sha1(pkgpanda_src, 'pkgpanda')
     dcos_image_sha1 = get_git_commit_sha1(dcos_image_src, 'dcos-image')

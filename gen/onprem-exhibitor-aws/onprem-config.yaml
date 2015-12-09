@@ -1,4 +1,4 @@
-write_files:
+package:
   - path: /etc/exhibitor
     content: |
       EXHIBITOR_BACKEND=AWS_S3

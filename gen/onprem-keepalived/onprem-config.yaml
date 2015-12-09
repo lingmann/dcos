@@ -1,4 +1,4 @@
-write_files:
+package:
   - path: /etc/keepalived
     content: |
       KEEPALIVED_VIRTUAL_IPADDRESS={{ keepalived_virtual_ipaddress }}

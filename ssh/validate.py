@@ -1,8 +1,12 @@
+import getpass
 import pwd
 import os
 import socket
+import stat
 
 import ssh.ssh_runner
+
+OWNERSHIP_BITMASK = 0b111111
 
 
 class ValidationException(Exception):
@@ -35,37 +39,68 @@ class ErrorsCollector():
         pass
 
     def validate(self):
-        if len(self.errors) < 1:
+        if not self.errors:
             return []
         if not self.throw_if_errors:
             return self.errors
         raise ValidationException(self.errors)
 
     def is_type(self, keys, cls, instance):
+        '''
+        Helper function to test a variable type.
+        :param keys: array of strings, each string is a property in cls
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param instance: type of object to test
+        '''
         for key in keys:
             check_value = getattr(cls, key)
             if not isinstance(check_value, instance):
                 self.errors.append('{} must be {}'.format(key, instance.__name__))
 
     def is_not_none(self, cls, keys):
+        '''
+        Test if variable is not None
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         for key in keys:
             check_value = getattr(cls, key)
             if check_value is None:
                 self.errors.append('{} must not be None'.format(key))
 
     def is_string(self, cls, keys):
+        '''
+        Test if variable is String
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         self.is_type(keys, cls, str)
 
     def is_int(self, cls, keys):
+        '''
+        Test if variable is not Integer
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         self.is_type(keys, cls, int)
 
     def is_list_not_empty(self, cls, keys):
+        '''
+        Test if variable keys are not an empty dict
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         for key in keys:
             check_value = getattr(cls, key)
-            if len(check_value) < 1:
+            if not check_value:
                 self.errors.append('{} list should not be empty'.format(key))
 
     def is_file(self, cls, keys):
+        '''
+        Test if keys are valid file
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         for key in keys:
             check_value = getattr(cls, key)
             error_msg = '{} file {} does not exist on filesystem'
@@ -76,6 +111,11 @@ class ErrorsCollector():
                 self.errors.append(error_msg.format(key, check_value))
 
     def is_dir(self, cls, keys):
+        '''
+        Test if keys are valid directory
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         for key in keys:
             check_value = getattr(cls, key)
             error_msg = '{} directory {} does not exist on filesystem'
@@ -86,6 +126,11 @@ class ErrorsCollector():
                 self.errors.append(error_msg.format(key, check_value))
 
     def is_valid_ip(self, cls, keys):
+        '''
+        Test if keys are valid IPv4 address
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        '''
         for key in keys:
             for ip in getattr(cls, key):
                 ip = ssh.ssh_runner.parse_ip(ip)['ip']
@@ -96,9 +141,14 @@ class ErrorsCollector():
                     # dual-stack environments (Although more of it works now than it used to).
 
     def is_valid_private_key_permission(self, cls, keys, ssh_key_owner=None):
-        # root is a default private key owner
+        '''
+        Test if keys have valid provate key ownership and permission
+        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
+        :param keys: array of strings, each string is a property in cls
+        :param ssh_key_owner: assume default key owner is a current user, unless this parameter is specified
+        '''
         if ssh_key_owner is None:
-            ssh_key_owner = 'root'
+            ssh_key_owner = getpass.getuser()
 
         for key in keys:
             check_value = getattr(cls, key)
@@ -115,7 +165,7 @@ class ErrorsCollector():
             if ssh_key_owner != user:
                 self.errors.append('{} owner should be {}, field: {}'.format(check_value, ssh_key_owner, key))
 
-            # bitmask 0b111111 is used to check that only owner permissions set
-            if os.stat(check_value).st_mode & 0b111111 > 0:
-                oct_permissions = oct(os.stat(check_value).st_mode & 0b111111111)
+            # OWNERSHIP_BITMASK is used to check that only owner permissions set
+            if os.stat(check_value).st_mode & OWNERSHIP_BITMASK > 0:
+                oct_permissions = oct(os.stat(check_value)[stat.ST_MODE])[-4:]
                 self.errors.append('permissions {} for {} are too open'.format(oct_permissions, check_value))

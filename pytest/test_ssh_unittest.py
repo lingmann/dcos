@@ -1,4 +1,3 @@
-import getpass
 import os
 import tempfile
 import unittest
@@ -243,6 +242,20 @@ class TestSSHRunner(unittest.TestCase):
             }
             assert set(err.args[0]) - expected_errors == set()
 
+    def test_validate_wrong_private_key_permissions(self):
+        runner = ssh.ssh_runner.SSHRunner()
+        with tempfile.NamedTemporaryFile() as tmp:
+            runner.ssh_key_path = tmp.name
+            runner.log_directory = '/tmp'
+            runner.ssh_user = 'ubuntu'
+            runner.targets = ['127.0.0.1']
+            os.chmod(tmp.name, 511)  # oct(511) = 0o777
+            errors = runner.validate(throw_if_errors=False)
+            expected_errors = {
+                'permissions 0777 for {} are too open'.format(tmp.name)
+            }
+            assert set(errors) - expected_errors == set()
+
     def test_validate(self):
         runner = ssh.ssh_runner.SSHRunner()
         with tempfile.NamedTemporaryFile() as tmp:
@@ -251,7 +264,7 @@ class TestSSHRunner(unittest.TestCase):
             runner.ssh_user = 'ubuntu'
             runner.targets = ['127.0.0.1']
             os.chmod(tmp.name, 256)  # oct(256) = 0o0400
-            runner.validate(ssh_key_owner=getpass.getuser())
+            runner.validate()
 
 
 class TestValidate(unittest.TestCase):

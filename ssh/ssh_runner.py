@@ -175,7 +175,7 @@ class SSHRunner():
 
             ec.is_valid_private_key_permission(self, [
                 'ssh_key_path'
-            ], ssh_key_owner=ssh_key_owner)
+            ])
             return ec.validate()
 
     def execute_cmd(self, cmd):

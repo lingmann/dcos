@@ -74,16 +74,15 @@ class MultiRunner():
 
     def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
         def build_scp(host):
-            copy_command = [
-                '-r' if recursive else '',
-                local_path if not remote_to_local else '',
-                '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path),
-                local_path if remote_to_local else ''
-            ]
+            copy_command = []
+            if recursive:
+                copy_command += ['-r']
+            remote_full_path = '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)
             if remote_to_local:
-                with open('/tmp/rtl', 'w') as f:
-                    f.writelines(['{}\n'.format(i) for i in copy_command if i])
-            return self._get_base_args(self.scp_bin, host) + [arg for arg in copy_command if arg]
+                copy_command += [remote_full_path, local_path]
+            else:
+                copy_command += [local_path, remote_full_path]
+            return self._get_base_args(self.scp_bin, host) + copy_command
         return self.__run_on_hosts(build_scp)
 
     def __run_on_hosts(self, cmd_builder):

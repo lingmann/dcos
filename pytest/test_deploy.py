@@ -3,7 +3,6 @@ import unittest
 import unittest.mock
 
 import deploy.postflight
-
 import ssh.ssh_runner
 from ssh.validate import ExecuteException, ValidationException
 

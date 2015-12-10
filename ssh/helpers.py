@@ -1,8 +1,9 @@
 """
 Helper functions for the SSH library.
 """
-import time
 import os
+import time
+
 import yaml
 
 

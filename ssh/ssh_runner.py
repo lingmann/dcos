@@ -11,11 +11,12 @@ preflight.execute_cmd(cmd)
 preflight.copy_cmd('/tmp/file.txt', '/tmp')
 preflight.copy_cmd('/usr', '/', recursive=True)
 """
-import subprocess
-from multiprocessing import Pool
-import ssh.helpers
 import json
 import os
+import subprocess
+from multiprocessing import Pool
+
+import ssh.helpers
 import ssh.validate
 
 

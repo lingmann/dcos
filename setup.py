@@ -14,7 +14,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    packages=['gen', 'providers'] + find_packages(),
+    packages=['gen', 'providers', 'ssh', 'deploy'] + find_packages(),
     install_requires=[
         'azure-storage==0.20.2',
         'boto3',

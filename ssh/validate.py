@@ -1,6 +1,6 @@
 import getpass
-import pwd
 import os
+import pwd
 import socket
 import stat
 
@@ -11,6 +11,10 @@ OWNERSHIP_BITMASK = 0b111111
 
 class ValidationException(Exception):
     """Validation Exception class"""
+
+
+class ExecuteException(Exception):
+    """Raised when commend execution fails"""
 
 
 def is_valid_ipv4_address(address):

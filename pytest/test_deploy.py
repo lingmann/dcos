@@ -4,6 +4,9 @@ import unittest.mock
 
 import deploy.postflight
 
+import ssh.ssh_runner
+from ssh.validate import ExecuteException, ValidationException
+
 
 class TestPostflight(unittest.TestCase):
     @unittest.mock.patch('subprocess.check_call')
@@ -13,35 +16,36 @@ class TestPostflight(unittest.TestCase):
         dns_search = 'true'
         dcos_dns_address = 'http://10.10.10.1'
         registry_host = '10.10.10.1'
+        env = os.environ.copy()
+        env['MASTER_HOSTS'] = masters
+        env['SLAVE_HOSTS'] = slaves
+        env['REGISTRY_HOST'] = registry_host
+        env['DNS_SEARCH'] = dns_search
+        env['DCOS_DNS_ADDRESS'] = dcos_dns_address
         deploy.postflight.run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry_host,
                                                test_path='/genconf')
-        mocked_check_call.assert_called_with('py.test -vv /genconf/integration_test.py', shell=True)
-        assert os.environ['MASTER_HOSTS'] == masters
-        assert os.environ['SLAVE_HOSTS'] == slaves
-        assert os.environ['REGISTRY_HOST'] == registry_host
-        assert os.environ['DNS_SEARCH'] == dns_search
-        assert os.environ['DCOS_DNS_ADDRESS'] == dcos_dns_address
+        mocked_check_call.assert_called_with(['py.test', '-vv', '/genconf/integration_test.py'], env=env)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
     def test_execute_local_service_check(self, mocked_validate, mocked_execute_cmd):
-        ssh_user = 'ubuntu'
-        ssh_key_path = '/home/ubuntu/.ssh/id_rsa'
-        log_directory = '/genconf/logs'
-        inventory = ['127.0.0.1']
-
+        executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.return_value = []
-        deploy.postflight.execute_local_service_check(ssh_user, ssh_key_path, log_directory, inventory)
-        mocked_execute_cmd.assert_called_with('/opt/mesosphere/bin/dcos-diagnostics.py')
+        mocked_execute_cmd.return_value = [{'returncode': 0}]
+        deploy.postflight.execute_local_service_check(executor)
+
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
+    def test_execute_local_service_check_throw_validation_exception(self, mocked_validate):
+        executor = ssh.ssh_runner.SSHRunner()
+        mocked_validate.side_effect = ValidationException()
+        with self.assertRaises(ValidationException):
+            deploy.postflight.execute_local_service_check(executor)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
-    def test_execute_local_service_check_with_errors(self, mocked_validate, mocked_execute_cmd):
-        ssh_user = 'ubuntu'
-        ssh_key_path = '/home/ubuntu/.ssh/id_rsa'
-        log_directory = '/genconf/logs'
-        inventory = ['127.0.0.1']
-
-        mocked_validate.return_value = ['error1', 'error2']
-        deploy.postflight.execute_local_service_check(ssh_user, ssh_key_path, log_directory, inventory)
-        mocked_execute_cmd.assert_assert_not_called()
+    def test_execute_local_service_check_throw_execute_exception(self, mocked_validate, mocked_execute_cmd):
+        executor = ssh.ssh_runner.SSHRunner()
+        mocked_validate.return_value = []
+        mocked_execute_cmd.return_value = [{'returncode': 1, 'stderr': 'stderr'}]
+        with self.assertRaises(ExecuteException):
+            deploy.postflight.execute_local_service_check(executor)

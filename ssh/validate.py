@@ -1,6 +1,6 @@
 import getpass
-import pwd
 import os
+import pwd
 import socket
 import stat
 

@@ -1,3 +1,4 @@
+import os
 import tempfile
 import unittest
 import unittest.mock
@@ -208,21 +209,20 @@ class TestSSHRunner(unittest.TestCase):
 
     def test_validate_dont_raise_exception(self):
         runner = ssh.ssh_runner.SSHRunner()
-        runner.targets = ['FE80:0000:0000:0000:0202:B3FF:FE1E:8329']
+        runner.targets = ['127.0.0.1', '127.0.0.2:22022']
         validation_result = runner.validate(throw_if_errors=False)
-        assert len(validation_result) == 10
-        assert 'log_directory must not be None' in validation_result
-        assert 'ssh_user must not be None' in validation_result
-        assert 'ssh_key_path must not be None' in validation_result
-        assert 'log_directory must be str' in validation_result
-        assert 'ssh_user must be str' in validation_result
-        assert 'ssh_key_path must be str' in validation_result
-        assert 'ssh_key_path file None does not exist on filesystem' in validation_result
-        assert 'log_directory directory None does not exist on filesystem' in validation_result
-        assert ('FE80:0000:0000:0000:0202:B3FF:FE1E:8329 '
-                'is not a valid IPv4 address, field: targets') in validation_result
-        assert ('FE80:0000:0000:0000:0202:B3FF:FE1E:8329 '
-                'IPv6 is currently not supported, field: targets') in validation_result
+        expected_errors = {
+            'log_directory must not be None',
+            'ssh_user must not be None',
+            'ssh_key_path must not be None',
+            'log_directory must be str',
+            'ssh_user must be str',
+            'ssh_key_path must be str',
+            'ssh_key_path file None does not exist on filesystem',
+            'log_directory directory None does not exist on filesystem',
+            'Cannot specify None for path argument'
+        }
+        assert set(validation_result) - set(expected_errors) == set()
 
     def test_validate_raise_exception(self):
         runner = ssh.ssh_runner.SSHRunner()
@@ -232,12 +232,29 @@ class TestSSHRunner(unittest.TestCase):
         try:
             runner.validate()
         except ssh.validate.ValidationException as err:
-            assert len(err.args[0]) == 5
-            assert 'ssh_user must not be None' in err.args[0]
-            assert 'ssh_user must be str' in err.args[0]
-            assert 'ssh_key_path file /no_file_exists does not exist on filesystem' in err.args[0]
-            assert 'log_directory directory /no_dir_exists does not exist on filesystem' in err.args[0]
-            assert 'targets list should not be empty' in err.args[0]
+            expected_errors = {
+                'ssh_user must not be None',
+                'ssh_user must be str',
+                'ssh_key_path file /no_file_exists does not exist on filesystem',
+                'log_directory directory /no_dir_exists does not exist on filesystem',
+                'targets list should not be empty',
+                'No such file or directory: /no_file_exists'
+            }
+            assert set(err.args[0]) - expected_errors == set()
+
+    def test_validate_wrong_private_key_permissions(self):
+        runner = ssh.ssh_runner.SSHRunner()
+        with tempfile.NamedTemporaryFile() as tmp:
+            runner.ssh_key_path = tmp.name
+            runner.log_directory = '/tmp'
+            runner.ssh_user = 'ubuntu'
+            runner.targets = ['127.0.0.1']
+            os.chmod(tmp.name, 511)  # oct(511) = 0o777
+            errors = runner.validate(throw_if_errors=False)
+            expected_errors = {
+                'permissions 0777 for {} are too open'.format(tmp.name)
+            }
+            assert set(errors) - expected_errors == set()
 
     def test_validate(self):
         runner = ssh.ssh_runner.SSHRunner()
@@ -246,19 +263,15 @@ class TestSSHRunner(unittest.TestCase):
             runner.log_directory = '/tmp'
             runner.ssh_user = 'ubuntu'
             runner.targets = ['127.0.0.1']
+            os.chmod(tmp.name, 256)  # oct(256) = 0o0400
             runner.validate()
 
 
 class TestValidate(unittest.TestCase):
     def test_is_valid_ipv4_address(self):
         assert ssh.validate.is_valid_ipv4_address('127.0.0.1') is True
-        assert ssh.validate.is_valid_ipv4_address('FE80:0000:0000:0000:0202:B3FF:FE1E:8329') is False
+        assert ssh.validate.is_valid_ipv4_address('255.255.255.256') is False
         assert ssh.validate.is_valid_ipv4_address('foo') is False
-
-    def test_is_valid_ipv6_address(self):
-        assert ssh.validate.is_valid_ipv6_address('FE80:0000:0000:0000:0202:B3FF:FE1E:8329') is True
-        assert ssh.validate.is_valid_ipv6_address('10.10.10.10') is False
-        assert ssh.validate.is_valid_ipv6_address('bar') is False
 
 
 if __name__ == '__main__':

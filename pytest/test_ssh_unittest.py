@@ -121,7 +121,6 @@ class TestSSHRunner(unittest.TestCase):
         self.ssh_runner = ssh.ssh_runner.SSHRunner()
         self.ssh_runner.ssh_user = 'ubuntu'
         self.ssh_runner.log_directory = '/tmp'
-        self.ssh_runner.postfix = 'test'
         self.ssh_runner.ssh_key_path = '/home/ubuntu/.ssh/id_rsa'
         self.ssh_runner.targets = ['127.0.0.1', '10.10.10.10:22022']
 
@@ -191,7 +190,6 @@ class TestSSHRunner(unittest.TestCase):
         mocked_isfile.return_value = True
 
         self.ssh_runner.wrapped_run(func)
-        self.ssh_runner.postfix = 'test'
         mocked_save_logs.assert_called_with([{'returncode': 0, 'host': {'ip': '127.0.0.1'}}])
         assert mocked_open.call_count == 2
         mocked_open.assert_any_call('./.cache.json')

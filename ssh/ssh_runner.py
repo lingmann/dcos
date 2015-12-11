@@ -123,7 +123,11 @@ class SSHRunner():
         try:
             for result in results:
                 host = result['host']['ip']
-                ssh.helpers.dump_host_results(self.log_directory, host, ssh.helpers.get_structured_results(result), self.log_postfix)
+                ssh.helpers.dump_host_results(
+                    self.log_directory, 
+                    host, 
+                    ssh.helpers.get_structured_results(result), 
+                    self.log_postfix)
         except IOError:
             pass
         return results

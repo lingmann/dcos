@@ -121,6 +121,7 @@ class TestSSHRunner(unittest.TestCase):
         self.ssh_runner = ssh.ssh_runner.SSHRunner()
         self.ssh_runner.ssh_user = 'ubuntu'
         self.ssh_runner.log_directory = '/tmp'
+        self.ssh_runner.postfix = 'test'
         self.ssh_runner.ssh_key_path = '/home/ubuntu/.ssh/id_rsa'
         self.ssh_runner.targets = ['127.0.0.1', '10.10.10.10:22022']
 
@@ -158,6 +159,7 @@ class TestSSHRunner(unittest.TestCase):
     @unittest.mock.patch('time.strftime')
     @unittest.mock.patch('ssh.helpers.dump_host_results')
     def test_save_log(self, mocked_dump_host_results, mocked_time_strftime):
+        self.ssh_runner.log_postfix = 'test'
         mock_struct_data = [
             {
                 'host': {
@@ -168,7 +170,7 @@ class TestSSHRunner(unittest.TestCase):
         mocked_time_strftime.return_value = '123'
         self.ssh_runner.save_logs(mock_struct_data)
         mocked_dump_host_results.assert_called_with('/tmp', '127.0.0.1',
-                                                    {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}})
+                                                    {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}}, 'test')
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
     def test_wrapped_run_no_cache(self, mocked_save_logs):
@@ -189,6 +191,7 @@ class TestSSHRunner(unittest.TestCase):
         mocked_isfile.return_value = True
 
         self.ssh_runner.wrapped_run(func)
+        self.ssh_runner.postfix = 'test'
         mocked_save_logs.assert_called_with([{'returncode': 0, 'host': {'ip': '127.0.0.1'}}])
         assert mocked_open.call_count == 2
         mocked_open.assert_any_call('./.cache.json')

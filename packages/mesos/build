@@ -17,6 +17,7 @@ pushd build
   --with-glog=/opt/mesosphere/active/mesos-buildenv \
   --with-protobuf=/opt/mesosphere/active/mesos-buildenv \
   --with-boost=/opt/mesosphere/active/mesos-buildenv \
+  --with-curl=/opt/mesosphere/active/curl \
 # TODO(cmaloney): -j8 is almost certainly wrong.
 make -j8
 

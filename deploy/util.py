@@ -1,4 +1,4 @@
-from ssh.ssh_runner import SSHRunner
+import ssh.ssh_runner
 
 
 def create_full_inventory(master_list, targets):
@@ -19,7 +19,7 @@ def get_runner(config, hosts):
     """
     Retrun the with pre-set parameters.
     """
-    default_runner = SSHRunner()
+    default_runner = ssh.ssh_runner.SSHRunner()
     default_runner.ssh_user = config['ssh_config']['ssh_user']
     default_runner.ssh_key_path = config['ssh_config']['ssh_key_path']
     default_runner.log_directory = config['ssh_config']['log_directory']

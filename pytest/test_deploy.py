@@ -2,6 +2,8 @@ import os
 import unittest
 import unittest.mock
 
+import pkg_resources
+
 import deploy.deploy
 import deploy.postflight
 import deploy.preflight
@@ -23,21 +25,35 @@ class TestDeploy(unittest.TestCase):
 
     def test_copy_dcos_install(self):
         deploy.deploy.copy_dcos_install(self.mocked_runner)
-        self.mocked_runner.copy_cmd.assert_called_with('/genconf/serve/dcos_install.sh', '/tmp/')
+        self.mocked_runner.copy_cmd.assert_called_with('/genconf/serve/dcos_install.sh',
+                                                       '/opt/dcos_install_tmp/dcos_install.sh')
 
-    def test_copy_packages(self):
+    @unittest.mock.patch('pkgpanda.load_json')
+    @unittest.mock.patch('os.path.isfile')
+    def test_copy_packages(self, mocked_isfile, mocked_load_json):
+        mocked_isfile.return_value = True
+        mocked_load_json.return_value = {
+            "dcos-config": {
+                "filename": "packages/dcos-config/dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9.tar.xz",
+                "id": "dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9"
+            }
+        }
         deploy.deploy.copy_packages(self.mocked_runner)
-        self.mocked_runner.copy_cmd.assert_called_with('/genconf/serve/packages/', '/tmp', recursive=True)
+        self.mocked_runner.copy_cmd.assert_called_with(
+            '/genconf/serve/packages/dcos-config/dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9.tar.xz',
+            '/opt/dcos_install_tmp/packages/dcos-config')
 
     def test_copy_bootstrap(self):
         deploy.deploy.copy_bootstrap(self.mocked_runner, '/genconf/serve/bootstrap')
-        self.mocked_runner.execute_cmd.assert_called_with('mkdir -p /tmp/bootstrap/')
-        self.mocked_runner.copy_cmd.assert_called_with('/genconf/serve/bootstrap', '/tmp/bootstrap/')
+        self.mocked_runner.execute_cmd.assert_called_with('mkdir -p /opt/dcos_install_tmp/bootstrap')
+        self.mocked_runner.copy_cmd.assert_called_with('/genconf/serve/bootstrap', '/opt/dcos_install_tmp/bootstrap')
 
-    @unittest.mock.patch('glob.glob')
-    def test_get_bootstrap_tarball(self, mocked_glob):
-        mocked_glob.return_value = ['pkg123']
-        assert deploy.deploy.get_bootstrap_tarball() == 'pkg123'
+    @unittest.mock.patch.dict(os.environ, {'BOOTSTRAP_ID': 'xyz'})
+    @unittest.mock.patch('os.path.isfile')
+    def test_get_bootstrap_tarball(self, mocked_isfile):
+        mocked_isfile.return_value = True
+        assert deploy.deploy.get_bootstrap_tarball(tarball_base_dir='/genconf/') == '/genconf/xyz.bootstrap.tar.xz'
+        assert deploy.deploy.get_bootstrap_tarball() == '/genconf/serve/bootstrap/xyz.bootstrap.tar.xz'
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
     def test_deploy_masters(self, mocked_ssh_runner):
@@ -56,7 +72,7 @@ class TestDeploy(unittest.TestCase):
         assert mocked_ssh_runner().ssh_key_path == '/home/ubuntu/.ssh/id_rsa'
         assert mocked_ssh_runner().log_directory == '/genconf/logs'
         assert mocked_ssh_runner().targets == ['10.10.0.1']
-        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /tmp/dcos_install.sh master')
+        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /opt/dcos_install_tmp/dcos_install.sh master')
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
     def test_deploy_agents(self, mocked_ssh_runner):
@@ -77,12 +93,20 @@ class TestDeploy(unittest.TestCase):
         assert mocked_ssh_runner().log_directory == '/genconf/logs'
         assert '10.10.0.2' in mocked_ssh_runner().targets
         assert '10.10.0.3' in mocked_ssh_runner().targets
-        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /tmp/dcos_install.sh slave')
+        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /opt/dcos_install_tmp/dcos_install.sh slave')
 
-    @unittest.mock.patch('glob.glob')
+    @unittest.mock.patch.dict(os.environ, {'BOOTSTRAP_ID': 'xyz'})
+    @unittest.mock.patch('pkgpanda.load_json')
+    @unittest.mock.patch('os.path.isfile')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
-    def test_install_dcos(self, mocked_ssh_runner, mocked_glob):
-        mocked_glob.return_value = ['pkg1']
+    def test_install_dcos(self, mocked_ssh_runner, mocked_isfile, mocked_load_json):
+        mocked_isfile.return_value = True
+        mocked_load_json.return_value = {
+            "dcos-config": {
+                "filename": "packages/dcos-config/dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9.tar.xz",
+                "id": "dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9"
+            }
+        }
         config = {
             'cluster_config': {
                 'master_list': ['10.10.0.1']
@@ -97,14 +121,22 @@ class TestDeploy(unittest.TestCase):
         deploy.deploy.install_dcos(config)
 
         assert mocked_ssh_runner().copy_cmd.call_count == 3
-        mocked_ssh_runner().copy_cmd.assert_any_call('/genconf/serve/dcos_install.sh', '/tmp/')
-        mocked_ssh_runner().copy_cmd.assert_any_call('/genconf/serve/packages/', '/tmp', recursive=True)
-        mocked_ssh_runner().copy_cmd.assert_any_call('pkg1', '/tmp/bootstrap/')
+        mocked_ssh_runner().copy_cmd.assert_any_call('/genconf/serve/dcos_install.sh',
+                                                     '/opt/dcos_install_tmp/dcos_install.sh')
+        mocked_ssh_runner().copy_cmd.assert_any_call(
+            '/genconf/serve/packages/dcos-config/dcos-config--setup_a1ddad12152a8b07982a910674cfcf320f9505b9.tar.xz',
+            '/opt/dcos_install_tmp/packages/dcos-config')
+        mocked_ssh_runner().copy_cmd.assert_any_call('/genconf/serve/bootstrap/xyz.bootstrap.tar.xz',
+                                                     '/opt/dcos_install_tmp/bootstrap')
 
-        assert mocked_ssh_runner().execute_cmd.call_count == 3
-        mocked_ssh_runner().execute_cmd.assert_any_call('mkdir -p /tmp/bootstrap/')
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /tmp/dcos_install.sh master')
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /tmp/dcos_install.sh slave')
+        assert mocked_ssh_runner().execute_cmd.call_count == 7
+        mocked_ssh_runner().execute_cmd.assert_any_call('mkdir -p /opt/dcos_install_tmp/bootstrap')
+        mocked_ssh_runner().execute_cmd.assert_any_call('mkdir -p /opt/dcos_install_tmp/packages/dcos-config')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /opt/dcos_install_tmp/dcos_install.sh master')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /opt/dcos_install_tmp/dcos_install.sh slave')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo mkdir -p /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo chown ubuntu /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo rm -rf /opt/dcos_install_tmp')
 
 
 class TestPreflight(unittest.TestCase):
@@ -122,8 +154,12 @@ class TestPreflight(unittest.TestCase):
             }
         }
         deploy.preflight.preflight_check(config, preflight_script_path='/somewhere/preflight.sh')
-        mocked_ssh_runner().copy_cmd.assert_called_with('/somewhere/preflight.sh', '/tmp/')
-        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /tmp/preflight.sh')
+        mocked_ssh_runner().copy_cmd.assert_called_with('/somewhere/preflight.sh', '/opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /opt/dcos_install_tmp/preflight.sh')
+
+        deploy.preflight.preflight_check(config)
+        prefligh_path = pkg_resources.resource_filename('deploy', 'preflight.sh')
+        mocked_ssh_runner().copy_cmd.assert_called_with(prefligh_path, '/opt/dcos_install_tmp')
 
 
 class TestPostflight(unittest.TestCase):
@@ -149,7 +185,7 @@ class TestPostflight(unittest.TestCase):
     def test_execute_local_service_check(self, mocked_validate, mocked_execute_cmd):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.return_value = []
-        mocked_execute_cmd.return_value = [{'returncode': 0}]
+        mocked_execute_cmd.return_value = [{'returncode': 0, 'stdout': 'stdout'}]
         deploy.postflight.execute_local_service_check(executor)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
@@ -164,7 +200,7 @@ class TestPostflight(unittest.TestCase):
     def test_execute_local_service_check_throw_execute_exception(self, mocked_validate, mocked_execute_cmd):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.return_value = []
-        mocked_execute_cmd.return_value = [{'returncode': 1, 'stderr': 'stderr'}]
+        mocked_execute_cmd.return_value = [{'returncode': 1, 'stderr': 'stderr', 'stdout': 'stdout'}]
         with self.assertRaises(ExecuteException):
             deploy.postflight.execute_local_service_check(executor)
 

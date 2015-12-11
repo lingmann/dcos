@@ -7,9 +7,9 @@ log = logging.getLogger(__name__)
 
 def handle_command(command):
     '''
-    A wrapper, checks command output and throws ExecuteException if return code != 0
+    A wrapper, checks command output.
     :param command:
-    :return:
+    :raises: ssh.validate.ExecuteException if command return code != 0
     '''
     for output in command():
         if output['stdout']:

@@ -2,6 +2,7 @@ import logging as log
 import os
 import subprocess
 
+from ssh.utils import handle_command
 from ssh.validate import ExecuteException, ValidationException
 
 
@@ -62,7 +63,4 @@ def execute_local_service_check(executor, dcos_diag=None):
         log.error(err)
         raise
 
-    for output in executor.execute_cmd(dcos_diag):
-        if output['returncode'] != 0:
-            log.error(output['stderr'])
-            raise ExecuteException(output)
+    handle_command(lambda: executor.execute_cmd(dcos_diag))

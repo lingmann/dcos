@@ -2,23 +2,32 @@ import ssh.ssh_runner
 
 
 def create_full_inventory(master_list, targets):
-    """
-    Merge master and target lists together, ensure no duplicates
-    """
+    '''
+    Join 2 lists of masters and all hosts to make sure we are addressing all available hosts.
+    :param master_list: List of masters
+    :param targets: List of all hosts
+    :return: joined unique list of masters and all targets
+    '''
     return list(set(master_list) | set(targets))
 
 
 def create_agent_list(master_list, targets):
-    """
-    Return an array of targets excluding the masters.
-    """
+    '''
+    Agents are targets - masters
+    :param master_list: List of masters
+    :param targets: List of all hosts
+    :return: List  of targets excluding the masters.
+    '''
     return list(set(targets) - set(master_list))
 
 
 def get_runner(config, hosts):
-    """
-    Retrun the with pre-set parameters.
-    """
+    '''
+
+    :param config: Dict, loaded config file from /genconf/config.yaml
+    :param hosts: set hosts to run ssh commands on
+    :return: instance of ssh.ssh_runner.SSHRunner with pre-set parameters.
+    '''
     default_runner = ssh.ssh_runner.SSHRunner()
     default_runner.ssh_user = config['ssh_config']['ssh_user']
     default_runner.ssh_key_path = config['ssh_config']['ssh_key_path']

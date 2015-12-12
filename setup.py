@@ -40,7 +40,8 @@ setup(
             'azure/templates/azure.html',
             'vagrant/config.rb',
             'vagrant/make_dcos_vagrant.sh.in',
-            'vagrant/Vagrantfile']
+            'vagrant/Vagrantfile',
+            'deploy/preflight.sh']
     },
     zip_safe=False
 )

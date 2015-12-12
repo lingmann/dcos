@@ -1,11 +1,4 @@
 package:
-  - path: /pkginfo.json
-    content: |
-      {
-        "environment": {
-          "PROVIDER": "{{ provider }}"
-        }
-      }
   - path: /etc/cloudenv
     content: |
       ZOOKEEPER_CLUSTER_SIZE=1

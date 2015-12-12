@@ -1,11 +1,4 @@
 package:
-  - path: /pkginfo.json
-    content: |
-      {
-        "environment": {
-          "PROVIDER": "{{ provider }}"
-        }
-      }
   - path: /etc/cloudenv
     content: |
       AWS_REGION={ "Ref" : "AWS::Region" }
@@ -34,8 +27,3 @@ package:
       MASTER_SOURCE=exhibitor
       EXHIBITOR_ADDRESS={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
       RESOLVERS={{ resolvers_str }}
-root:
-  - path: /etc/mesosphere/cluster-id
-    permissions: "0644"
-    content: |
-      { "Ref" : "AWS::StackId" }

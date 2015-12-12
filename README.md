@@ -5,7 +5,39 @@
 1. ```pip install -r requirements.txt```
 2. ```./run_dcos_installer```
 
-## Manpage
+## REST API
+
+<pre>/                          GET: <em>  root</em></pre>
+
+<pre>/configure/                GET: <em>  configuration page</em></pre>
+
+<pre>/configure/validate/       POST: <em>  validate configuration data, return config_errors.json</em></pre>
+
+<pre>/preflight/                POST: <em> Execute preflight on target hosts</em></pre> 
+<pre>                           GET: <em>  RETURN preflight_status.json</em></pre>
+
+<pre>/preflight/logs/           GET: <em>  Get *_preflight logs for download</em></pre>
+
+<pre>/preflight/errors/         GET: <em> RETURN preflight_errors.json </em></pre>
+
+<pre>/deploy/                   POST: <em> Install DCOS on target hosts.</em></pre>
+<pre>                           GET:  <em> RETURN deploy_status.json</em></pre>
+
+<pre>/deploy/logs/              GET: <em>  Get *_deploy.log data for download</em></pre>
+
+<pre>/deploy/errors/            GET: <em>  RETURN preflight_errors.json</em></pre>
+
+<pre>/postflight/               POST: <em>  Execute postflight on target hosts</em></pre>
+<pre>                           GET: <em> RETURN postflight_status.json</em></pre>
+
+<pre>/postflight/logs/          GET: <em>  RETURN *_postflight.log files for download</em></pre>
+
+<pre>/postflight/errors/        GET: <em> RETURN postflight_errors.json</em></pre>
+
+<pre>/success/                  GET: <em> RETURN url to DCOS UI</em></pre>
+
+
+## CLI Manpage
 
 ```pre
 usage: run [-h] [--log-directory LOG_DIRECTORY]
@@ -145,4 +177,5 @@ ssh_config:
   # The user to execute SSH and copy DCOS tarball to $HOME on taget hosts
   # Default: vagrant
   ssh_user: vagrant
+  log_directory: /genconf/logs
 ```

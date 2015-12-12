@@ -5,6 +5,8 @@
 1. ```pip install -r requirements.txt```
 2. ```./run_dcos_installer```
 
+# Frontend Manpage
+
 ## REST API
 
 <pre>/                          GET: <em>  root</em></pre>
@@ -37,7 +39,34 @@
 <pre>/success/                  GET: <em> RETURN url to DCOS UI</em></pre>
 
 
-## CLI Manpage
+#### *_errors.json
+
+```json
+{
+  '10.0.0.1': {
+    'master_list': 'Invalid list of IPv4 addresses',
+    'ssh_key_path': 'Path to ssh key is not valid.'
+  },
+  '10.0.0.2': {
+    ...
+  }
+}
+```
+
+#### *_status.json
+
+```json
+{
+   masters: {
+      status: '2 out of 10',  # String of text 
+      percentage: 60 # Integer no decimal point
+   },
+   slaves: { ...same as masters... }
+}
+```
+
+
+# CLI Manpage
 
 ```pre
 usage: run [-h] [--log-directory LOG_DIRECTORY]

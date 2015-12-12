@@ -10,6 +10,7 @@ import sys
 from argparse import RawTextHelpFormatter
 from subprocess import CalledProcessError
 
+import pkgpanda
 import yaml
 
 import gen
@@ -104,6 +105,9 @@ def do_genconf(options):
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
+
+    # Write cluster_packages.json with a list of packages
+    pkgpanda.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
 def do_provider(options, provider_module, mixins, user_arguments):

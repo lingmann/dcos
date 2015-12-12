@@ -117,12 +117,17 @@ class SSHRunner():
         self.log_directory = None
         self.use_cache = use_cache
         self.__cache_file = './.cache.json'
+        self.log_postfix = 'ssh_data'
 
     def save_logs(self, results):
         try:
             for result in results:
                 host = result['host']['ip']
-                ssh.helpers.dump_host_results(self.log_directory, host, ssh.helpers.get_structured_results(result))
+                ssh.helpers.dump_host_results(
+                    self.log_directory,
+                    host,
+                    ssh.helpers.get_structured_results(result),
+                    self.log_postfix)
         except IOError:
             pass
         return results
@@ -144,7 +149,7 @@ class SSHRunner():
             return results
         return self.save_logs(dump_success_hosts(eval_command()))
 
-    def validate(self, throw_if_errors=True, ssh_key_owner=None):
+    def validate(self, throw_if_errors=True):
         with ssh.validate.ErrorsCollector(throw_if_errors=throw_if_errors) as ec:
             ec.is_not_none(self, [
                 'log_directory',
@@ -155,6 +160,7 @@ class SSHRunner():
             ec.is_string(self, [
                 'log_directory',
                 'ssh_user',
+                'log_postfix',
                 'ssh_key_path'
             ])
 

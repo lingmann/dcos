@@ -22,12 +22,12 @@ def get_structured_results(command_result):
     }
 
 
-def dump_host_results(log_directory, host, results, log_type='preflight'):
+def dump_host_results(log_directory, host, results, postfix=''):
     """
     Dumps the results to our preflight log file. Assumes incoming results are already
     pre-structured.
     """
-    log_file = '{}/{}_{}.log'.format(log_directory, host, log_type)
+    log_file = '{}/{}_{}.log'.format(log_directory, host, postfix)
     if os.path.exists(log_file):
         current_file = yaml.load(open(log_file))
         for fhost, data in current_file.items():

@@ -213,12 +213,12 @@ def gen_templates(arguments, options):
     })
 
 
-def gen_buttons(channel, tag, commit):
+def gen_buttons(repo_channel_path, tag, commit):
     # Generate the button page.
     # TODO(cmaloney): Switch to package_resources
     return env.get_template('aws/templates/aws.html').render(
         {
-            'channel': channel,
+            'repo_channel_path': repo_channel_path,
             'tag': tag,
             'commit': commit,
             'regions': aws_region_names
@@ -232,7 +232,7 @@ def get_spot_args(base_args):
     return spot_args
 
 
-def do_create(tag, channel, commit, gen_arguments):
+def do_create(tag, repo_channel_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'cloud_dynamic'
@@ -244,7 +244,7 @@ def do_create(tag, channel, commit, gen_arguments):
     multi_master = gen_templates(multi_args, gen_options)
     single_master_spot = gen_templates(get_spot_args(single_args), gen_options)
     multi_master_spot = gen_templates(get_spot_args(single_args), gen_options)
-    button_page = gen_buttons(channel, tag, commit)
+    button_page = gen_buttons(repo_channel_path, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.
@@ -255,38 +255,32 @@ def do_create(tag, channel, commit, gen_arguments):
     extra_packages += util.cluster_to_extra_packages(single_master_spot.results.cluster_packages)
 
     return {
-        'extra_packages': extra_packages,
-        'files': [
+        'packages': extra_packages,
+        'artifacts': [
             {
-                'known_path': 'cloudformation/single-master.cloudformation.json',
-                'stable_path': 'cloudformation/{}.single-master.cloudformation.json'.format(
-                    single_master.results.arguments['config_id']),
-                'content': single_master.cloudformation
+                'channel_path': 'cloudformation/single-master.cloudformation.json',
+                'local_content': single_master.cloudformation,
+                'content_type': 'application/json; charset=utf-8'
             },
             {
-                'known_path': 'cloudformation/multi-master.cloudformation.json',
-                'stable_path': 'cloudformation/{}.multi-master.cloudformation.json'.format(
-                    multi_master.results.arguments['config_id']),
-                'content': multi_master.cloudformation
+                'channel_path': 'cloudformation/multi-master.cloudformation.json',
+                'local_content': multi_master.cloudformation,
+                'content_type': 'application/json; charset=utf-8'
             },
             {
-                'known_path': 'cloudformation/single-master-spot.cloudformation.json',
-                'stable_path': 'cloudformation/{}.single-master-spot.cloudformation.json'.format(
-                    single_master_spot.results.arguments['config_id']),
-                'content': single_master_spot.cloudformation
+                'channel_path': 'cloudformation/single-master-spot.cloudformation.json',
+                'local_content': single_master_spot.cloudformation,
+                'content_type': 'application/json; charset=utf-8'
             },
             {
-                'known_path': 'cloudformation/multi-master-spot.cloudformation.json',
-                'stable_path': 'cloudformation/{}.multi-master-spot.cloudformation.json'.format(
-                    multi_master_spot.results.arguments['config_id']),
-                'content': multi_master_spot.cloudformation
+                'channel_path': 'cloudformation/multi-master-spot.cloudformation.json',
+                'local_content': multi_master_spot.cloudformation,
+                'content_type': 'application/json; charset=utf-8'
             },
             {
-                'known_path': 'aws.html',
-                'content': button_page,
-                'upload_args': {
-                    'ContentType': 'text/html; charset=utf-8'
-                }
+                'channel_path': 'aws.html',
+                'local_content': button_page,
+                'content_type': 'text/html; charset=utf-8'
             }
         ]
     }

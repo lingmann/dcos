@@ -158,6 +158,7 @@ class TestSSHRunner(unittest.TestCase):
     @unittest.mock.patch('time.strftime')
     @unittest.mock.patch('ssh.helpers.dump_host_results')
     def test_save_log(self, mocked_dump_host_results, mocked_time_strftime):
+        self.ssh_runner.log_postfix = 'test'
         mock_struct_data = [
             {
                 'host': {
@@ -168,7 +169,7 @@ class TestSSHRunner(unittest.TestCase):
         mocked_time_strftime.return_value = '123'
         self.ssh_runner.save_logs(mock_struct_data)
         mocked_dump_host_results.assert_called_with('/tmp', '127.0.0.1',
-                                                    {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}})
+                                                    {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}}, 'test')
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
     def test_wrapped_run_no_cache(self, mocked_save_logs):

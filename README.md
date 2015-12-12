@@ -43,11 +43,11 @@
 
 ```json
 {
-  '10.0.0.1': {
-    'master_list': 'Invalid list of IPv4 addresses',
-    'ssh_key_path': 'Path to ssh key is not valid.'
+  "10.0.0.1": {
+    "master_list": "Invalid list of IPv4 addresses",
+    "ssh_key_path": "Path to ssh key is not valid."
   },
-  '10.0.0.2': {
+  "10.0.0.2": {
     ...
   }
 }
@@ -57,11 +57,14 @@
 
 ```json
 {
-   masters: {
-      status: '2 out of 10',  # String of text 
-      percentage: 60 # Integer no decimal point
+   "masters": {
+      "status": "2 out of 5", 
+      "percentage": "65"
    },
-   slaves: { ...same as masters... }
+   "slaves": {
+      "status": "4 out of 30",
+      "percentage": 3
+    }
 }
 ```
 

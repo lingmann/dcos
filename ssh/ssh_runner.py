@@ -33,15 +33,15 @@ def parse_ip(ip):
 
 
 def run_cmd_return_tuple(host, cmd):
-    exec = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = exec.communicate()
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    stdout, stderr = process.communicate()
     return {
         "cmd": cmd,
         "host": host,
         "stdout": stdout.decode().split('\n'),
         "stderr": stderr.decode().split('\n'),
-        "returncode": exec.returncode,
-        "pid": exec.pid
+        "returncode": process.returncode,
+        "pid": process.pid
     }
 
 

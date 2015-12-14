@@ -153,11 +153,17 @@ class TestPreflight(unittest.TestCase):
                 'target_hosts': ['10.10.0.2', '10.10.0.3']
             }
         }
-        deploy.preflight.preflight_check(config, preflight_script_path='/somewhere/preflight.sh')
+        deploy.preflight.run_preflight(config, preflight_script_path='/somewhere/preflight.sh')
+        assert mocked_ssh_runner().copy_cmd.call_count == 1
         mocked_ssh_runner().copy_cmd.assert_called_with('/somewhere/preflight.sh', '/opt/dcos_install_tmp')
-        mocked_ssh_runner().execute_cmd.assert_called_with('sudo bash /opt/dcos_install_tmp/preflight.sh')
 
-        deploy.preflight.preflight_check(config)
+        assert mocked_ssh_runner().execute_cmd.call_count == 4
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo mkdir -p /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo chown ubuntu /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /opt/dcos_install_tmp/preflight.sh')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo rm -rf /opt/dcos_install_tmp')
+
+        deploy.preflight.run_preflight(config)
         prefligh_path = pkg_resources.resource_filename('deploy', 'preflight.sh')
         mocked_ssh_runner().copy_cmd.assert_called_with(prefligh_path, '/opt/dcos_install_tmp')
 
@@ -177,7 +183,7 @@ class TestPostflight(unittest.TestCase):
         env['DNS_SEARCH'] = dns_search
         env['DCOS_DNS_ADDRESS'] = dcos_dns_address
         deploy.postflight.run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry_host,
-                                               test_path='/genconf')
+                                               '/genconf', None)
         mocked_check_call.assert_called_with(['py.test', '-vv', '/genconf/integration_test.py'], env=env)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
@@ -186,14 +192,14 @@ class TestPostflight(unittest.TestCase):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.return_value = []
         mocked_execute_cmd.return_value = [{'returncode': 0, 'stdout': 'stdout'}]
-        deploy.postflight.execute_local_service_check(executor)
+        deploy.postflight.execute_local_service_check(executor, None)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
     def test_execute_local_service_check_throw_validation_exception(self, mocked_validate):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.side_effect = ValidationException()
         with self.assertRaises(ValidationException):
-            deploy.postflight.execute_local_service_check(executor)
+            deploy.postflight.execute_local_service_check(executor, None)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
@@ -202,7 +208,29 @@ class TestPostflight(unittest.TestCase):
         mocked_validate.return_value = []
         mocked_execute_cmd.return_value = [{'returncode': 1, 'stderr': 'stderr', 'stdout': 'stdout'}]
         with self.assertRaises(ExecuteException):
-            deploy.postflight.execute_local_service_check(executor)
+            deploy.postflight.execute_local_service_check(executor, None)
+
+    @unittest.mock.patch('subprocess.check_call')
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
+    def test_run_postflight(self, mocked_ssh_runner, mocked_check_call):
+        config = {
+            'cluster_config': {
+                'master_list': ['10.10.0.1']
+            },
+            'ssh_config': {
+                'ssh_user': 'ubuntu',
+                'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
+                'log_directory': '/genconf/logs',
+                'target_hosts': ['10.10.0.2', '10.10.0.3']
+            }
+        }
+        deploy.postflight.run_postflight(config)
+        assert mocked_check_call.call_count == 1
+        assert mocked_ssh_runner().execute_cmd.call_count == 4
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo mkdir -p /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo chown ubuntu /opt/dcos_install_tmp')
+        mocked_ssh_runner().execute_cmd.assert_any_call('/opt/mesosphere/bin/dcos-diagnostics.py')
+        mocked_ssh_runner().execute_cmd.assert_any_call('sudo rm -rf /opt/dcos_install_tmp')
 
 
 if __name__ == '__main__':

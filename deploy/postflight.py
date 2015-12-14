@@ -2,12 +2,13 @@ import logging as log
 import os
 import subprocess
 
+from deploy.deploy import cleanup_tmp_dir, init_tmp_dir
+from deploy.util import create_agent_list, create_full_inventory, get_runner
 from ssh.utils import handle_command
 from ssh.validate import ExecuteException, ValidationException
 
 
-def run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry_host, test_path=None,
-                         pytest_path=None):
+def run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry_host, test_path, pytest_path):
     '''
     Runs integration test against fully setup DCOS cluster
     python modules required to run integration test: pytest requests beautifulsoup4 kazoo retrying dnspython3
@@ -44,12 +45,12 @@ def run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry
         raise ExecuteException()
 
 
-def execute_local_service_check(executor, dcos_diag=None):
+def execute_local_service_check(executor, dcos_diag):
     '''
     Execute post-flight check on local machine to ensure DCOS processes
     are in fact running.
     :param executor: configured instance of ssh.ssh_runner.SSHRunner
-    :param dcos_diag: location of dcos-diagnostics.py
+    :param dcos_diag: remote location of dcos-diagnostics.py
     :raises: ssh.validate.ValidationException if config validation fails
              ssh.validate.ExecuteException if command execution fails
     '''
@@ -64,3 +65,32 @@ def execute_local_service_check(executor, dcos_diag=None):
         raise
 
     handle_command(lambda: executor.execute_cmd(dcos_diag))
+
+
+def run_postflight(config, test_path=None, pytest_path=None, dcos_diag=None):
+    '''
+    Entry point for postflight tests
+    :param config: Dict, loaded config file from /genconf/config.yaml
+    :param test_path: String, a path to dcos-image where integration-test.py lives
+    :param pytest_path: String: a path to py.test
+    :param dcos_diag: remote location of dcos-diagnostics.py
+    '''
+    masters_str = ','.join(config['cluster_config']['master_list'])
+
+    slaves_str = ','.join(create_agent_list(config['cluster_config']['master_list'],
+                                            config['ssh_config']['target_hosts']))
+    dns_search = 'false'
+    if 'dns_search' in config['cluster_config'] and config['cluster_config']['dns_search'] == 'mesos':
+        dns_search = 'false'
+    dcos_dns_address = 'http://{}'.format(config['cluster_config']['master_list'][0])
+    registry_host = config['cluster_config']['master_list'][0]
+
+    postflight_runner = get_runner(config, create_full_inventory(config['cluster_config']['master_list'],
+                                                                 config['ssh_config']['target_hosts']))
+    try:
+        init_tmp_dir(postflight_runner)
+        execute_local_service_check(postflight_runner, dcos_diag)
+        run_integration_test(masters_str, slaves_str, dns_search, dcos_dns_address, registry_host, test_path,
+                             pytest_path)
+    finally:
+        cleanup_tmp_dir(postflight_runner)

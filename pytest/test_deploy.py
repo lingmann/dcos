@@ -169,23 +169,6 @@ class TestPreflight(unittest.TestCase):
 
 
 class TestPostflight(unittest.TestCase):
-    @unittest.mock.patch('subprocess.check_call')
-    def test_run_integration_test(self, mocked_check_call):
-        masters = '10.10.10.1,10.10.10.2'
-        slaves = '10.10.10.3'
-        dns_search = 'true'
-        dcos_dns_address = 'http://10.10.10.1'
-        registry_host = '10.10.10.1'
-        env = os.environ.copy()
-        env['MASTER_HOSTS'] = masters
-        env['SLAVE_HOSTS'] = slaves
-        env['REGISTRY_HOST'] = registry_host
-        env['DNS_SEARCH'] = dns_search
-        env['DCOS_DNS_ADDRESS'] = dcos_dns_address
-        deploy.postflight.run_integration_test(masters, slaves, dns_search, dcos_dns_address, registry_host,
-                                               '/genconf', None)
-        mocked_check_call.assert_called_with(['py.test', '-vv', '/genconf/integration_test.py'], env=env)
-
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
     def test_execute_local_service_check(self, mocked_validate, mocked_execute_cmd):
@@ -210,9 +193,9 @@ class TestPostflight(unittest.TestCase):
         with self.assertRaises(ExecuteException):
             deploy.postflight.execute_local_service_check(executor, None)
 
-    @unittest.mock.patch('subprocess.check_call')
+    @unittest.mock.patch('subprocess.Popen')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
-    def test_run_postflight(self, mocked_ssh_runner, mocked_check_call):
+    def test_run_postflight(self, mocked_ssh_runner, mocked_popen):
         config = {
             'cluster_config': {
                 'master_list': ['10.10.0.1']
@@ -224,13 +207,14 @@ class TestPostflight(unittest.TestCase):
                 'target_hosts': ['10.10.0.2', '10.10.0.3']
             }
         }
+        mocked_popen().pid = 123
+        mocked_popen().returncode = 0
+        mocked_popen().communicate.return_value = (bytes('stdout', encoding='utf-8'),
+                                                   bytes('stderr', encoding='utf-8'))
         deploy.postflight.run_postflight(config)
-        assert mocked_check_call.call_count == 1
-        assert mocked_ssh_runner().execute_cmd.call_count == 4
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo mkdir -p /opt/dcos_install_tmp')
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo chown ubuntu /opt/dcos_install_tmp')
+        assert mocked_popen.call_count == 3
+        assert mocked_ssh_runner().execute_cmd.call_count == 1
         mocked_ssh_runner().execute_cmd.assert_any_call('/opt/mesosphere/bin/dcos-diagnostics.py')
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo rm -rf /opt/dcos_install_tmp')
 
 
 if __name__ == '__main__':

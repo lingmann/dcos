@@ -16,8 +16,6 @@ NOTE:
 
 import collections
 import importlib
-import jinja2
-import jinja2.meta
 import json
 import os
 import os.path
@@ -26,7 +24,6 @@ import yaml
 import logging as log
 from copy import copy, deepcopy
 from itertools import chain
-from pkg_resources import resource_string
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
@@ -39,28 +36,6 @@ import gen.template
 role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
-
-
-# Function to allow jinja to load our templates folder layout. This uses
-# resource_string from pkg_resources which is the recommended way of getting
-# files out of a package however it is distributed
-# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
-# For the jinja function loader documentation, see:
-# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
-def load_template(name):
-    contents = resource_string(__name__, name).decode()
-
-    # The templates from our perspective are always invalidated / never cacheable.
-    def false_func():
-        return False
-
-    return (contents, name, false_func)
-
-# NOTE: Strict undefined behavior since we're doing generation / validation here.
-env = jinja2.Environment(
-    loader=jinja2.FunctionLoader(load_template),
-    undefined=jinja2.StrictUndefined,
-    keep_trailing_newline=True)
 
 
 def add_roles(cloudconfig, roles):
@@ -160,10 +135,7 @@ def render_templates(template_names, arguments):
             # Render the template. If the file doesn't exist that just means the
             # current mixin doesn't have it, which is fine.
             try:
-                rendered_template = env.get_template(template).render(arguments)
-                new_rendered_template = gen.template.parse_resources(template).render(arguments)
-                assert rendered_template == new_rendered_template
-
+                rendered_template = gen.template.parse_resources(template).render(arguments)
             except FileNotFoundError:
                 continue
 
@@ -196,18 +168,14 @@ def get_parameters(template_dict):
         for template in template_list:
             assert isinstance(template, str)
             try:
-                ast = env.parse(*env.loader.get_source(env, template))
-                template_parameters = jinja2.meta.find_undeclared_variables(ast)
+                ast = gen.template.parse_resources(template)
+                scoped_arguments = ast.get_scoped_arguments()
 
-                new_tmpl = gen.template.parse_resources(template)
-                new_parameters = new_tmpl.get_scoped_arguments()
-
-                assert new_parameters == {
-                    'variables': set(template_parameters),
-                    'sub_scopes': {}
-                }
-
-                parameters |= set(template_parameters)
+                # TODO(cmaloney): Allow sub_scopes / teach everything about
+                # scoped_parameters.
+                # Sub scopes / switch / if are not currently supported
+                assert scoped_arguments['sub_scopes'] == {}
+                parameters |= scoped_arguments['variables']
             except FileNotFoundError as ex:
                 # Needs to be implemented with a logger
                 log.debug("Template not found: %s", ex)
@@ -838,24 +806,16 @@ def generate(
         # config.json parameters
         arguments=dict(),
         cc_package_files=[]):
-    try:
-        # Set the logging level
-        if options.log_level == "debug":
-            log.basicConfig(level=log.DEBUG)
-        #    log.debug("Log level set to DEBUG")
-        elif options.log_level == "info":
-            log.basicConfig(level=log.INFO)
-        #    log.info("Log level set to INFO")
-        else:
-            log.error("Logging option not available: %s", options.log_level)
-            sys.exit(1)
-
-        log.info("Generating configuration files...")
-        return do_generate(options, mixins, extra_templates, arguments, cc_package_files)
-    except jinja2.TemplateSyntaxError as ex:
-        log.error("Jinja2 TemplateSyntaxError")
-        log.error("{}:{} - {}".format(
-            ex.filename if ex.filename else (ex.name if ex.name else '<>'),
-            ex.lineno,
-            ex.message))
+    # Set the logging level
+    if options.log_level == "debug":
+        log.basicConfig(level=log.DEBUG)
+    #    log.debug("Log level set to DEBUG")
+    elif options.log_level == "info":
+        log.basicConfig(level=log.INFO)
+    #    log.info("Log level set to INFO")
+    else:
+        log.error("Logging option not available: %s", options.log_level)
         sys.exit(1)
+
+    log.info("Generating configuration files...")
+    return do_generate(options, mixins, extra_templates, arguments, cc_package_files)

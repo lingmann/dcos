@@ -8,12 +8,38 @@ import sys
 from copy import deepcopy
 
 import botocore.exceptions
+import jinja2
 import requests
 import yaml
+from pkg_resources import resource_string
 
 import gen
 import providers.util as util
 from providers.aws_config import session_dev, session_prod
+
+
+# TODO(cmaloney): Remove this last use of jinja2. It contains a for loop which
+# is beyond what we compute currently.
+# Function to allow jinja to load our templates folder layout. This uses
+# resource_string from pkg_resources which is the recommended way of getting
+# files out of a package however it is distributed
+# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
+# For the jinja function loader documentation, see:
+# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
+def load_template(name):
+    contents = resource_string("gen", name).decode()
+
+    # The templates from our perspective are always invalidated / never cacheable.
+    def false_func():
+        return False
+
+    return (contents, name, false_func)
+
+# NOTE: Strict undefined behavior since we're doing generation / validation here.
+env = jinja2.Environment(
+    loader=jinja2.FunctionLoader(load_template),
+    undefined=jinja2.StrictUndefined,
+    keep_trailing_newline=True)
 
 aws_region_names = [
     {
@@ -118,7 +144,7 @@ def render_cloudformation(
     def transform_lines(text):
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
-    template_str = gen.env.from_string(cf_template).render(
+    template_str = gen.template.parse_str(cf_template).render(
         {
             'master_cloud_config': transform_lines(master_cloudconfig),
             'slave_cloud_config': transform_lines(slave_cloudconfig),
@@ -159,7 +185,7 @@ def gen_templates(arguments, options):
         # Specialize the dcos-cfn-signal service
         cc_variant = results.utils.add_units(
             cc_variant,
-            yaml.load(gen.env.from_string(late_services).render(params)))
+            yaml.load(gen.template.parse_str(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['aws'])
@@ -190,7 +216,7 @@ def gen_templates(arguments, options):
 def gen_buttons(channel, tag, commit):
     # Generate the button page.
     # TODO(cmaloney): Switch to package_resources
-    return gen.env.get_template('aws/templates/aws.html').render(
+    return env.get_template('aws/templates/aws.html').render(
         {
             'channel': channel,
             'tag': tag,

@@ -10,6 +10,7 @@ from copy import deepcopy
 import yaml
 
 import gen
+import gen.template
 import providers.util as util
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
@@ -87,7 +88,7 @@ def render_arm(
         slave_cloudconfig_yaml_str,
         slave_public_cloudconfig_yaml_str):
 
-    template_str = gen.env.get_template('azure/azuredeploy.json').render({
+    template_str = gen.template.parse_resources('azure/azuredeploy.json').render({
         'master_cloud_config': transform(master_cloudconfig_yaml_str),
         'slave_cloud_config': transform(slave_cloudconfig_yaml_str),
         'slave_public_cloud_config': transform(slave_public_cloudconfig_yaml_str)
@@ -135,7 +136,7 @@ def gen_templates(user_args, options):
         # TODO(cmaloney): Add the dcos-arm-signal service here
         # cc_variant = results.utils.add_units(
         #     cc_variant,
-        #     yaml.load(gen.env.from_string(late_services).render(params)))
+        #     yaml.load(gen.template.parse_str(late_services).render(params)))
 
         # Add roles
         cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['azure'])
@@ -195,7 +196,7 @@ def gen_buttons(channel, tag, commit, single_master_config_id):
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
     template_upload_url = UPLOAD_URL.format(channel=channel, config_id=single_master_config_id)
-    return gen.env.get_template('azure/templates/azure.html').render({
+    return gen.template.parse_resources('azure/templates/azure.html').render({
         'channel': channel,
         'tag': tag,
         'commit': commit,

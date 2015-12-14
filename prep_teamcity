@@ -7,5 +7,9 @@ set -o errexit -o nounset -o pipefail
 pip wheel ext/pkgpanda
 pip wheel .
 
+# Download distro independent artifacts
+pip install --download wheelhouse/ .
+pip install --download wheelhouse ext/pkgpanda
+
 # Install the wheels
 pip install --no-index --find-links=wheelhouse dcos-image pkgpanda

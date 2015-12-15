@@ -207,14 +207,15 @@ def make_bootstrap_tarball(packages, variant, repository_url):
         tmp_bootstrap = bootstrap_name + '.tmp'
         tmp_active = active_name + '.tmp'
         try:
-            print("Attempting to download", bootstrap_name, "from repository-url", repository_url)
-            # Normalize to no trailing slash for repository_url
             repository_url = repository_url.rstrip('/')
+            url = repository_url + '/bootstrap/' + bootstrap_name
+            print("Attempting to download", bootstrap_name, "from", url)
+            # Normalize to no trailing slash for repository_url
             check_call([
                 'curl',
                 '-fsSL',
                 '-o', tmp_bootstrap,
-                repository_url + '/bootstrap/' + bootstrap_name])
+                url])
             check_call([
                 'curl',
                 '-fsSL',
@@ -690,14 +691,15 @@ def build(variant, name, repository_url):
     if repository_url:
         tmp_filename = pkg_path + '.tmp'
         try:
-            print("Attempting to download", pkg_id, "from repository-url", repository_url)
+            url = repository_url + '/packages/{0}/{1}.tar.xz'.format(pkg_id.name, str(pkg_id))
+            print("Attempting to download", pkg_id, "from", url)
             # Normalize to no trailing slash for repository_url
             repository_url = repository_url.rstrip('/')
             check_call([
                 'curl',
                 '-fsSL',
                 '-o', tmp_filename,
-                repository_url + '/packages/{0}/{1}.tar.xz'.format(pkg_id.name, str(pkg_id))])
+                url])
             os.rename(tmp_filename, pkg_path)
 
             print("Package up to date. Not re-building. Downloaded from repository-url.")

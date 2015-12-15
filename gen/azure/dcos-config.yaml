@@ -1,8 +1,4 @@
 package:
-  - path: /etc/cloudenv
-    content: |
-      # TODO(cmaloney): Add cluster general info for analytics here
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER=[[[variables('uniqueName')]]]

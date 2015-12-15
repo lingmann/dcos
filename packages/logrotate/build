@@ -38,7 +38,6 @@ Description=Rotate various logs on the system
 Type=simple
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/cloudenv
 ExecStartPre=/usr/bin/mkdir -p /var/log/mesos/archive
 ExecStart=$PKG_PATH/sbin/logrotate $config_file
 EOF

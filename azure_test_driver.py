@@ -111,7 +111,7 @@ def clean_up_deploy(client):
 
     print("Polling on resource group status ...")
     try:
-        poll_until(tries=90,
+        poll_until(tries=180,
                    initial_delay=0,
                    delay=15,
                    backoff=1,

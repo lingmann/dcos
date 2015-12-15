@@ -105,7 +105,7 @@ def deploy_agents(config):
     :param config: Dict, loaded config file from /genconf/config.yaml
                    agent hosts are implicitly calculated: all_hosts - master_hosts
     '''
-    agent_list = create_agent_list(config['cluster_config']['master_list'], config['ssh_config']['target_hosts'])
+    agent_list = create_agent_list(config)
     if not agent_list:
         log.warning('No agents found to deploy, check config.yaml')
         return
@@ -137,7 +137,7 @@ def install_dcos(config):
 
     log.debug("Local bootstrap found: %s", bootstrap_tarball)
 
-    all_targets = create_full_inventory(config['cluster_config']['master_list'], config['ssh_config']['target_hosts'])
+    all_targets = create_full_inventory(config)
 
     deploy = get_runner(config, all_targets)
 

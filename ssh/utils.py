@@ -11,9 +11,13 @@ def handle_command(command):
     :param command:
     :raises: ssh.validate.ExecuteException if command return code != 0
     '''
+    failed = []
     for output in command():
         if output['stdout']:
             log.info('\n'.join(output['stdout']))
         if output['returncode'] != 0:
             log.error(output)
-            raise ExecuteException(output)
+            failed.append(output)
+
+    if failed:
+        raise ExecuteException()

@@ -1,24 +1,22 @@
 import ssh.ssh_runner
 
 
-def create_full_inventory(master_list, targets):
+def create_full_inventory(config):
     '''
     Join 2 lists of masters and all hosts to make sure we are addressing all available hosts.
-    :param master_list: List of masters
-    :param targets: List of all hosts
+    :config Dict, /genconf/config.yaml object
     :return: joined unique list of masters and all targets
     '''
-    return list(set(master_list) | set(targets))
+    return list(set(config['cluster_config']['master_list']) | set(config['ssh_config']['target_hosts']))
 
 
-def create_agent_list(master_list, targets):
+def create_agent_list(config):
     '''
     Agents are targets - masters
-    :param master_list: List of masters
-    :param targets: List of all hosts
+    :config Dict, /genconf/config.yaml object
     :return: List  of targets excluding the masters.
     '''
-    return list(set(targets) - set(master_list))
+    return list(set(config['ssh_config']['target_hosts']) - set(config['cluster_config']['master_list']))
 
 
 def get_runner(config, hosts):

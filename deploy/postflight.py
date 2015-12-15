@@ -35,6 +35,5 @@ def run_postflight(config, dcos_diag=None):
     :param pytest_path: String: a path to py.test
     :param dcos_diag: remote location of dcos-diagnostics.py
     '''
-    postflight_runner = get_runner(config, create_full_inventory(config['cluster_config']['master_list'],
-                                                                 config['ssh_config']['target_hosts']))
+    postflight_runner = get_runner(config, create_full_inventory(config))
     execute_local_service_check(postflight_runner, dcos_diag)

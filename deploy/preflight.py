@@ -31,7 +31,7 @@ def run_preflight(config, preflight_script_path=None):
     Entry point function for preflight tests
     :param config: Dict, loaded config file from /genconf/config.yaml
     '''
-    targets = create_full_inventory(config['cluster_config']['master_list'], config['ssh_config']['target_hosts'])
+    targets = create_full_inventory(config)
     preflight_runner = get_runner(config, targets)
     try:
         init_tmp_dir(preflight_runner)

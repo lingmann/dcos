@@ -16,11 +16,11 @@ setup(
     ],
     packages=['gen', 'providers', 'ssh', 'deploy'] + find_packages(),
     install_requires=[
+        'requests==2.8.1',
         'azure-storage==0.20.2',
         'boto3',
         'botocore',
         'jinja2',
-        'requests',
         'pyyaml',
         'pytest'],
     entry_points={

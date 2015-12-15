@@ -3,7 +3,7 @@
 
 from pkgpanda.util import write_string
 
-import gen
+import gen.template
 import providers.util as util
 
 
@@ -29,8 +29,8 @@ bash_template = """#!/bin/bash
 #
 #
 # Metadata:
-#   dcos image commit: {{dcos_image_commit}}
-#   generation date: {{generation_date}}
+#   dcos image commit: {{ dcos_image_commit }}
+#   generation date: {{ generation_date }}
 #
 # TODO(cmaloney): Copyright + License string here
 
@@ -82,13 +82,13 @@ function setup_dcos_roles() {
 # Set DCOS machine configuration
 function configure_dcos() {
 echo -e 'Configuring DCOS'
-{{setup_flags}}
+{{ setup_flags }}
 }
 
 # Install the DCOS services, start DCOS
 function setup_and_start_services() {
 echo -e 'Setting and starting DCOS'
-{{setup_services}}
+{{ setup_services }}
 }
 
 set +e
@@ -417,12 +417,11 @@ def make_bash(gen_out):
             setup_services += "systemctl start {}\n".format(name)
 
     # Populate in the bash script template
-    bash_script = gen.env.from_string(bash_template).render(
-        dcos_image_commit=util.dcos_image_commit,
-        generation_date=util.template_generation_date,
-        setup_flags=setup_flags,
-        setup_services=setup_services,
-        )
+    bash_script = gen.template.parse_str(bash_template).render({
+        'dcos_image_commit': util.dcos_image_commit,
+        'generation_date': util.template_generation_date,
+        'setup_flags': setup_flags,
+        'setup_services': setup_services})
 
     # Output the dcos install script
     write_string('dcos_install.sh', bash_script)

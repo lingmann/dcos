@@ -144,8 +144,10 @@ def test_scp_recursive(tmpdir):
                          ssh_key_path=workspace + '/host_key')
     copy_results = runner.copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied',
                                recursive=True)
-    assert os.path.isfile(workspace + '/recursive_pilot.txt.copied')
-    assert pkgpanda.util.load_string(workspace + '/recursive_pilot.txt.copied') == id
+    dest_path = workspace + '/recursive_pilot.txt.copied'
+    assert os.path.exists(dest_path)
+    assert os.path.isfile(dest_path)
+    assert pkgpanda.util.load_string(dest_path) == id
     for result in copy_results:
         assert result['returncode'] == 0, result['stderr']
         assert result['host']['ip'] == '127.0.0.1'

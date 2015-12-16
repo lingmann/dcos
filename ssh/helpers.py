@@ -7,13 +7,14 @@ import time
 import yaml
 
 
-def get_structured_results(command_result):
+def get_structured_results(command_result, index):
     """
     Takes the output from a SSH run and returns structured output for the
-    log file.
+    log file. Uses a random number between 1 and 1000 to ensure SSH dumps
+    to the logfile that fall within the same timestamp don't overwrite.
     """
     host = command_result['host']['ip']
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    timestamp = '{}-{}'.format(time.strftime("%Y%m%d-%H%M%S"), index)
 
     return {
         host: {

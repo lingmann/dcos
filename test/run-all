@@ -88,6 +88,13 @@ cluster_config:
     - 172.17.10.101
     - 172.17.10.102
     - 172.17.10.103
+ssh_config:
+  ssh_user: foo
+  ssh_port: 22
+  ssh_key_path: /foo/bar
+  target_hosts: 10.0.0.1
+  log_directory: /foo/bar
+  process_timeout: 600
 EOF
 
 echo "Starting Nginx"

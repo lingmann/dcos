@@ -1,105 +1,106 @@
+import json
 import logging
+import pprint
 import re
-
-from termcolor import colored
 
 log = logging.getLogger(__name__)
 
 
-def find_data(data_in):
+def find_data(data):
     failed_data = {}
     success_data = {}
-    for data in data_in:
-        for key, value in data.items():
-            if key == 'returncode':
-                if value != 0:
-                    failed_data[data['host']['ip']] = {
-                        'cmd': data['cmd'],
-                        'returncode': data['returncode'],
-                        'stdout': data['stdout'],
-                        'stderr': data['stderr']
-                    }
+    for key, value in data.items():
+        if key == 'returncode':
+            if value != 0:
+                failed_data[data['host']['ip']] = {
+                    'cmd': data['cmd'],
+                    'returncode': data['returncode'],
+                    'stdout': data['stdout'],
+                    'stderr': data['stderr']
+                }
 
-                else:
-                    success_data[data['host']['ip']] = {
-                        'cmd': data['cmd'],
-                        'returncode': data['returncode'],
-                        'stdout': data['stdout'],
-                        'stderr': data['stderr']
-                    }
+            else:
+                success_data[data['host']['ip']] = {
+                    'cmd': data['cmd'],
+                    'returncode': data['returncode'],
+                    'stdout': data['stdout'],
+                    'stderr': data['stderr']
+                }
 
     return failed_data, success_data
 
 
-class DeployPrettyPrint():
-    def __init__(self):
-        self.ssh_out = {}
+class PrettyPrint():
+    """
+    Pretty prints the output from the deployment process.
 
-    def beautify(self):
+    """
+    def __init__(self, output):
+        self.ssh_out = output
+
+    def beautify(self, mode='print_data_basic'):
         self.failed_data, self.success_data = find_data(self.ssh_out)
-        self.print_data()
+        getattr(self, mode)()
+        return self.failed_data, self.success_data
 
-    def print_data(self):
+    def print_data_basic(self):
         if len(self.failed_data) > 0:
-            print(colored('FAILED', 'red'))
-            print('')
             for host, data in self.failed_data.items():
-                print(colored('     HOST: ', 'yellow'), colored(host, 'red'))
-                print(colored('     CODE: ', 'yellow'), colored(data['returncode'], 'red'))
-                print(colored('     TASK: ', 'yellow'), colored(' '.join(data['cmd']), 'red'))
-                print(colored('     STDERR: ', 'yellow'), colored('\n'.join(data['stderr']), 'red'))
-                print(colored('     STDOUT: ', 'yellow'), colored('\n'.join(data['stdout'])))
-                print(' ')
+                log = logging.getLogger(host)
+                log.error('{} FAILED'.format(host))
+                log.debug('     CODE {}'.format(data['returncode']))
+                log.error('     TASK {}'.format(' '.join(data['cmd'])))
+                log.error('     STDERR {}'.format('\n'.join(data['stderr'])))
+                log.error('     STDOUT {}'.format('\n'.join(data['stdout'])))
         if len(self.success_data) > 0:
-            print(colored('SUCCESS', 'green', attrs=['underline']))
-            print('')
             for host, data in self.success_data.items():
-                print(colored('     HOST: ', 'blue'), colored(host, 'green'))
-                print(colored('     CODE: ', 'blue'), colored(data['returncode'], 'green'))
-                print(colored('     TASK: ', 'blue'), colored(' '.join(data['cmd']), 'green'))
-                print(colored('     STDERR: ', 'blue'), colored(''.join(data['stderr']), 'green'))
-                print(colored('     STDOUT: ', 'blue'), colored('\n'.join(data['stdout']), 'green'))
-                print(' ')
+                log = logging.getLogger(host)
+                log.debug('{} SUCCESS'.format(host))
+                log.debug('     CODE {}'.format(data['returncode']))
+                log.debug('     TASK {}'.format(' '.join(data['cmd'])))
+                log.debug('     STDERR {}'.format(''.join(data['stderr'])))
+                log.debug('     STDOUT {}'.format('\n'.join(data['stdout'])))
 
-
-class PreflightPrettyPrint():
-    def __init__(self):
-        self.ssh_out = {}
-
-    def beautify(self):
-        self.failed_data, self.success_data = find_data(self.ssh_out)
-        self.print_data()
-
-    def print_data(self):
+    def print_data_preflight(self):
         if len(self.failed_data) > 0:
-            print(colored('FAILED', 'red', attrs=['underline']))
-            print('')
             for host, data in self.failed_data.items():
-                print(colored('     HOST: ', 'yellow'), colored(host, 'red'))
-                print(colored('     CODE: ', 'yellow'), colored(data['returncode'], 'red'))
-                print(colored('     TASK: ', 'yellow'), colored(' '.join(data['cmd']), 'red'))
-                print(colored('     STDERR: ', 'yellow'), colored(''.join(data['stderr']), 'red'))
-                print(colored('     STDOUT: ', 'yellow'), self.color_preflight(data['stdout']))
-                print(' ')
+                log = logging.getLogger(host)
+                log.error('{} FAILED'.format(host))
+                log.debug('     CODE {}'.format(data['returncode']))
+                log.error('     TASK {}'.format(' '.join(data['cmd'])))
+                log.error('     STDERR {}'.format(''.join(data['stderr'])))
+                log.error('     STDOUT {}'.format(self.color_preflight(data['stdout'], host)))
 
         if len(self.success_data) > 0:
-            print(colored('SUCCESS', 'green', attrs=['underline']))
-            print('')
             for host, data in self.success_data.items():
-                print(colored('     HOST: ', 'blue'), colored(host, 'green'))
-                print(colored('     CODE: ', 'blue'), colored(data['returncode'], 'green'))
-                print(colored('     TASK: ', 'blue'), colored(' '.join(data['cmd']), 'green'))
-                print(colored('     STDERR: ', 'blue'), colored(''.join(data['stderr']), 'green'))
-                print(colored('     STDOUT: ', 'blue'), colored('\n'.join(data['stdout']), 'green'))
-                print(' ')
+                log = logging.getLogger(host)
+                log.debug('{} SUCCESS'.format(host))
+                log.debug('     CODE {}'.format(data['returncode']))
+                log.debug('     TASK {}'.format(' '.join(data['cmd'])))
+                log.debug('     STDERR {}'.format(''.join(data['stderr'])))
+                log.debug('     STDOUT {}'.format(self.color_preflight(data['stdout'], host)))
 
-    def color_preflight(self, data_array):
+    def print_json(self):
+        if len(self.success_data) > 0:
+            pprint.pprint(json.dumps(self.success_data))
+
+        if len(self.failed_data) > 0:
+            pprint.pprint(json.dumps(self.failed_data))
+
+    def color_preflight(self, data_array, host):
+        """
+        A subroutine to parse the output from the dcos_install.sh script's pass or fail
+        output.
+        """
+        log = logging.getLogger(host)
         does_pass = re.compile('PASS')
         does_fail = re.compile('FAIL')
-
         for line in data_array:
-            if does_pass.match(line.split('::')[0]):
-                print(colored('          {}'.format(line), 'green'))
+            if does_pass.search(line):
+                log.debug('          {}'.format(line))
 
-            if does_fail.match(line):
-                print(colored('          {}'.format(line), 'red'))
+            elif does_fail.search(line):
+                log.error('          {}'.format(line))
+
+            else:
+                log.debug('          {}'.format(line))

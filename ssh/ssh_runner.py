@@ -35,7 +35,7 @@ def parse_ip(ip):
             "colon in it. NOTE: IPv6 is not supported at this time. Got: {}".format(ip))
 
 
-def run_cmd_return_tuple(host, cmd, timeout=20, env=None):
+def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
     '''
     Run a shell command
     :param host: Dict, {'ip': '127.0.0.1, 'port': 22}
@@ -57,9 +57,7 @@ def run_cmd_return_tuple(host, cmd, timeout=20, env=None):
         env = os.environ
 
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
-
-    # timeout is in seconds, make it in minutes
-    stdout, stderr = process.communicate(timeout=timeout*60)
+    stdout, stderr = process.communicate(timeout=timeout_sec)
     return {
         "cmd": cmd,
         "host": host,

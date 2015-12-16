@@ -1,5 +1,5 @@
 package:
-  - path: /etc/cloudenv
+  - path: /etc/cfn_signal_metadata
     content: |
       AWS_REGION={ "Ref" : "AWS::Region" }
       AWS_STACK_ID={ "Ref" : "AWS::StackId" }
@@ -8,7 +8,6 @@ package:
       AWS_IAM_SLAVE_ROLE_NAME={ "Ref" : "SlaveRole" }
       AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
       AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={ "Ref" : "AWS::StackName" }

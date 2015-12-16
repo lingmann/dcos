@@ -157,7 +157,7 @@ class TestSSHRunner(unittest.TestCase):
 
     @unittest.mock.patch('time.strftime')
     @unittest.mock.patch('ssh.helpers.dump_host_results')
-    def test_save_log(self, mocked_dump_host_results, mocked_time_strftime):
+    def test_save_logs(self, mocked_dump_host_results, mocked_time_strftime):
         self.ssh_runner.log_postfix = 'test'
         mock_struct_data = [
             {
@@ -167,30 +167,35 @@ class TestSSHRunner(unittest.TestCase):
             }
         ]
         mocked_time_strftime.return_value = '123'
-        self.ssh_runner.save_logs(mock_struct_data)
+        ssh.ssh_runner.save_logs(mock_struct_data, '/tmp', 'test')
         mocked_dump_host_results.assert_called_with('/tmp', '127.0.0.1',
                                                     {'127.0.0.1': {'123': {'host': {'ip': '127.0.0.1'}}}}, 'test')
 
-    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
+    @unittest.mock.patch('ssh.ssh_runner.save_logs')
     def test_wrapped_run_no_cache(self, mocked_save_logs):
         func = lambda: [{'returncode': 0}]
+        self.ssh_runner.log_directory = '/genconf/logs'
+        self.ssh_runner.log_postfix = '_postfix'
         self.ssh_runner.use_cache = False
         self.ssh_runner.wrapped_run(func)
-        mocked_save_logs.assert_called_with([{'returncode': 0}])
+        mocked_save_logs.assert_called_with([{'returncode': 0}], '/genconf/logs', '_postfix')
 
     @unittest.mock.patch('json.dump')
     @unittest.mock.patch('json.load')
     @unittest.mock.patch('builtins.open')
     @unittest.mock.patch('os.path.isfile')
-    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.save_logs')
+    @unittest.mock.patch('ssh.ssh_runner.save_logs')
     def test_wrapped_run_use_cache(self, mocked_save_logs, mocked_isfile, mocked_open, mocked_json_load,
                                    mocked_json_dump):
         func = lambda: [{'returncode': 0, 'host': {'ip': '127.0.0.1'}}]
+        self.ssh_runner.log_directory = '/genconf/logs'
+        self.ssh_runner.log_postfix = '_postfix'
         self.ssh_runner.use_cache = True
         mocked_isfile.return_value = True
 
         self.ssh_runner.wrapped_run(func)
-        mocked_save_logs.assert_called_with([{'returncode': 0, 'host': {'ip': '127.0.0.1'}}])
+        mocked_save_logs.assert_called_with(
+            [{'returncode': 0, 'host': {'ip': '127.0.0.1'}}], '/genconf/logs', '_postfix')
         assert mocked_open.call_count == 2
         mocked_open.assert_any_call('./.cache.json')
         mocked_open.assert_called_with('./.cache.json', 'w')

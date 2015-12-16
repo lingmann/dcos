@@ -12,12 +12,15 @@ preflight.copy_cmd('/tmp/file.txt', '/tmp')
 preflight.copy_cmd('/usr', '/', recursive=True)
 """
 import json
+import logging
 import os
 import subprocess
 from multiprocessing import Pool
 
 import ssh.helpers
 import ssh.validate
+
+log = logging.getLogger(__name__)
 
 
 def parse_ip(ip):
@@ -32,9 +35,29 @@ def parse_ip(ip):
             "colon in it. NOTE: IPv6 is not supported at this time. Got: {}".format(ip))
 
 
-def run_cmd_return_tuple(host, cmd):
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, stderr = process.communicate()
+def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
+    '''
+    Run a shell command
+    :param host: Dict, {'ip': '127.0.0.1, 'port': 22}
+    :param cmd: List, shell command in the following format ['ls', '-la']
+    :param timeout: Integer, a timeout to run a command in minutes
+    :param env: Dict, environment variables os.environ
+    :return: Dict in the following format:
+            {
+              'cmd': ['ls', '-la'],
+              'host': '10.10.10.1',
+              'stdout': 'some stdout\nwith new line\n',
+              'stderr': 'some stderr\nwith new line\n',
+              'returncode': 0,
+              'pid': 123
+            }
+    '''
+    log.debug('execute {} on {}'.format(cmd, host))
+    if env is None:
+        env = os.environ
+
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    stdout, stderr = process.communicate(timeout=timeout_sec)
     return {
         "cmd": cmd,
         "host": host,
@@ -43,6 +66,20 @@ def run_cmd_return_tuple(host, cmd):
         "returncode": process.returncode,
         "pid": process.pid
     }
+
+
+def save_logs(results, log_directory, log_postfix):
+    try:
+        for result in results:
+            host = result['host']['ip']
+            ssh.helpers.dump_host_results(
+                log_directory,
+                host,
+                ssh.helpers.get_structured_results(result),
+                log_postfix)
+    except IOError:
+        pass
+    return results
 
 
 class MultiRunner():
@@ -119,19 +156,6 @@ class SSHRunner():
         self.__cache_file = './.cache.json'
         self.log_postfix = 'ssh_data'
 
-    def save_logs(self, results):
-        try:
-            for result in results:
-                host = result['host']['ip']
-                ssh.helpers.dump_host_results(
-                    self.log_directory,
-                    host,
-                    ssh.helpers.get_structured_results(result),
-                    self.log_postfix)
-        except IOError:
-            pass
-        return results
-
     def wrapped_run(self, eval_command):
         def dump_success_hosts(results):
             if self.use_cache:
@@ -147,7 +171,7 @@ class SSHRunner():
                 with open(self.__cache_file, 'w') as fh:
                     json.dump(dump, fh)
             return results
-        return self.save_logs(dump_success_hosts(eval_command()))
+        return save_logs(dump_success_hosts(eval_command()), self.log_directory, self.log_postfix)
 
     def validate(self, throw_if_errors=True):
         with ssh.validate.ErrorsCollector(throw_if_errors=throw_if_errors) as ec:

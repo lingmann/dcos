@@ -1,7 +1,4 @@
 package:
-  - path: /etc/cloudenv
-    content: |
-      ZOOKEEPER_CLUSTER_SIZE=1
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}

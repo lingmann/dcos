@@ -11,9 +11,6 @@ package:
           "PROVIDER": "onprem"
         }
       }
-  - path: /etc/cloudenv
-    content: |
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}

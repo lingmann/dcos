@@ -93,7 +93,7 @@ late_services = """- name: dcos-cfn-signal.service
     StartLimitInterval=0
     RestartSec=15s
     EnvironmentFile=/opt/mesosphere/environment
-    EnvironmentFile=/opt/mesosphere/etc/cloudenv
+    EnvironmentFile=/opt/mesosphere/etc/cfn_signal_metadata
     Environment="AWS_CFN_SIGNAL_THIS_RESOURCE={{ report_name }}"
     ExecStartPre=/bin/ping -c1 leader.mesos
     ExecStartPre=/opt/mesosphere/bin/cfn-signal
@@ -166,7 +166,7 @@ def gen_templates(arguments, options):
         extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
         arguments=arguments,
         cc_package_files=[
-            '/etc/cloudenv',
+            '/etc/cfn_signal_metadata',
             '/etc/dns_config',
             '/etc/exhibitor',
             '/etc/exhibitor.properties',

@@ -208,19 +208,21 @@ def make_bootstrap_tarball(packages, variant, repository_url):
         tmp_active = active_name + '.tmp'
         try:
             repository_url = repository_url.rstrip('/')
-            url = repository_url + '/bootstrap/' + bootstrap_name
-            print("Attempting to download", bootstrap_name, "from", url)
+            bootstrap_url = repository_url + '/bootstrap/' + bootstrap_name
+            active_url = repository_url + '/bootstrap/' + active_name
+            print("Attempting to download", bootstrap_name, "from", bootstrap_url)
             # Normalize to no trailing slash for repository_url
             check_call([
                 'curl',
                 '-fsSL',
                 '-o', tmp_bootstrap,
-                url])
+                bootstrap_url])
+            print("Attempting to download", active_name, "from", active_url)
             check_call([
                 'curl',
                 '-fsSL',
                 '-o', tmp_active,
-                repository_url + '/bootstrap/' + active_name])
+                active_url])
 
             # Move into place
             os.rename(tmp_bootstrap, bootstrap_name)

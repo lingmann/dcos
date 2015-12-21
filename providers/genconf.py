@@ -336,7 +336,7 @@ parameters that the input paramters were expanded to as DCOS configuration.
     # Fallback behavior when no explicit action flag is given, run genconf
     # since that is what used to happen.
     do_genconf(options)
-    sys.exit(1)
+    sys.exit(0)
 
 
 if __name__ == '__main__':

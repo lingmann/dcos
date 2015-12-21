@@ -2,13 +2,12 @@ import os
 import unittest
 import unittest.mock
 
-import pkg_resources
-
+import deploy.clean
 import deploy.deploy
 import deploy.postflight
 import deploy.preflight
 import ssh.ssh_runner
-from ssh.validate import ExecuteException, ValidationException
+from ssh.validate import ValidationException
 
 
 class TestDeploy(unittest.TestCase):
@@ -17,11 +16,6 @@ class TestDeploy(unittest.TestCase):
 
     def tearDown(self):
         self.mocked_runner = None
-
-    def test_handle_command_raise_execute_exception(self):
-        self.mocked_runner.copy_cmd.return_value = [{'returncode': 1, 'stdout': 'stdout'}]
-        with self.assertRaises(ExecuteException):
-            deploy.deploy.copy_dcos_install(self.mocked_runner)
 
     def test_copy_dcos_install(self):
         deploy.deploy.copy_dcos_install(self.mocked_runner)
@@ -64,7 +58,8 @@ class TestDeploy(unittest.TestCase):
             'ssh_config': {
                 'ssh_user': 'ubuntu',
                 'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
-                'log_directory': '/genconf/logs'
+                'log_directory': '/genconf/logs',
+                'process_timeout': 120
             }
         }
         deploy.deploy.deploy_masters(config)
@@ -84,7 +79,8 @@ class TestDeploy(unittest.TestCase):
                 'ssh_user': 'ubuntu',
                 'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
                 'log_directory': '/genconf/logs',
-                'target_hosts': ['10.10.0.2', '10.10.0.3']
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
             }
         }
         deploy.deploy.deploy_agents(config)
@@ -115,7 +111,8 @@ class TestDeploy(unittest.TestCase):
                 'ssh_user': 'ubuntu',
                 'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
                 'log_directory': '/genconf/logs',
-                'target_hosts': ['10.10.0.2', '10.10.0.3']
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
             }
         }
         deploy.deploy.install_dcos(config)
@@ -140,8 +137,9 @@ class TestDeploy(unittest.TestCase):
 
 
 class TestPreflight(unittest.TestCase):
+    @unittest.mock.patch('os.path.isfile')
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
-    def test_preflight_check(self, mocked_ssh_runner):
+    def test_run_preflight(self, mocked_ssh_runner, mocked_isfile):
         config = {
             'cluster_config': {
                 'master_list': ['10.10.0.1']
@@ -150,22 +148,24 @@ class TestPreflight(unittest.TestCase):
                 'ssh_user': 'ubuntu',
                 'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
                 'log_directory': '/genconf/logs',
-                'target_hosts': ['10.10.0.2', '10.10.0.3']
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
             }
         }
-        deploy.preflight.run_preflight(config, preflight_script_path='/somewhere/preflight.sh')
+        mocked_isfile.return_value = True
+        deploy.preflight.run_preflight(config, pf_script_path='/somewhere/preflight.sh')
         assert mocked_ssh_runner().copy_cmd.call_count == 1
         mocked_ssh_runner().copy_cmd.assert_called_with('/somewhere/preflight.sh', '/opt/dcos_install_tmp')
 
         assert mocked_ssh_runner().execute_cmd.call_count == 4
         mocked_ssh_runner().execute_cmd.assert_any_call('sudo mkdir -p /opt/dcos_install_tmp')
         mocked_ssh_runner().execute_cmd.assert_any_call('sudo chown ubuntu /opt/dcos_install_tmp')
-        mocked_ssh_runner().execute_cmd.assert_any_call('sudo bash /opt/dcos_install_tmp/preflight.sh')
+        mocked_ssh_runner().execute_cmd.assert_any_call(
+            'sudo bash /opt/dcos_install_tmp/dcos_install.sh --preflight-only master')
         mocked_ssh_runner().execute_cmd.assert_any_call('sudo rm -rf /opt/dcos_install_tmp')
 
         deploy.preflight.run_preflight(config)
-        prefligh_path = pkg_resources.resource_filename('deploy', 'preflight.sh')
-        mocked_ssh_runner().copy_cmd.assert_called_with(prefligh_path, '/opt/dcos_install_tmp')
+        mocked_ssh_runner().copy_cmd.assert_called_with('/genconf/serve/dcos_install.sh', '/opt/dcos_install_tmp')
 
 
 class TestPostflight(unittest.TestCase):
@@ -174,7 +174,16 @@ class TestPostflight(unittest.TestCase):
     def test_execute_local_service_check(self, mocked_validate, mocked_execute_cmd):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.return_value = []
-        mocked_execute_cmd.return_value = [{'returncode': 0, 'stdout': 'stdout'}]
+        mocked_execute_cmd.return_value = [
+            {
+                'returncode': 0,
+                'stdout': 'stdout',
+                'cmd': ['ls', '-la'],
+                'stderr': 'stderr',
+                'host': {
+                    'ip': '127.0.0.1'
+                }
+            }]
         deploy.postflight.execute_local_service_check(executor, None)
 
     @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
@@ -182,15 +191,6 @@ class TestPostflight(unittest.TestCase):
         executor = ssh.ssh_runner.SSHRunner()
         mocked_validate.side_effect = ValidationException()
         with self.assertRaises(ValidationException):
-            deploy.postflight.execute_local_service_check(executor, None)
-
-    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.execute_cmd')
-    @unittest.mock.patch('ssh.ssh_runner.SSHRunner.validate')
-    def test_execute_local_service_check_throw_execute_exception(self, mocked_validate, mocked_execute_cmd):
-        executor = ssh.ssh_runner.SSHRunner()
-        mocked_validate.return_value = []
-        mocked_execute_cmd.return_value = [{'returncode': 1, 'stderr': 'stderr', 'stdout': 'stdout'}]
-        with self.assertRaises(ExecuteException):
             deploy.postflight.execute_local_service_check(executor, None)
 
     @unittest.mock.patch('subprocess.Popen')
@@ -204,7 +204,8 @@ class TestPostflight(unittest.TestCase):
                 'ssh_user': 'ubuntu',
                 'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
                 'log_directory': '/genconf/logs',
-                'target_hosts': ['10.10.0.2', '10.10.0.3']
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
             }
         }
         mocked_popen().pid = 123
@@ -215,6 +216,46 @@ class TestPostflight(unittest.TestCase):
         assert mocked_popen.call_count == 3
         assert mocked_ssh_runner().execute_cmd.call_count == 1
         mocked_ssh_runner().execute_cmd.assert_any_call('/opt/mesosphere/bin/dcos-diagnostics.py')
+
+
+class TestClean(unittest.TestCase):
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
+    def test_execute_uninstall(self, mock_ssh_runner):
+        config = {
+            'cluster_config': {
+                'master_list': ['10.10.0.1']
+            },
+            'ssh_config': {
+                'ssh_user': 'ubuntu',
+                'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
+                'log_directory': '/genconf/logs',
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
+            }
+        }
+        runner = deploy.util.get_runner(config, '/logs', 'test')
+        deploy.clean.execute_uninstall(runner)
+        assert mock_ssh_runner().execute_cmd.call_count == 1
+        mock_ssh_runner().execute_cmd.assert_called_with(
+            'sudo -i /opt/mesosphere/bin/pkgpanda uninstall && sudo rm -rf /opt/mesosphere/')
+
+    @unittest.mock.patch('ssh.ssh_runner.SSHRunner')
+    def test_uninstall_dcos(self, mock_ssh_runner):
+        config = {
+            'cluster_config': {
+                'master_list': ['10.10.0.1']
+            },
+            'ssh_config': {
+                'ssh_user': 'ubuntu',
+                'ssh_key_path': '/home/ubuntu/.ssh/id_rsa',
+                'log_directory': '/genconf/logs',
+                'target_hosts': ['10.10.0.2', '10.10.0.3'],
+                'process_timeout': 120
+            }
+        }
+        deploy.clean.uninstall_dcos(config)
+        mock_ssh_runner().execute_cmd.assert_called_with(
+            'sudo -i /opt/mesosphere/bin/pkgpanda uninstall && sudo rm -rf /opt/mesosphere/')
 
 
 if __name__ == '__main__':

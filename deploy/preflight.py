@@ -1,40 +1,47 @@
 import logging
 import os
 
-import pkg_resources
-
-from deploy.deploy import REMOTE_TEMP_DIR, cleanup_tmp_dir, init_tmp_dir
-from deploy.util import create_full_inventory, get_runner
-from ssh.utils import handle_command
+from deploy.console_printer import clean_logs, print_failures, print_header
+from deploy.util import (REMOTE_TEMP_DIR, cleanup_tmp_dir,
+                         create_full_inventory, deploy_handler, get_runner,
+                         init_tmp_dir)
 
 log = logging.getLogger(__name__)
 
 
-def preflight_check(preflight_runner, preflight_script_path):
+def copy_preflight(pf, pf_script_path):
+    print_header('COPYING PREFLIGHT SCRIPT TO TARGETS')
+    deploy_handler(
+        lambda: pf.copy_cmd(pf_script_path, REMOTE_TEMP_DIR))
+
+
+def execute_preflight(pf):
+    print_header('EXECUTING PREFLIGHT CHECK ON TARGETS')
+    preflight_script_name = 'dcos_install.sh'
+    deploy_handler(
+        lambda: pf.execute_cmd(
+            'sudo bash {} --preflight-only master'.format(os.path.join(REMOTE_TEMP_DIR, preflight_script_name))),
+        'print_data_preflight')
+
+
+def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh'):
     '''
     Copies preflight.sh to target hosts and executes the script. Gathers
     stdout, sterr and return codes and logs them to disk via SSH library.
-    :param preflight_runner: ssh.ssh_runner.SSHRunner instance
-    '''
-    log.info("Executing Preflight")
-    preflight_script_name = 'preflight.sh'
-    if preflight_script_path is None:
-        preflight_script_path = pkg_resources.resource_filename(__name__, preflight_script_name)
-
-    handle_command(lambda: preflight_runner.copy_cmd(preflight_script_path, REMOTE_TEMP_DIR))
-    handle_command(lambda: preflight_runner.execute_cmd('sudo bash {}'.format(os.path.join(REMOTE_TEMP_DIR,
-                                                                              preflight_script_name))))
-
-
-def run_preflight(config, preflight_script_path=None):
-    '''
-    Entry point function for preflight tests
     :param config: Dict, loaded config file from /genconf/config.yaml
+    :param pf_script_path: preflight.sh script location on a local host
+    :param preflight_remote_path: destination location
     '''
+    clean_logs('preflight', config['ssh_config']['log_directory'])
+    if not os.path.isfile(pf_script_path):
+        log.error("genconf/serve/dcos_install.sh does not exist. Please run --genconf before executing preflight.")
+        raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
     targets = create_full_inventory(config)
-    preflight_runner = get_runner(config, targets)
+    pf = get_runner(config, targets, 'preflight')
     try:
-        init_tmp_dir(preflight_runner)
-        preflight_check(preflight_runner, preflight_script_path)
+        init_tmp_dir(pf)
+        copy_preflight(pf, pf_script_path)
+        execute_preflight(pf)
     finally:
-        cleanup_tmp_dir(preflight_runner)
+        cleanup_tmp_dir(pf)
+        print_failures('preflight', config['ssh_config']['log_directory'])

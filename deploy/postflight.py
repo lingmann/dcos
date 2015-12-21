@@ -1,7 +1,7 @@
 import logging as log
 
-from deploy.util import create_full_inventory, get_runner
-from ssh.utils import handle_command
+from deploy.console_printer import clean_logs, print_failures, print_header
+from deploy.util import create_full_inventory, deploy_handler, get_runner
 from ssh.validate import ValidationException
 
 
@@ -24,7 +24,7 @@ def execute_local_service_check(executor, dcos_diag):
         log.error(err)
         raise
 
-    handle_command(lambda: executor.execute_cmd(dcos_diag))
+    deploy_handler(lambda: executor.execute_cmd(dcos_diag))
 
 
 def run_postflight(config, dcos_diag=None):
@@ -35,5 +35,10 @@ def run_postflight(config, dcos_diag=None):
     :param pytest_path: String: a path to py.test
     :param dcos_diag: remote location of dcos-diagnostics.py
     '''
-    postflight_runner = get_runner(config, create_full_inventory(config))
-    execute_local_service_check(postflight_runner, dcos_diag)
+    print_header('EXECUTING POSTFLIGHT CHECKS')
+    clean_logs('postflight', config['ssh_config']['log_directory'])
+    postflight_runner = get_runner(config, create_full_inventory(config), 'postflight')
+    try:
+        execute_local_service_check(postflight_runner, dcos_diag)
+    finally:
+        print_failures('postflight', config['ssh_config']['log_directory'])

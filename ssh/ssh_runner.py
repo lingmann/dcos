@@ -40,7 +40,7 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
     Run a shell command
     :param host: Dict, {'ip': '127.0.0.1, 'port': 22}
     :param cmd: List, shell command in the following format ['ls', '-la']
-    :param timeout: Integer, a timeout to run a command in minutes
+    :param timeout: Integer, a timeout to run a command in seconds
     :param env: Dict, environment variables os.environ
     :return: Dict in the following format:
             {
@@ -52,11 +52,11 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
               'pid': 123
             }
     '''
-    log.debug('execute {} on {}'.format(cmd, host))
+    log.debug('EXECUTING ON {}\n         COMMAND: {}\n'.format(host['ip'], ' '.join(cmd)))
     if env is None:
         env = os.environ
 
-    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    process = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = process.communicate(timeout=timeout_sec)
     return {
         "cmd": cmd,
@@ -70,26 +70,30 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
 
 def save_logs(results, log_directory, log_postfix):
     try:
+        index = 0
         for result in results:
             host = result['host']['ip']
             ssh.helpers.dump_host_results(
                 log_directory,
                 host,
-                ssh.helpers.get_structured_results(result),
+                ssh.helpers.get_structured_results(result, index),
                 log_postfix)
+            index += 1
     except IOError:
         pass
     return results
 
 
 class MultiRunner():
-    def __init__(self, targets, ssh_user=None, ssh_key_path=None, parallelism=10):
+    def __init__(self, targets, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120, parallelism=10):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
         # manually building up / adding the arguments in _get_base_args which is
         # very error prone to get the formatting right. Should have just one
         # host section which applies to all hosts, sets things like "user".
+        self.extra_opts = extra_opts
+        self.process_timeout = process_timeout
         self.ssh_user = ssh_user
         self.ssh_key_path = ssh_key_path
         self.ssh_bin = '/usr/bin/ssh'
@@ -100,15 +104,27 @@ class MultiRunner():
     def _get_base_args(self, bin_name, host):
         # TODO(cmaloney): Switch to SSH config file, documented above. A single
         # user is always required.
-        port_option = '-p' if bin_name is self.ssh_bin else '-P'
-        return [
+        if bin_name is self.ssh_bin:
+            port_option = '-p'
+            if self.extra_opts:
+                add_opts = self.extra_opts.split(' ')
+            else:
+                add_opts = []
+        else:
+            port_option = '-P'
+            add_opts = []
+        shared_opts = [
             bin_name,
-            '-oConnectTimeout=3',
+            '-oConnectTimeout=10',
             '-oStrictHostKeyChecking=no',
             '-oUserKnownHostsFile=/dev/null',
+            '-oBatchMode=yes',
+            '-oPasswordAuthentication=no',
             '{}{}'.format(port_option, host['port']),
             '-i', self.ssh_key_path
-        ]
+            ]
+        shared_opts.extend(add_opts)
+        return shared_opts
 
     def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
         def build_scp(host):
@@ -124,7 +140,7 @@ class MultiRunner():
         return self.__run_on_hosts(build_scp)
 
     def __run_on_hosts(self, cmd_builder):
-        host_cmd_tuples = [(host, cmd_builder(host)) for host in self.__targets]
+        host_cmd_tuples = [(host, cmd_builder(host), self.process_timeout) for host in self.__targets]
 
         # NOTE: There are extra processes created here (We should be able to
         # just run N subprocesses at a time and wait for signals from any of n
@@ -146,8 +162,40 @@ class MultiRunner():
         return self.__run_on_hosts(build_ssh)
 
 
+tuple_to_string_header = """HOST: {}
+COMMAND: {}
+RETURNCODE: {}
+PID: {}
+"""
+
+
+def cmd_tuple_to_string(cmd_tuple):
+    """Transforms the given tuple returned from run_cmd_return_tuple into a user-friendly string message"""
+    string = tuple_to_string_header.format(
+        cmd_tuple['host'],
+        " ".join(cmd_tuple['cmd']),
+        cmd_tuple['returncode'],
+        cmd_tuple['pid'])
+
+    if cmd_tuple['stdout']:
+        string += "STDOUT:\n" + '\n'.join(cmd_tuple['stdout'])
+    if cmd_tuple['stderr']:
+        string += "STDERR:\n" + '\n'.join(cmd_tuple['stderr'])
+
+    return string
+
+
+class CmdRunException(Exception):
+
+    def __init__(self, results):
+        message = "\n".join(map(cmd_tuple_to_string, results))
+        super(CmdRunException, self).__init__(message)
+        self.results = results
+
+
 class SSHRunner():
     def __init__(self, use_cache=False):
+        self.extra_ssh_options = ''
         self.ssh_key_path = None
         self.ssh_user = None
         self.targets = []
@@ -155,6 +203,7 @@ class SSHRunner():
         self.use_cache = use_cache
         self.__cache_file = './.cache.json'
         self.log_postfix = 'ssh_data'
+        self.process_timeout = 120
 
     def wrapped_run(self, eval_command):
         def dump_success_hosts(results):
@@ -171,13 +220,16 @@ class SSHRunner():
                 with open(self.__cache_file, 'w') as fh:
                     json.dump(dump, fh)
             return results
-        return save_logs(dump_success_hosts(eval_command()), self.log_directory, self.log_postfix)
+        results = dump_success_hosts(eval_command())
+        save_logs(results, self.log_directory, self.log_postfix)
+        return results
 
     def validate(self, throw_if_errors=True):
         with ssh.validate.ErrorsCollector(throw_if_errors=throw_if_errors) as ec:
             ec.is_not_none(self, [
                 'log_directory',
                 'ssh_user',
+                'process_timeout',
                 'ssh_key_path'
             ])
 
@@ -185,6 +237,7 @@ class SSHRunner():
                 'log_directory',
                 'ssh_user',
                 'log_postfix',
+                'extra_ssh_options',
                 'ssh_key_path'
             ])
 
@@ -209,10 +262,25 @@ class SSHRunner():
             ])
             return ec.validate()
 
-    def execute_cmd(self, cmd):
+    def execute_cmd(self, cmd, throw_on_error=False):
         self.validate()
-        runner = MultiRunner(self.exclude_cached(self.targets), ssh_user=self.ssh_user, ssh_key_path=self.ssh_key_path)
-        return self.wrapped_run(lambda: runner.run(cmd.split()))
+        runner = MultiRunner(
+            self.exclude_cached(self.targets),
+            ssh_user=self.ssh_user,
+            ssh_key_path=self.ssh_key_path,
+            extra_opts=self.extra_ssh_options,
+            process_timeout=self.process_timeout)
+
+        results = self.wrapped_run(lambda: runner.run(cmd.split()))
+
+        if throw_on_error:
+            # If any results exited with non-zero, throw an exception with results attached
+            error_exits = list(filter(lambda result: result['returncode'] != 0, results))
+
+            if len(error_exits) > 0:
+                raise CmdRunException(error_exits)
+
+        return results
 
     def exclude_cached(self, hosts):
         if not self.use_cache or not os.path.isfile(self.__cache_file):
@@ -226,6 +294,9 @@ class SSHRunner():
 
     def copy_cmd(self, local_path, remote_path, recursive=False, remote_to_local=False):
         self.validate()
-        runner = MultiRunner(self.exclude_cached(self.targets), ssh_user=self.ssh_user, ssh_key_path=self.ssh_key_path)
+        runner = MultiRunner(self.exclude_cached(self.targets),
+                             ssh_user=self.ssh_user,
+                             ssh_key_path=self.ssh_key_path,
+                             process_timeout=self.process_timeout)
         return self.wrapped_run(lambda: runner.copy(local_path, remote_path, remote_to_local=remote_to_local,
                                                     recursive=recursive))

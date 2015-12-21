@@ -1,6 +1,4 @@
-import getpass
 import os
-import pwd
 import socket
 import stat
 
@@ -151,13 +149,10 @@ class ErrorsCollector():
         :param keys: array of strings, each string is a property in cls
         :param ssh_key_owner: assume default key owner is a current user, unless this parameter is specified
         '''
-        if ssh_key_owner is None:
-            ssh_key_owner = getpass.getuser()
-
         for key in keys:
             check_value = getattr(cls, key)
             try:
-                uid = os.stat(check_value).st_uid
+                os.stat(check_value).st_uid
             except FileNotFoundError:
                 self.errors.append('No such file or directory: {}'.format(check_value))
                 continue
@@ -165,9 +160,11 @@ class ErrorsCollector():
                 self.errors.append('Cannot specify {} for path argument'.format(check_value))
                 continue
 
-            user = pwd.getpwuid(uid).pw_name
-            if ssh_key_owner != user:
-                self.errors.append('{} owner should be {}, field: {}'.format(check_value, ssh_key_owner, key))
+            try:
+                with open(check_value, 'r') as key_fh:
+                    key_fh.read()
+            except PermissionError:
+                self.errors.append("Key is not readable by current user")
 
             # OWNERSHIP_BITMASK is used to check that only owner permissions set
             if os.stat(check_value).st_mode & OWNERSHIP_BITMASK > 0:

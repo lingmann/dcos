@@ -17,18 +17,19 @@ NOTE:
 import collections
 import importlib
 import json
+import logging as log
 import os
 import os.path
 import sys
-import yaml
-import logging as log
 from copy import copy, deepcopy
 from itertools import chain
+from subprocess import check_call
+from tempfile import TemporaryDirectory
+
+import yaml
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
-from subprocess import check_call
-from tempfile import TemporaryDirectory
 
 import gen.template
 

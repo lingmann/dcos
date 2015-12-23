@@ -41,10 +41,6 @@ def get_cluster_summary_event_from_json(summary_json):
                    'frameworks': frameworks_names_only,
                    'cluster_name': cluster_name}
 
-    for framework in frameworks_names_only:
-        key = "has_framework_%s" % framework
-        result_dict[key] = True
-
     return result_dict
 
 

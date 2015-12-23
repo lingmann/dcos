@@ -9,7 +9,7 @@ from subprocess import check_output
 import yaml
 
 
-def calulate_dcos_image_commit(arguments):
+def calulate_dcos_image_commit():
     dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 
     if dcos_image_commit is None:
@@ -21,31 +21,31 @@ def calulate_dcos_image_commit(arguments):
     return dcos_image_commit
 
 
-def calculate_bootstrap_url(arguments):
-    return "https://downloads.mesosphere.com/dcos/" + arguments['channel_name']
+def calculate_bootstrap_url(channel_name):
+    return "https://downloads.mesosphere.com/dcos/" + channel_name
 
 
-def calculate_bootstrap_id(arguments):
+def calculate_bootstrap_id(channel_name):
     # NOTE: We always use our repository for figuring out the current
     # bootstrap_id because it has all the bootstraps. For on-prem customers who
     # change the bootstrap_url to point to a local cluster, they still need
     # to be shipped our canoncial bootstrap for the selected release.
-    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(arguments['channel_name'])
+    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(channel_name)
     return urllib.request.urlopen(url).read().decode('utf-8')
 
 
-def calculate_resolvers_str(arguments):
+def calculate_resolvers_str(resolvers):
     # Validation because accidentally slicing a string instead of indexing a
     # list of resolvers then finding out at cluster launch is painful.
-    assert isinstance(arguments['resolvers'], str)
-    resolvers = json.loads(arguments['resolvers'])
+    assert isinstance(resolvers, str)
+    resolvers = json.loads(resolvers)
     assert isinstance(resolvers, list)
     return ",".join(resolvers)
 
 
-def calculate_mesos_dns_resolvers_str(arguments):
-    assert isinstance(arguments['resolvers'], str)
-    resolvers = json.loads(arguments['resolvers'])
+def calculate_mesos_dns_resolvers_str(resolvers):
+    assert isinstance(resolvers, str)
+    resolver_list = json.loads(resolvers)
 
     # Mesos-DNS unfortunately requires completley different config parameters
     # for saying "Don't resolve / reject non-Mesos-DNS requests" than "there are
@@ -57,35 +57,35 @@ def calculate_mesos_dns_resolvers_str(arguments):
     # jinja functions (the function names show up as unset arguments...).
     # As such, generate the full JSON line and replace it in the manner given
     # above.
-    if len(resolvers) > 0:
-        return '"resolvers": ' + arguments['resolvers']
+    if len(resolver_list) > 0:
+        return '"resolvers": ' + resolvers
     else:
         return '"externalOn": false'
 
 
-def calculate_ip_detect_contents(arguments):
-    if os.path.exists(arguments['ip_detect_filename']):
-        return yaml.dump(open(arguments['ip_detect_filename'], encoding='utf-8').read())
+def calculate_ip_detect_contents(ip_detect_filename):
+    if os.path.exists(ip_detect_filename):
+        return yaml.dump(open(ip_detect_filename, encoding='utf-8').read())
     else:
-        log.error("Ip-detect script: %s. Does not exist.", arguments['ip_detect_filename'])
+        log.error("Ip-detect script: %s. Does not exist.", ip_detect_filename)
         sys.exit(1)
 
 
-def calculate_gen_resolvconf_search(arguments):
-    if len(arguments['dns_search']) > 0:
-        return "SEARCH=" + arguments['dns_search']
+def calculate_gen_resolvconf_search(dns_search):
+    if len(dns_search) > 0:
+        return "SEARCH=" + dns_search
     else:
         return ""
 
 must = {
-    'master_quorum': lambda arguments: str(floor(int(arguments['num_masters']) / 2) + 1),
+    'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
     'resolvers_str': calculate_resolvers_str,
     'dcos_image_commit': calulate_dcos_image_commit,
     'ip_detect_contents': calculate_ip_detect_contents,
     'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-    'dcos_version': lambda arguments: "1.5",
+    'dcos_version': lambda: "1.5",
     'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
-    'curly_pound': lambda _: "{#"
+    'curly_pound': lambda: "{#"
 }
 
 can = {

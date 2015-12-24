@@ -16,19 +16,21 @@ NOTE:
 
 import collections
 import importlib
+import inspect
 import json
+import logging as log
 import os
 import os.path
 import sys
-import yaml
-import logging as log
 from copy import copy, deepcopy
 from itertools import chain
+from subprocess import check_call
+from tempfile import TemporaryDirectory
+
+import yaml
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
-from subprocess import check_call
-from tempfile import TemporaryDirectory
 
 import gen.template
 
@@ -208,7 +210,17 @@ class LazyArgumentCalculator(collections.Mapping):
 
         try:
             self.__in_progress.add(name)
-            self._arguments[name] = self._calculators[name](self)
+            calc_func = self._calculators[name]
+            parameters = inspect.signature(self._calculators[name]).parameters
+            # Iterate over the argument list, and force all the arguments to
+            # be calculated. This pulls that out of the implicit in the body
+            # of every function, allowing incremental work towards using the
+            # full graph of parameters.
+            kwargs = {}
+            for parameter in parameters:
+                kwargs[parameter] = self[parameter]
+
+            self._arguments[name] = calc_func(**kwargs)
         except AssertionError as ex:
             raise AssertionError(str(ex) + " while calculating {}".format(name)) from ex
         return self._arguments[name]

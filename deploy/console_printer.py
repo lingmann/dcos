@@ -11,7 +11,7 @@ def print_host_failures(f):
     return_code = False
     for host, data in f.items():
         for timestamp, values in data.items():
-            if values['returncode'] is not 0:
+            if values['returncode'] != 0:
                 return_code = True
 
     return return_code, host

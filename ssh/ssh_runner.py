@@ -104,7 +104,7 @@ class MultiRunner():
     def _get_base_args(self, bin_name, host):
         # TODO(cmaloney): Switch to SSH config file, documented above. A single
         # user is always required.
-        if bin_name is self.ssh_bin:
+        if bin_name == self.ssh_bin:
             port_option = '-p'
             if self.extra_opts:
                 add_opts = self.extra_opts.split(' ')

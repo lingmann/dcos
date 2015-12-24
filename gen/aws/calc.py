@@ -1,8 +1,4 @@
-from functools import partial
-
-
-def render_spot(name, arguments):
-    spot_price = arguments.get(name + '_spot_price')
+def get_spot_str(name, spot_price):
     if spot_price:
         return '"SpotPrice": "{}",'.format(spot_price)
     else:
@@ -25,9 +21,9 @@ defaults = {
 }
 
 must = {
-    'aws_master_spot_price': partial(render_spot, 'master'),
-    'aws_slave_spot_price': partial(render_spot, 'slave'),
-    'aws_slave_public_spot_price': partial(render_spot, 'slave_public')
+    'aws_master_spot_price': lambda master_spot_price: get_spot_str('master', master_spot_price),
+    'aws_slave_spot_price': lambda slave_spot_price: get_spot_str('slave', slave_spot_price),
+    'aws_slave_public_spot_price': lambda slave_public_spot_price: get_spot_str('slave_public', slave_public_spot_price)
 }
 
 arguments = {

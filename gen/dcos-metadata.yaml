@@ -14,3 +14,15 @@ package:
         "dcos-image-commit": "{{ dcos_image_commit }}",
         "bootstrap-id": "{{ bootstrap_id }}"
       }
+  - path: /etc/ui-config.json
+    content: |
+      {
+        "uiConfiguration": {
+          "plugins": {
+            "banner": {},
+            "tracking": {"enabled": true},
+            "authentication": {"enabled": false},
+            "settings": {"enabled": false}
+          }
+        }
+      }

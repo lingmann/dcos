@@ -11,10 +11,12 @@ preflight.execute_cmd(cmd)
 preflight.copy_cmd('/tmp/file.txt', '/tmp')
 preflight.copy_cmd('/usr', '/', recursive=True)
 """
+import asyncio
 import json
 import logging
 import os
 import subprocess
+import tempfile
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -95,6 +97,35 @@ def save_logs(results, log_directory, log_postfix):
     return results
 
 
+class CommandsChain():
+    '''
+    A chain of commands to execute
+    '''
+    execute_flag = 'execute'
+    copy_flag = 'copy'
+
+    def __init__(self):
+        self.commands_stack = []
+
+    def add_execute_cmd(self, cmd, rollback=None, comment=None):
+        '''
+        Add command to execute on a remote host.
+
+        :param cmd: String, command to execute
+        :param rollback: String (optional) a rollback command
+        :param comment: String (optional)
+        :return:
+        '''
+        cmd = cmd.split()
+        self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
+
+    def add_copy_cmd(self, local_path, remote_path, remote_to_local=False, recursive=False, comment=None):
+        self.commands_stack.append((self.copy_flag, local_path, remote_path, remote_to_local, recursive, comment))
+
+    def get_commands(self):
+        return self.commands_stack
+
+
 class MultiRunner():
     def __init__(self, targets, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120, parallelism=10):
         assert isinstance(targets, list)
@@ -111,6 +142,8 @@ class MultiRunner():
         self.scp_bin = '/usr/bin/scp'
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
+
+        self.tmp_dir = tempfile.mkdtemp()
 
     def _get_base_args(self, bin_name, host):
         # TODO(cmaloney): Switch to SSH config file, documented above. A single
@@ -137,6 +170,7 @@ class MultiRunner():
         return shared_opts
 
     def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
+        '''Deprecated'''
         def build_scp(host):
             copy_command = []
             if recursive:
@@ -150,6 +184,7 @@ class MultiRunner():
         return self.__run_on_hosts(build_scp)
 
     def __run_on_hosts(self, cmd_builder):
+        '''Deprecated'''
         host_cmd_tuples = [(host, cmd_builder(host), self.process_timeout) for host in self.__targets]
 
         # NOTE: There are extra processes created here (We should be able to
@@ -164,12 +199,93 @@ class MultiRunner():
             return pool.starmap(run_cmd_return_tuple, host_cmd_tuples)
 
     def run(self, cmd):
+        '''Deprecated'''
         assert isinstance(cmd, list)
 
         def build_ssh(host):
             return self._get_base_args(self.ssh_bin, host) + [
                 '{}@{}'.format(self.ssh_user, host['ip'])] + cmd
         return self.__run_on_hosts(build_ssh)
+
+    @asyncio.coroutine
+    def run_cmd_return_dict_async(self, cmd, host, future):
+        process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
+                                                            stderr=asyncio.subprocess.PIPE,
+                                                            stdin=asyncio.subprocess.DEVNULL)
+
+        stdout = yield from process.stdout.read()
+        stderr = yield from process.stderr.read()
+        yield from process.wait()
+
+        process_output = {
+            "cmd": cmd,
+            "host": host,
+            "stdout": stdout.decode().split('\n'),
+            "stderr": stderr.decode().split('\n'),
+            "returncode": process.returncode,
+            "pid": process.pid
+        }
+        future.set_result(process_output)
+        return process_output
+
+    @asyncio.coroutine
+    def run_async(self, host, command, future):
+        _, cmd, rollback, comment = command
+        full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host['ip'])] + cmd
+        result = yield from self.run_cmd_return_dict_async(full_cmd, host, future)
+        return result
+
+    @asyncio.coroutine
+    def copy_async(self, host, command, future):
+        print('Called copy_async for {} with command {}'.format(host, command))
+
+    def update_json(self, future):
+        print('This is future')
+        print(future.result())
+
+    @asyncio.coroutine
+    def dispatch_command(self, host, chain, sem):
+        with (yield from sem):
+            for command in chain.get_commands():
+                future = asyncio.Future()
+                future.add_done_callback(self.update_json)
+
+                command_type = command[0]
+                if command_type == CommandsChain.execute_flag:
+                    result = yield from self.run_async(host, command, future)
+                elif command_type == CommandsChain.copy_flag:
+                    result = yield from self.copy_async(host, command, future)
+                else:
+                    raise NotImplementedError(command_type)
+
+                # If a command fails, initiate a rollback
+                # TODO(mnaboka): add rollback logic here
+                if result['returncode'] != 0:
+                    return
+
+    @asyncio.coroutine
+    def run_commands_chain_async(self, chain):
+        assert isinstance(chain, CommandsChain)
+
+        sem = asyncio.Semaphore(self.__parallelism)
+        tasks = []
+        for host in self.__targets:
+            tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
+        yield from asyncio.wait(tasks)
+
+
+if __name__ == '__main__':
+    loop = asyncio.get_event_loop()
+    mr = MultiRunner(['127.0.0.1:22022', '127.0.0.1'], ssh_user='mnaboka', ssh_key_path='/Users/mnaboka/.ssh/id_rsa')
+    chain = CommandsChain()
+    chain.add_execute_cmd('uname -a')
+    chain.add_execute_cmd('ls -l /tmfff')
+    chain.add_execute_cmd('uname -a')
+
+    try:
+        loop.run_until_complete(mr.run_commands_chain_async(chain))
+    finally:
+        loop.close()
 
 
 tuple_to_string_header = """HOST: {}

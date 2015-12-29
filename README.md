@@ -9,34 +9,57 @@
 
 ## REST API
 
-<pre>/                          GET: <em>  root</em></pre>
+#### /
+**GET**: Loads application</em>
 
-<pre>/configure/                GET: <em>  configuration page</em></pre>
+#### /configure/
+**GET**: Get currently stored configuration
+```json
+// needs to be added
+```
 
-<pre>/configure/validate/       POST: <em>  validate configuration data, return config_errors.json</em></pre>
+**POST**: Save configuration. It validates configuration data, returns [config_errors.json](#_errorsjson)
 
-<pre>/preflight/                POST: <em> Execute preflight on target hosts</em></pre> 
-<pre>                           GET: <em>  RETURN preflight_status.json</em></pre>
+#### /preflight/
+**GET**:  RETURN preflight_status.json
 
-<pre>/preflight/logs/           GET: <em>  Get *_preflight logs for download</em></pre>
+**POST**: Execute preflight on target hosts 
 
-<pre>/preflight/errors/         GET: <em> RETURN preflight_errors.json </em></pre>
+#### /preflight/logs/
+**GET**: Get *_preflight logs for download (this is a .tar file)
 
-<pre>/deploy/                   POST: <em> Install DCOS on target hosts.</em></pre>
-<pre>                           GET:  <em> RETURN deploy_status.json</em></pre>
+#### /preflight/errors/
+**GET**: RETURN preflight_errors.json 
 
-<pre>/deploy/logs/              GET: <em>  Get *_deploy.log data for download</em></pre>
+#### /deploy/
+**GET**:  RETURN deploy_status.json
 
-<pre>/deploy/errors/            GET: <em>  RETURN preflight_errors.json</em></pre>
+**POST**: Execute install DCOS on target hosts.
 
-<pre>/postflight/               POST: <em>  Execute postflight on target hosts</em></pre>
-<pre>                           GET: <em> RETURN postflight_status.json</em></pre>
+#### /deploy/logs/
+**GET**: Get *_deploy.log data for download (this is a .tar file)
 
-<pre>/postflight/logs/          GET: <em>  RETURN *_postflight.log files for download</em></pre>
+#### /deploy/errors/
+**GET**: RETURN preflight_errors.json
 
-<pre>/postflight/errors/        GET: <em> RETURN postflight_errors.json</em></pre>
+#### /postflight/
+**GET**: RETURN postflight_status.json
 
-<pre>/success/                  GET: <em> RETURN url to DCOS UI</em></pre>
+**POST**:  Execute postflight on target hosts
+
+#### /postflight/logs/
+**GET**:  RETURN *_postflight.log files for download
+
+#### /postflight/errors/
+**GET**: RETURN postflight_errors.json
+
+#### /success/
+**GET**: RETURN url to DCOS UI
+```json
+{
+  "dcosUrl": "http://..."
+}
+```
 
 
 #### *_errors.json

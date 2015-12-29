@@ -84,6 +84,7 @@ def success():
 def page_not_found(e):
     return render_template('404.html'), 404
 
+app.run()
 
-if __name__ == '__main__':
-    app.run()
+#if __name__ == '__main__':
+#    app.run()

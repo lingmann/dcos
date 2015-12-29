@@ -35,9 +35,9 @@ def run(options):
         app.debug = True
 
     app.run(port=options.port)
-
-
-def do_routes(app, options):
+ do_routes(app,t_connect(sid, environ):
+       sio.emit('my response', {'data': 'Connected', 'count': 0}, room=sid,
+                      namespace='/test')options):
     """
     Organize all our routes into a single def so we can keep
     all our routes defined in one place.

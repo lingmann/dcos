@@ -101,7 +101,7 @@ def validate_string(key=None, config=None):
 
 def validate_int(key=None, config=None):
     if key in config:
-        key = config[key]
+        key = int(config[key])
         if type(key) == int:
             return [True, '{} is a valid integer.'.format(key)]
 
@@ -122,6 +122,19 @@ def validate_install_type(key=None, config=None):
 
     return [False, None]
 
+
+def validate_comma_list(key=None, config=None):
+    if key in config:
+        key = config[key]
+        if type(key) == str:
+            if key.split(','):
+                [True, '{} is a valid comma separated list'.format(key)]
+            else:
+                [True, '{} is a valid single entity string.'.format(key)]
+        else:
+            return [False, '{} is not a valid string. Looking for comma separated list.'.format(key)]
+
+    return [False, None]
 
 def validate_list(key=None, config=None):
     if key in config:

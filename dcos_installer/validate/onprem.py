@@ -58,7 +58,7 @@ def get_onprem_dependencies(config):
             "master_discovery": helpers.validate_master_discovery('master_discovery', cluster_config),
             "master_list": helpers.validate_ip_list('master_list', cluster_config),
             "exhibitor_storage_backend": helpers.validate_exhibitor_storage_backend('exhibitor_storage_backend', cluster_config),
-            "exhibitor_zk_hosts": helpers.validate_ip_list('exhibitor_zk_hosts', cluster_config),
+            "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_path('exhibitor_zk_hosts', cluster_config),
             "exhibitor_zk_path": helpers.validate_string('exhibitor_zk_path', cluster_config), 
             "cluster_name": helpers.validate_string('cluster_name', cluster_config), 
             "resolvers": helpers.validate_ip_list('resolvers', cluster_config),

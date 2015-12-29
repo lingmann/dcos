@@ -1,15 +1,17 @@
 import argparse
+import logging
 import os
 import sys
 
 from dcos_installer import server
-from dcos_installer.log import DCOSLog
+from dcos_installer import pretty_log
 
-log = DCOSLog(__name__).log
 
 # Get the current relative directory
 project_path=os.path.dirname(os.path.realpath(__file__))
 
+# Get logger
+log = logging.getLogger(__name__)
 
 class DcosInstaller:
     def __init__(self, options=None):

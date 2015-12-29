@@ -19,11 +19,11 @@
 #
 # else:
 #     print("Errors found: ", validate_out)
-from dcos_installer.log import DCOSLog
-log = DCOSLog(__name__).log
+import logging
+log = logging.getLogger(__name__)
 
-from dcos_installer.validate import onprem 
-#from dcosgen.validate import $some_other_installation_type
+from installer.validate import onprem
+# from dcosgen.validate import $some_other_installation_type
 
 
 class DCOSValidateConfig():
@@ -32,21 +32,16 @@ class DCOSValidateConfig():
     verifies that the install_type contains all neccessary dependencies
     and that those dependencies are of the correct type.
 
-    DCOSValidateConfig can be called on its own and one can 
+    DCOSValidateConfig can be called on its own and one can
     assume that it will 'do the right thing'. However, you can also
     call any of it's methods.
     """
     def __init__(self, dcos_config={}):
         self.dcos_config = dcos_config
-        
-        if len(self.dcos_config) > 0:
-            self.validate()
-
 
     def validate(self):
         errors, messages = self.onprem_config()
         return errors, messages
-
 
     def onprem_config(self):
         """
@@ -54,13 +49,9 @@ class DCOSValidateConfig():
         """
         log.info("Executing on-premise configuration validation...")
         errors, validate_out = onprem.check_dependencies(self.dcos_config)
-        
         if errors:
             log.error("Errors found in on-prem dependencies...")
-            log.error(validate_out)
-            log.error("Please make sure these errors are corrected. Setting no-generate flag.")
             return errors, validate_out
-
-        else: 
+        else:
             log.info("Configuration looks good!")
             return errors, validate_out

@@ -7,16 +7,13 @@
 # c = DcosConfig()
 # print(c)
 
-import datetime
-import time
 import json
+import logging
 import os
-import sys
 import yaml
 
-from dcos_installer.validate import DCOSValidateConfig
-from dcos_installer.log import DCOSLog
-log = DCOSLog(__name__).log
+from installer.validate import DCOSValidateConfig
+log = logging.getLogger(__name__)
 
 
 class DCOSConfig(dict):
@@ -24,22 +21,19 @@ class DCOSConfig(dict):
     Return the site configuration object for dcosgen library
     """
     def __init__(self, overrides={}, config_path=None):
-        # Default configuration
-        defaults = """ 
+        defaults = """
 ---
 cluster_config:
   cluster_name: 'Mesosphere: The Data Center Operating System'
-  config_dir: 
-  ip_detect_path: 
-  num_masters: 
+  ip_detect_path: /genconf/ip-detect
+  num_masters:
   master_discovery: static
-  master_list: 
+  master_list:
   exhibitor_storage_backend: zookeeper
-  exhibitor_zk_hosts:
-    - 127.0.0.1
+  exhibitor_zk_hosts: 127.0.0.1:2181
   exhibitor_zk_path: /exhibitor
   weights: slave_public=1
-  bootstrap_url: localhost
+  bootstrap_url: file:///opt/dcos_install_tmp
   roles: slave_public
   docker_remove_delay: 1hrs
   gc_delay: 2days
@@ -48,16 +42,20 @@ cluster_config:
     - 8.8.4.4
 
 ssh_config:
-  target_hosts: 
-  ssh_user: 
+  target_hosts:
+  -
+  ssh_user:
   ssh_port: 22
-  ssh_key_path: 
+  ssh_key_path: /genconf/ssh_key
+  log_directory: /genconf/logs
 """
         self.defaults = yaml.load(defaults)
-        self.defaults['ssh_config']['ssh_key_path'] = '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~'))
-        self.defaults['cluster_config']['config_dir'] = '{}/dcos-installer'.format(os.path.expanduser('~'))
-        self.defaults['cluster_config']['ip_detect_path'] = '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~'))
-        # Setting the passed in options as the overrides for the instance of the class. 
+        # We're using the on-container /genconf directory for v1 of the installer, these are unneccessary for now
+        # self.defaults['ssh_config']['ssh_key_path'] = '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~'))
+        # self.defaults['cluster_config']['config_dir'] = '{}/dcos-installer'.format(os.path.expanduser('~'))
+        # self.defaults['cluster_config']['ip_detect_path'] =
+        # '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~'))
+        # Setting the passed in options as the overrides for the instance of the class.
         self.config_path = config_path
         self.overrides = overrides
         self._update()
@@ -66,12 +64,10 @@ ssh_config:
         for k, v in self.items():
             log.debug("%s: %s", k, v)
 
-
     def _update(self):
         # Create defaults
         for key, value in self.defaults.items():
             self[key] = value
-        
         # Get user config file configuration
         if self.config_path:
             user_config = self.load_user_config(self.config_path)
@@ -79,31 +75,31 @@ ssh_config:
             if user_config:
                 for k, v in user_config.items():
                     self[k] = v
-                
-            else: 
-                log.warn("No user configuration found, using all defaults.") 
+            else:
+                log.warning("No user configuration found, using all defaults.")
 
         # Add user config if any
-        if len(self.overrides) > 0:
+        if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
-                self[key] = value
+                if isinstance(value, dict):
+                    for k1, v1 in value.items():
+                        log.warning("Overriding %s with %s", self[key][k1], v1)
+                        self[key][k1] = v1
 
         # Update num_masters and target_hosts with master_list data
+        print("self", self)
         if self['cluster_config']['master_list']:
             self['cluster_config']['num_masters'] = len(self['cluster_config']['master_list'])
-            if self['cluster_config']['master_list'] != None:
-                if self['ssh_config']['target_hosts'] == None:
-                    self['ssh_config']['target_hosts'] = []
-
+            if self['cluster_config']['master_list'] is not None:
                 for ip in self['cluster_config']['master_list']:
                     if ip not in self['ssh_config']['target_hosts']:
                         self['ssh_config']['target_hosts'].append(ip)
 
     def validate(self):
         # Convienience function to validate this object
-        DCOSValidateConfig(self)
+        _, messages = DCOSValidateConfig(self).validate()
+        return messages
 
-    
     def load_user_config(self, config_path):
         """
         Load user-land configuration and exit upon errors.
@@ -128,7 +124,7 @@ ssh_config:
         else:
             log.error("Configuration file not found, %s", config_path)
             log.warn("Using ALL DEFAULT configuration since %s was not found.", config_path)
-            data = open(config_path, 'w') 
+            data = open(config_path, 'w')
             data.write(yaml.dump(self.defaults, default_flow_style=False, explicit_start=True))
             data.close()
             return yaml.load(open(config_path, 'r'))

@@ -1,10 +1,11 @@
-# Dependencies for DCOS installations. Functions in this library are intended to accept a given 
-# set of configuration, and returns a boolean plus a dict of values (if any) that are missing 
+# Dependencies for DCOS installations. Functions in this library are intended to accept a given
+# set of configuration, and returns a boolean plus a dict of values (if any) that are missing
 # for the given set of config.
-from dcos_installer.log import DCOSLog
-log = DCOSLog(__name__).log
+import logging
+log = logging.getLogger(__name__)
 
-from dcos_installer.validate import helpers
+from installer.validate import helpers
+
 
 def check_dependencies(config):
     """
@@ -23,8 +24,8 @@ def return_data(config):
 
     # Verify values presented are valid
     messages = get_onprem_dependencies(config)
-    
-    # Check for errors 
+
+    # Check for errors
     if len(messages['errors']) > 0:
         errors = True
 
@@ -36,8 +37,8 @@ def return_data(config):
 
 def get_onprem_dependencies(config):
     """
-    The on-prem dependency tree. Each key gets a type, provide and dependecies. 
-    For each type, we assert first, if it passes, we verify with provide. 
+    The on-prem dependency tree. Each key gets a type, provide and dependecies.
+    For each type, we assert first, if it passes, we verify with provide.
     """
     # Init our return messages
     messages = {
@@ -47,9 +48,9 @@ def get_onprem_dependencies(config):
     }
 
     # Dependency tree: validation of the given config is done from the funcs
-    # embedded in the tree. If the config isn't set we throw a KeyError, log 
-    # it in 'messages' and continue parsing the tree. 
-   
+    # embedded in the tree. If the config isn't set we throw a KeyError, log
+    # it in 'messages' and continue parsing the tree.
+
     cluster_config = config['cluster_config']
     ssh_config = config['ssh_config']
 
@@ -57,10 +58,12 @@ def get_onprem_dependencies(config):
         "cluster_config": {
             "master_discovery": helpers.validate_master_discovery('master_discovery', cluster_config),
             "master_list": helpers.validate_ip_list('master_list', cluster_config),
-            "exhibitor_storage_backend": helpers.validate_exhibitor_storage_backend('exhibitor_storage_backend', cluster_config),
-            "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_path('exhibitor_zk_hosts', cluster_config),
-            "exhibitor_zk_path": helpers.validate_string('exhibitor_zk_path', cluster_config), 
-            "cluster_name": helpers.validate_string('cluster_name', cluster_config), 
+            "exhibitor_storage_backend": helpers.validate_exhibitor_storage_backend(
+                'exhibitor_storage_backend',
+                cluster_config),
+            "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', cluster_config),
+            "exhibitor_zk_path": helpers.validate_string('exhibitor_zk_path', cluster_config),
+            "cluster_name": helpers.validate_string('cluster_name', cluster_config),
             "resolvers": helpers.validate_ip_list('resolvers', cluster_config),
             "weights": helpers.validate_string('weights', cluster_config),
             "bootstrap_url": helpers.validate_string('bootstrap_url', cluster_config),
@@ -78,7 +81,7 @@ def get_onprem_dependencies(config):
         }
     }
 
-    # For each dependency, read its validation helper func and return 
+    # For each dependency, read its validation helper func and return
     for tk, tv in dep_tree.items():
         for rk, rv in tv.items():
             if rv[0]:
@@ -88,6 +91,5 @@ def get_onprem_dependencies(config):
             else:
                 log.error("%s: %s", rk, rv[1])
                 messages['errors'][rk] = '{}'.format(rv[1])
-
 
     return messages

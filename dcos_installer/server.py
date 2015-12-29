@@ -1,9 +1,15 @@
 import json
 import logging
 
-from flask import Flask, redirect, url_for, request, render_template, Response
-# from installer.exceptions import ActionNameNotSupported
-from installer import mock, pretty_log
+from flask import (
+    Flask,
+    redirect,
+    url_for,
+    request,
+    render_template,
+    Response)
+
+from installer import mock
 
 log = logging.getLogger(__name__)
 
@@ -14,7 +20,6 @@ in the future.
 """
 log.info("Starting UI for DCOS installer...")
 app = Flask(__name__)
-app.config['SECRET_KEY'] = 'secret!'
 version = '1'
 action_names = ['deploy', 'preflight', 'postflight']
 

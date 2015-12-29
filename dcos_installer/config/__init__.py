@@ -12,7 +12,7 @@ import logging
 import os
 import yaml
 
-from installer.validate import DCOSValidateConfig
+from dcos_installer.validate import DCOSValidateConfig
 log = logging.getLogger(__name__)
 
 

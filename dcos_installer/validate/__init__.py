@@ -20,10 +20,10 @@
 # else:
 #     print("Errors found: ", validate_out)
 import logging
-log = logging.getLogger(__name__)
 
-from installer.validate import onprem
-# from dcosgen.validate import $some_other_installation_type
+from dcos_installer.validate import onprem
+
+log = logging.getLogger(__name__)
 
 
 class DCOSValidateConfig():

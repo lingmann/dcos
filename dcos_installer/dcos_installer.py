@@ -3,8 +3,8 @@ import logging
 import os
 import sys
 
-from dcos_installer import server
 from dcos_installer import pretty_log
+from dcos_installer.server import app
 
 
 # Get the current relative directory
@@ -26,7 +26,7 @@ class DcosInstaller:
         self.set_install_dir(options)
 
         if options.mode == 'web':
-            server.run(options)
+            app.run(options)
         else:
             log.error("Sorry, %s is not a usable run mode.", options.mode)
             sys.exit(1)

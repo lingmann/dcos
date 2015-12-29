@@ -2,9 +2,11 @@
 # set of configuration, and returns a boolean plus a dict of values (if any) that are missing
 # for the given set of config.
 import logging
-log = logging.getLogger(__name__)
 
-from installer.validate import helpers
+from dcos_installer.validate import helpers
+
+
+log = logging.getLogger(__name__)
 
 
 def check_dependencies(config):

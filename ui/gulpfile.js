@@ -1,7 +1,7 @@
 var autoprefixer = require('gulp-autoprefixer');
 var browserSync = require('browser-sync');
-var colorLighten = require("less-color-lighten");
-var connect = require("gulp-connect");
+var colorLighten = require('less-color-lighten');
+var connect = require('gulp-connect');
 var eslint = require('gulp-eslint');
 var gulp = require('gulp');
 var gulpif = require('gulp-if');
@@ -15,11 +15,17 @@ var sourcemaps = require('gulp-sourcemaps');
 var uglify = require('gulp-uglify');
 var webpack = require('webpack');
 
-var config = require('./configuration');
+var config = require('./.build.config');
 var packageInfo = require('./package');
-var webpackConfig = require('./webpack.config.js');
+var webpackConfig = require('./.webpack.config');
 
 var development = process.env.NODE_ENV === 'development';
+
+function browserSyncReload () {
+  if (development) {
+    browserSync.reload();
+  }
+}
 
 gulp.task('browsersync', function () {
   browserSync.init({
@@ -34,20 +40,13 @@ gulp.task('browsersync', function () {
   });
 });
 
-gulp.task('server', function () {
-  connect.server({
-    port: 4200,
-    root: config.dirs.dist
-  });
-});
-
 // Create a function so we can use it inside of webpack's watch function.
 function eslintFn () {
-  return gulp.src([config.dirs.srcJS + "/**/*.?(js|jsx)"])
+  return gulp.src([config.dirs.srcJS + '/**/*.?(js|jsx)'])
     .pipe(eslint())
-    .pipe(eslint.formatEach("stylish", process.stderr));
+    .pipe(eslint.formatEach('stylish', process.stderr));
 };
-gulp.task("eslint", eslintFn);
+gulp.task('eslint', eslintFn);
 
 gulp.task('images', function () {
   return gulp.src([
@@ -63,7 +62,8 @@ gulp.task('images', function () {
 
 gulp.task('html', function () {
   return gulp.src(config.files.srcHTML)
-    .pipe(gulp.dest(config.dirs.dist));
+    .pipe(gulp.dest(config.dirs.dist))
+    .on('end', browserSyncReload);
 });
 
 gulp.task('less', function () {
@@ -73,6 +73,10 @@ gulp.task('less', function () {
       paths: [config.dirs.cssSrc], // @import paths
       plugins: [colorLighten]
     }))
+    .on('error', function (err) {
+        gutil.log(err);
+        this.emit('end');
+    })
     .pipe(autoprefixer())
     .pipe(gulpif(development, sourcemaps.write()))
     .pipe(gulp.dest(config.dirs.distCSS))
@@ -98,9 +102,17 @@ function replaceJsStringsFn () {
   return gulp.src(config.files.distJS)
     .pipe(replace('@@VERSION', packageInfo.version))
     .pipe(replace('@@ENV', process.env.NODE_ENV))
-    .pipe(gulp.dest(config.dirs.distJS));
+    .pipe(gulp.dest(config.dirs.distJS))
+    .on('end', browserSyncReload);
 };
 gulp.task('replace-js-strings', ['webpack'], replaceJsStringsFn);
+
+gulp.task('server', function () {
+  connect.server({
+    port: 4200,
+    root: config.dirs.dist
+  });
+});
 
 gulp.task('watch', function () {
   gulp.watch(config.files.srcHTML, ['html']);
@@ -110,18 +122,14 @@ gulp.task('watch', function () {
   // internal watch, which is faster due to insane caching.
 });
 
-// Use webpack to compile jsx into js,
-gulp.task('webpack', ['eslint'], function (callback) {
-  var isFirstRun = true;
-
-  // run webpack
+// Use webpack to compile jsx into js.
+gulp.task('webpack', ['eslint'], function () {
   webpack(webpackConfig, function (err, stats) {
     if (err) {
-      console.log('this is the error');
       throw new gutil.PluginError('webpack', err);
     }
 
-    gutil.log("[webpack]", stats.toString({
+    gutil.log('[webpack]', stats.toString({
       children: false,
       chunks: false,
       colors: true,
@@ -129,30 +137,15 @@ gulp.task('webpack', ['eslint'], function (callback) {
       timing: true
     }));
 
-    if (development) {
-      browserSync.reload();
-    }
-
-    if (isFirstRun) {
-      // This runs on initial gulp webpack load.
-      isFirstRun = false;
-      callback();
-    } else {
-      // This runs after webpack's internal watch rebuild.
-      eslintFn();
-      replaceJsStringsFn(function () {
-        if (development) {
-          browserSync.reload();
-        }
-      });
-    }
+    eslintFn();
+    replaceJsStringsFn();
   });
 });
 
-gulp.task('default', ['eslint', 'webpack', 'replace-js-strings', 'less', 'images', 'html']);
+gulp.task('default', ['webpack', 'eslint', 'replace-js-strings', 'less', 'images', 'html']);
 
 gulp.task('dist', ['default', 'minify-css', 'minify-js']);
 
 gulp.task('serve', ['server', 'default', 'watch']);
 
-gulp.task('livereload', ['server', 'default', 'browsersync', 'watch']);
+gulp.task('livereload', ['default', 'browsersync', 'watch']);

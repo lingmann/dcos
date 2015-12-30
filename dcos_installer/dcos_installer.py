@@ -56,8 +56,15 @@ class DcosInstaller:
             '-w',
             '--web',
             action='store_true',
-            default=True,
+            default=False,
             help='Run the web interface.')
+
+        mutual_exc.add_argument(
+            '-c',
+            '--configure',
+            action='store_true',
+            default=False,
+            help='Execute the configuration generation (genconf).')
 
         mutual_exc.add_argument(
             '-pre',
@@ -72,6 +79,20 @@ class DcosInstaller:
             action='store_true',
             default=False,
             help='Execute a deploy.')
+
+        mutual_exc.add_argument(
+            '-pos',
+            '--postflight',
+            action='store_true',
+            default=False,
+            help='Execute postflight checks on a series of nodes.')
+
+        mutual_exc.add_argument(
+            '-vc',
+            '--validate-config',
+            action='store_true',
+            default=False,
+            help='Validate the configuration in config.yaml')
 
         mutual_exc.add_argument(
             '-t',

@@ -3,135 +3,212 @@
 ## Run locally
 
 1. ```pip install -r requirements.txt```
-2. ```./run_dcos_installer```
+2. ```./run```
 
-# Frontend Manpage
+# REST API
 
-## REST API
+#### / -redirects-> /api/v1
+**GET**: Loads application
 
-#### /
-**GET**: Loads application</em>
-
-#### /configure/
+#### /api/v1/configure/ - TBD
 **GET**: Get currently stored configuration
-```json
-// needs to be added
-```
-
-**POST**: Save configuration. It validates configuration data, returns [config_errors.json](#_errorsjson)
-
-#### /preflight/
-**GET**:  RETURN preflight_status.json
-
-**POST**: Execute preflight on target hosts 
-
-#### /preflight/logs/
-**GET**: Get *_preflight logs for download (this is a .tar file)
-
-#### /preflight/errors/
-**GET**: RETURN preflight_errors.json 
-
-#### /deploy/
-**GET**:  RETURN deploy_status.json
-
-**POST**: Execute install DCOS on target hosts.
-
-#### /deploy/logs/
-**GET**: Get *_deploy.log data for download (this is a .tar file)
-
-#### /deploy/errors/
-**GET**: RETURN preflight_errors.json
-
-#### /postflight/
-**GET**: RETURN postflight_status.json
-
-**POST**:  Execute postflight on target hosts
-
-#### /postflight/logs/
-**GET**:  RETURN *_postflight.log files for download
-
-#### /postflight/errors/
-**GET**: RETURN postflight_errors.json
-
-#### /success/
-**GET**: RETURN url to DCOS UI
-```json
-{
-  "dcosUrl": "http://..."
-}
-```
-
-
-#### *_errors.json
 
 ```json
 {
-  "10.0.0.1": {
-    "master_list": "Invalid list of IPv4 addresses",
-    "ssh_key_path": "Path to ssh key is not valid."
+  "cluster_config": {
+    "exhibitor_storage_backend": "zookeeper",
+    "exhibitor_zk_hosts": "127.0.0.1:2181",
+    "exhibitor_zk_path": "/exhibitor",
+    "master_discovery": "static",
+    "num_masters": null,
+    "cluster_name": "Mesosphere: The Data Center Operating System",
+    "ip_detect_path": "/genconf/ip-detect",
+    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "resolvers": [
+      "8.8.8.8",
+      "8.8.4.4"
+    ],
+    "master_list": null,
+    "docker_remove_delay": "1hrs",
+    "roles": "slave_public",
+    "gc_delay": "2days",
+    "weights": "slave_public=1"
   },
-  "10.0.0.2": {
-    ...
+  "ssh_config": {
+    "target_hosts": [
+      null
+    ],
+    "ssh_key_path": "/genconf/ssh_key",
+    "log_directory": "/genconf/logs",
+    "ssh_port": 22,
+    "ssh_user": null
   }
 }
 ```
 
-#### *_status.json
+**POST**: Save configuration. It validates configuration data, returns [config_errors.json](#_errorsjson)
 
+```
+curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "some_new_user"}}' localhost:5000/api/v1/configure | json
+```
 ```json
 {
-   "masters": {
-      "status": "2 out of 5", 
-      "percentage": "65"
-   },
-   "slaves": {
-      "status": "4 out of 30",
-      "percentage": 3
-    }
+  "cluster_config": {
+    "exhibitor_storage_backend": "zookeeper",
+    "exhibitor_zk_hosts": "127.0.0.1:2181",
+    "exhibitor_zk_path": "/exhibitor",
+    "master_discovery": "static",
+    "num_masters": null,
+    "cluster_name": "Mesosphere: The Data Center Operating System",
+    "ip_detect_path": "/genconf/ip-detect",
+    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "resolvers": [
+      "8.8.8.8",
+      "8.8.4.4"
+    ],
+    "master_list": null,
+    "docker_remove_delay": "1hrs",
+    "roles": "slave_public",
+    "gc_delay": "2days",
+    "weights": "slave_public=1"
+  },
+  "ssh_config": {
+    "target_hosts": [
+      null
+    ],
+    "ssh_key_path": "/genconf/ssh_key",
+    "log_directory": "/genconf/logs",
+    "ssh_port": 22,
+    "ssh_user": "some_new_user"
+  }
 }
 ```
 
+#### /api/v1/preflight/
+**GET**:  RETURN preflight_status.json
+
+```
+curl localhost:5000/api/v1/preflight | json
+```
+```json
+{
+  "10.0.0.3": {
+    "stdout": [
+      ""
+    ],
+    "state": "not_running",
+    "returncode": -1,
+    "cmd": "",
+    "stderr": [
+      ""
+    ],
+    "role": "slave"
+  },
+  "10.0.0.1": {
+    "stdout": [
+      ""
+    ],
+    "state": "not_running",
+    "returncode": -1,
+    "cmd": "",
+    "stderr": [
+      ""
+    ],
+    "role": "master"
+  },
+  "10.0.0.2": {
+    "stdout": [
+      ""
+    ],
+    "state": "running",
+    "returncode": -1,
+    "cmd": "uptime",
+    "stderr": [
+      ""
+    ],
+    "role": "slave"
+  },
+  "10.0.0.4": {
+    "stdout": [
+      ""
+    ],
+    "state": "success",
+    "returncode": 0, 
+    "cmd": "uptime",
+    "stderr": [
+      ""
+    ],
+    "stdout": [
+      "13:53  up 13 days, 17:25, 3 users, load averages: 1.59 1.65 1.69",
+    ]
+    "role": "slave"
+  },
+  "10.0.0.5": {
+    "stdout": [
+      ""
+    ],
+    "state": "error",
+    "returncode": 127,
+    "cmd": "uptime",
+    "stderr": [
+      "command not found"
+    ],
+    "role": "slave"
+  }
+}
+```
+
+**POST**: Execute preflight on target hosts. Returns state.json
+
+#### /api/v1/preflight/logs/
+**GET**: Get *_preflight logs for download (this is a .tar file)
+
+#### /api/v1/deploy/
+**GET**:  RETURN state.json
+
+**POST**: Execute install DCOS on target hosts. Return state.json.
+
+#### /api/v1/deploy/logs/
+**GET**: Get *_deploy.log data for download (this is a .tar file)
+
+#### /api/v1/postflight/
+**GET**: RETURN state.json
+
+**POST**:  Execute postflight on target hosts, return state.json.
+
+#### /api/v1/postflight/logs/
+**GET**:  RETURN *_postflight.log files for download
+
+#### /api/v1/success/
+**GET**: RETURN url to DCOS UI
+
+```
+curl localhost:5000/api/v1/success
+```
+```json
+{"dcosUrl": "http://foobar.com"}
+```
 
 # CLI Manpage
 
 ```pre
-usage: run [-h] [--log-directory LOG_DIRECTORY]
-           [--dcos-install-script-path DCOS_INSTALL_SCRIPT_PATH]
-           [--ip-detect-path IP_DETECT_PATH] [-c CONFIG_PATH] [-d]
-           [-i INSTALL_DIRECTORY] [-l {info,debug}] [-m {cli,web}] [-p PORT]
-           [--serve-directory SERVE_DIRECTORY] [-pre] [-t]
-```
+ ./run --help
+usage: run [-h] [-v] [-p PORT] [-w | -c | -pre | -d | -pos | -vc | -t]
 
-**NAME**
+Install DCOS on-premise
 
-`./run -- run the DCOS installer`
-
-**SYNOPSIS**
-
-`./run [-h | --help] [ -l | --log-level ] [ -p | --port ] [ -m | --mode ] [ -c | --config-path ] [ -d | --install-directory ]` 
-
-**DESCRIPTION**
-
-The DCOS installer runs a web or CLI utility to build DCOS configuration files for your cluster and exposes several deployment options.
-
-**FLAGS**
-
-```pre 
--c                | Configuration Path - Set the configuration path, default is $HOME/dcos/dcos-config.yaml: Accepts a valid /path/to/config.yaml.
-
--d                | Install Directory - Set hte configuration directory used to store and build the bootstrap tarball, defaults to $HOME/dcos: Accepts a valid /path/to/install/stuff. 
-
--h                | Help - Show the help menu
-
--l                | Log Level - Set the loglevel: 'info' or 'debug'
-
---log-directory   | The path to the directory to store log data from preflight and deploy modes
-
--m                | Mode - Set the isntaller mode, defualt is 'web': 'cli' or 'web'
-
--p                | Port - Override the default port of :5000. Accepts an integer.
-
---serve-directory | The directory to find the tarball and installer script to ship to target hosts.
+optional arguments:
+  -h, --help            show this help message and exit
+  -v, --verbose         Verbose log output (DEBUG).
+  -p PORT, --port PORT  Web server port number.
+  -w, --web             Run the web interface.
+  -c, --configure       Execute the configuration generation (genconf).
+  -pre, --preflight     Execute the preflight checks on a series of nodes.
+  -d, --deploy          Execute a deploy.
+  -pos, --postflight    Execute postflight checks on a series of nodes.
+  -vc, --validate-config
+                        Validate the configuration in config.yaml
+  -t, --test            Performs tests on the dcos_installer application
 ```
 
 ### Configuration File 

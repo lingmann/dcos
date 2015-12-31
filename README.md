@@ -10,38 +10,60 @@
 #### / -redirects-> /api/v1
 **GET**: Loads application
 
-#### /api/v1/configure/ - TBD
-**GET**: Get currently stored configuration
+#### /api/v1/configure/ 
+**GET**: Get currently stored configuration and validation messages. 
 
 ```json
 {
+  "success": {
+    "docker_remove_delay": "1hrs is a valid string.",
+    "resolvers": "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
+    "ssh_port": "22 is a valid integer.",
+    "ip_detect_path": "File exists /genconf/ip-detect",
+    "exhibitor_storage_backend": "exhibitor_storage_backend is valid.",
+    "roles": "slave_public is a valid string.",
+    "exhibitor_zk_hosts": "127.0.0.1:2181 is valid exhibitor ZK hosts format.",
+    "cluster_name": "Mesosphere: The Data Center Operating System is a valid string.",
+    "bootstrap_url": "file:///opt/dcos_install_tmp is a valid string.",
+    "master_discovery": "master_discovery method is valid.",
+    "weights": "slave_public=1 is a valid string.",
+    "exhibitor_zk_path": "/exhibitor is a valid string.",
+    "gc_delay": "1hrs is a valid string."
+  },
+  "ssh_config": {
+    "ssh_user": null,
+    "target_hosts": [
+      null
+    ],
+    "log_directory": "/genconf/logs",
+    "ssh_key_path": "/genconf/ssh_key",
+    "ssh_port": 22
+  },
+  "warning": {},
   "cluster_config": {
-    "exhibitor_storage_backend": "zookeeper",
-    "exhibitor_zk_hosts": "127.0.0.1:2181",
-    "exhibitor_zk_path": "/exhibitor",
-    "master_discovery": "static",
-    "num_masters": null,
-    "cluster_name": "Mesosphere: The Data Center Operating System",
-    "ip_detect_path": "/genconf/ip-detect",
-    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "docker_remove_delay": "1hrs",
     "resolvers": [
       "8.8.8.8",
       "8.8.4.4"
     ],
-    "master_list": null,
-    "docker_remove_delay": "1hrs",
     "roles": "slave_public",
-    "gc_delay": "2days",
-    "weights": "slave_public=1"
+    "exhibitor_storage_backend": "zookeeper",
+    "ip_detect_path": "/genconf/ip-detect",
+    "exhibitor_zk_hosts": "127.0.0.1:2181",
+    "cluster_name": "Mesosphere: The Data Center Operating System",
+    "weights": "slave_public=1",
+    "num_masters": null,
+    "master_discovery": "static",
+    "master_list": null,
+    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "exhibitor_zk_path": "/exhibitor",
+    "gc_delay": "2days"
   },
-  "ssh_config": {
-    "target_hosts": [
-      null
-    ],
-    "ssh_key_path": "/genconf/ssh_key",
-    "log_directory": "/genconf/logs",
-    "ssh_port": 22,
-    "ssh_user": null
+  "errors": {
+    "ssh_user": "None is not a valid string. Is of type <class 'NoneType'>.",
+    "target_hosts": "[None] is not valid IPv4 address.",
+    "ssh_key_path": "File does not exist /genconf/ssh_key",
+    "master_list": "None is not of type list."
   }
 }
 ```
@@ -53,36 +75,60 @@ curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "
 ```
 ```json
 {
+  "success": {
+    "docker_remove_delay": "1hrs is a valid string.",
+    "resolvers": "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
+    "ssh_port": "22 is a valid integer.",
+    "ip_detect_path": "File exists /genconf/ip-detect",
+    "exhibitor_storage_backend": "exhibitor_storage_backend is valid.",
+    "roles": "slave_public is a valid string.",
+    "exhibitor_zk_hosts": "127.0.0.1:2181 is valid exhibitor ZK hosts format.",
+    "cluster_name": "Mesosphere: The Data Center Operating System is a valid string.",
+    "bootstrap_url": "file:///opt/dcos_install_tmp is a valid string.",
+    "master_discovery": "master_discovery method is valid.",
+    "weights": "slave_public=1 is a valid string.",
+    "ssh_user": "some_new_user is a valid string.",
+    "exhibitor_zk_path": "/exhibitor is a valid string.",
+    "gc_delay": "1hrs is a valid string."
+  },
+  "ssh_config": {
+    "ssh_user": "some_new_user",
+    "target_hosts": [
+      null
+    ],
+    "log_directory": "/genconf/logs",
+    "ssh_key_path": "/genconf/ssh_key",
+    "ssh_port": 22
+  },
+  "warning": {},
   "cluster_config": {
-    "exhibitor_storage_backend": "zookeeper",
-    "exhibitor_zk_hosts": "127.0.0.1:2181",
-    "exhibitor_zk_path": "/exhibitor",
-    "master_discovery": "static",
-    "num_masters": null,
-    "cluster_name": "Mesosphere: The Data Center Operating System",
-    "ip_detect_path": "/genconf/ip-detect",
-    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "docker_remove_delay": "1hrs",
     "resolvers": [
       "8.8.8.8",
       "8.8.4.4"
     ],
-    "master_list": null,
-    "docker_remove_delay": "1hrs",
     "roles": "slave_public",
-    "gc_delay": "2days",
-    "weights": "slave_public=1"
+    "exhibitor_storage_backend": "zookeeper",
+    "ip_detect_path": "/genconf/ip-detect",
+    "exhibitor_zk_hosts": "127.0.0.1:2181",
+    "cluster_name": "Mesosphere: The Data Center Operating System",
+    "weights": "slave_public=1",
+    "num_masters": null,
+    "master_discovery": "static",
+    "master_list": null,
+    "bootstrap_url": "file:///opt/dcos_install_tmp",
+    "exhibitor_zk_path": "/exhibitor",
+    "gc_delay": "2days"
   },
-  "ssh_config": {
-    "target_hosts": [
-      null
-    ],
-    "ssh_key_path": "/genconf/ssh_key",
-    "log_directory": "/genconf/logs",
-    "ssh_port": 22,
-    "ssh_user": "some_new_user"
+  "errors": {
+    "target_hosts": "[None] is not valid IPv4 address.",
+    "ssh_key_path": "File does not exist /genconf/ssh_key",
+    "master_list": "None is not of type list."
   }
 }
 ```
+
+Notice that the ssh_user is no longer ```None``` and the validation for it now passes since it is a string. 
 
 #### /api/v1/preflight/
 **GET**:  RETURN preflight_status.json

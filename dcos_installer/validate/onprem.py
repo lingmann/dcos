@@ -5,7 +5,6 @@ import logging
 
 from dcos_installer.validate import helpers
 
-
 log = logging.getLogger(__name__)
 
 

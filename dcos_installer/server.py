@@ -1,14 +1,7 @@
 import json
 import logging
 
-from flask import (
-    Flask,
-    redirect,
-    url_for,
-    request,
-    render_template,
-    Response)
-
+from flask import Flask, Response, redirect, render_template, request, url_for
 from installer import mock
 
 log = logging.getLogger(__name__)

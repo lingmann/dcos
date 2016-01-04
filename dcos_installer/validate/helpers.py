@@ -15,8 +15,8 @@
 # Helper methods should start with 'validate_' and methods that are helpers
 # to those should follow a 'is_something_..' construct as to be able to use
 # them in other validate methods.
-import socket
 import os
+import socket
 
 
 def is_valid_ipv4_address(address):

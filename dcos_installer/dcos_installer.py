@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from dcos_installer import server, pretty_log
+from dcos_installer import server
 
 # Get logger
 log = logging.getLogger(__name__)

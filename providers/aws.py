@@ -7,7 +7,6 @@ import re
 import sys
 from copy import deepcopy
 
-import botocore.exceptions
 import jinja2
 import requests
 import yaml
@@ -15,7 +14,7 @@ from pkg_resources import resource_string
 
 import gen
 import providers.util as util
-from providers.aws_config import session_dev, session_prod
+from providers.aws_config import session_dev
 
 
 # TODO(cmaloney): Remove this last use of jinja2. It contains a for loop which
@@ -204,7 +203,7 @@ def gen_templates(arguments, options):
         )
 
     print("Validating CloudFormation")
-    client = session_prod.client('cloudformation')
+    client = session_dev.client('cloudformation')
     client.validate_template(TemplateBody=cloudformation)
 
     return gen.Bunch({
@@ -290,7 +289,7 @@ def do_print_nat_amis(options):
     region_to_ami = {}
 
     for region in aws_region_names:
-        ec2 = session_prod.client('ec2', region_name=region['id'])
+        ec2 = session_dev.client('ec2', region_name=region['id'])
 
         instances = ec2.describe_images(
             Filters=[{'Name': 'name', 'Values': ['amzn-ami-vpc-nat-hvm-2014.03.2.x86_64-ebs']}])['Images']
@@ -318,105 +317,6 @@ def do_print_coreos_amis(options):
     # here, but it isn't real JSON so that is hard.
 
 
-def delete_s3_nonempty(bucket):
-    # This is an exhibitor bucket, should only have one item in it. Die hard rather
-    # than accidentally doing the wrong thing if there is more.
-
-    objects = [bucket.objects.all()]
-    assert len(objects) == 1
-
-    # While almost everything s3 is region agnostic (Including the listing,
-    # uploading, etc), for deleting things the Hamburg region has different
-    # auth than other regions, and if you use an s3 client from the wrong region
-    # things break. So figure out the bucket's region, make a s3 resource for
-    # that region, then delete that way.
-    s3_client = session_dev.client('s3')
-    region = s3_client.get_bucket_location(Bucket=bucket.name)['LocationConstraint']
-
-    region_s3 = session_dev.resource('s3', region_name=region)
-
-    region_bucket = region_s3.Bucket(bucket.name)
-
-    for obj in region_bucket.objects.all():
-        obj.delete()
-
-    region_bucket.delete()
-
-
-def delete_stack(stack):
-    # Delete the s3 bucket
-    stack_resource = stack.Resource('ExhibitorS3Bucket')
-    try:
-        bucket = session_dev.resource('s3').Bucket(stack_resource.physical_resource_id)
-        delete_s3_nonempty(bucket)
-    except botocore.exceptions.ClientError as ex:
-        print("ERROR deleting bucket:", ex)
-
-    # Delete the stack
-    stack.delete()
-
-
-def do_clean_stacks(options):
-    # Cycle through regions, listing all cloudformation stacks and prompting for
-    # each if it should be deleted. If yes, delete the stack and s3 bucket
-    for region in [region['id'] for region in aws_region_names]:
-        client = session_dev.resource('cloudformation', region_name=region)
-
-        # Do a for to convert from iterator to list
-        stacks = [stack for stack in client.stacks.all()]
-
-        for stack in stacks:
-            print("Stack: {}".format(stack.stack_name))
-            print("Launched: {}".format(stack.creation_time))
-            # Loop until y or n is given
-            while True:
-                delete = input("Delete? [y/n]: ")
-                if delete == 'y':
-                    delete_stack(stack)
-                    break
-                elif delete == 'n':
-                    break
-
-
-def do_clean_buckets(options):
-    # List s3 buckets, Prompt to delete any that don't have an associated stack
-    s3 = session_dev.resource('s3')
-    buckets = [bucket for bucket in s3.buckets.all()]
-
-    # NOTE: We list s3 buckets before cf stacks so that we hopefully don't get
-    # any stacks just starting up.
-
-    # Get all the current cf stack buckets
-    cf_buckets = []
-    for region in [region['id'] for region in aws_region_names]:
-        cf = session_dev.resource('cloudformation', region_name=region)
-
-        for stack in cf.stacks.all():
-            for resource in stack.resource_summaries.all():
-                if resource.logical_resource_id == 'ExhibitorS3Bucket':
-                    if resource.physical_resource_id is None:
-                        break
-                    cf_buckets.append(resource.physical_resource_id)
-                    break
-
-    for bucket in buckets:
-        if bucket.name in cf_buckets:
-            continue
-
-        # TODO(cmaloney): This should be a 'prompt' function.
-        while True:
-            delete = input("{} [y/n]: ".format(bucket.name))
-            if delete == 'y':
-                try:
-                    delete_s3_nonempty(bucket)
-                except Exception as ex:
-                    print("ERROR", ex)
-                    print("ERROR: Unable to delete", bucket.name)
-                break
-            elif delete == 'n':
-                break
-
-
 def main():
     parser = argparse.ArgumentParser(description='AWS DCOS image+template creation, management utilities.')
     subparsers = parser.add_subparsers(title='commands')
@@ -428,14 +328,6 @@ def main():
     # print_nat_amis subcommand.
     print_nat_amis = subparsers.add_parser('print-nat-amis')
     print_nat_amis.set_defaults(func=do_print_nat_amis)
-
-    # cleanup_cf_stacks
-    clean_stacks = subparsers.add_parser('clean_stacks')
-    clean_stacks.set_defaults(func=do_clean_stacks)
-
-    # cleanup s3 buckets
-    clean_stacks = subparsers.add_parser('clean_buckets')
-    clean_stacks.set_defaults(func=do_clean_buckets)
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()

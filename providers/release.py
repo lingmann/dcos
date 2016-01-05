@@ -635,10 +635,8 @@ def make_channel_artifacts(metadata):
 
     genconfs = build_genconfs(metadata['bootstrap_dict'], metadata['repo_channel_path'])
 
-    # TODO(cmaloney): This is very hackish this is done here. Really should just
-    # be more channel artifacts (then TeamCity picks up all the artifacts downstream jobs care about).
-    pkgpanda.util.write_string('docker-tag', genconfs[None][0])
-    pkgpanda.util.write_string('docker-tag.txt', genconfs[None][0])
+    artifacts.append({'channel_path': 'docker-tag', 'local_content': genconfs[None][0]})
+    artifacts.append({'channel_path': 'docker-tag.txt', 'local_content': genconfs[None][0]})
 
     # Add genconf scripts for all bootstraps.
     for variant, (genconf_version, genconf_filename) in genconfs.items():

@@ -470,15 +470,14 @@ class Mixin:
             except AttributeError:
                 pass
 
-            try:
-                self.validate_fn = module.validate
-            except AttributeError:
-                pass
+            # Must and can can take in new parameters as arguments, update the
+            # accepted paramters with those.
+            for name, func in chain(self.must_fn.items(), self.can_fn.items()):
+                self.parameters.add(name)
+                self.parameters |= set(inspect.signature(func).parameters)
 
             try:
-                # Updating rather than just assigning since many parameters are
-                # derived from the templates already
-                self.parameters |= set(module.parameters)
+                self.validate_fn = module.validate
             except AttributeError:
                 pass
 

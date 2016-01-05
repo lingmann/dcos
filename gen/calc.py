@@ -121,8 +121,6 @@ defaults = {
     "dns_search": ""
 }
 
-parameters = ["channel_name", "dns_search", "ip_detect_filename", "provider", "resolvers"]
-
 implies = {
     "master_discovery": {
         "cloud_dynamic": None,

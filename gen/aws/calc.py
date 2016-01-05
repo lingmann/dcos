@@ -31,5 +31,3 @@ arguments = {
     'slave_cloud_config': '{{ slave_cloud_config }}',
     'slave_public_cloud_config': '{{ slave_public_cloud_config }}'
 }
-
-parameters = ['master_spot_price', 'slave_spot_price', 'slave_public_spot_price']

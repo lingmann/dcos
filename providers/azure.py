@@ -20,7 +20,7 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
-UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{repo_channel_path}"
+UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{channel_commit_path}"
               "/azure/single-master.azuredeploy.json")
 
 INSTANCE_GROUPS = {
@@ -159,7 +159,7 @@ def gen_templates(user_args, options):
     })
 
 
-def do_create(tag, repo_channel_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'cloud_dynamic'
@@ -180,18 +180,18 @@ def do_create(tag, repo_channel_path, commit, gen_arguments):
             },
             {
                 'channel_path': 'azure.html',
-                'local_content': gen_buttons(repo_channel_path, tag, commit),
+                'local_content': gen_buttons(repo_channel_path, channel_commit_path, tag, commit),
                 'content_type': 'text/html; charset=utf-8'
             }
         ]
     }
 
 
-def gen_buttons(repo_channel_path, tag, commit):
+def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
     '''
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
-    template_upload_url = UPLOAD_URL.format(repo_channel_path=repo_channel_path)
+    template_upload_url = UPLOAD_URL.format(channel_commit_path=channel_commit_path)
     return gen.template.parse_resources('azure/templates/azure.html').render({
         'repo_channel_path': repo_channel_path,
         'tag': tag,

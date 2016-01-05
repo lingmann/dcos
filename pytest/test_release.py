@@ -543,6 +543,7 @@ def test_make_channel_artifacts(monkeypatch):
             'ee': 'ee_bootstrap_id'
         },
         'repo_channel_path': 'r_path/channel',
+        'channel_commit_path': 'r_path/channel/commit/sha-1',
         'repository_path': 'r_path',
         'storage_urls': {
             'aws': 'https://aws.example.com/',

@@ -212,11 +212,12 @@ def gen_templates(arguments, options):
     })
 
 
-def gen_buttons(repo_channel_path, tag, commit):
+def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
     # Generate the button page.
     # TODO(cmaloney): Switch to package_resources
     return env.get_template('aws/templates/aws.html').render(
         {
+            'channel_commit_path': channel_commit_path,
             'repo_channel_path': repo_channel_path,
             'tag': tag,
             'commit': commit,
@@ -231,7 +232,7 @@ def get_spot_args(base_args):
     return spot_args
 
 
-def do_create(tag, repo_channel_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'cloud_dynamic'
@@ -243,7 +244,7 @@ def do_create(tag, repo_channel_path, commit, gen_arguments):
     multi_master = gen_templates(multi_args, gen_options)
     single_master_spot = gen_templates(get_spot_args(single_args), gen_options)
     multi_master_spot = gen_templates(get_spot_args(single_args), gen_options)
-    button_page = gen_buttons(repo_channel_path, tag, commit)
+    button_page = gen_buttons(repo_channel_path, channel_commit_path, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well
     # as the single-master templates.

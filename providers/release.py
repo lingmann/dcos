@@ -662,6 +662,7 @@ def make_channel_artifacts(metadata):
         provider_data = module.do_create(
             tag=metadata['tag'],
             repo_channel_path=metadata['repo_channel_path'],
+            channel_commit_path=metadata['channel_commit_path'],
             commit=metadata['commit'],
             gen_arguments=copy.deepcopy({
                 'bootstrap_id': metadata['bootstrap_dict'][None],
@@ -887,6 +888,11 @@ class ReleaseManager():
         metadata['repository_path'] = destination_channel
         metadata['repository_url'] = self.__preferred_provider.url + destination_channel
         metadata['repo_channel_path'] = destination_channel
+        # Check that the channel_commit_path ends in a '/'. We want the metadata we add to not end
+        # in a slash, so we remove that. We aren't allowed to call the channel_commit_path with a
+        # non-empty artifact path, so use 'a' as a placeholder.
+        assert repository.channel_commit_path('a')[-2:] == '/a'
+        metadata['channel_commit_path'] = repository.channel_commit_path('a')[:-2]
         metadata['storage_urls'] = {}
         for name, store in self.__storage_providers.items():
             metadata['storage_urls'][name] = store.url
@@ -916,6 +922,11 @@ class ReleaseManager():
 
         repository = Repository(repository_path, channel, metadata['commit'])
         metadata['repo_channel_path'] = repository_path + '/' + channel
+        # Check that the channel_commit_path ends in a '/'. We want the metadata we add to not end
+        # in a slash, so we remove that. We aren't allowed to call the channel_commit_path with a
+        # non-empty artifact path, so use 'a' as a placeholder.
+        assert repository.channel_commit_path('a')[-2:] == '/a'
+        metadata['channel_commit_path'] = repository.channel_commit_path('a')[:-2]
         metadata['storage_urls'] = {}
         for name, store in self.__storage_providers.items():
             metadata['storage_urls'][name] = store.url

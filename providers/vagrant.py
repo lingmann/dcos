@@ -31,7 +31,7 @@ def make_vagrant(gen_out):
     return vagrant_script
 
 
-def do_create(tag, repo_channel_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'static'
     gen_arguments['master_list'] = '["127.0.0.1"]'

@@ -1,9 +1,9 @@
-# dcos.validate lib processes incoming user and dcosgen configuration, ensures that 
-# it passes dependency checks (in the case of dcos-specific configuration) and 
-# assertions on configuration type. 
+# dcos.validate lib processes incoming user and dcosgen configuration, ensures that
+# it passes dependency checks (in the case of dcos-specific configuration) and
+# assertions on configuration type.
 #
-# Validate should always be called on the configuration before executing generate 
-# library. 
+# Validate should always be called on the configuration before executing generate
+# library.
 #
 # Example
 # from dcosgen import dcosconfig, validate

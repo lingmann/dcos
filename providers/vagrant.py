@@ -31,7 +31,7 @@ def make_vagrant(gen_out):
     return vagrant_script
 
 
-def do_create(tag, channel, commit, gen_arguments):
+def do_create(tag, repo_channel_path, commit, gen_arguments):
     gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'static'
     gen_arguments['master_list'] = '["127.0.0.1"]'
@@ -46,15 +46,12 @@ def do_create(tag, channel, commit, gen_arguments):
     vagrant_script = make_vagrant(gen_out)
 
     return {
-        'extra_packages': util.cluster_to_extra_packages(gen_out.cluster_packages),
-        'files': [
+        'packages': util.cluster_to_extra_packages(gen_out.cluster_packages),
+        'artifacts': [
             {
-                'known_path': 'make_dcos_vagrant.sh',
-                'stable_path': 'make_vagrant/{}.sh'.format(gen_out.arguments['config_id']),
-                'content': vagrant_script,
-                'upload_args': {
-                    'ContentType': 'application/x-sh; charset=utf-8'
-                }
+                'channel_path': 'make_dcos_vagrant.sh',
+                'local_content': vagrant_script,
+                'content_type': 'application/x-sh; charset=utf-8'
             }
         ]
     }

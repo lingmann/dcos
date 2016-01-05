@@ -12,12 +12,10 @@ import argparse
 import copy
 import importlib
 import json
-import mimetypes
 import os.path
 import subprocess
 import sys
 import tempfile
-from functools import partial, partialmethod
 
 import azure.storage
 import azure.storage.blob
@@ -31,8 +29,21 @@ import providers.util as util
 
 provider_names = ['aws', 'azure', 'vagrant']
 
-AZURE_TESTING_CONTAINER = 'dcos'
-METADATA_FILE = 'metadata.json'
+
+def strip_locals(data):
+    """Returns a dictionary with all keys that begin with local_ removed.
+
+    If data is a dictionary, recurses through cleaning the keys of that as well."""
+
+    if isinstance(data, dict):
+        data = copy.copy(data)
+        for k in set(data.keys()):
+            if isinstance(k, str) and k.startswith('local_'):
+                del data[k]
+            else:
+                data[k] = strip_locals(data[k])
+
+    return data
 
 
 def to_json(data):
@@ -48,9 +59,24 @@ def to_json(data):
             items = obj.items()
         except AttributeError:
             return obj
+        # Don't make any ambiguities by requiring null to not be a key.
+        assert 'null' not in obj.keys()
         return {'null' if key is None else key: none_to_null(val) for key, val in items}
 
     return json.dumps(none_to_null(data), indent=2, sort_keys=True)
+
+
+def from_json(json_str):
+    """Reverses to_json"""
+
+    def null_to_none(obj):
+        try:
+            items = obj.items()
+        except AttributeError:
+            return obj
+        return {None if key == 'null' else key: null_to_none(val) for key, val in items}
+
+    return null_to_none(json.loads(json_str))
 
 
 def variant_str(variant):
@@ -67,11 +93,11 @@ def variant_name(variant):
     return variant
 
 
-def variant_extension(variant):
-    """Return a filename extension for variant."""
+def variant_prefix(variant):
+    """Return a filename prefix for variant."""
     if variant is None:
         return ''
-    return '.' + variant
+    return variant + '.'
 
 
 def get_bootstrap_packages(bootstrap_id):
@@ -85,350 +111,510 @@ def load_providers():
     return modules
 
 
-class CopyAcrossException(Exception):
-    """A Custom Exception raise when trying to copy across providers and either source of
-       destination provider is missing"""
-
-
 class AbstractStorageProvider(metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def copy_across(self):
+    def copy(self,
+             source_path,
+             destination_path):
+        """Copy the file and all metadata from destination_path to source_path."""
         pass
 
     @abc.abstractmethod
-    def upload_local_file(self):
+    def upload(self,
+               destination_path,
+               blob=None,
+               local_path=None,
+               no_cache=None,
+               content_type=None):
+        """Upload to destinoation_path the given blob or local_path, attaching metadata for additional properties."""
         pass
 
     @abc.abstractmethod
-    def upload_string(self):
+    def exists(self, path):
+        """Return true iff the given file / path exists."""
         pass
 
-    def upload_packages(self, packages):
-        for id_str in set(packages):
-            pkg_id = pkgpanda.PackageId(id_str)
-            self.upload_local_file(
-                'packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str),
-                if_not_exists=True)
+    @abc.abstractmethod
+    def fetch(self, path):
+        """Download the given file and return bytes. Do not use on large files.
 
-    def upload_bootstrap(self, bootstrap_dict):
-        upload = partial(self.upload_local_file, if_not_exists=True)
-        for bootstrap_id in bootstrap_dict.values():
-            upload('packages/{}.bootstrap.tar.xz'.format(bootstrap_id),
-                   'bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-            upload('packages/{}.active.json'.format(bootstrap_id),
-                   'bootstrap/{}.active.json'.format(bootstrap_id))
+        Throw an exception if the path doesn't exist or is a folder."""
+        pass
 
-    def upload_provider_files(self, provider_data, path_key, prefix):
-        for provider_name, data in provider_data.items():
-            for file_info in data['files']:
-                assert not ('content' in file_info and 'content_file' in file_info)
+    @abc.abstractmethod
+    def remove_recursive(self, path):
+        """Recursively remove the given path. Should never error / always complete successfully.
 
-                if path_key not in file_info:
-                    continue
+        If the given path doesn't exist then just ignore and keep going.
+        If the given path is a folder, delete all files and folders within it.
+        If the given path is a file, delete the file and return."""
+        pass
 
-                paths = file_info[path_key]
+    @abc.abstractmethod
+    def list_recursive(self, folder):
+        """Return a set of the contents of the given folder and every subfolder with no metadata.
 
-                # Avoid accidentally iterating strings by letter.
-                # providers may give a single path or a list of paths.
-                if isinstance(paths, str):
-                    paths = [paths]
+        Should return a set of filenames with the given folder prefix included.
 
-                for path in paths:
-                    if prefix and provider_name is not None:
-                        path = provider_name + '/' + path
+        In a bucket containing blobs with the prefixes: bar, b/baz a/foo, a/folder/a, a/folder/b
+        a call to list_recursive(a) would return: {"a/foo", "a/folder/a", "a/folder/b"}
 
-                    if 'content' in file_info:
-                        if 'upload_args' in file_info:
-                            self.upload_string(
-                                path,
-                                file_info['content'],
-                                args=file_info['upload_args'])
-                        else:
-                            self.put_text(path, file_info['content'])
-                    elif 'content_file' in file_info:
-                        self.upload_local_file(file_info['content_file'], path, args=file_info.get('upload_args', {}))
-                    else:
-                        raise ValueError("file_info must contain one of either 'content' or 'content_file'")
+        If given a file instead of a folder the behavior is unspecified."""
+        pass
 
-    def upload_provider_packages(self, provider_data):
-        extra_packages = list()
-        for data in provider_data.values():
-            extra_packages += data.get('extra_packages', [])
-        self.upload_packages(extra_packages)
-
-    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
-        # Upload provider artifacts to their stable locations
-        print("Uploading stable artifacts to Azure Blob storage")
-        self.upload_provider_packages(provider_data)
-        self.put_json("metadata/{}.json".format(commit), metadata_json)
-        self.upload_provider_files(provider_data, 'stable_path', prefix=True)
-
-        # Make active point to all the arifacts
-        # - bootstrap.latest
-        # - metadata.latest.json
-        # - provider templates to known_paths
-        # - dcos_generate_config.sh
-        print("Marking new build as the latest")
-        self.put_text('bootstrap.latest', bootstrap_dict[None])
-        for variant, bootstrap_id in bootstrap_dict.items():
-            if variant is None:
-                continue
-            self.put_text(variant + '.bootstrap.latest', bootstrap_id)
-
-        self.put_json(METADATA_FILE, metadata_json)
-        self.upload_provider_files(provider_data, 'known_path', prefix=False)
-
-    def _copy_across(self, bootstrap_dict, active_packages, do_copy):
-        # Copy across all the active packages
-        for id_str in active_packages:
-            pkg_id = pkgpanda.PackageId(id_str)
-            do_copy('packages/{name}/{id}.tar.xz'.format(name=pkg_id.name, id=id_str))
-
-        # Copy across the bootstrap, active.json
-        for bootstrap_id in bootstrap_dict.values():
-            do_copy('bootstrap/{}.bootstrap.tar.xz'.format(bootstrap_id))
-            do_copy('bootstrap/{}.active.json'.format(bootstrap_id))
+    @abc.abstractproperty
+    def url(self):
+        """The base url which should be used to fetch resources from this storage provider"""
+        pass
 
 
 class AzureStorageProvider(AbstractStorageProvider):
     name = 'azure'
 
-    def __init__(self, channel):
-        self.__channel = channel
-        account_name = os.environ.get('AZURE_STORAGE_ACCOUNT')
-        account_key = os.environ.get('AZURE_STORAGE_ACCESS_KEY')
+    def __init__(self, account_name, account_key, container, dl_base_url):
+        assert dl_base_url.endswith('/')
+        self.container = container
         self.blob_service = azure.storage.blob.BlobService(account_name=account_name, account_key=account_key)
+        self.__url = dl_base_url
 
     @property
-    def repository_url(self):
-        return 'http://az837203.vo.msecnd.net/dcos/{}'.format(self.__channel)
+    def url(self):
+        return self.__url
 
-    def upload_local_file(self, path, destination_path=None, container=None, args={}, no_cache=False,
-                          if_not_exists=False):
-        if not destination_path:
-            destination_path = path
+    def copy(self, source_path, destination_path):
+        assert destination_path[0] != '/'
+        az_blob_url = self.blob_service.make_blob_url(self.container, source_path)
 
-        destination_path = os.path.join(self.__channel, destination_path.lstrip('/'))
-        if not container:
-            container = AZURE_TESTING_CONTAINER
+        # NOTE(cmaloney): The try / except on copy exception is ugly, but seems
+        # to be necessary since sometimes we end up with hanging copy operations.
+        resp = None
+        try:
+            resp = self.blob_service.copy_blob(self.container, destination_path, az_blob_url)
+        except azure.common.AzureConflictHttpError:
+            # Cancel the past copy, make a new copy
+            properties = self.blob_service.get_blob_properties(self.container, destination_path)
+            assert 'x-ms-copy-id' in properties
+            self.blob_service.abort_copy_blob(self.container, destination_path, properties['x-ms-copy-id'])
+
+            # Try the copy again
+            resp = self.blob_service.copy_blob(self.container, destination_path, az_blob_url)
+
+        # Since we're copying inside of one bucket the copy should always be
+        # synchronous and successful.
+        assert resp['x-ms-copy-status'] == 'success'
+
+    def upload(self,
+               destination_path,
+               blob=None,
+               local_path=None,
+               no_cache=None,
+               content_type=None):
+        extra_args = {}
 
         if no_cache:
-            args['cache_control'] = None
+            extra_args['cache_control'] = None
+        if content_type:
+            extra_args['x_ms_blob_content_type'] = content_type
 
-        if if_not_exists:
-            try:
-                self.blob_service.get_blob_properties(container, destination_path)
-                print("Skipping {}: already exists".format(destination_path))
-                return
-            except azure.storage._common_error.AzureMissingResourceHttpError:
-                pass
+        # Must be a local_path or blob upload, not both
+        assert local_path is None or blob is None
+        if local_path:
+            # Upload local_path
+            self.blob_service.put_block_blob_from_path(
+                self.container,
+                destination_path,
+                local_path,
+                **extra_args)
+        else:
+            assert blob is not None
+            assert isinstance(blob, bytes)
+            self.blob_service.put_block_blob_from_text(
+                self.container,
+                destination_path,
+                blob,
+                **extra_args)
 
-        print("Uploading {}{}".format(path, " as {}".format(destination_path) if destination_path else ''))
-        self.blob_service.put_block_blob_from_path(
-            container,
-            destination_path,
-            path,
-            x_ms_blob_content_type=mimetypes.guess_type(path),
-            **args)
+    def exists(self, path):
+        try:
+            self.blob_service.get_blob_properties(self.container, path)
+            return True
+        except azure.storage._common_error.AzureMissingResourceHttpError:
+            return False
 
-    def upload_packages(self, packages):
-        super().upload_packages(packages)
+    def fetch(self, path):
+        return self.blob_service.get_blob_to_bytes(self.container, path)
 
-    def upload_bootstrap(self, bootstrap_dict):
-        super().upload_bootstrap(bootstrap_dict)
+    def list_recursive(self, path):
+        names = set()
+        for blob in self.blob_service.list_blobs(self.container, path):
+            names.add(blob.name)
+        return names
 
-    def copy_across(self, source, bootstrap_dict, active_packages):
-        def do_copy(path, no_cache=None):
-            print("Copying across {}".format(path))
-            self.blob_service.copy_blob(AZURE_TESTING_CONTAINER,
-                                        os.path.join(self.__channel, path.lstrip('/')),
-                                        os.path.join(source.repository_url, path.lstrip('/')))
-
-        super()._copy_across(bootstrap_dict, active_packages, do_copy)
-
-    def upload_provider_files(self, provider_data, path_key, prefix):
-        super().upload_provider_files(provider_data, path_key, prefix)
-
-    def upload_provider_packages(self, provider_data):
-        super().upload_provider_packages(provider_data)
-
-    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
-        super().upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
-
-    def upload_string(self, destination_path, text, args, container=None):
-        destination_path = os.path.join(self.__channel, destination_path.lstrip('/'))
-        if 'ContentType' in args:
-            content_type_value = args['ContentType']
-            del args['ContentType']
-            args.update({'x_ms_blob_content_type': content_type_value})
-        if not container:
-            container = AZURE_TESTING_CONTAINER
-        self.blob_service.put_block_blob_from_text(container, destination_path, text.encode('utf-8'), **args)
-
-    put_text = partialmethod(upload_string, args={'x_ms_blob_content_type': 'text/plain; charset=utf-8'})
-
-    put_json = partialmethod(upload_string, args={'x_ms_blob_content_type': 'application/json'})
+    def remove_recursive(self, path):
+        for blob_name in self.list_recursive(path):
+            self.blob_service.delete_blob(self.container, blob_name)
 
 
 class S3StorageProvider(AbstractStorageProvider):
     name = 'aws'
 
-    def __init__(self, channel):
-        self.__channel = channel
-        self.__bucket = aws_config.session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+    def __init__(self, bucket, object_prefix, dl_base_url):
+        assert not object_prefix.startswith('/')
+        assert not object_prefix.endswith('/')
+        self.__bucket = bucket
+        self.__object_prefix = object_prefix
+        self.__url = dl_base_url
 
-    @property
-    def repository_url(self):
-        return 'https://downloads.mesosphere.com/dcos/{}'.format(self.__channel)
+    def _get_path(self, name):
+        return self.__object_prefix + '/' + name
 
-    def copy_across(self, source, bootstrap_dict, active_packages):
-        def do_copy(path, no_cache=None):
-            print("Copying across {}".format(path))
-            src_object = source.get_object(path)
-            new_object = self.get_object(path)
-            old_path = src_object.bucket_name + '/' + src_object.key
-
-            if no_cache:
-                new_object.copy_from(CopySource=old_path, CacheControl='no-cache')
-            else:
-                new_object.copy_from(CopySource=old_path)
-        super()._copy_across(bootstrap_dict, active_packages, do_copy)
+    def _get_objects_with_prefix(self, prefix):
+        return self.__bucket.objects.filter(Prefix=self._get_path(prefix))
 
     def get_object(self, name):
-        return self.__bucket.Object('dcos/{}/{}'.format(self.__channel, name))
+        assert not name.startswith('/')
+        return self.__bucket.Object(self._get_path(name))
 
-    def read_file(self, name):
-        body = self.get_object(name).get()['Body']
+    def fetch(self, path):
+        body = self.get_object(path).get()['Body']
         data = bytes()
         for chunk in iter(lambda: body.read(4096), b''):
             data += chunk
         return data
 
-    def download_if_not_exist(self, name, output_filename):
-        if not os.path.exists(output_filename):
-            return self.get_object(name).download_file(output_filename)
+    @property
+    def url(self):
+        return self.__url
 
-    def upload_local_file(
-            self,
-            path,
-            destination_path=None,
-            args={},
-            no_cache=False,
-            if_not_exists=False):
+    def copy(self, source_path, destination_path):
+        src_object = self.get_object(source_path)
+        new_object = self.get_object(destination_path)
+        old_path = src_object.bucket_name + '/' + src_object.key
+
+        new_object.copy_from(CopySource=old_path)
+
+    def upload(self,
+               destination_path,
+               blob=None,
+               local_path=None,
+               no_cache=None,
+               content_type=None):
+        extra_args = {}
         if no_cache:
-            args['CacheControl'] = 'no-cache'
-
-        if not destination_path:
-            destination_path = path
+            extra_args['CacheControl'] = 'no-cache'
+        if content_type:
+            extra_args['ContentType'] = content_type
 
         s3_object = self.get_object(destination_path)
 
-        if if_not_exists:
-            try:
-                s3_object.load()
-                print("Skipping {}: already exists".format(destination_path))
-                return s3_object
-            except botocore.client.ClientError:
-                pass
+        assert local_path is None or blob is None
+        if local_path:
+            with open(local_path, 'rb') as data:
+                s3_object.put(Body=data, **extra_args)
+        else:
+            assert isinstance(blob, bytes)
+            s3_object.put(Body=blob, **extra_args)
 
-        with open(path, 'rb') as data:
-            print("Uploading {}/{}".format(
-                path, " as {}".format(destination_path) if destination_path else ''))
-            return s3_object.put(Body=data, **args)
+    def exists(self, path):
+        try:
+            self.get_object(path).load()
+            return True
+        except botocore.client.ClientError:
+            return False
 
-    def upload_string(self, destination_path, text, args={}):
-        obj = self.get_object(destination_path)
-        obj.put(Body=text.encode('utf-8'), CacheControl='no-cache', **args)
+    def list_recursive(self, path):
+        prefix_len = len(self.__object_prefix + '/')
+        names = set()
+        for object_summary in self._get_objects_with_prefix(path):
+            name = object_summary.key
 
-        # Save a local artifact for TeamCity
-        local_path = "artifacts/" + destination_path
-        subprocess.check_call(["mkdir", "-p", os.path.dirname(local_path)])
-        pkgpanda.util.write_string(local_path, text)
+            # Sanity check the prefix is there before removing.
+            assert name.startswith(self.__object_prefix + '/')
 
-    def upload_bootstrap(self, bootstrap_dict):
-        super().upload_bootstrap(bootstrap_dict)
+            # Add the unprefixed name since the caller of this function doesn't
+            # know we've added the prefix / only sees inside the prefix ever.
+            names.add(name[prefix_len:])
 
-    def upload_packages(self, packages):
-        super().upload_packages(packages)
+        return names
 
-    def upload_provider_packages(self, provider_data):
-        super().upload_provider_packages(provider_data)
-
-    def upload_provider_files(self, provider_data, path_key, prefix):
-        super().upload_provider_files(provider_data, path_key, prefix)
-
-    def upload_providers_and_activate(self, bootstrap_dict, commit, metadata_json, provider_data):
-        super().upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
-
-    put_text = partialmethod(upload_string, args={'ContentType': 'text/plain; charset=utf-8'})
-
-    put_json = partialmethod(upload_string, args={'ContentType': 'application/json'})
+    def remove_recursive(self, path):
+        for obj in self._get_objects_with_prefix(path):
+            obj.delete()
 
 
-class ChannelManager():
-    """
-    Magic Proxy class wil accept a lit of storage providers, iterate over the list and call a function against
-    each storage provider.
+# Local storage provider useful for testing. Not used for the local artifacts
+# since it would cause excess / needless copies, and doesn't work for "promote"
+# since the artifacts won't be local (And downloading them all to be local
+# would be a significant time sink).
+class LocalStorageProvider(AbstractStorageProvider):
+    name = 'local_storage_provider'
 
-    channel = ChannelManager([S3StorageProvider('s3provider_name'), AzureStorageProvider('azure_provider_name')])
-    channel.call_me() -> S3StorageProvider('s3provider_name').call_me and
-    AzureStorageProvider('azure_provider_name').call_me()
-    """
-    def __init__(self, storage_providers):
-        self.__storage_providers = storage_providers
+    def __init__(self, storage_path):
+        assert isinstance(storage_path, str)
+        assert not storage_path.endswith('/')
+        self.__storage_path = storage_path
 
-        # A default storage provider is the very first element in self.__sotrage_providers
-        self.__default_storage_provider = storage_providers[0]
+    def __full_path(self, path):
+        return self.__storage_path + '/' + path
 
-    def __getattr__(self, name, *args, **kwargs):
-        def wrapper(*args, **kwargs):
-            for provider in self.__storage_providers:
-                if hasattr(provider, name):
-                    getattr(provider, name)(*args, **kwargs)
-                else:
-                    raise AttributeError('Provider {} does not have attribute {}'.format(provider.name, name))
-        return wrapper
+    def fetch(self, path):
+        with open(self.__full_path(path), 'rb') as f:
+            return f.read()
 
-    def copy_across(self, source, bootstrap_dict, active_packages):
-        """
-        Dispatch copy_across in a special way. source and destination will both have self.__storage_providers
-        as an array of different storage providers This function will match providers by their type
-        """
-        copy_providers = {}
-        for destination_provider in self.__storage_providers:
-            found_source_provider = False
-            for source_provider in source.__storage_providers:
-                if destination_provider.name == source_provider.name:
-                    found_source_provider = True
-                    copy_providers.update({
-                        destination_provider.name: (source_provider, destination_provider)})
-            if not found_source_provider:
-                raise CopyAcrossException(
-                    'Cannot promote for {}, source provider not found'.format(destination_provider.name))
-            for provider_name, providers in copy_providers.items():
-                source_provider, destination_provider = providers
-                destination_provider.copy_across(source_provider, bootstrap_dict, active_packages)
+    # Copy between fully qualified paths
+    def __copy(self, full_source_path, full_destination_path):
+        subprocess.check_call(['mkdir', '-p', os.path.dirname(full_destination_path)])
+        subprocess.check_call(['cp', full_source_path, full_destination_path])
+
+    def copy(self, source_path, destination_path):
+        self.__copy(self.__full_path(source_path), self.__full_path(destination_path))
+
+    def upload(self, destination_path, blob=None, local_path=None, no_cache=None, content_type=None):
+        # TODO(cmaloney): Don't discard the extra no_cache / content_type. We ideally want to be
+        # able to test those are set.
+        destination_full_path = self.__full_path(destination_path)
+        subprocess.check_call(['mkdir', '-p', os.path.dirname(destination_full_path)])
+
+        assert local_path is None or blob is None
+        if local_path:
+            self.__copy(local_path, destination_full_path)
+        else:
+            assert isinstance(blob, bytes)
+            with open(destination_full_path, 'wb') as f:
+                f.write(blob)
+
+    def exists(self, path):
+        assert path[0] != '/'
+        return os.path.exists(self.__full_path(path))
+
+    def remove_recursive(self, path):
+        full_path = self.__full_path(path)
+
+        # Make sure we're not going to delete something too horrible / in the
+        # base system. Adjust as needed.
+        assert len(path) > 5
+        assert len(full_path) > 5
+        subprocess.check_call(['rm', '-rf', full_path])
+
+    def list_recursive(self, path):
+        final_filenames = set()
+        for dirpath, _, filenames in os.walk(self.__full_path(path)):
+            assert dirpath.startswith(self.__storage_path)
+            dirpath_no_prefix = dirpath[len(self.__storage_path)+1:]
+            for filename in filenames:
+                final_filenames.add(dirpath_no_prefix + '/' + filename)
+
+        return final_filenames
 
     @property
-    def repository_url(self):
-
-        repository_urls = {}
-        for provider in self.__storage_providers:
-            repository_urls.update({provider.name: provider.repository_url})
-        repository_urls.update({'default': self.__default_storage_provider.repository_url})
-        return repository_urls
-
-    def read_file(self, name):
-        for provider in self.__storage_providers:
-            if provider.name == 'aws':
-                return provider.read_file(name)
+    def url(self):
+        return 'file://' + self.__storage_path + '/'
 
 
-def all_storage_providers(channel):
-    """
-    Return a list of all StorageProviders initialized with the channel name.
-    """
-    return [S3StorageProvider(channel), AzureStorageProvider(channel)]
+# Transforms artifact definitions from the Release Manager into sets of commands
+# the storage providers understand, adding in the full path prefixes as needed
+# so storage provides just have to know how to operate on paths rather than
+# have all the logic about channels and repositories.
+class Repository():
+
+    def __init__(self, repository_path, channel_name, commit):
+        if len(repository_path) == 0:
+            raise ValueError("repository_path must be a non-empty string. channel_name may be None though.")
+
+        assert not repository_path.endswith('/')
+        if channel_name is not None:
+            assert isinstance(channel_name, str)
+            assert len(channel_name) > 0, "For an empty channel name pass None"
+            assert not channel_name.startswith('/')
+            assert not channel_name.endswith('/')
+        assert '/' not in commit
+
+        self.__repository_path = repository_path
+        self.__channel_name = channel_name
+        self.__commit = commit
+
+    @property
+    def channel_prefix(self):
+        if self.__channel_name:
+            return self.__channel_name + '/'
+        else:
+            return ''
+
+    def channel_commit_path(self, artifact_path):
+        assert artifact_path[0] != '/'
+        return self.channel_path('commit/' + self.__commit + '/' + artifact_path)
+
+    def channel_path(self, artifact_path):
+        assert artifact_path[0] != '/'
+        return self.repository_path(self.channel_prefix + artifact_path)
+
+    def repository_path(self, artifact_path):
+        assert artifact_path[0] != '/'
+
+        return self.__repository_path + '/' + artifact_path
+
+    # TODO(cmaloney): This function is too big. Break it into testable chunks.
+    # TODO(cmaloney): Assert the same path/destination_path is never used twice.
+    def make_commands(self, metadata, base_artifact_source):
+        assert base_artifact_source['method'] in {'copy_from', 'upload'}
+
+        stage1 = []
+        stage2 = []
+        local_cp = []
+
+        def process_artifact(artifact, base_artifact):
+            # First destination is upload
+            # All other destinations are copies from first destination.
+            upload_path = None
+
+            def add_dest(destinoation_path, is_reproducible):
+                nonlocal upload_path
+
+                # First action -> upload
+                # Future actions -> copy from upload / first action
+                if upload_path is not None:
+                    return {
+                        'method': 'copy',
+                        'if_not_exists': is_reproducible,
+                        'args': {
+                            'source_path': upload_path,
+                            'destination_path': destinoation_path}}
+
+                # Always set upload_path
+                upload_path = destinoation_path
+
+                # Copyfrom source method if a base artifact and we're supposed to get those by copying.
+                if base_artifact and base_artifact_source['method'] == 'copy_from':
+                    # Only reproducible artifacts / artifacts with a reproducible_path may be
+                    # copied / moved from old repo.
+                    assert is_reproducible
+                    return {
+                        'method': 'copy',
+                        'if_not_exists': True,
+                        'args': {
+                            'source_path': base_artifact_source['repository'] + '/' + artifact['reproducible_path'],
+                            'destination_path': destinoation_path}}
+                else:
+                    # Upload from local machine.
+                    action = {
+                        'method': 'upload',
+                        'if_not_exists': is_reproducible,
+                        'args': {
+                            'destination_path': destinoation_path,
+                            'no_cache': not is_reproducible}}
+                    if 'local_path' in artifact:
+                        # local_path and local_content are mutually exclusive / can only use one at a time.
+                        assert 'local_content' not in artifact
+                        action['args']['local_path'] = artifact['local_path']
+                    elif 'local_content' in artifact:
+                        action['args']['blob'] = artifact['local_content'].encode('utf-8')
+                    else:
+                        raise ValueError("local_path or local_content must be used as original source.")
+
+                    if 'content_type' in artifact:
+                        action['args']['content_type'] = artifact['content_type']
+                    return action
+
+            assert artifact.keys() <= {'reproducible_path', 'channel_path', 'content_type',
+                                       'local_path', 'local_content'}
+
+            action_count = 0
+            if 'reproducible_path' in artifact:
+                action_count += 1
+                stage1.append(add_dest(self.repository_path(artifact['reproducible_path']), True))
+
+            if 'channel_path' in artifact:
+                channel_path = artifact['channel_path']
+                action_count += 2
+                stage1.append(add_dest(self.channel_commit_path(channel_path), False))
+                stage2.append(add_dest(self.channel_path(channel_path), False))
+                if 'local_path' in artifact:
+                    local_cp.append({
+                        'source_path': artifact['local_path'],
+                        'destination_path': 'artifacts/' + channel_path})
+                else:
+                    assert 'local_content' in artifact
+                    local_cp.append({
+                        'source_content': artifact['local_content'],
+                        'destination_path': 'artifacts/' + channel_path})
+
+            # Must have done at least one thing with the artifact (reproducible_path or channel_path).
+            assert action_count > 0
+
+        for artifact in metadata['core_artifacts']:
+            process_artifact(artifact, True)
+        for artifact in metadata['channel_artifacts']:
+            process_artifact(artifact, False)
+
+        process_artifact({
+            'channel_path': 'metadata.json',
+            'content_type': 'application/json; charset=utf-8',
+            'local_content': to_json(strip_locals(metadata))
+            }, False)
+
+        return {
+            'stage1': stage1,
+            'stage2': stage2,
+            'local_cp': local_cp
+        }
+
+
+def get_package_artifact(package_id_str):
+    package_id = pkgpanda.PackageId(package_id_str)
+    package_filename = 'packages/{}/{}.tar.xz'.format(package_id.name, package_id_str)
+    return {
+        'reproducible_path': package_filename,
+        'local_path': package_filename}
+
+
+def make_stable_artifacts(cache_repository_url, skip_build):
+    metadata = {
+        "commit": util.dcos_image_commit,
+        "core_artifacts": [],
+        "packages": set()
+    }
+
+    # TODO(cmaloney): Rather than guessing / reverse-engineering all these paths
+    # have do_build_packages get them directly from pkgpanda
+    bootstrap_dict = do_build_packages(cache_repository_url, skip_build)
+    metadata["bootstrap_dict"] = bootstrap_dict
+
+    def add_file(info):
+        metadata["core_artifacts"].append(info)
+
+    def add_package(package_id):
+        if package_id in metadata['packages']:
+            return
+        metadata['packages'].add(package_id)
+        add_file(get_package_artifact(package_id))
+
+    # Add the bootstrap, active.json, packages as reproducible_path artifacts
+    # Add the <variant>.bootstrap.latest as a channel_path
+    for name, bootstrap_id in bootstrap_dict.items():
+        bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
+        add_file({
+            'reproducible_path': 'bootstrap/' + bootstrap_filename,
+            'local_path': 'packages/' + bootstrap_filename
+            })
+        active_filename = "{}.active.json".format(bootstrap_id)
+        add_file({
+            'reproducible_path': 'bootstrap/' + active_filename,
+            'local_path': 'packages/' + active_filename
+            })
+        latest_filename = "{}bootstrap.latest".format(variant_prefix(name))
+        add_file({
+            'channel_path': latest_filename,
+            'local_path': 'packages/' + latest_filename
+            })
+
+        # Add all the packages which haven't been added yet
+        for package_id in sorted(get_bootstrap_packages(bootstrap_id)):
+            add_package(package_id)
+
+    # Sets aren't json serializable, so transform to a list for future use.
+    metadata['packages'] = list(sorted(metadata['packages']))
+
+    return metadata
 
 
 # Generate provider templates against the bootstrap id, capturing the
@@ -444,44 +630,83 @@ def all_storage_providers(channel):
 #       'content': '',
 #       'content_file': '',
 #       }]}}
-def get_provider_data(repository_url, bootstrap_dict, genconfs, tag, channel_name, commit):
+def make_channel_artifacts(metadata):
+    artifacts = []
+
+    genconfs = build_genconfs(metadata['bootstrap_dict'], metadata['repo_channel_path'])
+
+    # TODO(cmaloney): This is very hackish this is done here. Really should just
+    # be more channel artifacts (then TeamCity picks up all the artifacts downstream jobs care about).
+    pkgpanda.util.write_string('docker-tag', genconfs[None][0])
+    pkgpanda.util.write_string('docker-tag.txt', genconfs[None][0])
+
+    # Add genconf scripts for all bootstraps.
+    for variant, (genconf_version, genconf_filename) in genconfs.items():
+        artifacts.append({
+            'channel_path': 'dcos_generate_config.{}sh'.format(variant_prefix(variant)),
+            'local_path': genconf_filename
+            })
+
     provider_data = {}
     providers = load_providers()
-    bootstrap_url = repository_url['default']
     for name, module in providers.items():
-        if name in repository_url:
-            bootstrap_url = repository_url[name]
+        bootstrap_url = metadata['repository_url']
+
+        # If the particular provider has its own storage by the same name then
+        # Use the storage provider rather
+        if name in metadata['storage_urls']:
+            bootstrap_url = metadata['storage_urls'][name] + metadata['repository_path']
 
         # Add templates for the default variant.
         # Use keyword args to make not matching ordering a loud error around changes.
-        provider_data[name] = module.do_create(
-            tag=tag,
-            channel=channel_name,
-            commit=commit,
+        provider_data = module.do_create(
+            tag=metadata['tag'],
+            repo_channel_path=metadata['repo_channel_path'],
+            commit=metadata['commit'],
             gen_arguments=copy.deepcopy({
-                'bootstrap_id': bootstrap_dict[None],
-                'channel_name': tag,
+                'bootstrap_id': metadata['bootstrap_dict'][None],
+                'channel_name': metadata['tag'],
                 'bootstrap_url': bootstrap_url,
                 'provider': name
             }))
 
-    # Add genconf scripts for all bootstraps.
-    default_provider_files = provider_data.setdefault(None, {}).setdefault('files', [])
-    for variant, (genconf_version, genconf_filename) in genconfs.items():
-        default_provider_files.append({
-            'known_path': 'dcos_generate_config{}.sh'.format(variant_extension(variant)),
-            'stable_path': 'dcos_generate_config.{}.sh'.format(genconf_version),
-            'content_file': genconf_filename,
-        })
+        # Translate provider data to artifacts
+        assert provider_data.keys() <= {'packages', 'artifacts'}
 
-    cleaned = copy.deepcopy(provider_data)
-    for data in cleaned.values():
-        for file_info in data['files']:
-            file_info.pop('content', None)
-            file_info.pop('content_file', None)
-            file_info.pop('upload_args', None)
+        for package in provider_data.get('packages', set()):
+            artifacts.append(get_package_artifact(package))
 
-    return provider_data, cleaned
+        # TODO(cmaloney): Check the provider artifacts adhere to the artifact template.
+        artifacts += provider_data.get('artifacts', list())
+
+    return artifacts
+
+
+def make_abs(path):
+    if path[0] == '/':
+        return path
+    return os.getcwd() + '/' + path
+
+
+def do_variable_set_or_exists(env_var, path):
+    # Get out the environment variable if needed
+    path = os.environ.get(env_var, default=path)
+
+    # If we're all set exit
+    if os.path.exists(path):
+        return path
+
+    # Error appropriately
+    if path in os.environ:
+        print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
+    else:
+        print(
+            ("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
+             "or ensure there is a checkout at the default path {path}.").format(
+                var=env_var,
+                path=path
+                ))
+    sys.exit(1)
 
 
 def get_src_dirs():
@@ -491,84 +716,7 @@ def get_src_dirs():
     return pkgpanda_src, dcos_image_src
 
 
-def do_promote(options):
-    print("Promoting channel {} to {}".format(options.source_channel, options.destination_channel))
-    destination_storage_providers = all_storage_providers(options.destination_channel)
-    source_storage_providers = all_storage_providers(options.source_channel)
-    destination = ChannelManager(destination_storage_providers)
-    source = ChannelManager(source_storage_providers)
-
-    # Validate src_dirs are set
-    get_src_dirs()
-
-    # Download source channel metadata
-    metadata = json.loads(source.read_file(METADATA_FILE).decode('utf-8'))
-    bootstrap_dict = metadata['bootstrap_dict']
-
-    # None gets stored as null in the key of the dictionary. Undo that.
-    default_bootstrap_id = bootstrap_dict['null']
-    del bootstrap_dict['null']
-    bootstrap_dict[None] = default_bootstrap_id
-
-    active_packages = metadata['active_packages']
-    commit = metadata['commit']
-
-    if util.dcos_image_commit != metadata['commit']:
-        print("WARNING: Running newer release script against different release.")
-
-    print("version tag:", metadata['tag'])
-
-    # Download the bootstraps if they don't exist.
-    for bootstrap_id in bootstrap_dict.values():
-        bootstrap_path = '/{}.bootstrap.tar.xz'.format(bootstrap_id)
-        source.download_if_not_exist('bootstrap' + bootstrap_path, 'packages' + bootstrap_path)
-
-    genconfs = build_genconfs(bootstrap_dict, options.destination_channel)
-
-    # TODO(cmaloney): Run against all bootstrap variants / allow providers to
-    # make multiple variants for the multiple variants of DCOS available.
-    # Run providers against repository_url for destination channel
-    print("Running providers to generate new provider config")
-    provider_data, cleaned_provider_data = get_provider_data(
-        destination.repository_url,
-        bootstrap_dict,
-        genconfs,
-        metadata['tag'],
-        options.destination_channel,
-        metadata['commit'])
-
-    metadata_json = to_json(
-        {
-            'active_packages': active_packages,
-            'bootstrap_dict': bootstrap_dict,
-            'commit': commit,
-            'date': util.template_generation_date,
-            'provider_data': cleaned_provider_data,
-            'tag': metadata['tag'],
-            'genconf_docker_tag': genconfs[None][0]})
-
-    # Copy across packages, bootstrap.
-    destination.copy_across(source, bootstrap_dict, active_packages)
-
-    # Upload provider artifacts, mark as active
-    destination.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
-    print("Channel {} now at tag {}".format(options.destination_channel, metadata['tag']))
-
-
-def get_local_build(skip_build, repository_url, storage_provider=None):
-    if not storage_provider:
-        storage_provider = 'aws'
-
-    if not skip_build:
-        subprocess.check_call(
-            ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + repository_url[storage_provider]],
-            cwd='packages',
-            env=os.environ)
-
-    return pkgpanda.build.get_last_bootstrap_set('packages')
-
-
-def do_build_packages(repository_url, skip_build):
+def do_build_packages(cache_repository_url, skip_build):
     dockerfile = 'docker/builder/Dockerfile'
     container_name = 'mesosphere/dcos-builder:dockerfile-' + pkgpanda.build.sha1(dockerfile)
     print("Attempting to pull dcos-builder docker:", container_name)
@@ -601,67 +749,37 @@ def do_build_packages(repository_url, skip_build):
     # mark as latest so it will be used when building packages
     subprocess.check_call(['docker', 'tag', '-f', container_name, 'dcos-builder:latest'])
 
-    bootstrap_dict = get_local_build(skip_build, repository_url)
+    def get_build():
+        # TODO(cmaloney): Stop shelling out
+        if not skip_build:
+            subprocess.check_call(
+                ['mkpanda', 'tree', '--mkbootstrap', '--repository-url=' + cache_repository_url],
+                cwd='packages',
+                env=os.environ)
 
-    return bootstrap_dict
+        return pkgpanda.build.get_last_bootstrap_set('packages')
 
-
-def do_variable_set_or_exists(env_var, path):
-    # Get out the environment variable if needed
-    path = os.environ.get(env_var, default=path)
-
-    # If we're all set exit
-    if os.path.exists(path):
-        return path
-
-    # Error appropriately
-    if path in os.environ:
-        print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
-    else:
-        print(
-            ("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
-             "or ensure there is a checkout at the default path {path}.").format(
-                var=env_var,
-                path=path
-                ))
-    sys.exit(1)
-
-
-def get_git_commit_sha1(path, identifier):
-    assert(path[-1] != '/')
-
-    if not os.path.exists(path + '/.git'):
-        raise ValueError(
-            identifier + "_src must be a git repository containing a .git " +
-            "folder. Given directory " + path + " isn't.")
-
-    sha1 = subprocess.check_output(['git', '-C', path, 'rev-parse', 'HEAD']).decode('utf-8')
-    assert len(sha1) > 0
-
-    return sha1
+    return get_build()
 
 
 def make_genconf_docker(channel_name, variant, bootstrap_id):
     assert len(channel_name) > 0
     assert len(bootstrap_id) > 0
 
-    # TODO(cmaloney): Move wheel building outside of release.py (release is inside of one of the
-    # packages we build...
+    # TODO(cmaloney): If a pre-existing wheelhouse exists assert that the wheels
+    # inside of it match the current versions / working commits of pkganda, dcos-image.
     pkgpanda_src, dcos_image_src = get_src_dirs()
     wheel_dir = os.getcwd() + '/wheelhouse'
-    if not os.path.exists(os.getcwd() + '/wheelhouse'):
+    if not os.path.exists(wheel_dir):
         print("Building wheels for dcos-image, pkgpanda, and all dependencies")
 
         # Make the wheels
         subprocess.check_call(['pip', 'wheel', pkgpanda_src])
         subprocess.check_call(['pip', 'wheel', dcos_image_src])
 
-    pkgpanda_sha1 = get_git_commit_sha1(pkgpanda_src, 'pkgpanda')
-    dcos_image_sha1 = get_git_commit_sha1(dcos_image_src, 'dcos-image')
-
-    genconf_version = dcos_image_sha1[:12] + '-' + pkgpanda_sha1[:12] + '-' + bootstrap_id[:12]
+    genconf_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
     genconf_tar = "dcos-genconf." + genconf_version + ".tar"
-    genconf_filename = "dcos_generate_config" + variant_extension(variant) + ".sh"
+    genconf_filename = "dcos_generate_config." + variant_prefix(variant) + "sh"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
     bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
 
@@ -673,7 +791,7 @@ def make_genconf_docker(channel_name, variant, bootstrap_id):
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
         'docker_image_name': 'mesosphere/dcos-genconf:' + genconf_version,
-        'dcos_image_commit': dcos_image_sha1,
+        'dcos_image_commit': util.dcos_image_commit,
         'channel_name': channel_name
     }
 
@@ -718,6 +836,8 @@ def build_genconfs(bootstrap_dict, channel_name):
 
     """
     genconfs = {}
+
+    # TODO(cmaloney): Build genconfs in parallel.
     # Variants are sorted for stable ordering.
     for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: variant_str(kv[0])):
         print("Building genconf for variant:", variant_name(variant))
@@ -725,108 +845,183 @@ def build_genconfs(bootstrap_dict, channel_name):
     return genconfs
 
 
-def make_abs(path):
-    if path[0] == '/':
-        return path
-    return os.getcwd() + '/' + path
-
-
-def do_create(options):
-    channel_name = 'testing/' + options.destination_channel
-    storage_providers = all_storage_providers(channel_name)
-    channel = ChannelManager(storage_providers)
-    commit = util.dcos_image_commit
-    print("Creating release on channel:", channel_name)
-    print("version tag:", options.tag)
-
-    # Build packages and generate bootstrap
-    print("Building packages")
-    # Build the standard docker build container, then build all the packages and bootstrap with it
-    bootstrap_dict = do_build_packages(channel.repository_url, options.skip_build)
-
-    genconfs = build_genconfs(bootstrap_dict, channel_name)
-
-    # Write out default variant's genconf version.
-    pkgpanda.util.write_string('docker-tag', genconfs[None][0])
-    pkgpanda.util.write_string('docker-tag.txt', genconfs[None][0])
-
-    # Build all the per-provider templates
-    # TODO(cmaloney): Allow making provider templates with non-default bootstrap
-    # tarballs.
-    print("Gathering per-provider additional files")
-    provider_data, cleaned_provider_data = get_provider_data(
-        channel.repository_url,
-        bootstrap_dict,
-        genconfs,
-        options.tag,
-        channel_name,
-        commit)
-
-    # Calculate the active packages merged from all the bootstraps
-    active_packages = set()
-    for bootstrap_id in bootstrap_dict.values():
-        active_packages |= get_bootstrap_packages(bootstrap_id)
-
-    metadata_json = to_json(
-        {
-            'active_packages': list(active_packages),
-            'bootstrap_dict': bootstrap_dict,
-            'commit': commit,
-            'date': util.template_generation_date,
-            'provider_data': cleaned_provider_data,
-            'tag': options.tag,
-            'genconf_docker_tag': genconfs[None][0]
-        })
-
-    if options.skip_upload:
-        print("Skipping upload")
-        return
-
-    print("Uploading packages")
-    channel.upload_packages(list(active_packages))
-    print("Uploading bootstrap tarballs")
-    channel.upload_bootstrap(bootstrap_dict)
-
-    # Upload provider artifacts, mark as active
-    channel.upload_providers_and_activate(bootstrap_dict, commit, metadata_json, provider_data)
-    print("New release created on channel", channel_name)
-
-
 def validate_options(options):
     assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
     assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
+
+    # Validate src_dirs are set properly up front. Building per channel
+    # artifacts will fail without it.
+    get_src_dirs()
+
+
+# Two stages of uploading artifacts. First puts all the artifacts into their places / uploads
+# all the artifacts to all providers. The second makes the end user known / used urls have the
+# correct artifacts.
+# The split is because in order to use some artifacts (Such as the cloudformation template) other
+# artifacts must already be in place. All those artifacts which must be in place get uploaded in
+# upload artifacts. By having the two steps we guarantee that a user is never able to download
+# something such as a cloudformation template which won't work.
+class ReleaseManager():
+    def __init__(self, storage_providers, preferred_provider, noop):
+        self.__storage_providers = storage_providers
+        self.__noop = noop
+        self.__preferred_provider = storage_providers[preferred_provider]
+
+    def get_metadata(src_channel):
+        return from_json(self.__preferred_provider.fetch(src_channel + '/metadata.json'))
+
+    def promote(self, src_channel, destinoation_channel):
+        metadata = self.get_metadata(src_channel)
+        src_repository_path = metadata['repository']
+
+        # Can't run a release promotion with a different version of the scripts than the one that
+        # created the release.
+        assert metadata['commit'] == util.dcos_image_commit
+
+        # TODO(cmaloney): Make key stable artifacts local (bootstrap) so they
+        # can be used / referenced inside the per-channel artifacts.
+        self.fetch_key_artifacts(metadata)
+
+        repository = Repository(destinoation_channel, None, metadata['commit'])
+
+        metadata['repository_path'] = destinoation_channel
+        metadata['repository_url'] = self.__preferred_provider.url + destinoation_channel
+        metadata['repo_channel_path'] = destinoation_channel
+        metadata['storage_urls'] = {}
+        for name, store in self.__storage_providers.items():
+            metadata['storage_urls'][name] = store.url
+        del metadata['channel_artifacts']
+
+        metadata['channel_artifacts'] = make_channel_artifacts(metadata)
+
+        storage_commands = repository.make_commands(
+            metadata,
+            base_artifacts={'method': 'copy_from', 'repository': src_repository_path})
+        self.apply_storage_commands(storage_commands)
+
+        return metadata
+
+    def create(self, repository_path, channel, tag, skip_build):
+        assert len(channel) > 0  # channel must be a non-empty string.
+
+        # TOOD(cmaloney): Figure out why the cached version hasn't been working right
+        # here from the TeamCity agents. For now hardcoding the non-cached s3 download locatoin.
+        repository_url = self.__preferred_provider.url + repository_path
+        metadata = make_stable_artifacts(
+            'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + repository_path, skip_build)
+
+        # Metadata should already have things like bootstrap_id in it.
+        assert 'bootstrap_dict' in metadata
+        assert 'commit' in metadata
+
+        repository = Repository(repository_path, channel, metadata['commit'])
+        metadata['repo_channel_path'] = repository_path + '/' + channel
+        metadata['storage_urls'] = {}
+        for name, store in self.__storage_providers.items():
+            metadata['storage_urls'][name] = store.url
+
+        metadata['repository_path'] = repository_path
+        metadata['repository_url'] = repository_url
+        metadata['tag'] = tag
+        assert 'channel_artifacts' not in metadata
+
+        metadata['channel_artifacts'] = make_channel_artifacts(metadata)
+
+        storage_commands = repository.make_commands(metadata, {'method': 'upload'})
+        self.apply_storage_commands(storage_commands)
+
+        return metadata
+
+    def apply_storage_commands(self, storage_commands):
+        assert storage_commands.keys() == {'stage1', 'stage2', 'local_cp'}
+
+        if self.__noop:
+            return
+
+        # TODO(cmaloney): Use a multiprocessing map to do all storage providers in parallel.
+        for stage in ['stage1', 'stage2']:
+            commands = storage_commands[stage]
+            for provider_name, provider in self.__storage_providers.items():
+                for artifact in commands:
+                    path = artifact['args']['destination_path']
+                    # If it is only supposed to be if the artifact does not exist, check for existence
+                    # and skip if it exists.
+                    if artifact['if_not_exists'] and provider.exists(path):
+                        print("Store to", provider_name, "artifact", path, "skipped because it already exists")
+                        continue
+                    print("Store to", provider_name, "artifact", path, "by method", artifact['method'])
+                    getattr(provider, artifact['method'])(**artifact['args'])
+
+        for artifact in storage_commands['local_cp']:
+            destination_path = artifact['destination_path']
+            print("Saving to local artifact path", destination_path)
+            subprocess.check_call(['mkdir', '-p', os.path.dirname(destination_path)])
+            if 'source_path' in artifact:
+                subprocess.check_call(['cp', artifact['source_path'], destination_path])
+            else:
+                assert 'source_content' in artifact
+                pkgpanda.util.write_string(destination_path, artifact['source_content'])
+
+
+def get_prod_storage_providers():
+    azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
+    azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
+
+    s3_bucket = aws_config.session_prod.resource('s3').Bucket('downloads.mesosphere.io')
+
+    storage_providers = {
+        'azure': AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
+                                      'http://az837203.vo.msecnd.net/dcos/'),
+        'aws': S3StorageProvider(s3_bucket, 'dcos', 'https://downloads.mesosphere.com/dcos/')
+    }
+
+    for name, provider in storage_providers.items():
+        assert provider.name == name
+
+    return storage_providers
 
 
 def main():
     parser = argparse.ArgumentParser(description='DCOS Release Management Tool.')
     subparsers = parser.add_subparsers(title='commands')
 
+    parser.add_argument(
+        '--noop',
+        action='store_true',
+        help="Do not take any actions on the storage providers, just run the "
+             "whole build, produce the list of actions than no-op.")
+
     # Moves the latest of a given release name to the given release name.
     promote = subparsers.add_parser('promote')
-    promote.set_defaults(func=do_promote)
+    promote.set_defaults(action='promote')
     promote.add_argument('source_channel')
+    promote.add_argument('destination_repoistory')
     promote.add_argument('destination_channel')
 
     # Creates, uploads, and marks as latest.
     # The marking as latest is ideally atomic (At least all artifacts when they
     # are uploaded should never result in a state where things don't work).
     create = subparsers.add_parser('create')
-    create.set_defaults(func=do_create)
-    create.add_argument('destination_channel')
+    create.set_defaults(action='create')
+    create.add_argument('channel')
     create.add_argument('tag')
-    create.add_argument('--skip-upload', action='store_true')
     create.add_argument('--skip-build', action='store_true')
 
     # Parse the arguments and dispatch.
     options = parser.parse_args()
-    if hasattr(options, 'func'):
-        validate_options(options)
-        options.func(options)
-        sys.exit(0)
-    else:
+    if not hasattr(options, 'action'):
         parser.print_help()
         print("ERROR: Must use a subcommand")
         sys.exit(1)
+
+    validate_options(options)
+    release_manager = ReleaseManager(get_prod_storage_providers(), 'aws', options.noop)
+    if options.action == 'promote':
+        release_manager.promote(options.source_channel, options.destination_channel)
+    elif options.action == 'create':
+        release_manager.create('testing', options.channel, options.tag, options.skip_build)
+    else:
+        raise ValueError("Unexpection options.action {}".format(options.action))
 
 
 if __name__ == '__main__':

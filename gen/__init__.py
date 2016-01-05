@@ -692,8 +692,7 @@ def do_generate(
     for fn in validate_fn:
         fn(arguments)
 
-    log.info("Final arguments:")
-    print(json.dumps(arguments, **json_prettyprint_args))
+    log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 
     # ID of this configuration is a hash of the parameters
     config_id = hash_checkout(arguments)

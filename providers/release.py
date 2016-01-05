@@ -870,7 +870,7 @@ class ReleaseManager():
     def get_metadata(src_channel):
         return from_json(self.__preferred_provider.fetch(src_channel + '/metadata.json'))
 
-    def promote(self, src_channel, destinoation_channel):
+    def promote(self, src_channel, destination_channel):
         metadata = self.get_metadata(src_channel)
         src_repository_path = metadata['repository']
 
@@ -882,11 +882,11 @@ class ReleaseManager():
         # can be used / referenced inside the per-channel artifacts.
         self.fetch_key_artifacts(metadata)
 
-        repository = Repository(destinoation_channel, None, metadata['commit'])
+        repository = Repository(destination_channel, None, metadata['commit'])
 
-        metadata['repository_path'] = destinoation_channel
-        metadata['repository_url'] = self.__preferred_provider.url + destinoation_channel
-        metadata['repo_channel_path'] = destinoation_channel
+        metadata['repository_path'] = destination_channel
+        metadata['repository_url'] = self.__preferred_provider.url + destination_channel
+        metadata['repo_channel_path'] = destination_channel
         metadata['storage_urls'] = {}
         for name, store in self.__storage_providers.items():
             metadata['storage_urls'][name] = store.url

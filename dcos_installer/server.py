@@ -9,7 +9,9 @@ from flask import (
     render_template,
     Response)
 
-from installer import mock
+from dcos_installer import (
+    mock,
+    backend)
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +50,11 @@ def start(options):
             messages, config = mock.validate(new_config)
             concat = dict(config, **messages)
             resp = Response(json.dumps(concat))
+
+            # if not len(messages['errors']) > 0:
+            #    backend.configure(options)
+            backend.configure(options)
+
             resp.headers['Content-Type'] = 'application/json'
             return resp
 
@@ -94,4 +101,4 @@ def start(options):
     def page_not_found(e):
         return render_template('404.html'), 404
 
-    app.run()
+    app.run(host='0.0.0.0')

@@ -1,8 +1,5 @@
-#DcosInstaller
 Flask
 Paramiko
 pyyaml
 jinja2
--e git+git@github.com:mesosphere/dcos-image.git@DCOS-3738#egg=dcos_image
-Queue
-
+-e git+git@github.com:mesosphere/dcos-image.git@master#egg=dcos_image

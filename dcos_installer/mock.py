@@ -1,7 +1,7 @@
 import logging
 import yaml
 
-from installer.config import DCOSConfig
+from dcos_installer.config import DCOSConfig
 
 log = logging.getLogger(__name__)
 

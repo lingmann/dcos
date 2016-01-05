@@ -6,7 +6,7 @@ from dcos_installer import DcosInstaller
 
 def main():
     os.environ["CHANNEL_NAME"] = "testing/continuous"
-    os.environ["BOOTSTRAP_ID"] = '0026f44d8574d508104f1e7e7a163e078e69990b'
+    os.environ["BOOTSTRAP_ID"] = '299269a7aa9e23a1edc94de3f2375356b2942af8'
 
     DcosInstaller()
 

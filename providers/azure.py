@@ -21,7 +21,7 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
 UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{repo_channel_path}"
-              "/azure/azure/single-master.azuredeploy.json")
+              "/azure/single-master.azuredeploy.json")
 
 INSTANCE_GROUPS = {
     'master': {

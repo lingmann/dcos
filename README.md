@@ -3,7 +3,9 @@
 ## Run locally
 
 1. ```pip install -r requirements.txt```
-2. ```./run```
+2. ```./run --web```
+
+^^ Check the run script to ensure current stable BOOTSTRAP_ID, this was last set to the stable CM.4 bootstrap ID.
 
 # REST API
 

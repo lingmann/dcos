@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from dcos_installer import server
+from dcos_installer import server, pretty_log
 
 # Get logger
 log = logging.getLogger(__name__)
@@ -100,6 +100,35 @@ class DcosInstaller:
             action='store_true',
             default=False,
             help='Performs tests on the dcos_installer application')
+
+        """
+        The following arguments are suppressed. We are adding them
+        because the genconf provider, specifically the do_genconf
+        method requires these to exist in the parser object we pass
+        to it. We do not want to exppose these to the end user and
+        may remove them from the genconf provider at a later date.
+        """
+        parser.add_argument(
+            '-l',
+            '--log-level',
+            default='info',
+            type=str,
+            choices=['debug', 'info'],
+            help=argparse.SUPPRESS)
+
+        parser.add_argument(
+            '-o',
+            '--output-dir',
+            default='/genconf/serve',
+            type=str,
+            help=argparse.SUPPRESS)
+
+        parser.add_argument(
+            '-i',
+            '--interactive',
+            action='store_true',
+            default=False,
+            help=argparse.SUPPRESS)
 
         options = parser.parse_args(args)
 

@@ -101,7 +101,6 @@ if exhibitor_backend == 'AWS_S3':
         '--configtype=s3',
         '--s3config', get_var_assert_set("AWS_S3_BUCKET") +
         ':' + get_var_assert_set("AWS_S3_PREFIX"),
-        '--s3credentials', '/opt/mesosphere/etc/exhibitor.properties',
         '--s3region', get_var_assert_set("AWS_REGION"),
         '--s3backup', 'false',
     ]

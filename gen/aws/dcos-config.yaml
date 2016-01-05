@@ -6,8 +6,6 @@ package:
       AWS_STACK_NAME={ "Ref" : "AWS::StackName" }
       AWS_IAM_MASTER_ROLE_NAME={ "Ref" : "MasterRole" }
       AWS_IAM_SLAVE_ROLE_NAME={ "Ref" : "SlaveRole" }
-      AWS_ACCESS_KEY_ID={ "Ref" : "HostKeys" }
-      AWS_SECRET_ACCESS_KEY={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={ "Ref" : "AWS::StackName" }
@@ -17,10 +15,6 @@ package:
       AWS_REGION={ "Ref" : "AWS::Region" }
       AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
       AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
-  - path: /etc/exhibitor.properties
-    content: |
-      com.netflix.exhibitor.s3.access-key-id={ "Ref" : "HostKeys" }
-      com.netflix.exhibitor.s3.access-secret-key={ "Fn::GetAtt" : [ "HostKeys", "SecretAccessKey" ] }
   - path: /etc/dns_config
     content: |
       MASTER_SOURCE=exhibitor

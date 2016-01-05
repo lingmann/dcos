@@ -168,7 +168,6 @@ def gen_templates(arguments, options):
             '/etc/cfn_signal_metadata',
             '/etc/dns_config',
             '/etc/exhibitor',
-            '/etc/exhibitor.properties',
             '/etc/mesos-master-provider'])
 
     cloud_config = results.templates['cloud-config']

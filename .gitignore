@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cdo]
 *.egg*
+.cache
 .DS_Store
 node_modules
 ui/dist

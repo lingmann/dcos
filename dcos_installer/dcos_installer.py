@@ -101,6 +101,7 @@ class DcosInstaller:
             default=False,
             help='Performs tests on the dcos_installer application')
 
+        
         options = parser.parse_args(args)
 
         return options

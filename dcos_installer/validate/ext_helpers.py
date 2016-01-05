@@ -3,8 +3,8 @@
 # serve validating a dependency tree. On the other hand, these
 # are desigend to be use anywhere, and simply accept a key and
 # return bool and message.
-import socket
 import os
+import socket
 
 
 def is_valid_ipv4_address(address):

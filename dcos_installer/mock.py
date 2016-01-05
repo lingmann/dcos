@@ -1,7 +1,8 @@
 import logging
 
-import yaml
 from dcos_installer.config import DCOSConfig
+
+import yaml
 
 log = logging.getLogger(__name__)
 

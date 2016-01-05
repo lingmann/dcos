@@ -1,26 +1,46 @@
 import argparse
-import logging
+import logging as log
 import sys
 
-from dcos_installer import server, pretty_log
+from dcos_installer import async_server
 
-# Get logger
-log = logging.getLogger(__name__)
+import coloredlogs
+
+coloredlogs.install(
+    datefmt='%H:%M:%S',
+    level_styles={
+        'warn': {
+            'color': 'yellow'
+        },
+        'error': {
+            'color': 'red',
+            'bold': True,
+        },
+    },
+    field_styles={
+        'asctime': {
+            'color': 'blue'
+        }
+    },
+    fmt='%(asctime)s :: %(message)s'
+)
 
 
 class DcosInstaller:
-    def __init__(self, options=None):
+    def __init__(self):
         """
         The web based installer leverages Flask to present end-users of
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-        if not options:
-            options = self.parse_args(sys.argv[1:])
+        options = self.parse_args(sys.argv[1:])
         self.set_log_level(options)
 
         if options.web:
-            server.start(options)
+            log.warning("Starting DCOS installer in web mode")
+            async_server.start(options.port)
+            # This was for the gunicorn wrapper:
+            # run_gunicorn(options)
 
     def set_log_level(self, options):
         """
@@ -28,8 +48,11 @@ class DcosInstaller:
         default logging level.
         """
         if options.verbose:
-            log.setLevel(logging.DEBUG)
-            log.debug("Running with verbose logger")
+            log.basicConfig(level=log.DEBUG)
+            log.debug("Log level set to DEBUG")
+        else:
+            log.basicConfig(level=log.INFO)
+            log.info("Log level set to INFO")
 
     def parse_args(self, args):
         """
@@ -101,7 +124,5 @@ class DcosInstaller:
             default=False,
             help='Performs tests on the dcos_installer application')
 
-        
         options = parser.parse_args(args)
-
         return options

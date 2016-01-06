@@ -67,6 +67,12 @@ def test_strip_locals():
     assert release.strip_locals(src_dict) == {'a': {}, 'c': {'d': 'e', 'f': 'g'}}
     assert src_dict == {'a': {'local_a': 'foo'}, 'local_b': '/test', 'c': {'d': 'e', 'f': 'g'}}
 
+    # Test recursion with lists.
+    # Dicts inside the list should be cleaned, but not the list itself.
+    src_list = [{'a': {'local_a': 'foo'}, 'local_b': '/test', 'c': {'d': 'e', 'f': 'g'}}, 'local_h']
+    assert release.strip_locals(src_list) == [{'a': {}, 'c': {'d': 'e', 'f': 'g'}}, 'local_h']
+    assert src_list == [{'a': {'local_a': 'foo'}, 'local_b': '/test', 'c': {'d': 'e', 'f': 'g'}}, 'local_h']
+
 
 def test_variant_variations():
     assert release.variant_str(None) == ''
@@ -298,7 +304,7 @@ copy_make_commands_result = {'stage1': [
         'args': {
             'no_cache': True,
             'destination_path': 'stable/commit/testing_commit_2/metadata.json',
-            'blob': b'{\n  "channel_artifacts": [\n    {\n      "channel_path": "2.html",\n      "local_content": "2"\n    },\n    {\n      "channel_path": "cf.json",\n      "content_type": "application/json",\n      "local_content": "{\\"a\\": \\"b\\"}"\n    },\n    {\n      "local_content": "hashy",\n      "reproducible_path": "some_big_hash.txt"\n    }\n  ],\n  "core_artifacts": [\n    {\n      "local_content": "1",\n      "reproducible_path": "1.html"\n    },\n    {\n      "channel_path": "3.html",\n      "content_type": "text/html",\n      "local_content": "3",\n      "reproducible_path": "3.html"\n    },\n    {\n      "channel_path": "3.json",\n      "content_type": "application/json",\n      "local_path": "/test/foo.json",\n      "reproducible_path": "3.json"\n    }\n  ],\n  "foo": "bar"\n}',  # noqa
+            'blob': b'{\n  "channel_artifacts": [\n    {\n      "channel_path": "2.html"\n    },\n    {\n      "channel_path": "cf.json",\n      "content_type": "application/json"\n    },\n    {\n      "reproducible_path": "some_big_hash.txt"\n    }\n  ],\n  "core_artifacts": [\n    {\n      "reproducible_path": "1.html"\n    },\n    {\n      "channel_path": "3.html",\n      "content_type": "text/html",\n      "reproducible_path": "3.html"\n    },\n    {\n      "channel_path": "3.json",\n      "content_type": "application/json",\n      "reproducible_path": "3.json"\n    }\n  ],\n  "foo": "bar"\n}',  # noqa
             'content_type': 'application/json; charset=utf-8'},
         'method': 'upload'}
     ],
@@ -347,7 +353,7 @@ copy_make_commands_result = {'stage1': [
         'source_content': '{"a": "b"}'},
     {
         'destination_path': 'artifacts/metadata.json',
-        'source_content': '{\n  "channel_artifacts": [\n    {\n      "channel_path": "2.html",\n      "local_content": "2"\n    },\n    {\n      "channel_path": "cf.json",\n      "content_type": "application/json",\n      "local_content": "{\\"a\\": \\"b\\"}"\n    },\n    {\n      "local_content": "hashy",\n      "reproducible_path": "some_big_hash.txt"\n    }\n  ],\n  "core_artifacts": [\n    {\n      "local_content": "1",\n      "reproducible_path": "1.html"\n    },\n    {\n      "channel_path": "3.html",\n      "content_type": "text/html",\n      "local_content": "3",\n      "reproducible_path": "3.html"\n    },\n    {\n      "channel_path": "3.json",\n      "content_type": "application/json",\n      "local_path": "/test/foo.json",\n      "reproducible_path": "3.json"\n    }\n  ],\n  "foo": "bar"\n}'  # noqa
+        'source_content': '{\n  "channel_artifacts": [\n    {\n      "channel_path": "2.html"\n    },\n    {\n      "channel_path": "cf.json",\n      "content_type": "application/json"\n    },\n    {\n      "reproducible_path": "some_big_hash.txt"\n    }\n  ],\n  "core_artifacts": [\n    {\n      "reproducible_path": "1.html"\n    },\n    {\n      "channel_path": "3.html",\n      "content_type": "text/html",\n      "reproducible_path": "3.html"\n    },\n    {\n      "channel_path": "3.json",\n      "content_type": "application/json",\n      "reproducible_path": "3.json"\n    }\n  ],\n  "foo": "bar"\n}'  # noqa
     }
 ]}
 
@@ -355,7 +361,7 @@ upload_make_command_results = {
     'local_cp': [{
         'destination_path':
         'artifacts/metadata.json',
-        'source_content': '{\n  "channel_artifacts": [],\n  "core_artifacts": [\n    {\n      "local_content": "foo",\n      "reproducible_path": "foo"\n    }\n  ]\n}'}],  # noqa
+        'source_content': '{\n  "channel_artifacts": [],\n  "core_artifacts": [\n    {\n      "reproducible_path": "foo"\n    }\n  ]\n}'}],  # noqa
     'stage2': [{
         'args': {
             'source_path': 'stable/commit/testing_commit_2/metadata.json',
@@ -374,7 +380,7 @@ upload_make_command_results = {
         'args': {
             'no_cache': True,
             'destination_path': 'stable/commit/testing_commit_2/metadata.json',
-            'blob': b'{\n  "channel_artifacts": [],\n  "core_artifacts": [\n    {\n      "local_content": "foo",\n      "reproducible_path": "foo"\n    }\n  ]\n}', 'content_type': 'application/json; charset=utf-8'},  # noqa
+            'blob': b'{\n  "channel_artifacts": [],\n  "core_artifacts": [\n    {\n      "reproducible_path": "foo"\n    }\n  ]\n}', 'content_type': 'application/json; charset=utf-8'},  # noqa
         'method': 'upload',
         'if_not_exists': False}
     ]}

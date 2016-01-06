@@ -33,7 +33,11 @@ provider_names = ['aws', 'azure', 'vagrant']
 def strip_locals(data):
     """Returns a dictionary with all keys that begin with local_ removed.
 
-    If data is a dictionary, recurses through cleaning the keys of that as well."""
+    If data is a dictionary, recurses through cleaning the keys of that as well.
+    If data is a list, any dictionaries it contains are cleaned. Any lists it
+    contains are recursively handled in the same way.
+
+    """
 
     if isinstance(data, dict):
         data = copy.copy(data)
@@ -42,6 +46,8 @@ def strip_locals(data):
                 del data[k]
             else:
                 data[k] = strip_locals(data[k])
+    elif isinstance(data, list):
+        data = [strip_locals(item) for item in data]
 
     return data
 

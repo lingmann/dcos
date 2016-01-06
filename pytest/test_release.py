@@ -531,8 +531,6 @@ def mock_build_genconfs(bootstrap_dict, repo_channel_path):
 # Test that the do_create functions for each provider output data in the right
 # shape.
 def test_make_channel_artifacts(monkeypatch):
-    write_string_args = []
-    monkeypatch.setattr('pkgpanda.util.write_string', lambda *args: write_string_args.append(args))
     monkeypatch.setattr('providers.release.build_genconfs', mock_build_genconfs)
 
     metadata = {
@@ -558,11 +556,6 @@ def test_make_channel_artifacts(monkeypatch):
     for artifact in channel_artifacts:
         assert 'local_path' in artifact or 'local_content' in artifact
         assert 'reproducible_path' in artifact or 'channel_path' in artifact
-
-    assert write_string_args == [
-        ('docker-tag', 'genconf-id'),
-        ('docker-tag.txt', 'genconf-id')
-    ]
 
 
 def test_make_abs():

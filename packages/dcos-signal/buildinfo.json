@@ -5,8 +5,8 @@
     "dcos-signal": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-signal.git",
-      "ref": "b7030103c9fc7da21f14e530cea609e85c43babf",
-      "ref_origin": "0.0.9d"
+      "ref": "8173b74688f57040b4716dd1fca1109c09eb39fa",
+      "ref_origin": "master"
     }
   }
 }

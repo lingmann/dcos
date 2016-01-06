@@ -7,8 +7,11 @@ USAGE:
 
 import analytics
 import docopt
+import logging
 import os
 import requests
+import subprocess
+import sys
 import uuid
 
 
@@ -19,6 +22,7 @@ EVENT_NAME = 'Cluster summary'
 
 
 def get_state_summary():
+    logging.info("Getting state-summary")
     result = {}
     for endpoint in ENDPOINTS:
         summary_url = "http://%s%s" % (MASTER_LOCATION, endpoint)
@@ -60,12 +64,14 @@ def report_heartbeat():
     for env_var in env_vars:
         cluster_event[env_var] = env_vars[env_var]
 
+    logging.info("Submitting to analytics")
     analytics.track(anonymous_id=uuid.uuid4().hex,
                     event=EVENT_NAME,
                     properties=cluster_event
                     )
 
     analytics.flush()
+    logging.info("Anlytics flushed")
 
 
 def start():
@@ -73,5 +79,12 @@ def start():
                          version='0.1')
 
     analytics.write_key = args['--write_key']
+
+    try:
+        # if there is no leading master no-op
+        subprocess.check_output(['ping', '-c1', MASTER_LOCATION])
+    except subprocess.CalledProcessError as ex:
+        logging.info("Couldn't ping mesos master. %s", ex.output)
+        sys.exit(0)
 
     return report_heartbeat()

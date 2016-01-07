@@ -16,7 +16,6 @@ import json
 import logging
 import os
 import subprocess
-import tempfile
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -104,8 +103,9 @@ class CommandsChain():
     execute_flag = 'execute'
     copy_flag = 'copy'
 
-    def __init__(self):
+    def __init__(self, namespace):
         self.commands_stack = []
+        self.namespace = namespace
 
     def add_execute_cmd(self, cmd, rollback=None, comment=None):
         '''
@@ -127,7 +127,8 @@ class CommandsChain():
 
 
 class MultiRunner():
-    def __init__(self, targets, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120, parallelism=10):
+    def __init__(self, targets, state_dir=None, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
+                 parallelism=10):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
@@ -140,10 +141,9 @@ class MultiRunner():
         self.ssh_key_path = ssh_key_path
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
+        self.state_dir = state_dir
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
-
-        self.tmp_dir = tempfile.mkdtemp()
 
     def _get_base_args(self, bin_name, host):
         # TODO(cmaloney): Switch to SSH config file, documented above. A single
@@ -208,7 +208,7 @@ class MultiRunner():
         return self.__run_on_hosts(build_ssh)
 
     @asyncio.coroutine
-    def run_cmd_return_dict_async(self, cmd, host, future):
+    def run_cmd_return_dict_async(self, cmd, host, namespace, future):
         process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.PIPE,
                                                             stdin=asyncio.subprocess.DEVNULL)
@@ -218,50 +218,84 @@ class MultiRunner():
         yield from process.wait()
 
         process_output = {
-            "cmd": cmd,
-            "host": host,
-            "stdout": stdout.decode().split('\n'),
-            "stderr": stderr.decode().split('\n'),
-            "returncode": process.returncode,
-            "pid": process.pid
+            '{}:{}'.format(host['ip'], host['port']): {
+                "cmd": cmd,
+                "stdout": stdout.decode().split('\n'),
+                "stderr": stderr.decode().split('\n'),
+                "returncode": process.returncode,
+                "pid": process.pid
+            }
         }
-        future.set_result(process_output)
+
+        if self.state_dir is not None:
+            future.set_result((namespace, process_output))
         return process_output
 
     @asyncio.coroutine
-    def run_async(self, host, command, future):
+    def run_async(self, host, command, namespace, future):
         _, cmd, rollback, comment = command
         full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host['ip'])] + cmd
-        result = yield from self.run_cmd_return_dict_async(full_cmd, host, future)
+        result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
     @asyncio.coroutine
-    def copy_async(self, host, command, future):
+    def copy_async(self, host, command, namespace, future):
         print('Called copy_async for {} with command {}'.format(host, command))
 
     def update_json(self, future):
         print('This is future')
-        print(future.result())
+        self._update_json_file(*future.result(), future_update=True)
+
+    def _update_json_file(self, namespace, process_output, future_update=None, chain_status=None, status_dict=None):
+        status_json = {}
+        status_file = os.path.join(self.state_dir, '{}.json'.format(namespace))
+        if os.path.isfile(status_file):
+            with open(status_file) as f:
+                status_json = json.load(f)
+
+        for host, return_values in process_output.items():
+            if future_update:
+                if host in status_json:
+                    status_json[host]['commands'].append(return_values)
+                else:
+                    status_json[host] = {
+                        'commands': [return_values]
+                    }
+
+            # Update chain status: success or fail
+            if chain_status:
+                status_json[host]['chain_status'] = chain_status
+
+            if status_dict:
+                assert isinstance(status_dict, dict)
+                status_json.update(status_dict)
+
+        with open(status_file, 'w') as f:
+            json.dump(status_json, f)
 
     @asyncio.coroutine
     def dispatch_command(self, host, chain, sem):
         with (yield from sem):
+            chain_status = 'success'
             for command in chain.get_commands():
                 future = asyncio.Future()
                 future.add_done_callback(self.update_json)
 
                 command_type = command[0]
                 if command_type == CommandsChain.execute_flag:
-                    result = yield from self.run_async(host, command, future)
+                    result = yield from self.run_async(host, command, chain.namespace, future)
                 elif command_type == CommandsChain.copy_flag:
-                    result = yield from self.copy_async(host, command, future)
+                    result = yield from self.copy_async(host, command, chain.namespace, future)
                 else:
                     raise NotImplementedError(command_type)
 
-                # If a command fails, initiate a rollback
+                # example: result['127.0.0.1:22022']['returncode']
                 # TODO(mnaboka): add rollback logic here
-                if result['returncode'] != 0:
-                    return
+                if result['{}:{}'.format(host['ip'], host['port'])]['returncode'] != 0:
+                    chain_status = 'failed'
+                    break
+
+            self._update_json_file(chain.namespace, result, chain_status=chain_status)
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain):
@@ -276,10 +310,10 @@ class MultiRunner():
 
 if __name__ == '__main__':
     loop = asyncio.get_event_loop()
-    mr = MultiRunner(['127.0.0.1:22022', '127.0.0.1'], ssh_user='mnaboka', ssh_key_path='/Users/mnaboka/.ssh/id_rsa')
-    chain = CommandsChain()
+    mr = MultiRunner(['127.0.0.1:22022'], ssh_user='mnaboka', ssh_key_path='/Users/mnaboka/.ssh/id_rsa',
+                     state_dir='/tmp')
+    chain = CommandsChain('preflight')
     chain.add_execute_cmd('uname -a')
-    chain.add_execute_cmd('ls -l /tmfff')
     chain.add_execute_cmd('uname -a')
 
     try:

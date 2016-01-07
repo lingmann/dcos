@@ -14,22 +14,8 @@ python3 setup.py install --root=/ --prefix=$PKG_PATH
 # Create the service file
 service="$PKG_PATH/dcos.target.wants_master/dcos-signal.service"
 mkdir -p "$(dirname "$service")"
-cat <<EOF > "$service"
-[Unit]
-Description=DCOS Tracking
-After=dcos-mesos-master.service
-[Service]
-EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=-/opt/mesosphere/etc/cfn_signal_metadata
-ExecStart=/opt/mesosphere/bin/dcos-signal --write_key=51ybGTeFEFU1xo6u10XMDrr6kATFyRyh
-EOF
+cp dcos-signal.service "$service"
 
 service_timer="$PKG_PATH/dcos.target.wants/dcos-signal.timer"
 mkdir -p "$(dirname "$service_timer")"
-cat <<'EOF' > "$service_timer"
-[Unit]
-Description=Tracking every interval
-[Timer]
-OnCalendar=hourly
-Unit=dcos-signal.service
-EOF
+cp dcos-signal.timer "$service_timer"

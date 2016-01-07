@@ -1,12 +1,4 @@
 {
   "requires": ["python-docopt", "python", "python-requests", "python-analytics"],
-  "docker": "dcos-builder",
-  "sources": {
-    "dcos-signal": {
-      "kind": "git",
-      "git": "git@github.com:mesosphere/dcos-signal.git",
-      "ref": "8173b74688f57040b4716dd1fca1109c09eb39fa",
-      "ref_origin": "master"
-    }
-  }
+  "docker": "dcos-builder"
 }

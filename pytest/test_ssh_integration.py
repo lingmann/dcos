@@ -1,3 +1,4 @@
+import asyncio
 import getpass
 import os
 import random
@@ -8,8 +9,9 @@ import time
 import uuid
 
 import pkgpanda.util
+import pytest
 
-from ssh.ssh_runner import MultiRunner
+from ssh.ssh_runner import CommandsChain, MultiRunner
 
 sshd_config = [
     'Protocol 1,2',
@@ -65,7 +67,15 @@ def generate_fixtures(workspace):
     assert os.path.isfile(os.path.join(workspace, 'sshd_config'))
 
 
-def test_ssh(tmpdir):
+@pytest.yield_fixture
+def loop():
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    yield loop
+    loop.close()
+
+
+def test_ssh(tmpdir, loop):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
     sshd_ports = start_random_sshd_servers(20, workspace)
@@ -74,17 +84,25 @@ def test_ssh(tmpdir):
     time.sleep(3)
     runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
-    results = runner.run(['uname', '-a'])
+    host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+
+    chain = CommandsChain('test')
+    chain.add_execute_cmd('uname -a')
+    try:
+        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+
     assert len(results) == 20
     for result in results:
-        assert result['returncode'] == 0, result['stderr']
-        assert result['host']['ip'] == '127.0.0.1'
-        assert result['host']['port'] in sshd_ports
-        assert '/usr/bin/ssh' in result['cmd']
-        assert 'uname' in result['cmd']
+        for host, params in result.items():
+            assert params['returncode'] == 0, params['stderr']
+            assert host in host_port
+            assert '/usr/bin/ssh' in params['cmd']
+            assert 'uname' in params['cmd']
 
 
-def test_scp_remote_to_local(tmpdir):
+def test_scp_remote_to_local(tmpdir, loop):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
     sshd_ports = start_random_sshd_servers(1, workspace)
@@ -96,18 +114,27 @@ def test_scp_remote_to_local(tmpdir):
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
     runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
-    copy_results = runner.copy(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
+    host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+
+    chain = CommandsChain('test')
+    chain.add_copy_cmd(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
+    try:
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+
+    assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
     for result in copy_results:
-        assert result['returncode'] == 0, result['stderr']
-        assert result['host']['ip'] == '127.0.0.1'
-        assert result['host']['port'] in sshd_ports
-        assert '/usr/bin/scp' in result['cmd']
-        assert workspace + '/pilot.txt.copied' in result['cmd']
+        for host, params in result.items():
+            assert params['returncode'] == 0, params['stderr']
+            assert host in host_port
+            assert '/usr/bin/scp' in params['cmd']
+            assert workspace + '/pilot.txt.copied' in params['cmd']
 
 
-def test_scp(tmpdir):
+def test_scp(tmpdir, loop):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
     sshd_ports = start_random_sshd_servers(1, workspace)
@@ -119,18 +146,27 @@ def test_scp(tmpdir):
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
     runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
-    copy_results = runner.copy(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
+    host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+
+    chain = CommandsChain('test')
+    chain.add_copy_cmd(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
+    try:
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+
+    assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
     for result in copy_results:
-        assert result['returncode'] == 0, result['stderr']
-        assert result['host']['ip'] == '127.0.0.1'
-        assert result['host']['port'] in sshd_ports
-        assert '/usr/bin/scp' in result['cmd']
-        assert workspace + '/pilot.txt' in result['cmd']
+        for host, params in result.items():
+            assert params['returncode'] == 0, params['stderr']
+            assert host in host_port
+            assert '/usr/bin/scp' in params['cmd']
+            assert workspace + '/pilot.txt' in params['cmd']
 
 
-def test_scp_recursive(tmpdir):
+def test_scp_recursive(tmpdir, loop):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
     sshd_ports = start_random_sshd_servers(1, workspace)
@@ -142,16 +178,24 @@ def test_scp_recursive(tmpdir):
     pkgpanda.util.write_string(workspace + '/recursive_pilot.txt', id)
     runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
-    copy_results = runner.copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied',
-                               recursive=True)
+    host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+
+    chain = CommandsChain('test')
+    chain.add_copy_cmd(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
+    try:
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+
     dest_path = workspace + '/recursive_pilot.txt.copied'
     assert os.path.exists(dest_path)
     assert os.path.isfile(dest_path)
+    assert len(copy_results) == 1
     assert pkgpanda.util.load_string(dest_path) == id
     for result in copy_results:
-        assert result['returncode'] == 0, result['stderr']
-        assert result['host']['ip'] == '127.0.0.1'
-        assert result['host']['port'] in sshd_ports
-        assert '/usr/bin/scp' in result['cmd']
-        assert '-r' in result['cmd']
-        assert workspace + '/recursive_pilot.txt' in result['cmd']
+        for host, params in result.items():
+            assert params['returncode'] == 0, params['stderr']
+            assert host in host_port
+            assert '/usr/bin/scp' in params['cmd']
+            assert '-r' in params['cmd']
+            assert workspace + '/recursive_pilot.txt' in params['cmd']

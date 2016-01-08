@@ -1,7 +1,6 @@
+# Docker build requires that either repos or wheels be placed in an ext directory
 FROM python:3.4.3-slim
 MAINTAINER support+dcos@mesosphere.io
-
-#TODO: do we really need curl, pxz?
 
 RUN apt-get update && \
   apt-get install -y \
@@ -12,15 +11,10 @@ RUN apt-get update && \
     gcc && \
   rm -rf /var/lib/apt/lists/* && apt-get clean
 
-COPY . /dcos-web-installer
+COPY . /dcos-installer
 
-WORKDIR /dcos-web-installer
+WORKDIR /dcos-installer
 
-RUN pip3 install -r container_requirements.txt
-RUN cd ext/pkgpanda && pip3 install .
-RUN cd ext/dcos-image && pip3 install .
-
-VOLUME /genconf
-
-EXPOSE 9000
-ENTRYPOINT /dcos-web-installer/run.py
+RUN pip install tox
+RUN pip install --find-links=ext dcos_image pkgpanda
+RUN pip install .

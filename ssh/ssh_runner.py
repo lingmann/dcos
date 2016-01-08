@@ -17,6 +17,7 @@ import logging
 import os
 import subprocess
 from concurrent.futures._base import TimeoutError
+from datetime import datetime
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -260,7 +261,7 @@ class MultiRunner():
     def update_json(self, future):
         self._update_json_file(*future.result(), future_update=True)
 
-    def _update_json_file(self, namespace, process_output, future_update=None, chain_status=None, status_dict=None):
+    def _update_json_file(self, namespace, process_output, future_update=None, chain_status=None, host_status=None):
         status_json = {}
         status_file = os.path.join(self.state_dir, '{}.json'.format(namespace))
         if os.path.isfile(status_file):
@@ -269,10 +270,15 @@ class MultiRunner():
 
         for host, return_values in process_output.items():
             if future_update:
+                return_values.update({
+                    'date': str(datetime.now())
+                })
                 if host in status_json:
                     status_json[host]['commands'].append(return_values)
                 else:
+                    status_json['total_hosts'] = len(self.__targets)
                     status_json[host] = {
+                        'chain_name': namespace,
                         'commands': [return_values]
                     }
 
@@ -280,48 +286,60 @@ class MultiRunner():
             if chain_status:
                 status_json[host]['chain_status'] = chain_status
 
-            if status_dict:
-                assert isinstance(status_dict, dict)
-                status_json.update(status_dict)
+            if host_status:
+                status_json[host_status] = status_json.get(host_status, 0) + 1
 
         with open(status_file, 'w') as f:
             json.dump(status_json, f)
 
     @asyncio.coroutine
     def dispatch_command(self, host, chain, sem):
+        chain_status = 'success'
+        host_status = 'hosts_success'
+        command_map = {
+            CommandsChain.execute_flag: self.run_async,
+            CommandsChain.copy_flag: self.copy_async
+        }
+
+        process_exit_code_map = {
+            None: {
+                'chain_status': 'terminated',
+                'host_status': 'hosts_terminated'
+            },
+            0: {
+                'chain_status': 'success',
+                'host_status': 'hosts_success'
+            },
+            'failed': {
+                'chain_status': 'failed',
+                'host_status': 'hosts_failed'
+            }
+        }
         with (yield from sem):
-            chain_status = 'success'
             for command in chain.get_commands():
                 future = asyncio.Future()
                 future.add_done_callback(self.update_json)
 
-                command_type = command[0]
-                if command_type == CommandsChain.execute_flag:
-                    result = yield from self.run_async(host, command, chain.namespace, future)
-                elif command_type == CommandsChain.copy_flag:
-                    result = yield from self.copy_async(host, command, chain.namespace, future)
-                else:
-                    raise NotImplementedError(command_type)
+                # command[0] is a type of a command, could be CommandsChain.execute_flag, CommandsChain.copy_flag
+                result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
 
                 # Make sure callback was invoked before we can update chain status
                 if self.state_dir is not None:
                     yield from asyncio.wait([future])
 
-                # if returncode is None, the process sub process was killed
-                if result['{}:{}'.format(host['ip'], host['port'])]['returncode'] is None:
-                    chain_status = 'terminated'
-                    break
+                host_port = '{}:{}'.format(host['ip'], host['port'])
+                status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
 
-                # example: result['127.0.0.1:22022']['returncode']
-                # TODO(mnaboka): add rollback logic here
-                if result['{}:{}'.format(host['ip'], host['port'])]['returncode'] != 0:
-                    chain_status = 'failed'
+                chain_status = status['chain_status']
+                host_status = status['host_status']
+
+                if chain_status != 'success':
                     break
 
             if self.state_dir is None:
                 return result
             else:
-                self._update_json_file(chain.namespace, result, chain_status=chain_status)
+                self._update_json_file(chain.namespace, result, chain_status=chain_status, host_status=host_status)
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):

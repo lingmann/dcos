@@ -74,7 +74,10 @@
     "privateSubnetPrefix": "10.0.0.0/22",
     "addressPrefix": "10.0.0.0/16",
     "vmSize": "Standard_A5",
-    "coreosVersion": "766.5.0",
+    "osPublisher": "Canonical",
+    "osOffer": "UbuntuServer",
+    "osSKU": "15.10",
+    "osVersion": "15.10.201512190",
     "vmsPerStorageAccount": 10,
     "storageAccountsCount": "[add(div(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')),variables('vmsPerStorageAccount')),mod(add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),2), add(mod(add(parameters('numberOfPrivateSlaves'),parameters('numberOfPublicSlaves')), variables('vmsPerStorageAccount')),1)))]",
     "storageAccountType": "Standard_LRS",
@@ -394,10 +397,10 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "CoreOS",
-            "offer": "CoreOS",
-            "sku": "stable",
-            "version": "[variables('coreosVersion')]"
+            "publisher": "[variables('osPublisher')]",
+            "offer": "[variables('osOffer')]",
+            "sku": "[variables('osSKU')]",
+            "version": "[variables('osVersion')]"
           },
           "osDisk": {
             "name": "[concat('slavePublicVhd', copyindex())]",
@@ -486,10 +489,10 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "CoreOS",
-            "offer": "CoreOS",
-            "sku": "stable",
-            "version": "[variables('coreosVersion')]"
+            "publisher": "[variables('osPublisher')]",
+            "offer": "[variables('osOffer')]",
+            "sku": "[variables('osSKU')]",
+            "version": "[variables('osVersion')]"
           },
           "osDisk": {
             "name": "[concat('slavePrivateVhd', copyindex())]",
@@ -604,10 +607,10 @@
         },
         "storageProfile": {
           "imageReference": {
-            "publisher": "CoreOS",
-            "offer": "CoreOS",
-            "sku": "stable",
-            "version": "[variables('coreosVersion')]"
+            "publisher": "[variables('osPublisher')]",
+            "offer": "[variables('osOffer')]",
+            "sku": "[variables('osSKU')]",
+            "version": "[variables('osVersion')]"
           },
           "osDisk": {
             "name": "[concat('masterNodeVhd', copyindex())]",

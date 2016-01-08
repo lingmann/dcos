@@ -1,5 +1,9 @@
+asyncio
+aiohttp
+aiohttp_jinja2
 Flask
 Paramiko
 pyyaml
 jinja2
+webtest-aiohttp
 -e git+git@github.com:mesosphere/dcos-image.git@master#egg=dcos_image

@@ -48,7 +48,7 @@
 }
 ```
 
-**POST**: Save configuration, only return errors if there are any. 
+**POST**: Read config from disk, overwrite the POSTed values, validate, write to disk if no errors, only return errors if there are any. 
 
 ```
 curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "some_new_user"}}' localhost:5000/api/v1/configure | json
@@ -56,7 +56,7 @@ curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "
 
 **SUCCESS** - 200, empty body
 
-**FAILURE** - 200, errors 
+**FAILURE** - 400, errors 
 ```json
 { "errors": {
    "ssh_user": "None is not a valid string. Is of type <class 'NoneType'>.",

@@ -16,6 +16,7 @@ import json
 import logging
 import os
 import subprocess
+from concurrent.futures._base import TimeoutError
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -212,10 +213,13 @@ class MultiRunner():
         process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.PIPE,
                                                             stdin=asyncio.subprocess.DEVNULL)
+        try:
+            yield from asyncio.wait_for(process.wait(), self.process_timeout)
+        except TimeoutError:
+            process.kill()
 
         stdout = yield from process.stdout.read()
         stderr = yield from process.stderr.read()
-        yield from process.wait()
 
         process_output = {
             '{}:{}'.format(host['ip'], host['port']): {
@@ -303,6 +307,11 @@ class MultiRunner():
                 if self.state_dir is not None:
                     yield from asyncio.wait([future])
 
+                # if returncode is None, the process sub process was killed
+                if result['{}:{}'.format(host['ip'], host['port'])]['returncode'] is None:
+                    chain_status = 'terminated'
+                    break
+
                 # example: result['127.0.0.1:22022']['returncode']
                 # TODO(mnaboka): add rollback logic here
                 if result['{}:{}'.format(host['ip'], host['port'])]['returncode'] != 0:
@@ -324,9 +333,8 @@ class MultiRunner():
             tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
 
         if block:
-            yield from asyncio.wait(tasks)
-
-        return [task.result() for task in tasks]
+            yield from asyncio.wait_for(asyncio.wait(tasks), self.process_timeout)
+            return [task.result() for task in tasks]
 
 
 tuple_to_string_header = """HOST: {}

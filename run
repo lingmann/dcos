@@ -2,7 +2,7 @@
 # ENV['channelname'] && ['bootstrap_id'] need to be set here.
 import os
 
-from dcos_installer.dcos_installer import DcosInstaller
+from dcos_installer import DcosInstaller
 
 def main():
     os.environ["CHANNEL_NAME"] = "testing/continuous"

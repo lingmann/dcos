@@ -7,3 +7,4 @@ pyyaml
 jinja2
 webtest-aiohttp
 -e git+git@github.com:mesosphere/dcos-image.git@master#egg=dcos_image
+-e git+git@github.com:mesosphere/pkgpanda.git@master#egg=pkgpanda

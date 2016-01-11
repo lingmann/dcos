@@ -1,14 +1,16 @@
 #!/usr/bin/env python3
 # ENV['channelname'] && ['bootstrap_id'] need to be set here.
 import os
+import sys
 
 from dcos_installer import DcosInstaller
+
 
 def main():
     os.environ["CHANNEL_NAME"] = "testing/continuous"
     os.environ["BOOTSTRAP_ID"] = '299269a7aa9e23a1edc94de3f2375356b2942af8'
 
-    DcosInstaller()
+    DcosInstaller(sys.argv[1:])
 
 if __name__ == '__main__':
     main()

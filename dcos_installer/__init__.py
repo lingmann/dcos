@@ -1,6 +1,5 @@
 import argparse
 import logging as log
-import sys
 
 from dcos_installer import async_server
 
@@ -27,20 +26,26 @@ coloredlogs.install(
 
 
 class DcosInstaller:
-    def __init__(self):
+    def __init__(self, args=None):
         """
         The web based installer leverages Flask to present end-users of
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-        options = self.parse_args(sys.argv[1:])
-        self.set_log_level(options)
 
-        if options.web:
-            log.warning("Starting DCOS installer in web mode")
-            async_server.start(options.port)
-            # This was for the gunicorn wrapper:
-            # run_gunicorn(options)
+        # If no args are passed to the class, then we're calling this
+        # class from another library or code so we shouldn't execute
+        # parser or anything else
+        if args:
+            options = self.parse_args(args)
+
+            self.set_log_level(options)
+
+            if options.web:
+                log.warning("Starting DCOS installer in web mode")
+                async_server.start(options.port)
+                # This was for the gunicorn wrapper:
+                # run_gunicorn(options)
 
     def set_log_level(self, options):
         """

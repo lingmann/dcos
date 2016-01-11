@@ -1,3 +1,5 @@
+import pytest
+
 from dcos_installer import DcosInstaller
 
 
@@ -34,33 +36,33 @@ def test_set_arg_parser():
     assert parser.test is True
 
 
-def test_mutual_exclusion():
-    try:
+def test_mutual_exclusion(capsys):
+    with pytest.raises(SystemExit):
         DcosInstaller().parse_args(['--web', '--configure'])
-    except SystemExit:
-        pass
+    out, err = capsys.readouterr()
+    assert 'argument -c/--configure: not allowed with argument -w/--web' in str(err)
 
-    try:
+    with pytest.raises(SystemExit):
         DcosInstaller().parse_args(['--web', '--preflight'])
-    except SystemExit:
-        pass
+    out, err = capsys.readouterr()
+    assert 'argument -pre/--preflight: not allowed with argument -w/--web' in str(err)
 
-    try:
+    with pytest.raises(SystemExit):
         DcosInstaller().parse_args(['--web', '--postflight'])
-    except SystemExit:
-        pass
+    out, err = capsys.readouterr()
+    assert 'argument -pos/--postflight: not allowed with argument -w/--web' in str(err)
 
-    try:
-        DcosInstaller().parse_args(['--web', '--deploy'])
-    except SystemExit:
-        pass
-
-    try:
+    with pytest.raises(SystemExit):
         DcosInstaller().parse_args(['--web', '--validate-config'])
-    except SystemExit:
-        pass
+    out, err = capsys.readouterr()
+    assert 'argument -vc/--validate-config: not allowed with argument -w/--web' in str(err)
 
-    try:
+    with pytest.raises(SystemExit):
+        DcosInstaller().parse_args(['--web', '--deploy'])
+    out, err = capsys.readouterr()
+    assert 'argument -d/--deploy: not allowed with argument -w/--web' in str(err)
+
+    with pytest.raises(SystemExit):
         DcosInstaller().parse_args(['--web', '--test'])
-    except SystemExit:
-        pass
+    out, err = capsys.readouterr()
+    assert 'argument -t/--test: not allowed with argument -w/--web' in str(err)

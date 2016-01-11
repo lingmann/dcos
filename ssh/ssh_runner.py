@@ -274,6 +274,7 @@ class MultiRunner():
                 return_values.update({
                     'date': str(datetime.now())
                 })
+
                 if host in status_json:
                     status_json[host]['commands'].append(return_values)
                 else:
@@ -282,6 +283,10 @@ class MultiRunner():
                         'chain_name': namespace,
                         'commands': [return_values]
                     }
+
+                # Update chain status to running
+                if 'chain_status' not in status_json[host]:
+                    status_json[host]['chain_status'] = 'running'
 
             # Update chain status: success or fail
             if chain_status:

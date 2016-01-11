@@ -18,3 +18,5 @@ WORKDIR /dcos-installer
 RUN pip install tox
 RUN pip install --find-links=ext dcos_image pkgpanda
 RUN pip install .
+
+ENV DCOS_IMAGE_COMMIT={DCOS_IMAGE_COMMIT}

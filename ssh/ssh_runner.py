@@ -214,6 +214,7 @@ class MultiRunner():
         process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.PIPE,
                                                             stdin=asyncio.subprocess.DEVNULL)
+
         try:
             yield from asyncio.wait_for(process.wait(), self.process_timeout)
         except TimeoutError:
@@ -316,12 +317,14 @@ class MultiRunner():
             }
         }
         with (yield from sem):
+            chain_result = []
             for command in chain.get_commands():
                 future = asyncio.Future()
                 future.add_done_callback(self.update_json)
 
                 # command[0] is a type of a command, could be CommandsChain.execute_flag, CommandsChain.copy_flag
                 result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
+                chain_result.append(result)
 
                 # Make sure callback was invoked before we can update chain status
                 if self.state_dir is not None:
@@ -336,10 +339,18 @@ class MultiRunner():
                 if chain_status != 'success':
                     break
 
-            if self.state_dir is None:
-                return result
-            else:
+            # Update chain status
+            if self.state_dir is not None:
                 self._update_json_file(chain.namespace, result, chain_status=chain_status, host_status=host_status)
+
+            # Return a merged result. in the following format: {'127.0.0.1:22022': [{...}, {...}]}
+            # this is used to return result for CLI client.
+            return_result = {}
+            for result in chain_result:
+                for host, params in result.items():
+                    if host not in return_result:
+                        return_result.setdefault(host, [params]).append(params)
+            return return_result
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):
@@ -351,7 +362,7 @@ class MultiRunner():
             tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
 
         if block:
-            yield from asyncio.wait_for(asyncio.wait(tasks), self.process_timeout)
+            yield from asyncio.wait(tasks)
             return [task.result() for task in tasks]
 
 

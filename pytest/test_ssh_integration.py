@@ -96,10 +96,11 @@ def test_ssh(tmpdir, loop):
     assert len(results) == 20
     for result in results:
         for host, params in result.items():
-            assert params['returncode'] == 0, params['stderr']
-            assert host in host_port
-            assert '/usr/bin/ssh' in params['cmd']
-            assert 'uname' in params['cmd']
+            for chain_params in params:
+                assert chain_params['returncode'] == 0, chain_params['stderr']
+                assert host in host_port
+                assert '/usr/bin/ssh' in chain_params['cmd']
+                assert 'uname' in chain_params['cmd']
 
 
 def test_scp_remote_to_local(tmpdir, loop):
@@ -128,10 +129,11 @@ def test_scp_remote_to_local(tmpdir, loop):
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
     for result in copy_results:
         for host, params in result.items():
-            assert params['returncode'] == 0, params['stderr']
-            assert host in host_port
-            assert '/usr/bin/scp' in params['cmd']
-            assert workspace + '/pilot.txt.copied' in params['cmd']
+            for chain_params in params:
+                assert chain_params['returncode'] == 0, chain_params['stderr']
+                assert host in host_port
+                assert '/usr/bin/scp' in chain_params['cmd']
+                assert workspace + '/pilot.txt.copied' in chain_params['cmd']
 
 
 def test_scp(tmpdir, loop):
@@ -160,10 +162,11 @@ def test_scp(tmpdir, loop):
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
     for result in copy_results:
         for host, params in result.items():
-            assert params['returncode'] == 0, params['stderr']
-            assert host in host_port
-            assert '/usr/bin/scp' in params['cmd']
-            assert workspace + '/pilot.txt' in params['cmd']
+            for chain_params in params:
+                assert chain_params['returncode'] == 0, chain_params['stderr']
+                assert host in host_port
+                assert '/usr/bin/scp' in chain_params['cmd']
+                assert workspace + '/pilot.txt' in chain_params['cmd']
 
 
 def test_scp_recursive(tmpdir, loop):
@@ -194,8 +197,9 @@ def test_scp_recursive(tmpdir, loop):
     assert pkgpanda.util.load_string(dest_path) == id
     for result in copy_results:
         for host, params in result.items():
-            assert params['returncode'] == 0, params['stderr']
-            assert host in host_port
-            assert '/usr/bin/scp' in params['cmd']
-            assert '-r' in params['cmd']
-            assert workspace + '/recursive_pilot.txt' in params['cmd']
+            for chain_params in params:
+                assert chain_params['returncode'] == 0, chain_params['stderr']
+                assert host in host_port
+                assert '/usr/bin/scp' in chain_params['cmd']
+                assert '-r' in chain_params['cmd']
+                assert workspace + '/recursive_pilot.txt' in chain_params['cmd']

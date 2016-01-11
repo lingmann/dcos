@@ -31,6 +31,13 @@ setup(
     tests_require=['tox'],
     cmdclass={'test': Tox},
     packages=['dcos_installer'] + find_packages(),
+    install_requires=[
+        'asyncio',
+        'aiohttp',
+        'aiohttp_jinja2',
+        'webtest_aiohttp',
+        'pytest'],
+    setup_requires=['pytest'],
     package_data={
         'dcos_installer': [
             'templates/*',

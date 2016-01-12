@@ -1,3 +1,0 @@
----
-
-[check][$HOST_IP]:[stdout | stderr]

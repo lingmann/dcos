@@ -1,6 +1,30 @@
 #!/bin/bash
 set -o errexit -o nounset -o pipefail
 
+PRG=$0
+usage()
+{{
+    echo "Usage: $PRG [options] [CMD...]"
+    echo "Options:"
+    echo "--help      Print this statement"
+    echo "--version   Print git SHA's for repos used"
+    exit 0
+}}
+
+version()
+{{
+    echo "dcos-installer revision: {DCOS_INSTALLER_COMMIT}"
+    echo "dcos-image revision: {DCOS_IMAGE_COMMIT}"
+    exit 0
+}}
+
+first_arg="$1"
+case "$first_arg" in
+    --help) usage ;;
+    --version) version ;;
+esac
+
+
 # preflight checks
 docker version >/dev/null 2>&1 || {{ echo >&2 "docker should be installed and running. Aborting."; exit 1; }}
 

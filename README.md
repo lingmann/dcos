@@ -12,8 +12,8 @@
 #### / -redirects-> /api/v1
 **GET**: Loads application
 
-#### /api/v1/configure/ 
-**GET**: Get currently stored configuration and validation messages. 
+#### /api/v1/configure/
+**GET**: Get currently stored configuration and validation messages.
 
 ```json
 {
@@ -48,7 +48,7 @@
 }
 ```
 
-**POST**: Read config from disk, overwrite the POSTed values, validate, write to disk if no errors, only return errors if there are any. 
+**POST**: Read config from disk, overwrite the POSTed values, validate, write to disk if no errors, only return errors if there are any.
 
 ```
 curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "some_new_user"}}' localhost:5000/api/v1/configure | json
@@ -56,7 +56,7 @@ curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "
 
 **SUCCESS** - 200, empty body
 
-**FAILURE** - 400, errors 
+**FAILURE** - 400, errors
 ```json
 { "errors": {
    "ssh_user": "None is not a valid string. Is of type <class 'NoneType'>.",
@@ -101,7 +101,7 @@ curl -H 'Content-Type: application/json' -XGET localhost:5000/api/v1/configure |
 }
 ```
 
-Notice that the ssh_user is no longer ```None``` and the validation for it now passes since it is a string. 
+Notice that the ssh_user is no longer ```None``` and the validation for it now passes since it is a string.
 
 #### /api/v1/preflight/
 **GET**:  RETURN preflight_status.json
@@ -152,7 +152,7 @@ curl localhost:5000/api/v1/preflight | json
       ""
     ],
     "state": "success",
-    "returncode": 0, 
+    "returncode": 0,
     "cmd": "uptime",
     "stderr": [
       ""
@@ -234,7 +234,7 @@ optional arguments:
   -t, --test            Performs tests on the dcos_installer application
 ```
 
-### Configuration File 
+### Configuration File
 Yaml configuration file located at `$INSTALL_DIRECTORY/dcos_config.yaml`
 
 **EXAMPLE CONFIGURATION**
@@ -244,16 +244,12 @@ Yaml configuration file located at `$INSTALL_DIRECTORY/dcos_config.yaml`
 # Used for configuration generation
 cluster_config:
   # The URL to download the tarball - not used in deploy mode
-  # Defualt: localhost
+  # Default: localhost
   bootstrap_url: localhost
 
   # The name of the DCOS cluster
   # Default: Mesosphere: The Data Center Operating System
   cluster_name: 'Mesosphere: The Data Center Operating System'
-
-  # The installer configuration directory
-  # Default: $HOME/dcos-installer/
-  config_dir: /Users/malnick/dcos-installer
 
   # Docker garbage collection
   # Default: 1hrs
@@ -276,10 +272,6 @@ cluster_config:
   # Default: 2days
   gc_delay: 2days
 
-  # The path to the ip-detect script
-  # Default: $HOME/dcos-installer/ip-detect
-  ip_detect_path: /Users/malnick/dcos-installer/ip-detect
-
   # The master discovery method
   # Default: static list (master_list)
   master_discovery: static
@@ -290,10 +282,6 @@ cluster_config:
   - 10.33.2.20
   - 10.0.0.2
   - 10.0.0.3
-
-  # Deprecated value; the number of running masters
-  # Calculated from master_list
-  num_masters: 3
 
   # Upstream DNS resolvers for Mesos DNS
   # Default: TBD
@@ -311,7 +299,7 @@ cluster_config:
 
 # Used for SSH configuration
 ssh_config:
-  # The list of target hosts that will run Mesos Agents. The ip's from master_list are 
+  # The list of target hosts that will run Mesos Agents. The ip's from master_list are
   # automagically added to this list when used via the config library in the web installer.
   # Default: []
   target_hosts:

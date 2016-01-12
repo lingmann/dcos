@@ -6,14 +6,12 @@ from dcos_installer import DcosInstaller
 
 
 def main():
-    os.getenv("CHANNEL_NAME", None)
-    os.getenv("BOOTSTRAP_ID", None)
-    if os.environ["CHANNEL_NAME"] is None:
-        print("CHANNEL_NAME must be set in environment!")
-        exit(1)
-    if os.environ["BOOTSTRAP_ID"] is None:
-        print("BOOTSTRAP_ID must be set in environment!")
-        exit(1)
+    channel = os.getenv("CHANNEL_NAME", None)
+    bootstrap_id = os.getenv("BOOTSTRAP_ID", None)
+    if channel is None:
+        exit("CHANNEL_NAME must be set in environment!")
+    if bootstrap_id is None:
+        exit("BOOTSTRAP_ID must be set in environment!")
     DcosInstaller(sys.argv[1:])
 
 if __name__ == '__main__':

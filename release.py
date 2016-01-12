@@ -9,6 +9,8 @@ import subprocess
 
 DCOS_INSTALLER_COMMIT = os.getenv("DCOS_INSTALLER_COMMIT", None)
 DCOS_IMAGE_COMMIT = os.getenv("DCOS_IMAGE_COMMIT", None)
+CHANNEL_NAME = os.getenv("CHANNEL_NAME", 'testing')
+BOOTSTRAP_ID = os.getenv("BOOTSTRAP_ID", 'deadbeef')
 
 def get_git_commit():
     try:
@@ -26,11 +28,18 @@ def load_string(filename):
         return f.read().strip()
 
 def do_create():
+    print("Creating web-installer with the following environment:")
+    print("DCOS_INSTALLER_COMMIT = {}".format(DCOS_INSTALLER_COMMIT))
+    print("DCOS_IMAGE_COMMIT = {}".format(DCOS_IMAGE_COMMIT))
+    print("CHANNEL_NAME = {}".format(CHANNEL_NAME))
+    print("BOOTSTRAP_ID= {}".format(BOOTSTRAP_ID))
     # make docker
     docker_image_name = "dcos_installer:{}".format(DCOS_INSTALLER_COMMIT)
     # Write Dockerfile
-    dockerfile_contents = load_string('Dockerfile.in').format(DCOS_IMAGE_COMMIT=DCOS_IMAGE_COMMIT)
-    print("Writing Dockerfile with the following contents:\n{}".format(dockerfile_contents))
+    dockerfile_contents = load_string('Dockerfile.in').format(
+            DCOS_IMAGE_COMMIT=DCOS_IMAGE_COMMIT,
+            CHANNEL_NAME=CHANNEL_NAME,
+            BOOTSTRAP_ID=BOOTSTRAP_ID)
     write_string('Dockerfile', dockerfile_contents)
     # Build Docker image
     subprocess.check_call(['docker', 'build', '-t', docker_image_name, "."])

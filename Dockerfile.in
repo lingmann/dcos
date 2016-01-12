@@ -19,3 +19,5 @@ RUN pip install --find-links=ext dcos_image pkgpanda
 RUN pip install .
 
 ENV DCOS_IMAGE_COMMIT={DCOS_IMAGE_COMMIT}
+ENV CHANNEL_NAME={CHANNEL_NAME}
+ENV BOOTSTRAP_ID={BOOTSTRAP_ID}

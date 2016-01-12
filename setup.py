@@ -15,6 +15,9 @@ setup(
         'pytest',
         'tox',
         'webtest_aiohttp'],
+    entry_points={
+        'console_scripts': ['dcos_installer = dcos_installer.entrypoint:main']
+        },
     package_data={
         'dcos_installer': [
             'templates/*',

@@ -13,6 +13,14 @@ then
   docker load -i {installer_tar}
 fi
 
+if [ ! -d installer_data ]; then
+    mkdir installer_data
+fi
+
+if [ -z "$@" ]; then
+docker run -i -v $(pwd)/installer_data/:/installer_data {docker_image_name} dcos-installer --web
+else
 docker run -i -v $(pwd)/installer_data/:/installer_data {docker_image_name} "$@"
+fi
 
 exit 0

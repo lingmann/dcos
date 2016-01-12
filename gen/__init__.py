@@ -45,6 +45,7 @@ COMMON_CC_KEYS = {
 
 ALL_CC_KEYS = COMMON_CC_KEYS.union({'package', 'root'})
 
+
 def add_roles(cloudconfig, roles):
     for role in roles:
         cloudconfig['write_files'].append({

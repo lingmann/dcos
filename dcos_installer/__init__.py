@@ -1,6 +1,5 @@
 import argparse
 import logging as log
-import sys
 
 from dcos_installer import async_server
 
@@ -27,40 +26,43 @@ coloredlogs.install(
 
 
 class DcosInstaller:
-    def __init__(self):
+    def __init__(self, args=None):
         """
         The web based installer leverages Flask to present end-users of
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-        options = self.parse_args(sys.argv[1:])
-        self.set_log_level(options)
+        # If no args are passed to the class, then we're calling this
+        # class from another library or code so we shouldn't execute
+        # parser or anything else
+        if args:
+            options = self.parse_args(args)
 
-        if options.web:
-            log.warning("Starting DCOS installer in web mode")
-            async_server.start(port=options.port)
-            # This was for the gunicorn wrapper:
-            # run_gunicorn(options)
+            self.set_log_level(options)
 
-        if options.configure:
-            log.warning("Executing configuration generation for DCOS.")
-            # backend.configure()
+            if options.web:
+                log.warning("Starting DCOS installer in web mode")
+                async_server.start(options.port)
 
-        if options.preflight:
-            log.warning("Executing preflight on target hosts.")
-            # backend.preflight()
+            if options.configure:
+                log.warning("Executing configuration generation for DCOS.")
+                # backend.configure()
 
-        if options.deploy:
-            log.warning("Executing deploy on target hosts.")
-            # backend.deploy()
+            if options.preflight:
+                log.warning("Executing preflight on target hosts.")
+                # backend.preflight()
 
-        if options.postflight:
-            log.warning("Executing postflight on target hosts.")
-            # backend.postflight()
+            if options.deploy:
+                log.warning("Executing deploy on target hosts.")
+                # backend.deploy()
 
-        if options.uninstall:
-            log.warning("Executing uninstall on target hosts.")
-            # backend.unsinstall()
+            if options.postflight:
+                log.warning("Executing postflight on target hosts.")
+                # backend.postflight()
+
+            if options.uninstall:
+                log.warning("Executing uninstall on target hosts.")
+                # backend.unsinstall()
 
     def set_log_level(self, options):
         """

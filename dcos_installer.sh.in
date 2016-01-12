@@ -1,0 +1,18 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+# preflight checks
+docker version >/dev/null 2>&1 || {{ echo >&2 "docker should be installed and running. Aborting."; exit 1; }}
+
+# extract payload and load into docker if not extracted
+if [ ! -f "{installer_tar}" ]
+then
+  echo Extracting docker container from this script
+  sed '0,/^#EOF#$/d' $0 | tar xv
+  echo Loading container into Docker daemon
+  docker load -i {installer_tar}
+fi
+
+docker run -i -v $(pwd)/installer_data/:/installer_data {docker_image_name} "$@"
+
+exit 0

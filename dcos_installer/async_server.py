@@ -2,9 +2,8 @@ import asyncio
 import logging
 
 import pkg_resources
-from dcos_installer import backend, mock
-
 from aiohttp import web
+from dcos_installer import backend, mock
 
 log = logging.getLogger("aiohttp.web")
 

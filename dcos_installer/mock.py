@@ -120,7 +120,7 @@ def validate(new_data={}):
     instead of the defualts. For now, the mock version will return only defualts
     on GET and return the complete config with overrides on POST.
     """
-    config = DCOSConfig(overrides=new_data)  # , config_path='/tmp/config.yaml')
+    config = DCOSConfig(overrides=new_data, config_path='/tmp/config.yaml')
     log.info("New Config:")
     print(yaml.dump(config, default_flow_style=False, explicit_start=True))
     messages = config.validate()
@@ -129,9 +129,8 @@ def validate(new_data={}):
     return messages, config
 
 
-def write_config(config, path):
-    with open(path, 'w') as f:
-        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
+def write_config(config, path, dcosconfig_obj):
+    dcosconfig_obj.write_config(path)
 
 
 def unbind_configuration(data):

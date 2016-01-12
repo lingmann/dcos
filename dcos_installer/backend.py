@@ -2,15 +2,43 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
+import logging
+
+from dcos_installer.config import DCOSConfig
 from dcos_installer.mock import mock_config_yaml
 
 import yaml
 from deploy.util import create_agent_list
+# Need to build a new provider for config generation from installer
 from providers.genconf import do_genconf
 
+log = logging.getLogger()
+config_path = '/tmp/config.yaml'
 
-def configure():
+
+def generate_configuration():
     do_genconf(interactive=False)
+
+
+def create_config_from_post(post_data):
+    """
+    Take POST data and form it into the dual dictionary we need
+    to pass it as overrides to DCOSConfig object.
+    """
+    log.info("Creating new DCOSConfig object from POST data.")
+    config_obj = DCOSConfig(config_path=config_path, post_data=post_data)
+
+    log.warning("Updated config to be validated:")
+    config_obj.print_to_screen()
+
+    messages = config_obj.validate()
+
+    config_obj.write()
+    return messages
+
+
+def get_config():
+    return DCOSConfig(config_path=config_path).get_config()
 
 
 def success():
@@ -30,3 +58,10 @@ def success():
     }
 
     return return_success
+
+
+def write_ssh_key(key_data):
+    config = DCOSConfig(config_path=config_path)
+    key_path = config['ssh_config']['ssh_key_path']
+    with open(key_path, 'w') as f:
+        f.write(key_data)

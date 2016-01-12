@@ -59,6 +59,21 @@ Note: depending on what features in dcos-image are being used, some of the dummy
 
 **POST**: Read config from disk, overwrite the POSTed values, validate, write to disk if no errors, only return errors if there are any.
 
+Example POST data structure:
+
+```json
+{
+  "master_ips": ["...", "..."],
+  "agent_ips": ["...", "..."],
+  "ssh_username": "...",
+  "ssh_port": 22,
+  "ssh_key": "...",
+  "username": "...",
+  "password": "...",
+  "upstream_dns_servers": "..."
+}
+```
+
 ```
 curl -H 'Content-Type: application/json' -XPOST -d '{"ssh_config":{"ssh_user": "some_new_user"}}' localhost:5000/api/v1/configure | json
 ```
@@ -112,7 +127,7 @@ curl -H 'Content-Type: application/json' -XGET localhost:5000/api/v1/configure |
 
 Notice that the ssh_user is no longer ```None``` and the validation for it now passes since it is a string.
 
-#### /api/v1/preflight/
+#### /api/v1/action/preflight/
 **GET**:  RETURN preflight_status.json
 
 ```
@@ -188,24 +203,33 @@ curl localhost:5000/api/v1/preflight | json
 
 **POST**: Execute preflight on target hosts. Returns state.json
 
-#### /api/v1/preflight/logs/
+#### /api/v1/action/preflight/logs/
 **GET**: Get *_preflight logs for download (this is a .tar file)
 
-#### /api/v1/deploy/
+#### /api/v1/action/deploy/
 **GET**:  RETURN state.json
 
 **POST**: Execute install DCOS on target hosts. Return state.json.
 
-#### /api/v1/deploy/logs/
+#### /api/v1/action/deploy/logs/
 **GET**: Get *_deploy.log data for download (this is a .tar file)
 
-#### /api/v1/postflight/
+#### /api/v1/action/postflight/
 **GET**: RETURN state.json
 
 **POST**:  Execute postflight on target hosts, return state.json.
 
-#### /api/v1/postflight/logs/
+#### /api/v1/action/postflight/logs/
 **GET**:  RETURN *_postflight.log files for download
+
+#### /api/v1/action/current/
+**GET**: RETURN current_action_name
+
+```json
+{
+  "current_action": "postflight"
+}
+```
 
 #### /api/v1/success/
 **GET**: RETURN url to DCOS UI

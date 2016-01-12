@@ -2,6 +2,8 @@ import logging
 
 from dcos_installer.config import DCOSConfig
 
+from deploy.util import create_agent_list
+
 import yaml
 
 log = logging.getLogger(__name__)
@@ -61,7 +63,10 @@ cluster_config:
   gc_delay: 2days
   ip_detect_path: /genconf/ip-detect
   master_discovery: static
-  master_list: null
+  master_list:
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3
   num_masters: null
   resolvers:
   - 8.8.8.8
@@ -74,7 +79,14 @@ ssh_config:
   ssh_port: 22
   ssh_user: foobar
   target_hosts:
-  - null
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3
+  - 10.0.0.4
+  - 10.0.0.5
+  - 10.0.0.6
+  - 10.0.0.7
+  - 10.0.0.8
 """
 
 
@@ -84,7 +96,18 @@ def get_config():
 
 
 def mock_success():
-    return {'dcosUrl': 'http://foobar.com'}
+    yaml_data = yaml.load(mock_config_yaml)
+    url = 'http://foobar.org'
+    master_count = len(yaml_data['cluster_config']['master_list'])
+    agent_count = len(create_agent_list(yaml_data))
+
+    return_success = {
+        'success': url,
+        'master_count': master_count,
+        'agent_count': agent_count
+    }
+
+    return return_success
 
 
 def validate(new_data={}):

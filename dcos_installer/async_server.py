@@ -82,7 +82,7 @@ def configure_status(request):
 
 # Success route handler
 def success(request):
-    return web.json_response(mock.mock_success())
+    return web.json_response(backend.success())
 
 
 # TODO action_ID implementation

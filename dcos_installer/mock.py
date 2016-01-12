@@ -103,14 +103,14 @@ def validate(new_data={}):
     instead of the defualts. For now, the mock version will return only defualts
     on GET and return the complete config with overrides on POST.
     """
-    concat = dict(get_config(), **new_data)
-    config = DCOSConfig(overrides=concat, config_path='/tmp/config.yaml')
+    # concat = dict(get_config(), **new_data)
+    config = DCOSConfig(overrides=new_data)  # , config_path='/tmp/config.yaml')
     log.info("New Config:")
     print(yaml.dump(config, default_flow_style=False, explicit_start=True))
     messages = config.validate()
     if not messages['errors']:
         log.info("Success! Configuration looks good. Writing to disk.")
-        config.write('/tmp/config.yaml')
+        # config.write('/tmp/config.yaml')
     else:
         log.warning("Oops! Configuration failed validation. Not writing to disk")
 

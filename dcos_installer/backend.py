@@ -5,7 +5,6 @@ libraries to support the dcos installer.
 from dcos_installer.mock import mock_config_yaml
 
 import yaml
-
 from deploy.util import create_agent_list
 from providers.genconf import do_genconf
 

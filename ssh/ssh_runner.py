@@ -98,26 +98,25 @@ def save_logs(results, log_directory, log_postfix):
     return results
 
 
-class CommandsChain():
+class CommandChain():
     '''
-    A chain of commands to execute
+    Add command to execute on a remote host.
+
+    :param cmd: String, command to execute
+    :param rollback: String (optional) a rollback command
+    :param comment: String (optional)
+    :return:
     '''
     execute_flag = 'execute'
     copy_flag = 'copy'
 
     def __init__(self, namespace):
+        self.prepened_commands_stack = []
+        self.appended_commands_stack = []
         self.commands_stack = []
         self.namespace = namespace
 
     def add_execute_cmd(self, cmd, rollback=None, comment=None):
-        '''
-        Add command to execute on a remote host.
-
-        :param cmd: String, command to execute
-        :param rollback: String (optional) a rollback command
-        :param comment: String (optional)
-        :return:
-        '''
         cmd = cmd.split()
         self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
@@ -125,7 +124,19 @@ class CommandsChain():
         self.commands_stack.append((self.copy_flag, local_path, remote_path, remote_to_local, recursive, comment))
 
     def get_commands(self):
-        return self.commands_stack
+        # Return all commands
+        return self.prepened_commands_stack + self.commands_stack + self.appended_commands_stack
+
+    def prepend_command(self, cmd, rollback=None, comment=None):
+        # We can specify a command to be executed before the main chain of commands, for example some setup commands
+        cmd = cmd.split()
+        self.prepened_commands_stack.append((self.execute_flag, cmd, rollback, comment))
+
+    def append_command(self, cmd, rollback=None, comment=None):
+        # We can also cleanup commands if needed.
+        cmd = cmd.split()
+        self.appended_commands_stack.append((self.execute_flag, cmd, rollback, comment))
+
 
 
 class MultiRunner():
@@ -302,9 +313,11 @@ class MultiRunner():
     def dispatch_command(self, host, chain, sem):
         chain_status = 'success'
         host_status = 'hosts_success'
+        host_port = '{}:{}'.format(host['ip'], host['port'])
+
         command_map = {
-            CommandsChain.execute_flag: self.run_async,
-            CommandsChain.copy_flag: self.copy_async
+            CommandChain.execute_flag: self.run_async,
+            CommandChain.copy_flag: self.copy_async
         }
 
         process_exit_code_map = {
@@ -322,12 +335,20 @@ class MultiRunner():
             }
         }
         with (yield from sem):
+            return_result = {
+                'total_hosts': len(self.__targets),
+                'chain_status': chain_status,
+                host_port: []
+            }
             chain_result = []
             for command in chain.get_commands():
+                # command[-1] stands for comment
+                if command[-1] is not None:
+                    log.debug('{}: {}'.format(host_port, command[-1]))
                 future = asyncio.Future()
                 future.add_done_callback(self.update_json)
 
-                # command[0] is a type of a command, could be CommandsChain.execute_flag, CommandsChain.copy_flag
+                # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
                 result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
                 chain_result.append(result)
 
@@ -335,13 +356,13 @@ class MultiRunner():
                 if self.state_dir is not None:
                     yield from asyncio.wait([future])
 
-                host_port = '{}:{}'.format(host['ip'], host['port'])
                 status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
 
                 chain_status = status['chain_status']
                 host_status = status['host_status']
 
                 if chain_status != 'success':
+                    return_result.update({'chain_status': 'failed'})
                     break
 
             # Update chain status
@@ -350,16 +371,13 @@ class MultiRunner():
 
             # Return a merged result. in the following format: {'127.0.0.1:22022': [{...}, {...}]}
             # this is used to return result for CLI client.
-            return_result = {}
             for result in chain_result:
-                for host, params in result.items():
-                    if host not in return_result:
-                        return_result.setdefault(host, [params]).append(params)
+                return_result[host_port].append(result[host_port])
             return return_result
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):
-        assert isinstance(chain, CommandsChain)
+        assert isinstance(chain, CommandChain)
 
         sem = asyncio.Semaphore(self.__parallelism)
         tasks = []

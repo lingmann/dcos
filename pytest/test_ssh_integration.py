@@ -11,7 +11,7 @@ import uuid
 import pkgpanda.util
 import pytest
 
-from ssh.ssh_runner import CommandsChain, MultiRunner
+from ssh.ssh_runner import CommandChain, MultiRunner
 
 sshd_config = [
     'Protocol 1,2',
@@ -86,7 +86,7 @@ def test_ssh(tmpdir, loop):
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
-    chain = CommandsChain('test')
+    chain = CommandChain('test')
     chain.add_execute_cmd('uname -a')
     try:
         results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
@@ -117,7 +117,7 @@ def test_scp_remote_to_local(tmpdir, loop):
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
-    chain = CommandsChain('test')
+    chain = CommandChain('test')
     chain.add_copy_cmd(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
@@ -150,7 +150,7 @@ def test_scp(tmpdir, loop):
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
-    chain = CommandsChain('test')
+    chain = CommandChain('test')
     chain.add_copy_cmd(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
@@ -183,7 +183,7 @@ def test_scp_recursive(tmpdir, loop):
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
-    chain = CommandsChain('test')
+    chain = CommandChain('test')
     chain.add_copy_cmd(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))

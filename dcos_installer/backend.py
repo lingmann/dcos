@@ -2,9 +2,10 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
+from dcos_installer.mock import mock_config_yaml
+
 import yaml
 
-from dcos_installer.mock import mock_config_yaml
 from deploy.util import create_agent_list
 from providers.genconf import do_genconf
 

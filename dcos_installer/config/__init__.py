@@ -50,12 +50,6 @@ ssh_config:
   log_directory: /genconf/logs
 """
         self.defaults = yaml.load(defaults)
-        # We're using the on-container /genconf directory for v1 of the installer, these are unneccessary for now
-        # self.defaults['ssh_config']['ssh_key_path'] = '{}/dcos-installer/ssh_key'.format(os.path.expanduser('~'))
-        # self.defaults['cluster_config']['config_dir'] = '{}/dcos-installer'.format(os.path.expanduser('~'))
-        # self.defaults['cluster_config']['ip_detect_path'] =
-        # '{}/dcos-installer/ip-detect'.format(os.path.expanduser('~'))
-        # Setting the passed in options as the overrides for the instance of the class.
         self.config_path = config_path
         self.overrides = overrides
         self._update()
@@ -87,7 +81,6 @@ ssh_config:
                         self[key][k1] = v1
 
         # Update num_masters and target_hosts with master_list data
-        print("self", self)
         if self['cluster_config']['master_list']:
             self['cluster_config']['num_masters'] = len(self['cluster_config']['master_list'])
             if self['cluster_config']['master_list'] is not None:

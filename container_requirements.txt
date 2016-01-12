@@ -1,7 +1,0 @@
-#DcosInstaller
-Flask
-Paramiko
-pyyaml
-jinja2
-pytest
-tox

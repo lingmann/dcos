@@ -7,7 +7,7 @@ import argparse
 import os
 import subprocess
 
-GIT_SHA = os.getenv("GIT_SHA", None)
+DCOS_INSTALLER_COMMIT = os.getenv("DCOS_INSTALLER_COMMIT", None)
 DCOS_IMAGE_COMMIT = os.getenv("DCOS_IMAGE_COMMIT", None)
 
 def get_git_commit():
@@ -27,7 +27,7 @@ def load_string(filename):
 
 def do_create():
     # make docker
-    docker_image_name = "dcos_installer:{}".format(GIT_SHA)
+    docker_image_name = "dcos_installer:{}".format(DCOS_INSTALLER_COMMIT)
     # Write Dockerfile
     dockerfile_contents = load_string('Dockerfile.in').format(DCOS_IMAGE_COMMIT=DCOS_IMAGE_COMMIT)
     print("Writing Dockerfile with the following contents:\n{}".format(dockerfile_contents))
@@ -35,7 +35,7 @@ def do_create():
     # Build Docker image
     subprocess.check_call(['docker', 'build', '-t', docker_image_name, "."])
     # Export docker image
-    installer_tar = "dcos_installer_{}.tar".format(GIT_SHA)
+    installer_tar = "dcos_installer_{}.tar".format(DCOS_INSTALLER_COMMIT)
     subprocess.check_call(
         ['docker', 'save', docker_image_name],
         stdout=open(installer_tar, 'w'))
@@ -59,7 +59,7 @@ def main(args):
     if args.create:
         do_create()
     elif args.version:
-        print(GIT_SHA)
+        print(DCOS_INSTALLER_COMMIT)
     else:
         exit(0)
 

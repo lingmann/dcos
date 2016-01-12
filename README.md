@@ -3,9 +3,18 @@
 ## Run locally
 
 1. ```pip install -r requirements.txt```
-2. ```./run --web```
+2. ```python setup.py develop```
+3. ```source test_env```
+4. ```dcos_installer --web```
 
-^^ Check the run script to ensure current stable BOOTSTRAP_ID, this was last set to the stable CM.4 bootstrap ID.
+Note: depending on what features in dcos-image are being used, some of the dummy environment variables mmay need to be populated with valid values
+
+## Run from artifacts
+
+1. Go to https://teamcity.mesosphere.io/viewType.html?buildTypeId=ClosedSource_Dcos_Installer_OnPremInstallerCreation
+2. Find a desired build and download the installer from the artifacts drop-down, or trigger a custom build ("..." next to run) and specify the dcos-image version under Dependencies and the dcos-installer version under Changes
+3. ```bash dcos_installer.sh``` will run the web installer application.
+4. To debug and introspect the installer script, any arguments given will be passed to the docker container as the container command (default docker entrypoint)
 
 # REST API
 

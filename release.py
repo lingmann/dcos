@@ -52,7 +52,12 @@ def do_create():
     installer_filename = "dcos_installer.sh"
     write_string(
         installer_filename,
-        load_string('dcos_installer.sh.in').format(installer_tar=installer_tar, docker_image_name=docker_image_name) + '\n#EOF#\n')
+        load_string('dcos_installer.sh.in').format(
+            installer_tar=installer_tar,
+            docker_image_name=docker_image_name,
+            DCOS_INSTALLER_COMMIT=DCOS_INSTALLER_COMMIT,
+            DCOS_IMAGE_COMMIT=DCOS_IMAGE_COMMIT
+            ) + '\n#EOF#\n')
     # Attach docker image to script
     subprocess.check_call(['tar', 'cvf', '-', installer_tar], stdout=open(installer_filename, 'a'))
     # Make script executbale

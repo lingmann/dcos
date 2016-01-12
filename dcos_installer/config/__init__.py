@@ -124,7 +124,21 @@ ssh_config:
         else:
             log.error("Configuration file not found, %s", config_path)
             log.warn("Using ALL DEFAULT configuration since %s was not found.", config_path)
-            data = open(config_path, 'w')
-            data.write(yaml.dump(self.defaults, default_flow_style=False, explicit_start=True))
-            data.close()
+            self.write(self.defaults, config_path)
             return yaml.load(open(config_path, 'r'))
+
+    def write(self, config_path):
+        data = open(config_path, 'w')
+        data.write(yaml.dump(self.unbind_configuration(), default_flow_style=False, explicit_start=True))
+        data.close()
+
+    def unbind_configuration(self):
+        """
+        Unbinds the methods and class variables from the DCOSConfig
+        object and returns a simple dictionary.
+        """
+        dictionary = {}
+        for k, v in self.items():
+            dictionary[k] = v
+
+        return dictionary

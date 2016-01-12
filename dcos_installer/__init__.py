@@ -32,7 +32,6 @@ class DcosInstaller:
         dcos_installer with a clean web interface to configure their
         site-based installation of DCOS.
         """
-
         # If no args are passed to the class, then we're calling this
         # class from another library or code so we shouldn't execute
         # parser or anything else
@@ -44,8 +43,26 @@ class DcosInstaller:
             if options.web:
                 log.warning("Starting DCOS installer in web mode")
                 async_server.start(options.port)
-                # This was for the gunicorn wrapper:
-                # run_gunicorn(options)
+
+            if options.configure:
+                log.warning("Executing configuration generation for DCOS.")
+                # backend.configure()
+
+            if options.preflight:
+                log.warning("Executing preflight on target hosts.")
+                # backend.preflight()
+
+            if options.deploy:
+                log.warning("Executing deploy on target hosts.")
+                # backend.deploy()
+
+            if options.postflight:
+                log.warning("Executing postflight on target hosts.")
+                # backend.postflight()
+
+            if options.uninstall:
+                log.warning("Executing uninstall on target hosts.")
+                # backend.unsinstall()
 
     def set_log_level(self, options):
         """
@@ -114,6 +131,13 @@ class DcosInstaller:
             action='store_true',
             default=False,
             help='Execute postflight checks on a series of nodes.')
+
+        mutual_exc.add_argument(
+            '-u',
+            '--uninstall',
+            action='store_true',
+            default=False,
+            help='Execute uninstall on target hosts.')
 
         mutual_exc.add_argument(
             '-vc',

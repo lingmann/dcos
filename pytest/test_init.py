@@ -14,6 +14,7 @@ def test_default_arg_parser():
     assert parser.postflight is False
     assert parser.validate_config is False
     assert parser.test is False
+    assert parser.uninstall is False
 
 
 def test_set_arg_parser():
@@ -34,6 +35,8 @@ def test_set_arg_parser():
     assert parser.validate_config is True
     parser = DcosInstaller().parse_args(['--test'])
     assert parser.test is True
+    parser = DcosInstaller().parse_args(['--uninstall'])
+    assert parser.uninstall is True
 
 
 def test_mutual_exclusion(capsys):
@@ -66,3 +69,8 @@ def test_mutual_exclusion(capsys):
         DcosInstaller().parse_args(['--web', '--test'])
     out, err = capsys.readouterr()
     assert 'argument -t/--test: not allowed with argument -w/--web' in str(err)
+
+    with pytest.raises(SystemExit):
+        DcosInstaller().parse_args(['--web', '--uninstall'])
+    out, err = capsys.readouterr()
+    assert 'argument -u/--uninstall: not allowed with argument -w/--web' in str(err)

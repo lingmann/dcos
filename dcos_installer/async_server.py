@@ -81,7 +81,7 @@ def configure_status(request):
 
 # Success route handler
 def success(request):
-    return web.json_response(mock.mock_success())
+    return web.json_response(backend.success())
 
 
 # TODO action_ID implementation
@@ -103,7 +103,7 @@ app.router.add_route('GET', '/api/v{}/configure/status'.format(version), configu
 app.router.add_route('GET', '/api/v{}/success'.format(version), success)
 
 
-def start(port):
+def start(port=9000):
     handler = app.make_handler()
     f = loop.create_server(
         handler,

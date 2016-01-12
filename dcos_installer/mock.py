@@ -61,7 +61,10 @@ cluster_config:
   gc_delay: 2days
   ip_detect_path: /genconf/ip-detect
   master_discovery: static
-  master_list: null
+  master_list:
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3
   num_masters: null
   resolvers:
   - 8.8.8.8
@@ -74,17 +77,20 @@ ssh_config:
   ssh_port: 22
   ssh_user: foobar
   target_hosts:
-  - null
+  - 10.0.0.1
+  - 10.0.0.2
+  - 10.0.0.3
+  - 10.0.0.4
+  - 10.0.0.5
+  - 10.0.0.6
+  - 10.0.0.7
+  - 10.0.0.8
 """
 
 
 def get_config():
     yaml_data = yaml.load(mock_config_yaml)
     return yaml_data
-
-
-def mock_success():
-    return {'dcosUrl': 'http://foobar.com'}
 
 
 def validate(new_data={}):
@@ -97,27 +103,15 @@ def validate(new_data={}):
     instead of the defualts. For now, the mock version will return only defualts
     on GET and return the complete config with overrides on POST.
     """
+    # concat = dict(get_config(), **new_data)
     config = DCOSConfig(overrides=new_data)  # , config_path='/tmp/config.yaml')
     log.info("New Config:")
     print(yaml.dump(config, default_flow_style=False, explicit_start=True))
     messages = config.validate()
-    # TODO write configuration back to disk, leaving out for now for test
-    # write_config(unbind_configuration(config), 'config.yaml')
+    if not messages['errors']:
+        log.info("Success! Configuration looks good. Writing to disk.")
+        # config.write('/tmp/config.yaml')
+    else:
+        log.warning("Oops! Configuration failed validation. Not writing to disk")
+
     return messages, config
-
-
-def write_config(config, path):
-    with open(path, 'w') as f:
-        f.write(yaml.dump(config, default_flow_style=False, explicit_start=True))
-
-
-def unbind_configuration(data):
-    """
-    Unbinds the methods and class variables from the DCOSConfig
-    object and returns a simple dictionary.
-    """
-    dictionary = {}
-    for k, v in data.items():
-        dictionary[k] = v
-
-    return dictionary

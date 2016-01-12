@@ -205,7 +205,11 @@ curl localhost:5000/api/v1/preflight | json
 curl localhost:5000/api/v1/success
 ```
 ```json
-{"dcosUrl": "http://foobar.com"}
+{
+  "dcosUrl": "http://foobar.com",
+  "master_count": 3,
+  "agent_count": 400
+}
 ```
 
 # CLI Manpage

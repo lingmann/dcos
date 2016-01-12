@@ -3,29 +3,114 @@ root:
     permissions: "0644"
     content: |
       [[[resourceid('Microsoft.Resources/deployments', deployment().name)]]]
-coreos:
-  units:
-    - name: var-lib.mount
-      command: start
-      content: |
-        [Unit]
-        Description=Mount /var/lib
-        Before=dbus.service
-        [Mount]
-        What=/dev/sdb1
-        Where=/var/lib
-        Type=ext4
-    - name: config-writer.service
-      command: start
-      content: |
-        [Unit]
-        Description=Write out dynamic config values
-        [Service]
-        Type=oneshot
-        EnvironmentFile=/etc/environment
-        # Various DCOS universe packages depend on local hostname resolution
-        # working (e.g. `ping $(hostname)` must work). The config-writer
-        # service can be removed when we are certain that all DCOS packages
-        # work properly in environments where hostname DNS resolution is not
-        # functional. See: DCOS-3719
-        ExecStart=/usr/bin/bash -c "echo $private_ipv4 $(hostname) > /etc/hosts"
+  - path: /etc/systemd/system/dcos-link-env.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Before=dcos.target
+      [Service]
+      Type=oneshot
+      StandardOutput=journal+console
+      StandardError=journal+console
+      ExecStartPre=/usr/bin/mkdir -p /etc/profile.d
+      ExecStart=/usr/bin/ln -sf /opt/mesosphere/environment.export /etc/profile.d/dcos.sh
+  - path: /etc/systemd/system/dcos-download.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Download the DCOS
+      After=network-online.target
+      Wants=network-online.target
+      ConditionPathExists=!/opt/mesosphere/
+      [Service]
+      EnvironmentFile=/etc/mesosphere/setup-flags/bootstrap-id
+      Type=oneshot
+      StandardOutput=journal+console
+      StandardError=journal+console
+      ExecStartPre=/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
+      ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
+      ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
+      ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz
+  - path: /etc/systemd/system/dcos-setup.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Prep the Pkgpanda working directories for this host.
+      Requires=dcos-download.service
+      After=dcos-download.service
+      [Service]
+      Type=oneshot
+      StandardOutput=journal+console
+      StandardError=journal+console
+      EnvironmentFile=/opt/mesosphere/environment
+      ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
+      [Install]
+      WantedBy=multi-user.target
+  - path: /usr/sbin/policy-rc.d
+    permissions: "0755"
+    content: |
+      #!/usr/bin/bash
+      if [[ "$1" == "docker" && "$2" == "start" ]]; then exit 101; fi
+  - path: /etc/systemd/system/docker.service.d/execstart.conf
+    permissions: "0644"
+    content: |
+      [Service]
+      ExecStartPre=/bin/sh -ec "until df|grep /mnt;do echo waiting for /mnt;sleep 10;done"
+      # Disable unit default ExecStart statements with an empty assignment
+      ExecStart=
+      ExecStart=/usr/bin/docker daemon -H fd:// --graph=/mnt/docker --storage-driver=overlay
+  - path: /etc/systemd/system/docker.socket
+    permissions: "0644"
+    content: |
+      [Unit]
+      PartOf=docker.service
+      [Socket]
+      ListenStream=/var/run/docker.sock
+      SocketMode=0660
+      SocketUser=root
+      SocketGroup=docker
+      ListenStream=2375
+      BindIPv6Only=both
+      [Install]
+      WantedBy=sockets.target
+  - path: /etc/systemd/system/dcos-config-writer.service
+    permissions: "0644"
+    content: |
+      [Unit]
+      Description=Write out dynamic config values
+      Requires=dcos-setup.service
+      After=dcos-setup.service
+      [Service]
+      Type=oneshot
+      EnvironmentFile=/etc/environment
+      EnvironmentFile=/opt/mesosphere/environment
+      # config-writer service should eventually be removed, see: DCOS-3719
+      ExecStart=/usr/bin/bash -c "echo $(detect_ip) $(hostname) > /etc/hosts"
+apt_sources:
+    - source: "deb https://apt.dockerproject.org/repo ubuntu-wily main"
+runcmd:
+    - [ ln, -s, /bin/rm, /usr/bin/rm ]
+    - [ ln, -s, /bin/mkdir, /usr/bin/mkdir ]
+    - [ ln, -s, /bin/tar, /usr/bin/tar ]
+    - [ ln, -s, /bin/ln, /usr/bin/ln ]
+    - [ ln, -s, /bin/cp, /usr/bin/cp ]
+    - [ ln, -s, /bin/systemctl, /usr/bin/systemctl ]
+    - [ ln, -s, /bin/mount, /usr/bin/mount ]
+    - [ ln, -s, /bin/bash, /usr/bin/bash ]
+    - [ systemctl, stop, resolvconf.service ]
+    - [ systemctl, disable, resolvconf.service ]
+    - [ systemctl, stop, lxc-net.service ]
+    - [ systemctl, disable, lxc-net.service ]
+    - [ systemctl, mask, lxc-net.service ]
+    - [ cp, -p, /etc/resolv.conf, /tmp/resolv.conf ]
+    - [ rm, -f, /etc/resolv.conf ]
+    - [ cp, -p, /tmp/resolv.conf, /etc/resolv.conf ]
+    - [ systemctl, start, dcos-link-env.service ]
+    - [ systemctl, start, dcos-download.service ]
+    - [ systemctl, start, dcos-setup.service ]
+    - [ systemctl, start, dcos-config-writer.service ]
+    - apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
+    - [ apt-get, -y, update ]
+    - DEBIAN_FRONTEND=noninteractive apt-get install -y -q docker-engine=1.9.1-0~wily
+    - [ usermod, -aG, docker, core ]
+    - [ systemctl, restart, docker ]

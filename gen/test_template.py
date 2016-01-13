@@ -96,16 +96,16 @@ def test_parse():
 def test_get_variables():
     assert(parse_str("a").get_scoped_arguments() ==
            {'variables': set(), 'sub_scopes': dict()})
-    assert(parse_str("{{ a }}").get_scoped_arguments()
-           == {'variables': {"a"}, 'sub_scopes': dict()})
-    assert(parse_str("{{ a | foo }}").get_scoped_arguments()
-           == {'variables': {"a"}, 'sub_scopes': dict()})
-    assert(parse_str("a{{ a }}b{{ c }}").get_scoped_arguments()
-           == {'variables': {"a", "c"}, 'sub_scopes': dict()})
-    assert(parse_str("a{{ a }}b{{ a }}c{{ c | baz }}").get_scoped_arguments()
-           == {'variables': {"a", "c"}, 'sub_scopes': dict()})
-    assert(parse_str("a{{ a }}b{{ a | bar }}c{{ c }}").get_scoped_arguments()
-           == {'variables': {"a", "c"}, 'sub_scopes': dict()})
+    assert(parse_str("{{ a }}").get_scoped_arguments() ==
+           {'variables': {"a"}, 'sub_scopes': dict()})
+    assert(parse_str("{{ a | foo }}").get_scoped_arguments() ==
+           {'variables': {"a"}, 'sub_scopes': dict()})
+    assert(parse_str("a{{ a }}b{{ c }}").get_scoped_arguments() ==
+           {'variables': {"a", "c"}, 'sub_scopes': dict()})
+    assert(parse_str("a{{ a }}b{{ a }}c{{ c | baz }}").get_scoped_arguments() ==
+           {'variables': {"a", "c"}, 'sub_scopes': dict()})
+    assert(parse_str("a{{ a }}b{{ a | bar }}c{{ c }}").get_scoped_arguments() ==
+           {'variables': {"a", "c"}, 'sub_scopes': dict()})
     assert(parse_str("{{ a }}{% switch b %}{% case \"c\" %}{{ d }}{% endswitch %}{{ e }}").get_scoped_arguments() == {
         'variables': {'a', 'e'},
         'sub_scopes': {

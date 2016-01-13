@@ -113,7 +113,8 @@ class AzureClient(object):
 
         @rtype: dict
         '''
-        url_format = lambda u: '{}/{}'.format(self.deployment_endpoint, u)
+        def url_format(u):
+            return '{}/{}'.format(self.deployment_endpoint, u)
         urls = dict(zip(RESOURCES, map(url_format, RESOURCES)))
         print('INFO: url space is {}'.format(urls))
 

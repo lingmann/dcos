@@ -38,7 +38,8 @@ class VpcCluster():
         return json.loads(self.ccm.get_cluster_info(self.pk)["cluster_info"])["NodesIpAddresses"]
 
     def wait_for_up(self, timeout=300, wait=10):
-        status_cb = lambda: self.ccm.get_cluster_info(self.pk)['status_text']
+        def status_cb():
+            return self.ccm.get_cluster_info(self.pk)['status_text']
         tick = 0
         while status_cb() == 'Creating':
             if wait*tick > timeout:

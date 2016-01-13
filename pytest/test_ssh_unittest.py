@@ -181,7 +181,8 @@ class TestSSHRunner(unittest.TestCase):
 
     @unittest.mock.patch('ssh.ssh_runner.save_logs')
     def test_wrapped_run_no_cache(self, mocked_save_logs):
-        func = lambda: [{'returncode': 0}]
+        def func():
+            return [{'returncode': 0}]
         self.ssh_runner.log_directory = '/genconf/logs'
         self.ssh_runner.log_postfix = '_postfix'
         self.ssh_runner.use_cache = False
@@ -195,7 +196,8 @@ class TestSSHRunner(unittest.TestCase):
     @unittest.mock.patch('ssh.ssh_runner.save_logs')
     def test_wrapped_run_use_cache(self, mocked_save_logs, mocked_isfile, mocked_open, mocked_json_load,
                                    mocked_json_dump):
-        func = lambda: [{'returncode': 0, 'host': {'ip': '127.0.0.1'}}]
+        def func():
+            return [{'returncode': 0, 'host': {'ip': '127.0.0.1'}}]
         self.ssh_runner.log_directory = '/genconf/logs'
         self.ssh_runner.log_postfix = '_postfix'
         self.ssh_runner.use_cache = True

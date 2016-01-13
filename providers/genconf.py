@@ -115,7 +115,6 @@ def do_genconf(options):
     # in gen/__init__.py from our genconf.py commands
     genconf_config = {}
     gen_options = gen.get_options_object()
-    gen_options.log_level = options.log_level
     if not options.interactive:
         genconf_config, config = get_config(options)
     gen_options.output_dir = '/genconf/serve'

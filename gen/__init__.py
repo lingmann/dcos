@@ -308,7 +308,6 @@ def get_options_object():
     return Bunch({
         'assume_defaults': True,
         'non_interactive': True,
-        'log_level': 'info',
         })
 
 
@@ -823,16 +822,6 @@ def generate(
         # config.json parameters
         arguments=dict(),
         cc_package_files=[]):
-    # Set the logging level
-    if options.log_level == "debug":
-        log.basicConfig(level=log.DEBUG)
-    #    log.debug("Log level set to DEBUG")
-    elif options.log_level == "info":
-        log.basicConfig(level=log.INFO)
-    #    log.info("Log level set to INFO")
-    else:
-        log.error("Logging option not available: %s", options.log_level)
-        sys.exit(1)
 
     log.info("Generating configuration files...")
     return do_generate(options, mixins, extra_templates, arguments, cc_package_files)

@@ -82,7 +82,7 @@ def test_ssh(tmpdir, loop):
 
     # wait a little bit for sshd server to start
     time.sleep(3)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
@@ -94,13 +94,13 @@ def test_ssh(tmpdir, loop):
         loop.close()
 
     assert len(results) == 20
-    for result in results:
-        for host, params in result.items():
-            for chain_params in params:
-                assert chain_params['returncode'] == 0, chain_params['stderr']
+    for host_result in results:
+        for command_result in host_result:
+            for host, process_result in command_result.items():
+                assert process_result['returncode'] == 0, process_result['stderr']
                 assert host in host_port
-                assert '/usr/bin/ssh' in chain_params['cmd']
-                assert 'uname' in chain_params['cmd']
+                assert '/usr/bin/ssh' in process_result['cmd']
+                assert 'uname' in process_result['cmd']
 
 
 def test_scp_remote_to_local(tmpdir, loop):
@@ -113,7 +113,7 @@ def test_scp_remote_to_local(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
@@ -127,13 +127,13 @@ def test_scp_remote_to_local(tmpdir, loop):
     assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
-    for result in copy_results:
-        for host, params in result.items():
-            for chain_params in params:
-                assert chain_params['returncode'] == 0, chain_params['stderr']
-                assert host in host_port
-                assert '/usr/bin/scp' in chain_params['cmd']
-                assert workspace + '/pilot.txt.copied' in chain_params['cmd']
+    for host_result in copy_results:
+            for command_result in host_result:
+                for host, process_result in command_result.items():
+                    assert process_result['returncode'] == 0, process_result['stderr']
+                    assert host in host_port
+                    assert '/usr/bin/scp' in process_result['cmd']
+                    assert workspace + '/pilot.txt.copied' in process_result['cmd']
 
 
 def test_scp(tmpdir, loop):
@@ -146,7 +146,7 @@ def test_scp(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
@@ -160,13 +160,13 @@ def test_scp(tmpdir, loop):
     assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
-    for result in copy_results:
-        for host, params in result.items():
-            for chain_params in params:
-                assert chain_params['returncode'] == 0, chain_params['stderr']
-                assert host in host_port
-                assert '/usr/bin/scp' in chain_params['cmd']
-                assert workspace + '/pilot.txt' in chain_params['cmd']
+    for host_result in copy_results:
+            for command_result in host_result:
+                for host, process_result in command_result.items():
+                    assert process_result['returncode'] == 0, process_result['stderr']
+                    assert host in host_port
+                    assert '/usr/bin/scp' in process_result['cmd']
+                    assert workspace + '/pilot.txt' in process_result['cmd']
 
 
 def test_scp_recursive(tmpdir, loop):
@@ -179,7 +179,7 @@ def test_scp_recursive(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/recursive_pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
@@ -195,11 +195,11 @@ def test_scp_recursive(tmpdir, loop):
     assert os.path.isfile(dest_path)
     assert len(copy_results) == 1
     assert pkgpanda.util.load_string(dest_path) == id
-    for result in copy_results:
-        for host, params in result.items():
-            for chain_params in params:
-                assert chain_params['returncode'] == 0, chain_params['stderr']
-                assert host in host_port
-                assert '/usr/bin/scp' in chain_params['cmd']
-                assert '-r' in chain_params['cmd']
-                assert workspace + '/recursive_pilot.txt' in chain_params['cmd']
+    for host_result in copy_results:
+            for command_result in host_result:
+                for host, process_result in command_result.items():
+                    assert process_result['returncode'] == 0, process_result['stderr']
+                    assert host in host_port
+                    assert '/usr/bin/scp' in process_result['cmd']
+                    assert '-r' in process_result['cmd']
+                    assert workspace + '/recursive_pilot.txt' in process_result['cmd']

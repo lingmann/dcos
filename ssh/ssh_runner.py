@@ -138,11 +138,11 @@ class CommandChain():
         self.appended_commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
 
-
 class MultiRunner():
-    def __init__(self, targets, state_dir=None, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
+    def __init__(self, targets, state_dir, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
                  parallelism=10):
         assert isinstance(targets, list)
+        assert os.path.isdir(state_dir)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
         # manually building up / adding the arguments in _get_base_args which is
@@ -155,6 +155,7 @@ class MultiRunner():
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
         self.state_dir = state_dir
+        self.run_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
 
@@ -244,8 +245,7 @@ class MultiRunner():
             }
         }
 
-        if self.state_dir is not None:
-            future.set_result((namespace, process_output))
+        future.set_result((namespace, process_output))
         return process_output
 
     @asyncio.coroutine
@@ -270,12 +270,13 @@ class MultiRunner():
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
-    def update_json(self, future):
-        self._update_json_file(*future.result(), future_update=True)
+    def update_json(self, future, callback_called):
+        self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
 
-    def _update_json_file(self, namespace, process_output, future_update=None, chain_status=None, host_status=None):
+    def _update_json_file(self, namespace, process_output, future_update=None, host_status_count=None, host_status=None,
+                          callback_called=None):
         status_json = {}
-        status_file = os.path.join(self.state_dir, '{}.json'.format(namespace))
+        status_file = os.path.join(self.state_dir, '{}-{}.json'.format(namespace, self.run_time))
         if os.path.isfile(status_file):
             with open(status_file) as f:
                 status_json = json.load(f)
@@ -286,28 +287,33 @@ class MultiRunner():
                     'date': str(datetime.now())
                 })
 
+                # Append to commands
                 if host in status_json:
                     status_json[host]['commands'].append(return_values)
                 else:
+                    # Create a new chain properties
                     status_json['total_hosts'] = len(self.__targets)
+                    status_json['chain_name'] = namespace
                     status_json[host] = {
-                        'chain_name': namespace,
                         'commands': [return_values]
                     }
 
                 # Update chain status to running
-                if 'chain_status' not in status_json[host]:
-                    status_json[host]['chain_status'] = 'running'
+                if 'host_status' not in status_json[host]:
+                    status_json[host]['host_status'] = 'running'
 
             # Update chain status: success or fail
-            if chain_status:
-                status_json[host]['chain_status'] = chain_status
-
             if host_status:
-                status_json[host_status] = status_json.get(host_status, 0) + 1
+                status_json[host]['host_status'] = host_status
+
+            if host_status_count:
+                status_json[host_status_count] = status_json.get(host_status_count, 0) + 1
 
         with open(status_file, 'w') as f:
             json.dump(status_json, f)
+
+        if callback_called:
+            callback_called.set_result(True)
 
     @asyncio.coroutine
     def dispatch_command(self, host, chain, sem):
@@ -322,71 +328,69 @@ class MultiRunner():
 
         process_exit_code_map = {
             None: {
-                'chain_status': 'terminated',
-                'host_status': 'hosts_terminated'
+                'host_status': 'terminated',
+                'host_status_count': 'hosts_terminated'
             },
             0: {
-                'chain_status': 'success',
-                'host_status': 'hosts_success'
+                'host_status': 'success',
+                'host_status_count': 'hosts_success'
             },
             'failed': {
-                'chain_status': 'failed',
-                'host_status': 'hosts_failed'
+                'host_status': 'failed',
+                'host_status_count': 'hosts_failed'
             }
         }
+        chain_result = []
         with (yield from sem):
-            return_result = {
-                'total_hosts': len(self.__targets),
-                'chain_status': chain_status,
-                host_port: []
-            }
-            chain_result = []
             for command in chain.get_commands():
+
                 # command[-1] stands for comment
                 if command[-1] is not None:
                     log.debug('{}: {}'.format(host_port, command[-1]))
                 future = asyncio.Future()
-                future.add_done_callback(self.update_json)
+
+                callback_called = asyncio.Future()
+                future.add_done_callback(lambda future: self.update_json(future, callback_called))
 
                 # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
                 result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
-                chain_result.append(result)
-
-                # Make sure callback was invoked before we can update chain status
-                if self.state_dir is not None:
-                    yield from asyncio.wait([future])
-
                 status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
-
-                chain_status = status['chain_status']
                 host_status = status['host_status']
+                host_status_count = status['host_status_count']
 
+                # We need to make sure the callback was executed before we can proceed further
+                # 5 seconds should be enough for a callback.
+                try:
+                    yield from asyncio.wait_for(callback_called, 5)
+                except TimeoutError:
+                    print('Callback did not execute within 5 sec')
+                    chain_status = 'terminated'
+                    break
+                _, result = future.result()
+                chain_result.append(result)
                 if chain_status != 'success':
-                    return_result.update({'chain_status': 'failed'})
                     break
 
             # Update chain status
-            if self.state_dir is not None:
-                self._update_json_file(chain.namespace, result, chain_status=chain_status, host_status=host_status)
-
-            # Return a merged result. in the following format: {'127.0.0.1:22022': [{...}, {...}]}
-            # this is used to return result for CLI client.
-            for result in chain_result:
-                return_result[host_port].append(result[host_port])
-            return return_result
+            self._update_json_file(chain.namespace, result, host_status_count=host_status_count,
+                                   host_status=host_status)
+        return chain_result
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):
         assert isinstance(chain, CommandChain)
-
         sem = asyncio.Semaphore(self.__parallelism)
-        tasks = []
-        for host in self.__targets:
-            tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
 
         if block:
+            tasks = []
+            for host in self.__targets:
+                tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
+
             yield from asyncio.wait(tasks)
             return [task.result() for task in tasks]
+        else:
+            for host in self.__targets:
+                asyncio.async(self.dispatch_command(host, chain, sem))
 
 
 tuple_to_string_header = """HOST: {}

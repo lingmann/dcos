@@ -317,7 +317,7 @@ class MultiRunner():
 
     @asyncio.coroutine
     def dispatch_command(self, host, chain, sem):
-        chain_status = 'success'
+        exit_code = 0
         host_status = 'hosts_success'
         host_port = '{}:{}'.format(host['ip'], host['port'])
 
@@ -364,17 +364,19 @@ class MultiRunner():
                     yield from asyncio.wait_for(callback_called, 5)
                 except TimeoutError:
                     print('Callback did not execute within 5 sec')
-                    chain_status = 'terminated'
+                    host_status = 'terminated'
                     break
+
                 _, result = future.result()
                 chain_result.append(result)
-                if chain_status != 'success':
+                if host_status != 'success':
+                    exit_code = 1
                     break
 
             # Update chain status
             self._update_json_file(chain.namespace, result, host_status_count=host_status_count,
                                    host_status=host_status)
-        return chain_result
+        return chain_result, exit_code
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):
@@ -497,6 +499,7 @@ class SSHRunner():
         self.validate()
         runner = MultiRunner(
             self.exclude_cached(self.targets),
+            self.log_directory,
             ssh_user=self.ssh_user,
             ssh_key_path=self.ssh_key_path,
             extra_opts=self.extra_ssh_options,
@@ -526,6 +529,7 @@ class SSHRunner():
     def copy_cmd(self, local_path, remote_path, recursive=False, remote_to_local=False):
         self.validate()
         runner = MultiRunner(self.exclude_cached(self.targets),
+                             self.log_directory,
                              ssh_user=self.ssh_user,
                              ssh_key_path=self.ssh_key_path,
                              process_timeout=self.process_timeout)

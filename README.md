@@ -16,6 +16,16 @@ Note: depending on what features in dcos-image are being used, some of the dummy
 3. ```bash dcos_installer.sh``` will run the web installer application.
 4. To debug and introspect the installer script, any arguments given will be passed to the docker container as the container command (default docker entrypoint)
 
+## Build artifacts
+setup.py can also package the repo as a self-loading docker image within a bash script:
+1. ```pip install -r requirements.txt```
+2. ```pip setup.py build_docker```
+NOTE: the following environment variables will need to be set for full functionality
+* DCOS_INSTALLER_COMMIT
+* DCOS_IMAGE_COMMIT
+* CHANNEL_NAME
+* BOOTSTRAP_ID
+
 # REST API
 
 #### / -redirects-> /api/v1

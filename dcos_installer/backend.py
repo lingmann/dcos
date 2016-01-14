@@ -5,15 +5,13 @@ libraries to support the dcos installer.
 import logging
 
 from dcos_installer.config import DCOSConfig
-from dcos_installer.mock import mock_config_yaml
 
-import yaml
 from deploy.util import create_agent_list
 # Need to build a new provider for config generation from installer
 from providers.genconf import do_genconf
 
 log = logging.getLogger()
-config_path = '/tmp/config.yaml'
+CONFIG_PATH = '/tmp/config.yaml'
 
 
 def generate_configuration():
@@ -26,7 +24,7 @@ def create_config_from_post(post_data):
     to pass it as overrides to DCOSConfig object.
     """
     log.info("Creating new DCOSConfig object from POST data.")
-    config_obj = DCOSConfig(config_path=config_path, post_data=post_data)
+    config_obj = DCOSConfig(config_path=CONFIG_PATH, post_data=post_data)
 
     log.warning("Updated config to be validated:")
     config_obj.print_to_screen()
@@ -38,7 +36,7 @@ def create_config_from_post(post_data):
 
 
 def get_config():
-    return DCOSConfig(config_path=config_path).get_config()
+    return DCOSConfig(config_path=CONFIG_PATH).get_config()
 
 
 def success():
@@ -46,10 +44,10 @@ def success():
     Return the success URL, master and agent counts.
     """
     # TODO(malnick) implement with DCOSConfig constructor
-    yaml_data = yaml.load(mock_config_yaml)
-    url = 'http://foobar.org'
-    master_count = len(yaml_data['cluster_config']['master_list'])
-    agent_count = len(create_agent_list(yaml_data))
+    data = DCOSConfig(config_path=CONFIG_PATH).get_config()
+    url = 'http://{}'.format(data['cluster_config']['master_list'][0])
+    master_count = len(data['cluster_config']['master_list'])
+    agent_count = len(create_agent_list(data))
 
     return_success = {
         'success': url,
@@ -61,7 +59,7 @@ def success():
 
 
 def write_ssh_key(key_data):
-    config = DCOSConfig(config_path=config_path)
+    config = DCOSConfig(config_path=CONFIG_PATH)
     key_path = config['ssh_config']['ssh_key_path']
     with open(key_path, 'w') as f:
         f.write(key_data)

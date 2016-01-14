@@ -5,9 +5,11 @@ import pkg_resources
 from aiohttp import web
 from dcos_installer import backend, mock
 
-log = logging.getLogger()
+log = logging.getLogger("aiohttp.web")
 
 version = '1'
+
+log.info("Starting DCOS Installer")
 
 
 # Aiohttp route handlers. These methods are for the
@@ -40,9 +42,7 @@ def configure(request):
         new_config = yield from request.json()
         log.info("Received: %s", new_config)
         log.info('POST to configure: {}'.format(new_config))
-        if 'ssh_key' in new_config:
-            backend.write_ssh_key(new_config['ssh_key'])
-        messages = backend.create_config_from_post(new_config)
+        messages, _ = mock.validate(new_config)
         resp = web.json_response({})
         if messages['errors'] and len(messages['errors']) > 0:
             resp = web.json_response(messages['errors'], status=400)
@@ -61,7 +61,7 @@ def configure(request):
         """
         Return the written configuration on disk.
         """
-        config = backend.get_config()
+        _, config = mock.validate()
         resp = web.json_response(config)
 
     resp.headers['Content-Type'] = 'application/json'
@@ -116,7 +116,6 @@ app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|d
 
 
 def start(port=9000):
-    log.debug('DCOS Installer V{}'.format(version))
     handler = app.make_handler()
     f = loop.create_server(
         handler,

@@ -85,6 +85,16 @@ def success(request):
 
 
 # TODO action_ID implementation
+def action_action_name(request):
+    action_name = request.match_info['action_name']
+    if request.method == 'GET':
+        log.info('GET {}'.format(action_name))
+        return web.json_response(action_name)
+
+    elif request.method == 'POST':
+        log.info('POST {}'.format(action_name))
+        return web.json_response(action_name)
+
 
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.
@@ -101,6 +111,8 @@ app.router.add_route('GET', '/api/v{}/configure'.format(version), configure)
 app.router.add_route('POST', '/api/v{}/configure'.format(version), configure)
 app.router.add_route('GET', '/api/v{}/configure/status'.format(version), configure_status)
 app.router.add_route('GET', '/api/v{}/success'.format(version), success)
+app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
+app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 
 
 def start(port=9000):

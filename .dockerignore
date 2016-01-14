@@ -2,3 +2,6 @@
 .tox/
 pytest/__pycache__
 .cache/
+#exclude any previously generated artifacts
+dcos_installer.*
+dcos_installer_*

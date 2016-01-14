@@ -1,7 +1,7 @@
 asyncio
 aiohttp
 aiohttp_jinja2
-aiohttp_session
+docker_py
 pytest
 tox
 webtest-aiohttp

@@ -1,6 +1,7 @@
 asyncio
 aiohttp
 aiohttp_jinja2
+aiohttp_session
 pytest
 tox
 webtest-aiohttp

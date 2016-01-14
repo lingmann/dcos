@@ -93,7 +93,7 @@ def get_config():
     return yaml_data
 
 
-def validate(new_data={}):
+def validate():
     """
     Take the new data from a post, add it to base defaults if overwritting them
     and validate the entire config, return messages.
@@ -103,15 +103,6 @@ def validate(new_data={}):
     instead of the defualts. For now, the mock version will return only defualts
     on GET and return the complete config with overrides on POST.
     """
-    # concat = dict(get_config(), **new_data)
-    config = DCOSConfig(overrides=new_data)  # , config_path='/tmp/config.yaml')
-    log.info("New Config:")
-    print(yaml.dump(config, default_flow_style=False, explicit_start=True))
+    config = DCOSConfig()
     messages = config.validate()
-    if not messages['errors']:
-        log.info("Success! Configuration looks good. Writing to disk.")
-        # config.write('/tmp/config.yaml')
-    else:
-        log.warning("Oops! Configuration failed validation. Not writing to disk")
-
-    return messages, config
+    return messages

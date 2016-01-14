@@ -78,7 +78,7 @@ def loop():
 def test_ssh(tmpdir, loop):
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
-    sshd_ports = start_random_sshd_servers(1, workspace)
+    sshd_ports = start_random_sshd_servers(20, workspace)
 
     # wait a little bit for sshd server to start
     time.sleep(3)
@@ -87,15 +87,14 @@ def test_ssh(tmpdir, loop):
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
-    chain.add_execute_cmd('uname -a')
+    chain.add_execute(['uname', '-a'])
     try:
         results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
     finally:
         loop.close()
 
-    assert len(results) == 1
-    for host_result, exit_code in results:
-        assert exit_code == 0
+    assert len(results) == 20
+    for host_result in results:
         for command_result in host_result:
             for host, process_result in command_result.items():
                 assert process_result['returncode'] == 0, process_result['stderr']
@@ -119,7 +118,7 @@ def test_scp_remote_to_local(tmpdir, loop):
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
-    chain.add_copy_cmd(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
+    chain.add_copy(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
     finally:
@@ -128,8 +127,7 @@ def test_scp_remote_to_local(tmpdir, loop):
     assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
-    for host_result, exit_code in copy_results:
-        assert exit_code == 0
+    for host_result in copy_results:
         for command_result in host_result:
             for host, process_result in command_result.items():
                 assert process_result['returncode'] == 0, process_result['stderr']
@@ -153,7 +151,7 @@ def test_scp(tmpdir, loop):
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
-    chain.add_copy_cmd(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
+    chain.add_copy(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
     finally:
@@ -162,8 +160,7 @@ def test_scp(tmpdir, loop):
     assert len(copy_results) == 1
     assert os.path.isfile(workspace + '/pilot.txt.copied')
     assert pkgpanda.util.load_string(workspace + '/pilot.txt.copied') == id
-    for host_result, exit_code in copy_results:
-        assert exit_code == 0
+    for host_result in copy_results:
         for command_result in host_result:
             for host, process_result in command_result.items():
                 assert process_result['returncode'] == 0, process_result['stderr']
@@ -187,7 +184,7 @@ def test_scp_recursive(tmpdir, loop):
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
-    chain.add_copy_cmd(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
+    chain.add_copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
     try:
         copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
     finally:
@@ -198,8 +195,7 @@ def test_scp_recursive(tmpdir, loop):
     assert os.path.isfile(dest_path)
     assert len(copy_results) == 1
     assert pkgpanda.util.load_string(dest_path) == id
-    for host_result, exit_code in copy_results:
-        assert exit_code == 0
+    for host_result in copy_results:
         for command_result in host_result:
             for host, process_result in command_result.items():
                 assert process_result['returncode'] == 0, process_result['stderr']
@@ -207,3 +203,18 @@ def test_scp_recursive(tmpdir, loop):
                 assert '/usr/bin/scp' in process_result['cmd']
                 assert '-r' in process_result['cmd']
                 assert workspace + '/recursive_pilot.txt' in process_result['cmd']
+
+
+def test_command_chain():
+    chain = CommandChain('test')
+    chain.add_execute(['cmd2'])
+    chain.add_copy('/local', '/remote')
+    chain.prepend_command(['cmd1'])
+    chain.append_command(['cmd3'])
+
+    assert chain.get_commands() == [
+        ('execute', ['cmd1'], None, None),
+        ('execute', ['cmd2'], None, None),
+        ('copy', '/local', '/remote', False, False, None),
+        ('execute', ['cmd3'], None, None)
+    ]

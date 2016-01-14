@@ -16,7 +16,7 @@ import json
 import logging
 import os
 import subprocess
-from concurrent.futures._base import TimeoutError
+import warnings
 from datetime import datetime
 from multiprocessing import Pool
 
@@ -24,6 +24,20 @@ import ssh.helpers
 import ssh.validate
 
 log = logging.getLogger(__name__)
+
+
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.'''
+    def new_func(*args, **kwargs):
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning)
+        return func(*args, **kwargs)
+    new_func.__name__ = func.__name__
+    new_func.__doc__ = func.__doc__
+    new_func.__dict__.update(func.__dict__)
+    return new_func
 
 
 def parse_ip(ip):
@@ -116,11 +130,11 @@ class CommandChain():
         self.commands_stack = []
         self.namespace = namespace
 
-    def add_execute_cmd(self, cmd, rollback=None, comment=None):
-        cmd = cmd.split()
+    def add_execute(self, cmd, rollback=None, comment=None):
+        assert isinstance(cmd, list)
         self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
-    def add_copy_cmd(self, local_path, remote_path, remote_to_local=False, recursive=False, comment=None):
+    def add_copy(self, local_path, remote_path, remote_to_local=False, recursive=False, comment=None):
         self.commands_stack.append((self.copy_flag, local_path, remote_path, remote_to_local, recursive, comment))
 
     def get_commands(self):
@@ -129,20 +143,19 @@ class CommandChain():
 
     def prepend_command(self, cmd, rollback=None, comment=None):
         # We can specify a command to be executed before the main chain of commands, for example some setup commands
-        cmd = cmd.split()
+        assert isinstance(cmd, list)
         self.prepened_commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
     def append_command(self, cmd, rollback=None, comment=None):
         # We can also cleanup commands if needed.
-        cmd = cmd.split()
+        assert isinstance(cmd, list)
         self.appended_commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
 
 class MultiRunner():
-    def __init__(self, targets, state_dir, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
+    def __init__(self, targets, state_dir=None, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
                  parallelism=10):
         assert isinstance(targets, list)
-        assert os.path.isdir(state_dir)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
         # manually building up / adding the arguments in _get_base_args which is
@@ -155,7 +168,6 @@ class MultiRunner():
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
         self.state_dir = state_dir
-        self.run_time = datetime.now().strftime("%Y-%m-%d_%H:%M:%S")
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
 
@@ -183,8 +195,8 @@ class MultiRunner():
         shared_opts.extend(add_opts)
         return shared_opts
 
+    @deprecated
     def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
-        '''Deprecated'''
         def build_scp(host):
             copy_command = []
             if recursive:
@@ -197,8 +209,8 @@ class MultiRunner():
             return self._get_base_args(self.scp_bin, host) + copy_command
         return self.__run_on_hosts(build_scp)
 
+    @deprecated
     def __run_on_hosts(self, cmd_builder):
-        '''Deprecated'''
         host_cmd_tuples = [(host, cmd_builder(host), self.process_timeout) for host in self.__targets]
 
         # NOTE: There are extra processes created here (We should be able to
@@ -212,8 +224,8 @@ class MultiRunner():
             # Rather than just hanging until they all return.
             return pool.starmap(run_cmd_return_tuple, host_cmd_tuples)
 
+    @deprecated
     def run(self, cmd):
-        '''Deprecated'''
         assert isinstance(cmd, list)
 
         def build_ssh(host):
@@ -226,14 +238,12 @@ class MultiRunner():
         process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
                                                             stderr=asyncio.subprocess.PIPE,
                                                             stdin=asyncio.subprocess.DEVNULL)
-
+        stdout = b''
+        stderr = b''
         try:
-            yield from asyncio.wait_for(process.wait(), self.process_timeout)
-        except TimeoutError:
-            process.kill()
-
-        stdout = yield from process.stdout.read()
-        stderr = yield from process.stderr.read()
+            stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
+        except asyncio.TimeoutError:
+            process.terminate()
 
         process_output = {
             '{}:{}'.format(host['ip'], host['port']): {
@@ -276,7 +286,7 @@ class MultiRunner():
     def _update_json_file(self, namespace, process_output, future_update=None, host_status_count=None, host_status=None,
                           callback_called=None):
         status_json = {}
-        status_file = os.path.join(self.state_dir, '{}-{}.json'.format(namespace, self.run_time))
+        status_file = os.path.join(self.state_dir, '{}.json'.format(namespace))
         if os.path.isfile(status_file):
             with open(status_file) as f:
                 status_json = json.load(f)
@@ -316,8 +326,7 @@ class MultiRunner():
             callback_called.set_result(True)
 
     @asyncio.coroutine
-    def dispatch_command(self, host, chain, sem):
-        exit_code = 0
+    def dispatch_chain(self, host, chain, sem):
         host_status = 'hosts_success'
         host_port = '{}:{}'.format(host['ip'], host['port'])
 
@@ -349,8 +358,9 @@ class MultiRunner():
                     log.debug('{}: {}'.format(host_port, command[-1]))
                 future = asyncio.Future()
 
-                callback_called = asyncio.Future()
-                future.add_done_callback(lambda future: self.update_json(future, callback_called))
+                if self.state_dir is not None:
+                    callback_called = asyncio.Future()
+                    future.add_done_callback(lambda future: self.update_json(future, callback_called))
 
                 # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
                 result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
@@ -358,25 +368,26 @@ class MultiRunner():
                 host_status = status['host_status']
                 host_status_count = status['host_status_count']
 
-                # We need to make sure the callback was executed before we can proceed further
-                # 5 seconds should be enough for a callback.
-                try:
-                    yield from asyncio.wait_for(callback_called, 5)
-                except TimeoutError:
-                    print('Callback did not execute within 5 sec')
-                    host_status = 'terminated'
-                    break
+                if self.state_dir is not None:
+                    # We need to make sure the callback was executed before we can proceed further
+                    # 5 seconds should be enough for a callback.
+                    try:
+                        yield from asyncio.wait_for(callback_called, 5)
+                    except asyncio.TimeoutError:
+                        print('Callback did not execute within 5 sec')
+                        host_status = 'terminated'
+                        break
 
                 _, result = future.result()
                 chain_result.append(result)
                 if host_status != 'success':
-                    exit_code = 1
                     break
 
-            # Update chain status
-            self._update_json_file(chain.namespace, result, host_status_count=host_status_count,
-                                   host_status=host_status)
-        return chain_result, exit_code
+            if self.state_dir is not None:
+                # Update chain status
+                self._update_json_file(chain.namespace, result, host_status_count=host_status_count,
+                                       host_status=host_status)
+        return chain_result
 
     @asyncio.coroutine
     def run_commands_chain_async(self, chain, block=False):
@@ -386,13 +397,13 @@ class MultiRunner():
         if block:
             tasks = []
             for host in self.__targets:
-                tasks.append(asyncio.async(self.dispatch_command(host, chain, sem)))
+                tasks.append(asyncio.async(self.dispatch_chain(host, chain, sem)))
 
             yield from asyncio.wait(tasks)
             return [task.result() for task in tasks]
         else:
             for host in self.__targets:
-                asyncio.async(self.dispatch_command(host, chain, sem))
+                asyncio.async(self.dispatch_chain(host, chain, sem))
 
 
 tuple_to_string_header = """HOST: {}

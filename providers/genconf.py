@@ -138,13 +138,7 @@ def do_genconf(options):
 
 
 def do_provider(options, provider_module, mixins, genconf_config):
-    # We set the channel_name, bootstrap_id in env as to not expose it to users but still make it switchable
-    if 'CHANNEL_NAME' in os.environ:
-        channel_name = os.environ['CHANNEL_NAME']
-    else:
-        log.error("CHANNEL_NAME must be set in environment to run.")
-        sys.exit(1)
-
+    # We set the bootstrap_id in env as to not expose it to users but still make it switchable
     if 'BOOTSTRAP_ID' in os.environ:
         bootstrap_id = os.environ['BOOTSTRAP_ID']
     else:
@@ -153,7 +147,6 @@ def do_provider(options, provider_module, mixins, genconf_config):
 
     arguments = {
         'ip_detect_filename': '/genconf/ip-detect',
-        'channel_name': channel_name,
         'bootstrap_id': bootstrap_id,
         'provider': 'onprem'}
 

@@ -20,7 +20,6 @@ VOLUME ["/genconf"]
 RUN mkdir -p /artifacts
 COPY {bootstrap_filename} /artifacts/{bootstrap_filename}
 
-ENV CHANNEL_NAME={channel_name}
 ENV BOOTSTRAP_ID={bootstrap_id}
 ENV PYTHONUNBUFFERED="notemtpy"
 ENV DCOS_IMAGE_COMMIT={dcos_image_commit}

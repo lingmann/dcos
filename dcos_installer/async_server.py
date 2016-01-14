@@ -107,7 +107,8 @@ def action_action_name(request):
 
 def action_current(request):
     action = app['current_action']
-    return web.json_response(action)
+    return_json = {'current_action': action}
+    return web.json_response(return_json)
 
 
 # Serve static files:

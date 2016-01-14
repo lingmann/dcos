@@ -4,7 +4,6 @@ import logging
 import pkg_resources
 from aiohttp import web
 
-from aiohttp_session import get_session, session_middleware, SimpleCookieStorage
 from dcos_installer import backend, mock
 
 log = logging.getLogger()
@@ -12,7 +11,18 @@ log = logging.getLogger()
 VERSION = '1'
 
 
-# class CurrentAction():
+class CurrentAction(dict):
+    def __init__(self):
+        self.new_action = ''
+        self.update
+
+    def update(self):
+        self['current_action'] = self.new_action
+        log.info("Current Action State: %s", self['current_action'])
+
+
+current_action = CurrentAction()
+
 
 # Aiohttp route handlers. These methods are for the
 # aiohttp routes. Some are asyncio.coroutines and
@@ -91,11 +101,9 @@ def success(request):
 
 def action_action_name(request):
     action_name = request.match_info['action_name']
-    # Create a new globally accessibly session and set the
-    # current_action name to action_name. We return this in
-    # the route for action_name/current.
-    # session = yield from get_session(request)
-    # session['current_action'] = action_name
+    # Update the global action
+    current_action.new_action = action_name
+    current_action.update()
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
         return web.json_response(action_name)
@@ -106,16 +114,13 @@ def action_action_name(request):
 
 
 def action_current(request):
-     #current_action = current_action  # yield from get_session(request)
-    # current_action = session['current_action']
-    return web.json_response(current_action)
+    action = current_action['current_action']
+    return web.json_response(action)
 
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.
 loop = asyncio.get_event_loop()
-app = web.Application(
-    loop=loop,
-    middlewares=[session_middleware(SimpleCookieStorage())])
+app = web.Application(loop=loop)
 
 # Serve static files:
 # app.router.add_static('/', pkg_resources.resource_filename(__name__, 'css/'))

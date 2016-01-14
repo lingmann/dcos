@@ -10,18 +10,11 @@ log = logging.getLogger()
 
 VERSION = '1'
 
-
-class CurrentAction(dict):
-    def __init__(self):
-        self.new_action = ''
-        self.update
-
-    def update(self):
-        self['current_action'] = self.new_action
-        log.info("Current Action State: %s", self['current_action'])
-
-
-current_action = CurrentAction()
+# Define the aiohttp web application framework and setup
+# the routes to be used in the API.
+loop = asyncio.get_event_loop()
+app = web.Application(loop=loop)
+app['current_action'] = ''
 
 
 # Aiohttp route handlers. These methods are for the
@@ -102,25 +95,20 @@ def success(request):
 def action_action_name(request):
     action_name = request.match_info['action_name']
     # Update the global action
-    current_action.new_action = action_name
-    current_action.update()
+    app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
-        return web.json_response(action_name)
+        return web.json_response(mock.mock_action_state)
 
     elif request.method == 'POST':
         log.info('POST {}'.format(action_name))
-        return web.json_response(action_name)
+        return web.json_response(mock.mock_action_state)
 
 
 def action_current(request):
-    action = current_action['current_action']
+    action = app['current_action']
     return web.json_response(action)
 
-# Define the aiohttp web application framework and setup
-# the routes to be used in the API.
-loop = asyncio.get_event_loop()
-app = web.Application(loop=loop)
 
 # Serve static files:
 # app.router.add_static('/', pkg_resources.resource_filename(__name__, 'css/'))

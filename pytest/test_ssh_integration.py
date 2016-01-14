@@ -1,5 +1,6 @@
 import asyncio
 import getpass
+import json
 import os
 import random
 import socket
@@ -82,7 +83,7 @@ def test_ssh(tmpdir, loop):
 
     # wait a little bit for sshd server to start
     time.sleep(3)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
@@ -93,6 +94,7 @@ def test_ssh(tmpdir, loop):
     finally:
         loop.close()
 
+    assert not os.path.isfile(workspace + '/test.json')
     assert len(results) == 20
     for host_result in results:
         for command_result in host_result:
@@ -218,3 +220,40 @@ def test_command_chain():
         ('copy', '/local', '/remote', False, False, None),
         ('execute', ['cmd3'], None, None)
     ]
+
+
+def test_ssh_command_terminate(tmpdir, loop):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(3)
+
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key', process_timeout=2)
+
+    chain = CommandChain('test')
+    chain.add_execute(['sleep', '20'])
+    start_time = time.time()
+    try:
+        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+    elapsed_time = time.time() - start_time
+    assert elapsed_time < 5
+    assert os.path.isfile(workspace + '/test.json')
+
+    with open(workspace + '/test.json') as fh:
+        result_json = json.load(fh)
+        assert result_json['total_hosts'] == 1
+        assert result_json['hosts_terminated'] == 1
+        assert 'hosts_failed' not in result_json
+        assert 'hosts_success' not in result_json
+
+    for host_result in results:
+        for command_result in host_result:
+            for host, process_result in command_result.items():
+                assert process_result['stdout'] == ['']
+                assert process_result['stderr'] == ['']
+                assert process_result['returncode'] is None

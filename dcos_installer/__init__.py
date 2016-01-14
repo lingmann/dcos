@@ -5,7 +5,7 @@ from dcos_installer import async_server
 
 import coloredlogs
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class DcosInstaller:
@@ -144,7 +144,7 @@ class DcosInstaller:
                     'color': 'blue'
                 }
             },
-            fmt='%(asctime)s :: %(message)s'
+            fmt='%(asctime)s %(name)s:: %(message)s'
         )
         log.debug("Logger set to DEBUG")
 

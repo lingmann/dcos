@@ -11,7 +11,7 @@ import os
 import yaml
 
 from dcos_installer.validate import DCOSValidateConfig
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class DCOSConfig(dict):

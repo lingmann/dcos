@@ -7,7 +7,13 @@ from dcos_installer import backend, mock
 
 log = logging.getLogger()
 
-version = '1'
+VERSION = '1'
+
+# Define the aiohttp web application framework and setup
+# the routes to be used in the API.
+loop = asyncio.get_event_loop()
+app = web.Application(loop=loop)
+app['current_action'] = ''
 
 
 # Aiohttp route handlers. These methods are for the
@@ -25,8 +31,8 @@ def root(request):
 
 # Redirect to root method handler
 def redirect_to_root(request):
-    log.info("/api/v{} -> redirecting -> /".format(version))
-    return web.HTTPFound('/'.format(version))
+    log.info("/api/v{} -> redirecting -> /".format(VERSION))
+    return web.HTTPFound('/'.format(VERSION))
 
 
 # Configure route method handler
@@ -71,7 +77,8 @@ def configure(request):
 # Configuration validation route handler
 def configure_status(request):
     log.info("Request for configuration validation made.")
-    messages, _ = mock.validate()
+    # TODO(malnick) Update this to point to backend.py with call to Gen validation
+    messages = mock.validate()
     resp = web.json_response({})
     if messages['errors'] and len(messages['errors']) > 0:
         resp = web.json_response(messages['errors'], status=400)
@@ -84,27 +91,44 @@ def success(request):
     return web.json_response(backend.success())
 
 
-# TODO action_ID implementation
+def action_action_name(request):
+    action_name = request.match_info['action_name']
+    # Update the global action
+    app['current_action'] = action_name
+    if request.method == 'GET':
+        log.info('GET {}'.format(action_name))
+        return web.json_response(mock.mock_action_state)
 
-# Define the aiohttp web application framework and setup
-# the routes to be used in the API.
-loop = asyncio.get_event_loop()
-app = web.Application(loop=loop)
+    elif request.method == 'POST':
+        log.info('POST {}'.format(action_name))
+        return web.json_response(mock.mock_action_state)
+
+
+def action_current(request):
+    action = app['current_action']
+    return_json = {'current_action': action}
+    return web.json_response(return_json)
+
 
 # Serve static files:
 # app.router.add_static('/', pkg_resources.resource_filename(__name__, 'css/'))
 
 # Static routes
 app.router.add_route('GET', '/', root)
-app.router.add_route('GET', '/api/v{}'.format(version), redirect_to_root)
-app.router.add_route('GET', '/api/v{}/configure'.format(version), configure)
-app.router.add_route('POST', '/api/v{}/configure'.format(version), configure)
-app.router.add_route('GET', '/api/v{}/configure/status'.format(version), configure_status)
-app.router.add_route('GET', '/api/v{}/success'.format(version), success)
+app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
+app.router.add_route('GET', '/api/v{}/configure'.format(VERSION), configure)
+app.router.add_route('POST', '/api/v{}/configure'.format(VERSION), configure)
+app.router.add_route('GET', '/api/v{}/configure/status'.format(VERSION), configure_status)
+app.router.add_route('GET', '/api/v{}/success'.format(VERSION), success)
+# TODO(malnick) The regex handling in the variable routes blows up if we insert another variable to be
+# filled in by .format. Had to hardcode the VERSION into the URL for now. Fix suggestions please!
+app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
+app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
+app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
 
 
 def start(port=9000):
-    log.debug('DCOS Installer V{}'.format(version))
+    log.debug('DCOS Installer V{}'.format(VERSION))
     handler = app.make_handler()
     f = loop.create_server(
         handler,

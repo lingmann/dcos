@@ -125,8 +125,6 @@ class CommandChain():
     copy_flag = 'copy'
 
     def __init__(self, namespace):
-        self.prepened_commands_stack = []
-        self.appended_commands_stack = []
         self.commands_stack = []
         self.namespace = namespace
 
@@ -139,17 +137,17 @@ class CommandChain():
 
     def get_commands(self):
         # Return all commands
-        return self.prepened_commands_stack + self.commands_stack + self.appended_commands_stack
+        return self.commands_stack
 
     def prepend_command(self, cmd, rollback=None, comment=None):
         # We can specify a command to be executed before the main chain of commands, for example some setup commands
         assert isinstance(cmd, list)
-        self.prepened_commands_stack.append((self.execute_flag, cmd, rollback, comment))
+        self.commands_stack.insert(0, (self.execute_flag, cmd, rollback, comment))
 
     def append_command(self, cmd, rollback=None, comment=None):
         # We can also cleanup commands if needed.
         assert isinstance(cmd, list)
-        self.appended_commands_stack.append((self.execute_flag, cmd, rollback, comment))
+        self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
 
 class MultiRunner():

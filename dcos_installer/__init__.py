@@ -1,28 +1,11 @@
 import argparse
-import logging as log
+import logging
 
 from dcos_installer import async_server
 
 import coloredlogs
 
-coloredlogs.install(
-    datefmt='%H:%M:%S',
-    level_styles={
-        'warn': {
-            'color': 'yellow'
-        },
-        'error': {
-            'color': 'red',
-            'bold': True,
-        },
-    },
-    field_styles={
-        'asctime': {
-            'color': 'blue'
-        }
-    },
-    fmt='%(asctime)s :: %(message)s'
-)
+log = logging.getLogger()
 
 
 class DcosInstaller:
@@ -37,8 +20,6 @@ class DcosInstaller:
         # parser or anything else
         if args:
             options = self.parse_args(args)
-
-            self.set_log_level(options)
 
             if options.web:
                 log.warning("Starting DCOS installer in web mode")
@@ -63,18 +44,6 @@ class DcosInstaller:
             if options.uninstall:
                 log.warning("Executing uninstall on target hosts.")
                 # backend.unsinstall()
-
-    def set_log_level(self, options):
-        """
-        Given a map of options, parse for log level flag and set the
-        default logging level.
-        """
-        if options.verbose:
-            log.basicConfig(level=log.DEBUG)
-            log.debug("Log level set to DEBUG")
-        else:
-            log.basicConfig(level=log.INFO)
-            log.info("Log level set to INFO")
 
     def parse_args(self, args):
         """
@@ -154,4 +123,29 @@ class DcosInstaller:
             help='Performs tests on the dcos_installer application')
 
         options = parser.parse_args(args)
+        level = 'INFO'
+        if options.verbose:
+            level = 'DEBUG'
+
+        coloredlogs.install(
+            level=level,
+            datefmt='%H:%M:%S',
+            level_styles={
+                'warn': {
+                    'color': 'yellow'
+                },
+                'error': {
+                    'color': 'red',
+                    'bold': True,
+                },
+            },
+            field_styles={
+                'asctime': {
+                    'color': 'blue'
+                }
+            },
+            fmt='%(asctime)s :: %(message)s'
+        )
+        log.debug("Logger set to DEBUG")
+
         return options

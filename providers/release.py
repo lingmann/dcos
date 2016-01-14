@@ -639,7 +639,7 @@ def make_stable_artifacts(cache_repository_url, skip_build):
 def make_channel_artifacts(metadata):
     artifacts = []
 
-    genconfs = build_genconfs(metadata['bootstrap_dict'], metadata['repo_channel_path'])
+    genconfs = build_genconfs(metadata['bootstrap_dict'])
 
     artifacts.append({'channel_path': 'docker-tag', 'local_content': genconfs[None][0]})
     artifacts.append({'channel_path': 'docker-tag.txt', 'local_content': genconfs[None][0]})
@@ -670,7 +670,6 @@ def make_channel_artifacts(metadata):
             commit=metadata['commit'],
             gen_arguments=copy.deepcopy({
                 'bootstrap_id': metadata['bootstrap_dict'][None],
-                'channel_name': metadata['tag'],
                 'bootstrap_url': bootstrap_url,
                 'provider': name
             }))
@@ -767,8 +766,7 @@ def do_build_packages(cache_repository_url, skip_build):
     return get_build()
 
 
-def make_genconf_docker(channel_name, variant, bootstrap_id):
-    assert len(channel_name) > 0
+def make_genconf_docker(variant, bootstrap_id):
     assert len(bootstrap_id) > 0
 
     # TODO(cmaloney): If a pre-existing wheelhouse exists assert that the wheels
@@ -796,8 +794,7 @@ def make_genconf_docker(channel_name, variant, bootstrap_id):
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
         'docker_image_name': 'mesosphere/dcos-genconf:' + genconf_version,
-        'dcos_image_commit': util.dcos_image_commit,
-        'channel_name': channel_name
+        'dcos_image_commit': util.dcos_image_commit
     }
 
     with tempfile.TemporaryDirectory() as build_dir:
@@ -831,7 +828,7 @@ def make_genconf_docker(channel_name, variant, bootstrap_id):
     return genconf_version, genconf_filename
 
 
-def build_genconfs(bootstrap_dict, channel_name):
+def build_genconfs(bootstrap_dict):
     """Create a genconf script for each variant in bootstrap_dict.
 
     Writes a dcos_generate_config.<variant>.sh for each variant in
@@ -846,7 +843,7 @@ def build_genconfs(bootstrap_dict, channel_name):
     # Variants are sorted for stable ordering.
     for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: variant_str(kv[0])):
         print("Building genconf for variant:", variant_name(variant))
-        genconfs[variant] = make_genconf_docker(channel_name, variant, bootstrap_id)
+        genconfs[variant] = make_genconf_docker(variant, bootstrap_id)
     return genconfs
 
 

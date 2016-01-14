@@ -99,7 +99,7 @@ def validate(arguments):
 
     assert arguments['bootstrap_url'][-1] != '/'
 
-    if len(arguments['channel_name']):
+    if 'channel_name' in arguments:
         assert arguments['channel_name'][0] != '/'
         assert arguments['channel_name'][-1] != '/'
 

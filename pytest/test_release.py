@@ -527,7 +527,7 @@ def test_make_stable_artifacts(monkeypatch, tmpdir):
 
 # NOTE: Implicitly tests all providers do_create functions since it calls them.
 # TODO(cmaloney): Test make_channel_artifacts, module do_create functions
-def mock_build_genconfs(bootstrap_dict, repo_channel_path):
+def mock_build_genconfs(bootstrap_dict):
     return {
         None: ('genconf-id', 'dcos_generate_config.sh'),
         'ee': ('genconf-id-ee', 'dcos_generate_config.ee.sh')

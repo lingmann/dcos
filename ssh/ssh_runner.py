@@ -154,7 +154,7 @@ class CommandChain():
 
 class MultiRunner():
     def __init__(self, targets, state_dir=None, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
-                 parallelism=10):
+                 parallelism=10, tags=None):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
@@ -168,6 +168,7 @@ class MultiRunner():
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
         self.state_dir = state_dir
+        self.tags = tags
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
 
@@ -310,6 +311,11 @@ class MultiRunner():
                     status_json[host] = {
                         'commands': [return_values]
                     }
+
+                if self.tags and 'tags' not in status_json[host]:
+                    status_json[host]['tags'] = {}
+                    for tag in self.tags:
+                        status_json[host]['tags'].update(tag)
 
                 # Update chain status to running
                 if 'host_status' not in status_json[host]:

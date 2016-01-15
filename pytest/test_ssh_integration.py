@@ -257,3 +257,33 @@ def test_ssh_command_terminate(tmpdir, loop):
                 assert process_result['stdout'] == ['']
                 assert process_result['stderr'] == ['']
                 assert process_result['returncode'] is None
+
+
+def test_tags(tmpdir, loop):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+    host_ports = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+    # wait a little bit for sshd server to start
+    time.sleep(3)
+
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key', tags=[{'tag1': 'test1'}, {'tag2': 'test2'}])
+
+    chain = CommandChain('test')
+    chain.add_execute(['sleep', '1'])
+    try:
+        loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+    finally:
+        loop.close()
+
+    with open(workspace + '/test.json') as fh:
+        result_json = json.load(fh)
+        for host_port in host_ports:
+            assert 'tags' in result_json[host_port]
+            assert len(result_json[host_port]['tags']) == 2
+            assert result_json[host_port]['tags']['tag1'] == 'test1'
+            assert result_json[host_port]['tags']['tag2'] == 'test2'
+
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+                         ssh_key_path=workspace + '/host_key')

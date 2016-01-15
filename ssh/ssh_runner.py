@@ -125,6 +125,8 @@ class CommandChain():
     copy_flag = 'copy'
 
     def __init__(self, namespace):
+        self.pre_commands = []
+        self.post_commands = []
         self.commands_stack = []
         self.namespace = namespace
 
@@ -137,17 +139,17 @@ class CommandChain():
 
     def get_commands(self):
         # Return all commands
-        return self.commands_stack
+        return self.pre_commands + self.commands_stack + self.post_commands
 
     def prepend_command(self, cmd, rollback=None, comment=None):
         # We can specify a command to be executed before the main chain of commands, for example some setup commands
         assert isinstance(cmd, list)
-        self.commands_stack.insert(0, (self.execute_flag, cmd, rollback, comment))
+        self.pre_commands.append((self.execute_flag, cmd, rollback, comment))
 
     def append_command(self, cmd, rollback=None, comment=None):
         # We can also cleanup commands if needed.
         assert isinstance(cmd, list)
-        self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
+        self.post_commands.append((self.execute_flag, cmd, rollback, comment))
 
 
 class MultiRunner():
@@ -241,7 +243,10 @@ class MultiRunner():
         try:
             stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
         except asyncio.TimeoutError:
-            process.terminate()
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                log.warn('process with pid {} not found'.format(process.pid))
 
         process_output = {
             '{}:{}'.format(host['ip'], host['port']): {

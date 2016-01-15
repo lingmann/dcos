@@ -3,6 +3,9 @@ import {GetSetMixin, Store} from 'mesosphere-shared-reactjs';
 import ActionTypes from '../constants/ActionTypes';
 import AppDispatcher from '../events/AppDispatcher';
 import EventTypes from '../constants/EventTypes';
+import StageActions from '../events/StageActions';
+
+const stageID = 'preflight';
 
 let PreFlighStore = Store.createStore({
   storeID: 'preFlight',
@@ -25,6 +28,12 @@ let PreFlighStore = Store.createStore({
       status: 'Running Pre-Flight...'
     });
   },
+
+  beginStage: StageActions.beginStage.bind(null, stageID),
+
+  fetchLogs: StageActions.fetchLogs.bind(null, stageID),
+
+  fetchStageStatus: StageActions.fetchStageStatus.bind(null, stageID),
 
   addChangeListener: function (eventName, callback) {
     this.on(eventName, callback);
@@ -53,6 +62,10 @@ let PreFlighStore = Store.createStore({
       case ActionTypes.PREFLIGHT_UPDATE_SUCCESS:
         PreFlighStore.processUpdateSuccess(action.data);
         break;
+      case ActionTypes.PREFLIGHT_BEGIN_SUCCESS:
+        this.emit(EventTypes.PREFLIGHT_BEGIN_SUCCESS);
+      case ActionTypes.PREFLIGHT_BEGIN_ERROR:
+        this.emit(EventTypes.PREFLIGHT_BEGIN_ERROR, action.data);
     }
 
     return true;

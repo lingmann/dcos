@@ -31,6 +31,11 @@ NOTE: the following environment variables will need to be set for full functiona
 #### / -redirects-> /api/v1
 **GET**: Loads application
 
+#### /assets
+**GET**: Serves assets in dcos_installer/assets/
+
+Return headers are self informed. In example, if the file is foo.js the header to return will be ```application/javascript```. 
+
 #### /api/v1/configure/
 **GET**: Get currently stored configuration and validation messages.
 
@@ -81,6 +86,9 @@ Example POST data structure:
   "username": "...",
   "password": "...",
   "upstream_dns_servers": "..."
+  "zk_exhibitor_port": ".." # Yes, it's a string please!
+  "zk_exhibitor_hosts": ["...", "..."]
+  "ip_detect_script": "..."
 }
 ```
 

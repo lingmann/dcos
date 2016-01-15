@@ -137,7 +137,7 @@ def validate_list(key=None, config=None):
 
 
 def validate_exhibitor_zk_hosts(key=None, config=None):
-    if key in config:
+    if key in config and key is not None:
         key = config[key]
         if key.split(','):
             for address in key.split(','):

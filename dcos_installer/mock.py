@@ -2,95 +2,562 @@ import logging
 
 from dcos_installer.config import DCOSConfig
 
-import yaml
-
 log = logging.getLogger(__name__)
 
 mock_action_state = {
-    "10.0.0.1": {
-        "role": "master",
-        "state": "not_running",
-        "cmd": "",
-        "returncode": -1,
-        "stderr": [""],
-        "stdout": [""]
+    "127.0.0.1:22022": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22022",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@127.0.0.1",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:42.773561",
+                "pid": 20785,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 127.0.0.1 port 22022: Connection refused\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
     },
-    "10.0.0.2": {
-        "role": "slave",
-        "state": "running",
-        "cmd": "",
-        "returncode": -1,
-        "stderr": [""],
-        "stdout": [""]
+    "52.35.180.142:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.35.180.142",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:53.508197",
+                "pid": 20800,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.35.180.142 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
     },
-    "10.0.0.3": {
-        "role": "slave",
-        "state": "not_running",
-        "cmd": "",
-        "returncode": -1,
-        "stderr": [""],
-        "stdout": [""]
+    "52.35.203.104:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.35.203.104",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:53.167311",
+                "pid": 20799,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.35.203.104 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
     },
-    "10.0.0.4": {
-        "role": "slave",
-        "state": "success",
-        "cmd": "",
-        "returncode": -1,
-        "stderr": [""],
-        "stdout": [""]
+    "52.35.209.217:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.35.209.217",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:43.486630",
+                "pid": 20797,
+                "returncode": 255,
+                "stderr": [
+                    "Warning: Permanently added '52.35.209.217' (ECDSA) to the list of known hosts.\r",
+                    "Permission denied (publickey).\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
     },
-    "10.0.0.5": {
-        "role": "slave",
-        "state": "error",
-        "cmd": "",
-        "returncode": -1,
-        "stderr": [""],
-        "stdout": [""]
-    }
+    "52.35.209.2:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.35.209.2",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:53.150617",
+                "pid": 20798,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.35.209.2 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.35.249.172:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.35.249.172",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:53.109791",
+                "pid": 20796,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.35.249.172 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.115.240:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.115.240",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.775261",
+                "pid": 20790,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.115.240 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.220.149:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.220.149",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:43.091281",
+                "pid": 20789,
+                "returncode": 255,
+                "stderr": [
+                    "Warning: Permanently added '52.88.220.149' (ECDSA) to the list of known hosts.\r",
+                    "Permission denied (publickey,password).\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.231.115:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.231.115",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:43.125068",
+                "pid": 20787,
+                "returncode": 255,
+                "stderr": [
+                    "Warning: Permanently added '52.88.231.115' (ECDSA) to the list of known hosts.\r",
+                    "Permission denied (publickey,password).\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.231.59:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.231.59",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.774169",
+                "pid": 20788,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.231.59 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.249.230:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.249.230",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.765248",
+                "pid": 20786,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.249.230 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.25.18:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.25.18",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:43.154439",
+                "pid": 20795,
+                "returncode": 255,
+                "stderr": [
+                    "Warning: Permanently added '52.88.25.18' (ECDSA) to the list of known hosts.\r",
+                    "Permission denied (publickey).\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.28.76:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.28.76",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.786028",
+                "pid": 20794,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.28.76 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.49.130:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.49.130",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.785151",
+                "pid": 20793,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.49.130 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.60.147:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.60.147",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:52.784125",
+                "pid": 20792,
+                "returncode": 255,
+                "stderr": [
+                    "ssh: connect to host 52.88.60.147 port 22: Operation timed out\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "52.88.91.74:22": {
+        "commands": [
+            {
+                "cmd": [
+                    "/usr/bin/ssh",
+                    "-oConnectTimeout=10",
+                    "-oStrictHostKeyChecking=no",
+                    "-oUserKnownHostsFile=/dev/null",
+                    "-oBatchMode=yes",
+                    "-oPasswordAuthentication=no",
+                    "-p22",
+                    "-i",
+                    "/Users/mnaboka/mesos/keys/mesosphere_shared_develoer_infrostructure_aws.pem",
+                    "ec2-user@52.88.91.74",
+                    "uname",
+                    "-a"
+                ],
+                "date": "2016-01-15 10:01:43.133815",
+                "pid": 20791,
+                "returncode": 255,
+                "stderr": [
+                    "Warning: Permanently added '52.88.91.74' (ECDSA) to the list of known hosts.\r",
+                    "Permission denied (publickey,password).\r",
+                    ""
+                ],
+                "stdout": [
+                    ""
+                ]
+            }
+        ],
+        "host_status": "failed",
+        "tags": {
+            "role": "master"
+        }
+    },
+    "chain_name": "mnaboka",
+    "hosts_failed": 16,
+    "total_hosts": 30
 }
-
-mock_config_yaml = """
----
-cluster_config:
-  bootstrap_url: file:///opt/dcos_install_tmp
-  cluster_name: 'Mesosphere: The Data Center Operating System'
-  docker_remove_delay: 1hrs
-  exhibitor_storage_backend: zookeeper
-  exhibitor_zk_hosts: 127.0.0.1:2181
-  exhibitor_zk_path: /exhibitor
-  gc_delay: 2days
-  ip_detect_path: /genconf/ip-detect
-  master_discovery: static
-  master_list:
-  - 10.0.0.1
-  - 10.0.0.2
-  - 10.0.0.3
-  num_masters: null
-  resolvers:
-  - 8.8.8.8
-  - 8.8.4.4
-  roles: slave_public
-  weights: slave_public=1
-ssh_config:
-  log_directory: /genconf/logs
-  ssh_key_path: /genconf/ssh_key
-  ssh_port: 22
-  ssh_user: foobar
-  target_hosts:
-  - 10.0.0.1
-  - 10.0.0.2
-  - 10.0.0.3
-  - 10.0.0.4
-  - 10.0.0.5
-  - 10.0.0.6
-  - 10.0.0.7
-  - 10.0.0.8
-"""
-
-
-def get_config():
-    yaml_data = yaml.load(mock_config_yaml)
-    return yaml_data
 
 
 def validate():

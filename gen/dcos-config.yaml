@@ -30,6 +30,7 @@ package:
       MESOS_WEIGHTS={{ weights }}
       MESOS_QUORUM={{ master_quorum }}
       MESOS_HOSTNAME_LOOKUP=false
+      GLOG_drop_log_memory=false
       SASL_PATH=/opt/mesosphere/lib/sasl2
   - path: /etc/mesos-slave-common
     content: |
@@ -44,6 +45,7 @@ package:
       MESOS_DOCKER_REMOVE_DELAY={{ docker_remove_delay }}
       MESOS_GC_DELAY={{ gc_delay }}
       MESOS_HOSTNAME_LOOKUP=false
+      GLOG_drop_log_memory=false
   - path: /etc/mesos-slave
     content: |
       MESOS_RESOURCES=ports:[1025-2180,2182-3887,3889-5049,5052-8079,8082-8180,8182-32000]

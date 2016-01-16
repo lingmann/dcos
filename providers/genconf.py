@@ -7,7 +7,6 @@ import logging as log
 import os
 import subprocess
 import sys
-from argparse import RawTextHelpFormatter
 from copy import deepcopy
 from subprocess import CalledProcessError
 
@@ -201,33 +200,7 @@ def fetch_bootstrap(bootstrap_id):
 
 
 def main():
-    desc = '''Generates DCOS configuration.
-
-Initial Setup
-  1. Set up a build location for input config and artifacts (e.g.
-     /dcos-config). These instructions will refer to this location as
-     $BUILD_DIR.
-  2. Add ip-detect script to $BUILD_DIR
-  3. Add config-user.json to $BUILD_DIR (optional for interactive mode)
-
-Interactive Mode
-  1. Build DCOS artifacts:
-     docker run -it -v $BUILD_DIR:/genconf dcos-genconf interactive
-
-  All the user-input parameters will be saved to config-user-output.json. That
-  file can be used as the config-user.json for either an interactive or
-  non-interactive run.
-
-Non-Interactive Mode
-  1. Create an appropriate config-user.json in $BUILD_DIR
-  2. Build DCOS artifacts:
-     docker run -it -v $BUILD_DIR:/genconf dcos-genconf non-interactive
-
-In both modes a file config-final.json will be output which contains all the
-parameters that the input paramters were expanded to as DCOS configuration.
-'''
-    parser = argparse.ArgumentParser(
-        description=desc, formatter_class=RawTextHelpFormatter)
+    parser = argparse.ArgumentParser(description="Generates DCOS configuration.")
     ssh_deployer = parser.add_mutually_exclusive_group()
 
     # Log level
@@ -251,7 +224,7 @@ parameters that the input paramters were expanded to as DCOS configuration.
     # NOTE: Only applies to deploy options (preflight, postflight, deploy, uninstall, etc)
     parser.add_argument(
         '--no-color',
-        action='store_false',
+        action='store_true',
         help='No colored logs.')
 
     # Add an explicit genconf option for those who want it. The legacy behavior

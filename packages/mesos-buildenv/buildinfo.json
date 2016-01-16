@@ -3,7 +3,7 @@
   "single_source": {
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-buildenv.git",
-    "ref": "d55c910b63456abbd9ed7bd40d9f5332db3dc12f",
+    "ref": "598d99060869a5bb09c25417382c8b3bd4060ace",
     "ref_origin": "master"
   }
 }

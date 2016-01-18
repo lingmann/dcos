@@ -28,6 +28,7 @@ from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import yaml
+from pkg_resources import resource_string
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
@@ -112,14 +113,6 @@ def merge_dictionaries(base, additions):
         except ValueError as ex:
             raise ValueError("{} inside key {}".format(ex, k)) from ex
     return base_copy
-
-
-def load_json(filename):
-    try:
-        with open(filename) as f:
-            return json.load(f)
-    except ValueError as ex:
-        raise ValueError("Invalid JSON in {0}: {1}".format(filename, ex)) from ex
 
 
 # Order in a file determines order in which things like services get placed,
@@ -376,7 +369,7 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         if possible_values:
             possible_values_str = '{' + ",".join(possible_values) + '}'
 
-        descriptions = load_json("gen/descriptions.json")
+        descriptions = json.loads(resource_string(__name__, "descriptions.json"))
 
         if name in descriptions:
             print("")

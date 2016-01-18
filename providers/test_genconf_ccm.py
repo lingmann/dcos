@@ -106,7 +106,6 @@ def main():
 
     vpc = None  # Set if the test owns the VPC
 
-    remove_tty = True
     if host_list is None:
         vpc = make_vpc()
         host_list = vpc.hosts()
@@ -167,18 +166,7 @@ def main():
     ssh_runner.log_directory = "genconf"
     ssh_runner.process_timeout = 600
     ssh_runner.targets = host_list
-    # Remove TTY reqs from nodes before starting. If tty is required, then sudo commands
-    # will be bounced. All deploy lib functions rely on sudo so this must be done first
-    if remove_tty:
-        ssh_runner.extra_ssh_options = "-tt"
-        # TODO(mellenburg): make a check that the previous ssh_runner passed for all nodes
-        ssh_runner.execute_cmd("sudo sed -i -e '/requirett/d' -e '/visiblepw/d' /etc/sudoers", throw_on_error=True)
-        # Reseting the terminal is often required as -t -t makes for some bad TTY voodoo
-        # As a consequence, prior terminal output will be cleared
-        # TMP: subprocess.check_call("reset", shell=True)
-
-        # Reset extra ssh_runner arguments so future runners don't accidentally get them.
-        ssh_runner.extra_ssh_options = ""
+    ssh_runner.extra_ssh_options = "-tt"
 
     # Run Configuratator
     run_cmd('--genconf')

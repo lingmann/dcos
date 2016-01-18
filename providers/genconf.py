@@ -224,7 +224,7 @@ def main():
     # NOTE: Only applies to deploy options (preflight, postflight, deploy, uninstall, etc)
     parser.add_argument(
         '--no-color',
-        action='store_false',
+        action='store_true',
         help='No colored logs.')
 
     # Add an explicit genconf option for those who want it. The legacy behavior

@@ -35,7 +35,7 @@ def parse_ip(ip):
             "colon in it. NOTE: IPv6 is not supported at this time. Got: {}".format(ip))
 
 
-def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
+def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None, ignore_warning=True):
     '''
     Run a shell command
     :param host: Dict, {'ip': '127.0.0.1, 'port': 22}
@@ -58,6 +58,17 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None):
 
     process = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = process.communicate(timeout=timeout_sec)
+
+    if ignore_warning and isinstance(stderr, bytes):
+        # For each possible line in stderr, match from the beginning of the line for the
+        # the confusing warning: "Warning: Permanently added ...". If the warning exists,
+        # remove it from the string when ignore_warning is True (default).
+        err_arry = stderr.decode().split('\r')
+        # Re-cast to bytes since we may pass False to ignore_warning,
+        # in which case we need to ensure to run decode().
+        stderr = bytes('\n'.join([line for line in err_arry if not line.startswith(
+            'Warning: Permanently added')]), 'utf-8')
+
     return {
         "cmd": cmd,
         "host": host,

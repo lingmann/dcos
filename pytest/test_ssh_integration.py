@@ -12,7 +12,8 @@ import uuid
 import pkgpanda.util
 import pytest
 
-from ssh.ssh_runner import CommandChain, MultiRunner
+from ssh.ssh_runner import MultiRunner
+from ssh.utils import CommandChain
 
 sshd_config = [
     'Protocol 1,2',
@@ -215,7 +216,7 @@ def test_command_chain():
     chain.add_execute(['cmd2'])
     chain.add_copy('/local', '/remote')
     chain.prepend_command(['cmd1'])
-    chain.append_command(['cmd3'])
+    chain.add_execute(['cmd3'])
 
     assert chain.get_commands() == [
         ('execute', ['cmd1'], None, None),
@@ -287,6 +288,3 @@ def test_tags(tmpdir, loop):
             assert len(result_json[host_port]['tags']) == 2
             assert result_json[host_port]['tags']['tag1'] == 'test1'
             assert result_json[host_port]['tags']['tag2'] == 'test2'
-
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
-                         ssh_key_path=workspace + '/host_key')

@@ -5,13 +5,13 @@ libraries to support the dcos installer.
 import logging
 
 from dcos_installer.config import DCOSConfig
+from dcos_installer.util import CONFIG_PATH
 
 from deploy.util import create_agent_list
 # Need to build a new provider for config generation from installer
 from providers.genconf import do_genconf
 
 log = logging.getLogger()
-CONFIG_PATH = '/tmp/config.yaml'
 
 
 def generate_configuration():
@@ -56,10 +56,3 @@ def success():
     }
 
     return return_success
-
-
-def write_ssh_key(key_data):
-    config = DCOSConfig(config_path=CONFIG_PATH)
-    key_path = config['ssh_config']['ssh_key_path']
-    with open(key_path, 'w') as f:
-        f.write(key_data)

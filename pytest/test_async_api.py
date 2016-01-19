@@ -71,7 +71,7 @@ def test_configure(monkeypatch):
         'POST': [
             400,
             'application/json',
-            '{"ssh_config": {"ssh_user": 1}}'],
+            '{"ssh_username": 1}'],
         'PUT': [405, 'text/plain'],
         'DELETE': [405, 'text/plain'],
         'HEAD': [405, 'text/plain'],
@@ -233,3 +233,27 @@ def test_action_current(monkeypatch):
             method,
             expected)
 
+
+# def test_serve_assets(monkeypatch):
+#    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
+#    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
+#    route = '/api/v{}/assets'.format(version)
+#    featured_methods = {
+#        'GET': [200],
+#        'POST': [405, 'text/plain'],
+#        'PUT': [405, 'text/plain'],
+#        'DELETE': [405, 'text/plain'],
+#        'HEAD': [405, 'text/plain'],
+#        'TRACE': [405, 'text/plain'],
+#        'CONNECT': [405, 'text/plain'],
+#    }
+#    filetypes = {
+#        '.js': 'application/javascript',
+#        '.json': 'application/json',
+#        '.txt': 'text/plain'
+#    }
+#    for method, expected in featured_methods.items():
+#        res = client.request(route, method=method, expect_errors=True)
+#        assert res.status_code == expected[0], '{}: {}'.format(
+#            method,
+#            expected)

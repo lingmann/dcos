@@ -10,6 +10,7 @@ import logging
 import os
 import yaml
 
+from dcos_installer import util
 from dcos_installer.validate import DCOSValidateConfig
 log = logging.getLogger(__name__)
 
@@ -30,11 +31,13 @@ cluster_config:
   -
 
   # The bootstrapping exhibitor hosts. Format is ip:port.
-  exhibitor_zk_hosts: 127.0.0.1:2181
+  exhibitor_zk_hosts:
 
   # Upstream DNS resolvers for MesosDNS
   resolvers:
     -
+  # Leaving IP-detect path in here for now
+  ip_detect_path: /tmp/ip-detect
 
 # SSH configuration for --deploy, --preflight, --uninstall, --postflight
 ssh_config:
@@ -129,6 +132,28 @@ ssh_config:
 
         if 'upstream_dns_servers' in self.post_data:
             self['cluster_config']['resolvers'] = self.post_data['upstream_dns_servers']
+
+        # Must transform to host1:2181,host2:2181 https://github.com/Netflix/exhibitor/wiki/Running-Exhibitor
+        exhibitor_port = '2181'
+        if 'zk_exhibitor_port' in self.post_data and self.post_data['zk_exhibitor_port'] is not None:
+            exhibitor_port = self.post_data['zk_exhibitor_port']
+
+        if 'zk_exhibitor_hosts' in self.post_data and self.post_data['zk_exhibitor_hosts'] is not None:
+            # Transform to match exepected string type for exhibitor host:port
+            host_list = []
+            for host in self.post_data['zk_exhibitor_hosts']:
+                host_list.append('{}:{}'.format(host, exhibitor_port))
+
+            self['cluster_config']['exhibitor_zk_hosts'] = ','.join(host_list)
+
+        # We have to write these files to separate places
+        if 'ssh_key' in self.post_data and self.post_data['ssh_key'] is not None:
+            key_path = self['ssh_config']['ssh_key_path']
+            util.write_file(self.post_data['ssh_key'], key_path)
+
+        if 'ip_detect_script' in self.post_data and self.post_data['ip_detect_script'] is not None:
+            key_path = self['cluster_config']['ip_detect_path']
+            util.write_file(self.post_data['ip_detect_script'], key_path)
 
     def validate(self):
         # TODO Leverage Gen library from here

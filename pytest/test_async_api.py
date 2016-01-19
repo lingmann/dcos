@@ -234,6 +234,30 @@ def test_action_current(monkeypatch):
             expected)
 
 
+def test_configure_type(monkeypatch):
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
+    route = '/api/v{}/configure/type'.format(version)
+    featured_methods = {
+        'GET': [200, 'application/json'],
+        'POST': [405, 'text/plain'],
+        'PUT': [405, 'text/plain'],
+        'DELETE': [405, 'text/plain'],
+        'HEAD': [405, 'text/plain'],
+        'TRACE': [405, 'text/plain'],
+        'CONNECT': [405, 'text/plain'],
+    }
+    for method, expected in featured_methods.items():
+        res = client.request(route, method=method, expect_errors=True)
+        assert res.status_code == expected[0], '{}: {}'.format(
+            method,
+            expected)
+        assert res.content_type == expected[1], '{}: {}'.format(
+            method,
+            expected)
+
+
+
 # def test_serve_assets(monkeypatch):
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)

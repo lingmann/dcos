@@ -86,6 +86,10 @@ def configure_status(request):
     return resp
 
 
+def configure_type(request):
+    log.info("Request for configuration type made.")
+
+
 # Success route handler
 def success(request):
     return web.json_response(backend.success())

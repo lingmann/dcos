@@ -150,7 +150,6 @@ def main():
             "ssh_user": "centos",
             "ssh_port": 22,
             "ssh_key_path": "/genconf/ssh_key",
-            "extra_ssh_options": "-tt",
             # skip exhibitor_zk_host
             "target_hosts": host_list[1:],
             "log_directory": "/genconf/",
@@ -170,7 +169,6 @@ def main():
     ssh_runner.log_directory = "genconf"
     ssh_runner.process_timeout = 600
     ssh_runner.targets = host_list
-    ssh_runner.extra_ssh_options = "-tt"
 
     # Run Configuratator
     run_cmd('--genconf')

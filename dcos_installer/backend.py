@@ -72,11 +72,9 @@ def determine_config_type():
         if value is not None and key in config['cluster_config'] and value != config['cluster_config'][key]:
             adv_found[key] = config['cluster_config'][key]
 
-    print(adv_found)
     if len(adv_found) > 0:
-        message = """Advanced configuration detected in genconf/config.yaml (Found: {}).
-Please backup or remove genconf/config.yaml to use the UI installer.
-        """.format(adv_found)
+        message = """Advanced configuration detected in genconf/config.yaml ({}).
+ Please backup or remove genconf/config.yaml to use the UI installer.""".format(adv_found)
         ctype = 'advanced'
 
     return {

@@ -106,6 +106,9 @@ class JsonDelegate(AbstractSSHLibDelegate):
             with open(status_file) as f:
                 status_json = json.load(f)
 
+        if 'hosts' not in status_json:
+            status_json['hosts'] = {}
+
         for host, return_values in result.items():
             if future_update:
                 return_values.update({
@@ -113,8 +116,8 @@ class JsonDelegate(AbstractSSHLibDelegate):
                 })
 
                 # Append to commands
-                if host in status_json:
-                    status_json[host]['commands'].append(return_values)
+                if host in status_json['hosts']:
+                    status_json['hosts'][host]['commands'].append(return_values)
                 else:
                     # Create a new chain properties
                     status_json['total_hosts'] = self.total_hosts
@@ -125,22 +128,22 @@ class JsonDelegate(AbstractSSHLibDelegate):
                         status_json['total_agents'] = self.total_agents
 
                     status_json['chain_name'] = name
-                    status_json[host] = {
+                    status_json['hosts'][host] = {
                         'commands': [return_values]
                     }
 
-                if self.tags and 'tags' not in status_json[host]:
-                    status_json[host]['tags'] = {}
+                if self.tags and 'tags' not in status_json['hosts'][host]:
+                    status_json['hosts'][host]['tags'] = {}
                     for tag in self.tags:
-                        status_json[host]['tags'].update(tag)
+                        status_json['hosts'][host]['tags'].update(tag)
 
                 # Update chain status to running
-                if 'host_status' not in status_json[host]:
-                    status_json[host]['host_status'] = 'running'
+                if 'host_status' not in status_json['hosts'][host]:
+                    status_json['hosts'][host]['host_status'] = 'running'
 
             # Update chain status: success or fail
             if host_status:
-                status_json[host]['host_status'] = host_status
+                status_json['hosts'][host]['host_status'] = host_status
 
             if host_status_count:
                 status_json[host_status_count] = status_json.get(host_status_count, 0) + 1

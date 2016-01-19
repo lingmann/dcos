@@ -47,9 +47,8 @@ class TestMultiRunner(unittest.TestCase):
                 "stderr": ["stderr", "newline"],
                 "pid": 1111,
                 "cmd": ["/usr/bin/ssh", "-oConnectTimeout=10", "-oStrictHostKeyChecking=no",
-                        "-oUserKnownHostsFile=/dev/null", "-oBatchMode=yes",
-                        "-oPasswordAuthentication=no", "-p22", "-i", "/home/ubuntu/.ssh/id_rsa",
-                        "-tt", "ubuntu@127.0.0.1", "uname", "-a"]
+                        "-oUserKnownHostsFile=/dev/null", "-oBatchMode=yes", "-oPasswordAuthentication=no",
+                        "-p22", "-i", "/home/ubuntu/.ssh/id_rsa", "-tt", "ubuntu@127.0.0.1", "uname", "-a"]
             },
             {
                 "stdout": ["stdout", "newline"],

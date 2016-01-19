@@ -287,11 +287,11 @@ def test_tags(tmpdir, loop):
     with open(workspace + '/test.json') as fh:
         result_json = json.load(fh)
         for host_port in host_ports:
-            assert 'tags' in result_json[host_port]
-            assert len(result_json[host_port]['tags']) == 2
-            assert result_json[host_port]['tags']['tag1'] == 'test1'
-            assert result_json[host_port]['tags']['tag2'] == 'test2'
-            assert result_json[host_port]['commands'][0]['cmd'] == [
+            assert 'tags' in result_json['hosts'][host_port]
+            assert len(result_json['hosts'][host_port]['tags']) == 2
+            assert result_json['hosts'][host_port]['tags']['tag1'] == 'test1'
+            assert result_json['hosts'][host_port]['tags']['tag2'] == 'test2'
+            assert result_json['hosts'][host_port]['commands'][0]['cmd'] == [
                 "/usr/bin/ssh",
                 "-oConnectTimeout=10",
                 "-oStrictHostKeyChecking=no",

@@ -40,11 +40,8 @@ role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
 
-COMMON_CC_KEYS = {
-    'write_files', 'coreos', 'runcmd', 'apt_sources',
-}
-
-ALL_CC_KEYS = COMMON_CC_KEYS.union({'package', 'root'})
+CLOUDCONFIG_KEYS = {'coreos', 'runcmd', 'apt_sources', 'root'}
+PACKAGE_KEYS = {'package', 'root'}
 
 
 def add_roles(cloudconfig, roles):
@@ -721,11 +718,13 @@ def do_generate(
     for name, template in rendered_templates.items():
         if name == 'dcos-services':  # yaml list of the service files
             assert isinstance(template, list)
+        elif name == 'cloud-config':
+            assert template.keys() <= CLOUDCONFIG_KEYS, template.keys()
         elif isinstance(template, str):  # Not a yaml template
             pass
         else:  # yaml template file
             log.debug("validating template file %s", name)
-            assert template.keys() <= ALL_CC_KEYS, template.keys()
+            assert template.keys() <= PACKAGE_KEYS, template.keys()
 
     # Extract cc_package_files out of the dcos-config template and put them into
     # the cloud-config package.
@@ -778,17 +777,11 @@ def do_generate(
     # Make sure write_files exists.
     assert 'write_files' not in cc
     cc['write_files'] = []
-    # Validate there are no unexpected top level directives
-    assert cc.keys() <= COMMON_CC_KEYS, cc.keys()
     # Do the transform
     for item in cc_root:
         assert item['path'].startswith('/')
         cc['write_files'].append(item)
     rendered_templates['cloud-config'] = cc
-
-    # Validate there are no unexpected top level directives
-    assert rendered_templates['cloud-config'].keys() <= COMMON_CC_KEYS, \
-        rendered_templates['cloud-config'].keys()
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters

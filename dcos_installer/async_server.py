@@ -3,7 +3,7 @@ import logging
 
 import pkg_resources
 from aiohttp import web
-from dcos_installer import backend, mock, util
+from dcos_installer import backend, mock
 
 log = logging.getLogger()
 

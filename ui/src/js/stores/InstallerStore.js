@@ -13,6 +13,9 @@ let InstallerStore = Store.createStore({
 
   init: function () {
     this.set({
+      configStatus: null,
+      currentConfig: null,
+      currentConfigError: null,
       currentStage: null,
       dcosURL: null,
       installInProgress: false,
@@ -43,20 +46,20 @@ let InstallerStore = Store.createStore({
   },
 
   setInstallInProgress: function (installInProgress) {
-    InstallerStore.set({
+    this.set({
       installInProgress: installInProgress
     });
-    InstallerStore.emit(EventTypes.GLOBAL_INSTALL_IN_PROGRESS_CHANGE);
+    this.emit(EventTypes.GLOBAL_INSTALL_IN_PROGRESS_CHANGE);
   },
 
   setNextStep: function (stepData) {
-    InstallerStore.set({
+    this.set({
       enabled: stepData.enabled,
       label: stepData.label,
       link: stepData.link,
       visible: stepData.visible
     });
-    InstallerStore.emit(EventTypes.GLOBAL_NEXT_STEP_CHANGE);
+    this.emit(EventTypes.GLOBAL_NEXT_STEP_CHANGE);
   },
 
   dispatcherIndex: AppDispatcher.register(function (payload) {

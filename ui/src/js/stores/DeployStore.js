@@ -3,9 +3,12 @@ import {GetSetMixin, Store} from 'mesosphere-shared-reactjs';
 import ActionTypes from '../constants/ActionTypes';
 import AppDispatcher from '../events/AppDispatcher';
 import EventTypes from '../constants/EventTypes';
+import StageActions from '../events/StageActions';
+
+const stageID = 'deploy';
 
 let DeployStore = Store.createStore({
-  storeID: 'deploy',
+  storeID: stageID,
 
   mixins: [GetSetMixin],
 
@@ -25,6 +28,12 @@ let DeployStore = Store.createStore({
       status: 'Deploying DCOS...'
     });
   },
+
+  beginStage: StageActions.beginStage.bind(null, stageID),
+
+  fetchLogs: StageActions.fetchLogs.bind(null, stageID),
+
+  fetchStageStatus: StageActions.fetchStageStatus.bind(null, stageID),
 
   addChangeListener: function (eventName, callback) {
     this.on(eventName, callback);
@@ -52,6 +61,12 @@ let DeployStore = Store.createStore({
         break;
       case ActionTypes.DEPLOY_UPDATE_SUCCESS:
         DeployStore.processUpdateSuccess(action.data);
+        break;
+      case ActionTypes.DEPLOY_BEGIN_SUCCESS:
+        this.emit(EventTypes.DEPLOY_BEGIN_SUCCESS);
+        break;
+      case ActionTypes.DEPLOY_BEGIN_ERROR:
+        this.emit(EventTypes.DEPLOY_BEGIN_ERROR, action.data);
         break;
     }
 

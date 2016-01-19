@@ -46,8 +46,6 @@ def configure(request):
         new_config = yield from request.json()
         log.info("Received: %s", new_config)
         log.info('POST to configure: {}'.format(new_config))
-        if 'ssh_key' in new_config:
-            backend.write_ssh_key(new_config['ssh_key'])
         messages = backend.create_config_from_post(new_config)
         resp = web.json_response({})
         if messages['errors'] and len(messages['errors']) > 0:
@@ -55,8 +53,8 @@ def configure(request):
 
         else:
             # Execute genconf
-            backend.configure()
-            resp = web.json_response({}, status=200)
+            # backend.configure()
+            resp = web.json_response({"validation": "Success! Executing configuration generation."}, status=200)
 
         return resp
         # TODO (malnick/cmalony) implement the proper call to the gen
@@ -97,6 +95,11 @@ def success(request):
 
 def action_action_name(request):
     action_name = request.match_info['action_name']
+    # get_action_status(action_name)
+    # if action_status == not_running
+    #     cleanup_action_jsons(action_name)
+    # ...execute action again.
+    #
     # Update the global action
     app['current_action'] = action_name
     if request.method == 'GET':
@@ -115,7 +118,7 @@ def action_current(request):
 
 
 # Serve static files:
-# app.router.add_static('/', pkg_resources.resource_filename(__name__, 'css/'))
+app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
 
 # Static routes
 app.router.add_route('GET', '/', root)

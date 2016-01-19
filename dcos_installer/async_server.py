@@ -86,6 +86,7 @@ def configure_status(request):
 
 def configure_type(request):
     log.info("Request for configuration type made.")
+    return web.json_response(backend.determine_config_type())
 
 
 # Success route handler
@@ -126,6 +127,7 @@ app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
 app.router.add_route('GET', '/api/v{}/configure'.format(VERSION), configure)
 app.router.add_route('POST', '/api/v{}/configure'.format(VERSION), configure)
 app.router.add_route('GET', '/api/v{}/configure/status'.format(VERSION), configure_status)
+app.router.add_route('GET', '/api/v{}/configure/type'.format(VERSION), configure_type)
 app.router.add_route('GET', '/api/v{}/success'.format(VERSION), success)
 # TODO(malnick) The regex handling in the variable routes blows up if we insert another variable to be
 # filled in by .format. Had to hardcode the VERSION into the URL for now. Fix suggestions please!

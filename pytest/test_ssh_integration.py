@@ -115,14 +115,15 @@ def test_scp_remote_to_local(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
     chain.add_copy(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+                                                                               state_json_dir=workspace))
     finally:
         loop.close()
 
@@ -148,14 +149,15 @@ def test_scp(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
     chain.add_copy(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+                                                                               state_json_dir=workspace))
     finally:
         loop.close()
 
@@ -181,14 +183,15 @@ def test_scp_recursive(tmpdir, loop):
 
     id = uuid.uuid4().hex
     pkgpanda.util.write_string(workspace + '/recursive_pilot.txt', id)
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key')
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
     chain.add_copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+                                                                               state_json_dir=workspace))
     finally:
         loop.close()
 
@@ -230,14 +233,14 @@ def test_ssh_command_terminate(tmpdir, loop):
     # wait a little bit for sshd server to start
     time.sleep(3)
 
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key', process_timeout=2)
 
     chain = CommandChain('test')
     chain.add_execute(['sleep', '20'])
     start_time = time.time()
     try:
-        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True, state_json_dir=workspace))
     finally:
         loop.close()
     elapsed_time = time.time() - start_time
@@ -267,13 +270,13 @@ def test_tags(tmpdir, loop):
     # wait a little bit for sshd server to start
     time.sleep(3)
 
-    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], workspace, ssh_user=getpass.getuser(),
+    runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
                          ssh_key_path=workspace + '/host_key', tags=[{'tag1': 'test1'}, {'tag2': 'test2'}])
 
     chain = CommandChain('test')
     chain.add_execute(['sleep', '1'])
     try:
-        loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        loop.run_until_complete(runner.run_commands_chain_async(chain, block=True, state_json_dir=workspace))
     finally:
         loop.close()
 

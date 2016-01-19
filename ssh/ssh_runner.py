@@ -21,6 +21,7 @@ from multiprocessing import Pool
 
 import ssh.helpers
 import ssh.validate
+from ssh.utils import CommandChain, JsonDelegate
 
 log = logging.getLogger(__name__)
 
@@ -109,46 +110,6 @@ def save_logs(results, log_directory, log_postfix):
     except IOError:
         pass
     return results
-
-
-class CommandChain():
-    '''
-    Add command to execute on a remote host.
-
-    :param cmd: String, command to execute
-    :param rollback: String (optional) a rollback command
-    :param comment: String (optional)
-    :return:
-    '''
-    execute_flag = 'execute'
-    copy_flag = 'copy'
-
-    def __init__(self, namespace):
-        self.pre_commands = []
-        self.post_commands = []
-        self.commands_stack = []
-        self.namespace = namespace
-
-    def add_execute(self, cmd, rollback=None, comment=None):
-        assert isinstance(cmd, list)
-        self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
-
-    def add_copy(self, local_path, remote_path, remote_to_local=False, recursive=False, comment=None):
-        self.commands_stack.append((self.copy_flag, local_path, remote_path, remote_to_local, recursive, comment))
-
-    def get_commands(self):
-        # Return all commands
-        return self.pre_commands + self.commands_stack + self.post_commands
-
-    def prepend_command(self, cmd, rollback=None, comment=None):
-        # We can specify a command to be executed before the main chain of commands, for example some setup commands
-        assert isinstance(cmd, list)
-        self.pre_commands.append((self.execute_flag, cmd, rollback, comment))
-
-    def append_command(self, cmd, rollback=None, comment=None):
-        # We can also cleanup commands if needed.
-        assert isinstance(cmd, list)
-        self.post_commands.append((self.execute_flag, cmd, rollback, comment))
 
 
 class MultiRunner():
@@ -348,9 +309,14 @@ class MultiRunner():
         return chain_result
 
     @asyncio.coroutine
-    def run_commands_chain_async(self, chain, block=False):
+    def run_commands_chain_async(self, chain, block=False, state_json_dir=None):
         assert isinstance(chain, CommandChain)
         sem = asyncio.Semaphore(self.__parallelism)
+        if self.async_delegate is not None and state_json_dir is True:
+            log.error('Cannot use a delegate and update json at the same time')
+            return None
+        elif state_json_dir:
+            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), tags=self.tags)
 
         if block:
             tasks = []

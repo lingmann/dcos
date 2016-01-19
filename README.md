@@ -137,6 +137,26 @@ curl -H 'Content-Type: application/json' -XGET localhost:5000/api/v1/configure |
 
 Notice that the ssh_user is no longer ```None``` and the validation for it now passes since it is a string.
 
+
+#### /api/v1/configure/type
+**GET**: Get the current configuration type, advanced or minimal.
+
+If minimal is found:
+```json
+{
+  "configuration_type": "minimal",
+  "message": "Configuration looks good!",
+}
+```
+
+If advanced is found:
+```json
+{
+  "configuration_type": "advanced",
+  "message": "Advanced configuration detected in genconf/config.yaml. Please backup or remove genconf/config.yaml to use the UI installer."
+}
+```
+
 #### /api/v1/action/preflight/
 **GET**:  RETURN preflight_status.json
 

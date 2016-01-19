@@ -85,10 +85,12 @@ class AbstractSSHLibDelegate(metaclass=abc.ABCMeta):
 
 
 class JsonDelegate(AbstractSSHLibDelegate):
-    def __init__(self, state_dir, total_hosts, tags=None):
+    def __init__(self, state_dir, total_hosts, tags=None, total_masters=None, total_agents=None):
         self.state_dir = state_dir
         self.total_hosts = total_hosts
         self.tags = tags
+        self.total_masters = total_masters
+        self.total_agents = total_agents
 
     def on_update(self, future, callback_called):
         self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
@@ -116,6 +118,12 @@ class JsonDelegate(AbstractSSHLibDelegate):
                 else:
                     # Create a new chain properties
                     status_json['total_hosts'] = self.total_hosts
+                    if self.total_masters:
+                        status_json['total_masters'] = self.total_masters
+
+                    if self.total_agents:
+                        status_json['total_agents'] = self.total_agents
+
                     status_json['chain_name'] = name
                     status_json[host] = {
                         'commands': [return_values]

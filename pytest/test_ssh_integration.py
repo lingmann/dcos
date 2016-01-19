@@ -286,7 +286,6 @@ def test_tags(tmpdir, loop):
 
     with open(workspace + '/test.json') as fh:
         result_json = json.load(fh)
-        index = 0
         for host_port in host_ports:
             assert 'tags' in result_json[host_port]
             assert len(result_json[host_port]['tags']) == 2

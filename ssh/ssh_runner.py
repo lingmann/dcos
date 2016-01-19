@@ -150,7 +150,6 @@ class MultiRunner():
             '-oUserKnownHostsFile=/dev/null',
             '-oBatchMode=yes',
             '-oPasswordAuthentication=no',
-            '-tt',
             '{}{}'.format(port_option, host['port']),
             '-i', self.ssh_key_path
             ]

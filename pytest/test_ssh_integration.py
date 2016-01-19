@@ -104,6 +104,8 @@ def test_ssh(tmpdir, loop):
                 assert host in host_port
                 assert '/usr/bin/ssh' in process_result['cmd']
                 assert 'uname' in process_result['cmd']
+                assert '-tt' in process_result['cmd']
+                assert len(process_result['cmd']) == 13
 
 
 def test_scp_remote_to_local(tmpdir, loop):
@@ -138,6 +140,7 @@ def test_scp_remote_to_local(tmpdir, loop):
                 assert host in host_port
                 assert '/usr/bin/scp' in process_result['cmd']
                 assert workspace + '/pilot.txt.copied' in process_result['cmd']
+                assert '-tt' not in process_result['cmd']
 
 
 def test_scp(tmpdir, loop):
@@ -283,8 +286,24 @@ def test_tags(tmpdir, loop):
 
     with open(workspace + '/test.json') as fh:
         result_json = json.load(fh)
+        index = 0
         for host_port in host_ports:
             assert 'tags' in result_json[host_port]
             assert len(result_json[host_port]['tags']) == 2
             assert result_json[host_port]['tags']['tag1'] == 'test1'
             assert result_json[host_port]['tags']['tag2'] == 'test2'
+            assert result_json[host_port]['commands'][0]['cmd'] == [
+                "/usr/bin/ssh",
+                "-oConnectTimeout=10",
+                "-oStrictHostKeyChecking=no",
+                "-oUserKnownHostsFile=/dev/null",
+                "-oBatchMode=yes",
+                "-oPasswordAuthentication=no",
+                "-p{}".format(sshd_ports[0]),
+                "-i",
+                "{}/host_key".format(workspace),
+                "-tt",
+                "{}@127.0.0.1".format(getpass.getuser()),
+                "sleep",
+                "1"
+            ]

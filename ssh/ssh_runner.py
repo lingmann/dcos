@@ -17,7 +17,6 @@ import logging
 import os
 import subprocess
 import warnings
-from datetime import datetime
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -153,8 +152,8 @@ class CommandChain():
 
 
 class MultiRunner():
-    def __init__(self, targets, state_dir=None, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120,
-                 parallelism=10, tags=None):
+    def __init__(self, targets, async_delegate=None, ssh_user=None, ssh_key_path=None, extra_opts='',
+                 process_timeout=120, parallelism=10, tags=None):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
@@ -167,7 +166,7 @@ class MultiRunner():
         self.ssh_key_path = ssh_key_path
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
-        self.state_dir = state_dir
+        self.async_delegate = async_delegate
         self.tags = tags
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
@@ -284,56 +283,6 @@ class MultiRunner():
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
-    def update_json(self, future, callback_called):
-        self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
-
-    def _update_json_file(self, namespace, process_output, future_update=None, host_status_count=None, host_status=None,
-                          callback_called=None):
-        status_json = {}
-        status_file = os.path.join(self.state_dir, '{}.json'.format(namespace))
-        if os.path.isfile(status_file):
-            with open(status_file) as f:
-                status_json = json.load(f)
-
-        for host, return_values in process_output.items():
-            if future_update:
-                return_values.update({
-                    'date': str(datetime.now())
-                })
-
-                # Append to commands
-                if host in status_json:
-                    status_json[host]['commands'].append(return_values)
-                else:
-                    # Create a new chain properties
-                    status_json['total_hosts'] = len(self.__targets)
-                    status_json['chain_name'] = namespace
-                    status_json[host] = {
-                        'commands': [return_values]
-                    }
-
-                if self.tags and 'tags' not in status_json[host]:
-                    status_json[host]['tags'] = {}
-                    for tag in self.tags:
-                        status_json[host]['tags'].update(tag)
-
-                # Update chain status to running
-                if 'host_status' not in status_json[host]:
-                    status_json[host]['host_status'] = 'running'
-
-            # Update chain status: success or fail
-            if host_status:
-                status_json[host]['host_status'] = host_status
-
-            if host_status_count:
-                status_json[host_status_count] = status_json.get(host_status_count, 0) + 1
-
-        with open(status_file, 'w') as f:
-            json.dump(status_json, f)
-
-        if callback_called:
-            callback_called.set_result(True)
-
     @asyncio.coroutine
     def dispatch_chain(self, host, chain, sem):
         host_status = 'hosts_success'
@@ -367,9 +316,9 @@ class MultiRunner():
                     log.debug('{}: {}'.format(host_port, command[-1]))
                 future = asyncio.Future()
 
-                if self.state_dir is not None:
+                if self.async_delegate is not None:
                     callback_called = asyncio.Future()
-                    future.add_done_callback(lambda future: self.update_json(future, callback_called))
+                    future.add_done_callback(lambda future: self.async_delegate.on_update(future, callback_called))
 
                 # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
                 result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
@@ -377,7 +326,7 @@ class MultiRunner():
                 host_status = status['host_status']
                 host_status_count = status['host_status_count']
 
-                if self.state_dir is not None:
+                if self.async_delegate is not None:
                     # We need to make sure the callback was executed before we can proceed further
                     # 5 seconds should be enough for a callback.
                     try:
@@ -392,10 +341,10 @@ class MultiRunner():
                 if host_status != 'success':
                     break
 
-            if self.state_dir is not None:
+            if self.async_delegate is not None:
                 # Update chain status
-                self._update_json_file(chain.namespace, result, host_status_count=host_status_count,
-                                       host_status=host_status)
+                self.async_delegate.on_done(chain.namespace, result, host_status_count=host_status_count,
+                                            host_status=host_status)
         return chain_result
 
     @asyncio.coroutine

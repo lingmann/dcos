@@ -14,7 +14,7 @@ import os
 import yaml
 
 from dcos_installer.validate import DCOSValidateConfig
-from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH
+from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH, REXRAY_CONFIG_PATH
 log = logging.getLogger(__name__)
 
 
@@ -109,14 +109,16 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
                     self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
-
-                if key == 'ip_detect_script':
+                elif key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
+                elif key == 'rexray_config':
+                    self['rexray_config_method'] = 'file'
+                    self['rexray_config_filename'] = REXRAY_CONFIG_PATH
+                    self.write_to_disk(value, REXRAY_CONFIG_PATH)
 
                 if key in arrays and value is None:
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = list(value)
-
                 else:
                     log.warning("Overriding %s: %s -> %s", key, self.get(key), value)
                     self[key] = value
@@ -196,7 +198,8 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     'agent_list',
                     'ip_detect_path',
                     'ip_detect_script',
-                    'process_timeout']:
+                    'process_timeout',
+                    'rexray_config']:
                 continue
             log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
             # stringify the keys as they're added in:

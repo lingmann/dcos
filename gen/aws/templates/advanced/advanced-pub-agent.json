@@ -95,16 +95,37 @@
           "PolicyName": "Agents",
           "PolicyDocument": {
             "Version" : "2012-10-17",
-            "Statement": [ {
-              "Resource": [
+            "Statement": [
+              {
+                "Resource": [
                   { "Ref" : "AWS::StackId" },
                   { "Fn::Join" : ["", [{ "Ref" : "AWS::StackId" }, "/*" ]]}
-              ],
-              "Action": [
+                ],
+                "Action": [
                   "cloudformation:*"
-              ],
-              "Effect": "Allow"
-            }
+                ],
+                "Effect": "Allow"
+              },
+              {
+                "Resource": "*",
+                "Action": [
+                  "ec2:CreateTags",
+                  "ec2:DescribeInstances",
+                  "ec2:CreateVolume",
+                  "ec2:DeleteVolume",
+                  "ec2:AttachVolume",
+                  "ec2:DetachVolume",
+                  "ec2:DescribeVolumes",
+                  "ec2:DescribeVolumeStatus",
+                  "ec2:DescribeVolumeAttribute",
+                  "ec2:CreateSnapshot",
+                  "ec2:CopySnapshot",
+                  "ec2:DeleteSnapshot",
+                  "ec2:DescribeSnapshots",
+                  "ec2:DescribeSnapshotAttribute"
+                ],
+                "Effect": "Allow"
+              }
             ]
           }
         } ]

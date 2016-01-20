@@ -3,6 +3,7 @@ Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
 import logging
+import os
 
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
@@ -114,3 +115,14 @@ def success():
     }
 
     return return_success
+
+
+def make_default_directories():
+    """
+    So users do not have to set the directories in the config.yaml,
+    we build them using sane defaults here first.
+    """
+    config = get_config()
+    state_dir = config['state_dir'].get('state_dir', '/genconf/state')
+    if not os.path.exists(state_dir):
+        os.makedirs(state_dir)

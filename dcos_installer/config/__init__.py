@@ -52,7 +52,7 @@ ssh_config:
   # Optional parameter for executing SSH with an attached TTY. Useful in
   # AWS or other environments which require a tty with your ssh session
   # to execute sudo on remote machines.
-  # extra_ssh_options: -tt
+  extra_ssh_options: -tt
 """
         # TODO set this to validate()? What does validate return? messages,config?
         self.defaults = yaml.load(defaults)

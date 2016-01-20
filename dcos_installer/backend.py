@@ -18,6 +18,32 @@ def generate_configuration():
     do_genconf(interactive=False)
 
 
+def validate_config_from_post(post_data):
+    """
+    Take any key from post and return tuple of message and bool
+    for passed or did not pass validation.
+    """
+    config = DCOSConfig(post_data=post_data)
+    messages = config.validate()
+    # Transform to return only messages for posted config
+    return_data = {}
+    ui_keys = [
+        "master_ips",
+        "agent_ips",
+        "ssh_username",
+        "ssh_port",
+        "ssh_key",
+        "username",
+        "password",
+        "upstream_dns_servers",
+        "zk_exhibitor_port",
+        "zk_exhibitor_hosts",
+        "ip_detect_script",
+    ]
+    for key, value in post_data.items():
+
+
+
 def create_config_from_post(post_data):
     """
     Take POST data and form it into the dual dictionary we need

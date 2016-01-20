@@ -77,14 +77,14 @@ def determine_config_type():
     for key, value in advanced_cluster_config.items():
         # If the key is present in the config but we don't care what
         # the default is, add it to the advanced found hash.
-        if value is None and key in config['cluster_config']:
-            adv_found[key] = config['cluster_config'][key]
+        if value is None and key in config:
+            adv_found[key] = config[key]
 
         # If the key is present in the config and we do care what the
         # value is set to, and the value present in the config is not
         # what we want it to be, add it to adv config hash.
-        if value is not None and key in config['cluster_config'] and value != config['cluster_config'][key]:
-            adv_found[key] = config['cluster_config'][key]
+        if value is not None and key in config and value != config[key]:
+            adv_found[key] = config[key]
 
     if len(adv_found) > 0:
         message = """Advanced configuration detected in genconf/config.yaml ({}).

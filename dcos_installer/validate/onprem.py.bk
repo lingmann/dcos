@@ -52,27 +52,35 @@ def get_onprem_dependencies(config):
     # embedded in the tree. If the config isn't set we throw a KeyError, log
     # it in 'messages' and continue parsing the tree.
 
+    cluster_config = config['cluster_config']
+    ssh_config = config['ssh_config']
+
     dep_tree = {
-        "master_list": helpers.validate_ip_list('master_list', config),
-        "exhibitor_zk_hosts": helpers.validate_string('exhibitor_zk_hosts', config),
-        "cluster_name": helpers.validate_string('cluster_name', config),
-        "resolvers": helpers.validate_ip_list('resolvers', config),
-        "master_list": helpers.validate_ip_list('master_list', config),
-        "ip_detect_path": helpers.validate_path('ip_detect_path', config),
-        "ssh_port": helpers.validate_int('ssh_port', config),
-        "ssh_key_path": helpers.validate_path('ssh_key_path', config),
-        "ssh_user": helpers.validate_string('ssh_user', config),
-        "agent_list": helpers.validate_ip_list('agent_list', config),
+        "cluster_config": {
+            "master_list": helpers.validate_ip_list('master_list', cluster_config),
+            "exhibitor_zk_hosts": helpers.validate_string('exhibitor_zk_hosts', cluster_config),
+            "cluster_name": helpers.validate_string('cluster_name', cluster_config),
+            "resolvers": helpers.validate_ip_list('resolvers', cluster_config),
+            "master_list": helpers.validate_ip_list('master_list', cluster_config),
+            "ip_detect_path": helpers.validate_path('ip_detect_path', cluster_config),
+        },
+        "ssh_config": {
+            "ssh_port": helpers.validate_int('ssh_port', ssh_config),
+            "ssh_key_path": helpers.validate_path('ssh_key_path', ssh_config),
+            "ssh_user": helpers.validate_string('ssh_user', ssh_config),
+            "target_hosts": helpers.validate_ip_list('target_hosts', ssh_config),
+        }
     }
 
     # For each dependency, read its validation helper func and return
     for tk, tv in dep_tree.items():
-        if tv[0]:
-            log.debug("%s: %s", tk, tv[1])
-            messages['success'][tk] = '{}'.format(tv[1])
+        for rk, rv in tv.items():
+            if rv[0]:
+                log.debug("%s: %s", rk, rv[1])
+                messages['success'][rk] = '{}'.format(rv[1])
 
-        else:
-            log.error("%s: %s", tk, tv[1])
-            messages['errors'][tk] = '{}'.format(tv[1])
+            else:
+                log.error("%s: %s", rk, rv[1])
+                messages['errors'][rk] = '{}'.format(rv[1])
 
     return messages

@@ -71,7 +71,7 @@ def test_configure(monkeypatch):
         'POST': [
             400,
             'application/json',
-            '{"ssh_username": 1}'],
+            '{"ssh_user": 1}'],
         'PUT': [405, 'text/plain'],
         'DELETE': [405, 'text/plain'],
         'HEAD': [405, 'text/plain'],
@@ -255,7 +255,6 @@ def test_configure_type(monkeypatch):
         assert res.content_type == expected[1], '{}: {}'.format(
             method,
             expected)
-
 
 
 # def test_serve_assets(monkeypatch):

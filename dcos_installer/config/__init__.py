@@ -26,14 +26,14 @@ cluster_name: 'Mesosphere: The Data Center Operating System'
 
 # The IPv4 addresses of your master hosts
 master_list:
-- 127.0.0.1
+-
 
 # The IPv4 addresses of your agent hosts
 agent_list:
-- 127.0.0.1
+-
 
 # The bootstrapping exhibitor hosts. Format is ip:port.
-exhibitor_zk_hosts: 127.0.0.1:2181
+exhibitor_zk_hosts:
 
 # Upstream DNS resolvers for MesosDNS
 resolvers:
@@ -79,6 +79,20 @@ extra_ssh_options: -tt
         # Add overrides, if any
         self._add_overrides()
 
+    def make_zk_exhibitor_hosts(self):
+        # Must transform to host1:2181,host2:2181 https://github.com/Netflix/exhibitor/wiki/Running-Exhibitor
+        exhibitor_port = '2181'
+        if 'zk_exhibitor_port' in self.overrides and self.overrides['zk_exhibitor_port'] is not None:
+            exhibitor_port = self.overrides['zk_exhibitor_port']
+
+        if 'zk_exhibitor_hosts' in self.overrides and self.overrides['zk_exhibitor_hosts'] is not None:
+            # Transform to match exepected string type for exhibitor host:port
+            host_list = []
+            for host in self.overrides['zk_exhibitor_hosts']:
+                host_list.append('{}:{}'.format(host, exhibitor_port))
+
+            return ','.join(host_list)
+
     def _add_overrides(self):
         """
         Add overrides. Overrides expects data in the same format as the config file.
@@ -86,11 +100,15 @@ extra_ssh_options: -tt
         arrays = ['master_list', 'resolvers', 'target_hosts']
         if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
-                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
-                    if key in arrays and value is None:
-                        self[key] = list(value)
-                    else:
-                        self[key] = value
+                if key == 'zk_exhibitor_hosts':
+                    value = self.make_zk_exhibitor_hosts()
+                    key = 'exhibitor_zk_hosts'
+
+                log.warning("Overriding %s: %s -> %s", key, self[key], value)
+                if key in arrays and value is None:
+                    self[key] = list(value)
+                else:
+                    self[key] = value
 
     def validate(self):
         # TODO Leverage Gen library from here

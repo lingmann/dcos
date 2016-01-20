@@ -187,6 +187,10 @@ def update_dictionary(base, addition):
     return base_copy
 
 
+def get_function_parameters(function):
+    return inspect.signature(function).parameters
+
+
 class LazyArgumentCalculator(collections.Mapping):
 
     def __init__(self, must_fn, can_fn, arguments):
@@ -207,7 +211,7 @@ class LazyArgumentCalculator(collections.Mapping):
         try:
             self.__in_progress.add(name)
             calc_func = self._calculators[name]
-            parameters = inspect.signature(self._calculators[name]).parameters
+            parameters = get_function_parameters(self._calculators[name])
             # Iterate over the argument list, and force all the arguments to
             # be calculated. This pulls that out of the implicit in the body
             # of every function, allowing incremental work towards using the
@@ -441,10 +445,7 @@ class Mixin:
         self.must_fn = dict()
         self.implies = dict()
 
-        def no_validate(arguments):
-            pass
-
-        self.validate_fn = no_validate
+        self.validate = []
 
         module = None
         # Load the library and grab things from it as seperate bits so we don't
@@ -472,7 +473,7 @@ class Mixin:
                 self.parameters |= set(inspect.signature(func).parameters)
 
             try:
-                self.validate_fn = module.validate
+                self.validate = module.validate
             except AttributeError:
                 pass
 
@@ -549,6 +550,32 @@ def extract_files_with_path(start_files, paths):
     return found_files, left_files
 
 
+def validate_given(validate_fns, arguments):
+    fns_by_arg = dict()
+
+    for fn in validate_fns:
+        parameters = get_function_parameters(fn)
+        assert len(parameters) == 1, "Validate functions must take exactly one parameter currently."
+        # Get out the one and only parameter's name. This will break really badly
+        # if functions have more than one parameter (We'll call for
+        # each parameter with only one parameter)
+        for param in parameters.keys():
+            fns_by_arg[param] = fn
+
+    errors = {}
+
+    def noop(_):
+        return
+
+    for name, value in arguments.items():
+        try:
+            fns_by_arg.get(name, noop)(value)
+        except AssertionError as ex:
+            errors[name] = ex.args[0]
+
+    return errors
+
+
 def do_generate(
         options,
         mixins,
@@ -562,7 +589,7 @@ def do_generate(
     parameters = set()
     must_calc = dict()
     can_calc = dict()
-    validate_fn = list()
+    validate = list()
     defaults = dict()
 
     # Make sure all user provided arguments are strings.
@@ -623,7 +650,7 @@ def do_generate(
         parameters |= mixin.parameters
         must_calc.update(mixin.must_fn)
         can_calc.update(mixin.can_fn)
-        validate_fn.append(mixin.validate_fn)
+        validate = validate + mixin.validate
         arguments.update(mixin.arguments)
         defaults.update(mixin.defaults)
 
@@ -681,10 +708,11 @@ def do_generate(
 
     # Validate arguments.
     validate_arguments_strings(arguments)
-    # TODO(cmaloney): Define an API for allowing multiple failures, reporting
-    # more than just the first error.
-    for fn in validate_fn:
-        fn(arguments)
+    errors = validate_given(validate, arguments)
+    if errors:
+        for key, msg in errors.items():
+            log.error("ERROR: Argument '%s' with value '%s' didn't pass validation: %s", key, arguments[key], msg)
+        sys.exit(1)
 
     log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 

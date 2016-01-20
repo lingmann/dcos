@@ -117,10 +117,9 @@ class MultiRunner():
         # user is always required.
         if bin_name == self.ssh_bin:
             port_option = '-p'
+            add_opts = ['-tt']
             if self.extra_opts:
-                add_opts = self.extra_opts.split(' ')
-            else:
-                add_opts = []
+                add_opts.extend(self.extra_opts.split(' '))
         else:
             port_option = '-P'
             add_opts = []

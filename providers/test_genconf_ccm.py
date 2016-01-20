@@ -27,9 +27,8 @@ def run_cmd(mode, expect_errors=False):
     # doesn't have to be executable.
     p = subprocess.Popen(
         ['bash', './dcos_generate_config.sh', '--log-level', 'debug', mode],
-        stdin=subprocess.DEVNULL, stderr=subprocess.PIPE)
-    out = p.communicate()[1].decode()
-
+        stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)
+    out = p.communicate()[0].decode()
     # TODO(cmaloney): Only print on an error.
     print(out)
     if expect_errors:
@@ -108,12 +107,16 @@ def main():
 
     if host_list is None:
         vpc = make_vpc()
-        host_list = vpc.hosts()
 
+        @retry(wait_fixed=1000, stop_max_attempt_number=100)
+        def get_hosts():
+            return vpc.hosts()
+
+        host_list = get_hosts()
         # TODO(cmaloney): Use the ssh runner and retrying to do this same thing more reliably.
         # There is some significant latency between an AWS node is created and when the access
         # is enabled. Wait to make sure that deploy lib will not be prompted for password
-        print("Sleep for 50 seconds so authorized_keys is populated on hosts...")
+        print("Sleep for 60 seconds so authorized_keys is populated on hosts...")
 
         # TODO(cmaloney):
         time.sleep(60)
@@ -166,7 +169,6 @@ def main():
     ssh_runner.log_directory = "genconf"
     ssh_runner.process_timeout = 600
     ssh_runner.targets = host_list
-    ssh_runner.extra_ssh_options = "-tt"
 
     # Run Configuratator
     run_cmd('--genconf')

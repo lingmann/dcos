@@ -1,9 +1,15 @@
 import asyncio
 import logging
+import os
+import json
 
 import pkg_resources
 from aiohttp import web
 from dcos_installer import backend, mock
+
+import deploy.preflight
+import deploy.deploy
+import deploy.postflight
 
 log = logging.getLogger()
 
@@ -14,6 +20,12 @@ VERSION = '1'
 loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app['current_action'] = ''
+
+action_map = {
+    'preflight': deploy.preflight.run_preflight,
+    'deploy': deploy.deploy.install_dcos,
+    'postflight': deploy.postflight.run_postflight
+}
 
 
 # Aiohttp route handlers. These methods are for the
@@ -97,14 +109,27 @@ def action_action_name(request):
     # ...execute action again.
     #
     # Update the global action
+    state_dir = '/genconf/state'
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
-        return web.json_response(mock.mock_action_state)
+        if os.path.isfile(state_dir + '/{}.json'.format(action_name)):
+            with open(state_dir + '/{}.json'.format(action_name)) as fh:
+                result_json = json.load(fh)
+            return web.Response(body=json.dumps(result_json, sort_keys=True, indent=4).encode('utf-8'),
+                content_type='application/json')
+
+        return web.json_response({})
 
     elif request.method == 'POST':
         log.info('POST {}'.format(action_name))
-        return web.json_response(mock.mock_action_state)
+        if os.path.isfile(state_dir + '/{}.json'.format(action_name)):
+            return web.json_response({'status': 'preflight started'})
+        action = action_map.get(action_name)
+        if not action:
+            return web.json_response({'error': 'action {} not implemented'.format(action_name)})
+        yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir))
+        return web.json_response({'status': '{} started'.format(action_name)})
 
 
 def action_current(request):

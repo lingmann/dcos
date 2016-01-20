@@ -46,8 +46,10 @@ def configure(request):
         new_config = yield from request.json()
         log.info("Received: %s", new_config)
         log.info('POST to configure: {}'.format(new_config))
-        messages = backend.create_config_from_post(new_config)
-        resp = web.json_response({})
+        messages = backend.validate_config_from_post(new_config)
+
+        #messages = backend.create_config_from_post(new_config)
+        #resp = web.json_response({})
         if messages['errors'] and len(messages['errors']) > 0:
             resp = web.json_response(messages['errors'], status=400)
 

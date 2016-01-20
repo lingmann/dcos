@@ -25,24 +25,27 @@ def validate_config_from_post(post_data):
     """
     config = DCOSConfig(post_data=post_data)
     messages = config.validate()
+    print(messages)
     # Transform to return only messages for posted config
     return_data = {}
-    ui_keys = [
-        "master_ips",
-        "agent_ips",
-        "ssh_username",
-        "ssh_port",
-        "ssh_key",
-        "username",
-        "password",
-        "upstream_dns_servers",
-        "zk_exhibitor_port",
-        "zk_exhibitor_hosts",
-        "ip_detect_script",
-    ]
-    for key, value in post_data.items():
+    ui_keys = {
+        "master_ips": ['target_hosts'],
+        "agent_ips": ['target_hosts'],
+        "ssh_username": '',
+        "ssh_port": '',
+        "ssh_key": '',
+        "username": '',
+        "password": '',
+        "upstream_dns_servers": '',
+        "zk_exhibitor_port": '',
+        "zk_exhibitor_hosts": '',
+        "ip_detect_script": '',
+    }
+    for ui_key, ui_value in ui_keys.items():
+        if ui_key in post_data:
+            return_data[ui_key] = messages['errors'][ui_value[0]]
 
-
+    print(return_data)
 
 def create_config_from_post(post_data):
     """

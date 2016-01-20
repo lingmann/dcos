@@ -36,13 +36,24 @@ def get_runner(config, hosts, log_postfix):
     :return: instance of ssh.ssh_runner.SSHRunner with pre-set parameters.
     '''
     default_runner = ssh.ssh_runner.SSHRunner()
+    # process timeout and ssh options are defualted in ssh lib, so override if they're set or
+    # accept defaults
     if 'extra_ssh_options' in config['ssh_config']:
         default_runner.extra_ssh_options = config['ssh_config']['extra_ssh_options']
-    default_runner.process_timeout = config['ssh_config']['process_timeout']
+    if 'process_timeout' in config['ssh_config']:
+        default_runner.process_timeout = config['ssh_config']['process_timeout']
     default_runner.log_postfix = log_postfix
     default_runner.ssh_user = config['ssh_config']['ssh_user']
-    default_runner.ssh_key_path = config['ssh_config']['ssh_key_path']
-    default_runner.log_directory = config['ssh_config']['log_directory']
+    if 'ssh_key_path' in config['ssh_config']:
+        default_runner.ssh_key_path = config['ssh_config']['ssh_key_path']
+    else:
+        default_runner.ssh_key_path = '/genconf/ssh_key'
+    # Default the log directory so we don't need to set it in config, otherwise
+    # override if it's present
+    if 'log_directory' in config['ssh_config']:
+        default_runner.log_directory = config['ssh_config']['log_directory']
+    else:
+        default_runner.log_directory = '/genconf/logs'
     default_runner.targets = hosts
     default_runner.validate()
     return default_runner

@@ -113,8 +113,14 @@ def action_action_name(request):
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
-        if os.path.isfile(state_dir + '/{}.json'.format(action_name)):
-            with open(state_dir + '/{}.json'.format(action_name)) as fh:
+        role = request.GET.get('role')
+
+        if role:
+            json_status_file = state_dir + '/{}_{}.json'.format(action_name, role)
+        else:
+            json_status_file = state_dir + '/{}.json'.format(action_name)
+        if os.path.isfile(json_status_file):
+            with open(json_status_file) as fh:
                 result_json = json.load(fh)
             return web.Response(body=json.dumps(result_json, sort_keys=True, indent=4).encode('utf-8'),
                 content_type='application/json')
@@ -122,13 +128,13 @@ def action_action_name(request):
         return web.json_response({})
 
     elif request.method == 'POST':
-        log.info('POST {}'.format(action_name))
+        params = yield from request.post()
         if os.path.isfile(state_dir + '/{}.json'.format(action_name)):
-            return web.json_response({'status': 'preflight started'})
+            return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
         action = action_map.get(action_name)
         if not action:
             return web.json_response({'error': 'action {} not implemented'.format(action_name)})
-        yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir))
+        yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
         return web.json_response({'status': '{} started'.format(action_name)})
 
 

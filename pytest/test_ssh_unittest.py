@@ -152,7 +152,7 @@ class TestSSHRunner(unittest.TestCase):
             }]
 
         self.ssh_runner.execute_cmd('uname -a')
-        mocked_multirunner.assert_called_with(['127.0.0.1', '10.10.10.10:22022'], '/tmp', ssh_user='ubuntu',
+        mocked_multirunner.assert_called_with(['127.0.0.1', '10.10.10.10:22022'], ssh_user='ubuntu',
                                               extra_opts='', ssh_key_path='/home/ubuntu/.ssh/id_rsa',
                                               process_timeout=120)
         mocked_multirunner().run.assert_called_with(['uname', '-a'])

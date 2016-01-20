@@ -207,7 +207,7 @@ class MultiRunner():
             try:
                 process.terminate()
             except ProcessLookupError:
-                log.warn('process with pid {} not found'.format(process.pid))
+                log.info('process with pid {} not found'.format(process.pid))
 
         process_output = {
             '{}:{}'.format(host['ip'], host['port']): {
@@ -224,14 +224,19 @@ class MultiRunner():
 
     @asyncio.coroutine
     def run_async(self, host, command, namespace, future):
-        _, cmd, rollback, comment = command
+        # command consists of (command_flag, command, rollback, comment)
+        # we will ignore all but command for now
+        _, cmd, _, _ = command
         full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host['ip'])] + cmd
+        log.debug('executing command {}'.format(full_cmd))
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
     @asyncio.coroutine
     def copy_async(self, host, command, namespace, future):
-        _, local_path, remote_path, remote_to_local, recursive, comment = command
+        # command[0] is command_flag, command[-1] is comment
+        # we will ignore them here.
+        _, local_path, remote_path, remote_to_local, recursive, _ = command
         copy_command = []
         if recursive:
             copy_command += ['-r']
@@ -241,11 +246,13 @@ class MultiRunner():
         else:
             copy_command += [local_path, remote_full_path]
         full_cmd = self._get_base_args(self.scp_bin, host) + copy_command
+        log.debug('copy with command {}'.format(full_cmd))
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
     @asyncio.coroutine
     def dispatch_chain(self, host, chain, sem):
+        log.debug('Started dispatch_chain for host {}'.format(host))
         host_status = 'hosts_success'
         host_port = '{}:{}'.format(host['ip'], host['port'])
 
@@ -278,6 +285,7 @@ class MultiRunner():
                 future = asyncio.Future()
 
                 if self.async_delegate is not None:
+                    log.debug('Using async_delegate with callback')
                     callback_called = asyncio.Future()
                     future.add_done_callback(lambda future: self.async_delegate.on_update(future, callback_called))
 
@@ -293,7 +301,7 @@ class MultiRunner():
                     try:
                         yield from asyncio.wait_for(callback_called, 5)
                     except asyncio.TimeoutError:
-                        print('Callback did not execute within 5 sec')
+                        log.error('Callback did not execute within 5 sec')
                         host_status = 'terminated'
                         break
 
@@ -316,16 +324,20 @@ class MultiRunner():
             log.error('Cannot use a delegate and update json at the same time')
             return None
         elif state_json_dir:
+            log.debug('Using state_json_dir {}'.format(state_json_dir))
             self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), tags=self.tags)
 
         if block:
+            log.info('Waiting for run_command_chain_async to execute')
             tasks = []
             for host in self.__targets:
                 tasks.append(asyncio.async(self.dispatch_chain(host, chain, sem)))
 
             yield from asyncio.wait(tasks)
+            log.info('run_command_chain_async executed')
             return [task.result() for task in tasks]
         else:
+            log.info('Started run_command_chain_async in non-blocking mode')
             for host in self.__targets:
                 asyncio.async(self.dispatch_chain(host, chain, sem))
 
@@ -434,7 +446,6 @@ class SSHRunner():
         self.validate()
         runner = MultiRunner(
             self.exclude_cached(self.targets),
-            self.log_directory,
             ssh_user=self.ssh_user,
             ssh_key_path=self.ssh_key_path,
             extra_opts=self.extra_ssh_options,
@@ -464,7 +475,6 @@ class SSHRunner():
     def copy_cmd(self, local_path, remote_path, recursive=False, remote_to_local=False):
         self.validate()
         runner = MultiRunner(self.exclude_cached(self.targets),
-                             self.log_directory,
                              ssh_user=self.ssh_user,
                              ssh_key_path=self.ssh_key_path,
                              process_timeout=self.process_timeout)

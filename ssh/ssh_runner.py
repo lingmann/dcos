@@ -11,16 +11,33 @@ preflight.execute_cmd(cmd)
 preflight.copy_cmd('/tmp/file.txt', '/tmp')
 preflight.copy_cmd('/usr', '/', recursive=True)
 """
+import asyncio
 import json
 import logging
 import os
 import subprocess
+import warnings
 from multiprocessing import Pool
 
 import ssh.helpers
 import ssh.validate
+from ssh.utils import CommandChain, JsonDelegate
 
 log = logging.getLogger(__name__)
+
+
+def deprecated(func):
+    '''This is a decorator which can be used to mark functions
+    as deprecated. It will result in a warning being emitted
+    when the function is used.'''
+    def new_func(*args, **kwargs):
+        warnings.warn("Call to deprecated function {}.".format(func.__name__),
+                      category=DeprecationWarning)
+        return func(*args, **kwargs)
+    new_func.__name__ = func.__name__
+    new_func.__doc__ = func.__doc__
+    new_func.__dict__.update(func.__dict__)
+    return new_func
 
 
 def parse_ip(ip):
@@ -96,7 +113,8 @@ def save_logs(results, log_directory, log_postfix):
 
 
 class MultiRunner():
-    def __init__(self, targets, ssh_user=None, ssh_key_path=None, extra_opts='', process_timeout=120, parallelism=10):
+    def __init__(self, targets, async_delegate=None, ssh_user=None, ssh_key_path=None, extra_opts='',
+                 process_timeout=120, parallelism=10, tags=None):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
@@ -109,6 +127,8 @@ class MultiRunner():
         self.ssh_key_path = ssh_key_path
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
+        self.async_delegate = async_delegate
+        self.tags = tags
         self.__targets = [parse_ip(ip) for ip in targets]
         self.__parallelism = parallelism
 
@@ -136,6 +156,7 @@ class MultiRunner():
         shared_opts.extend(add_opts)
         return shared_opts
 
+    @deprecated
     def copy(self, local_path, remote_path, remote_to_local=False, recursive=False):
         def build_scp(host):
             copy_command = []
@@ -149,6 +170,7 @@ class MultiRunner():
             return self._get_base_args(self.scp_bin, host) + copy_command
         return self.__run_on_hosts(build_scp)
 
+    @deprecated
     def __run_on_hosts(self, cmd_builder):
         host_cmd_tuples = [(host, cmd_builder(host), self.process_timeout) for host in self.__targets]
 
@@ -163,6 +185,7 @@ class MultiRunner():
             # Rather than just hanging until they all return.
             return pool.starmap(run_cmd_return_tuple, host_cmd_tuples)
 
+    @deprecated
     def run(self, cmd):
         assert isinstance(cmd, list)
 
@@ -170,6 +193,153 @@ class MultiRunner():
             return self._get_base_args(self.ssh_bin, host) + [
                 '{}@{}'.format(self.ssh_user, host['ip'])] + cmd
         return self.__run_on_hosts(build_ssh)
+
+    @asyncio.coroutine
+    def run_cmd_return_dict_async(self, cmd, host, namespace, future):
+        process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
+                                                            stderr=asyncio.subprocess.PIPE,
+                                                            stdin=asyncio.subprocess.DEVNULL)
+        stdout = b''
+        stderr = b''
+        try:
+            stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
+        except asyncio.TimeoutError:
+            try:
+                process.terminate()
+            except ProcessLookupError:
+                log.info('process with pid {} not found'.format(process.pid))
+
+        process_output = {
+            '{}:{}'.format(host['ip'], host['port']): {
+                "cmd": cmd,
+                "stdout": stdout.decode().split('\n'),
+                "stderr": stderr.decode().split('\n'),
+                "returncode": process.returncode,
+                "pid": process.pid
+            }
+        }
+
+        future.set_result((namespace, process_output))
+        return process_output
+
+    @asyncio.coroutine
+    def run_async(self, host, command, namespace, future):
+        # command consists of (command_flag, command, rollback, comment)
+        # we will ignore all but command for now
+        _, cmd, _, _ = command
+        full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host['ip'])] + cmd
+        log.debug('executing command {}'.format(full_cmd))
+        result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
+        return result
+
+    @asyncio.coroutine
+    def copy_async(self, host, command, namespace, future):
+        # command[0] is command_flag, command[-1] is comment
+        # we will ignore them here.
+        _, local_path, remote_path, remote_to_local, recursive, _ = command
+        copy_command = []
+        if recursive:
+            copy_command += ['-r']
+        remote_full_path = '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)
+        if remote_to_local:
+            copy_command += [remote_full_path, local_path]
+        else:
+            copy_command += [local_path, remote_full_path]
+        full_cmd = self._get_base_args(self.scp_bin, host) + copy_command
+        log.debug('copy with command {}'.format(full_cmd))
+        result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
+        return result
+
+    @asyncio.coroutine
+    def dispatch_chain(self, host, chain, sem):
+        log.debug('Started dispatch_chain for host {}'.format(host))
+        host_status = 'hosts_success'
+        host_port = '{}:{}'.format(host['ip'], host['port'])
+
+        command_map = {
+            CommandChain.execute_flag: self.run_async,
+            CommandChain.copy_flag: self.copy_async
+        }
+
+        process_exit_code_map = {
+            None: {
+                'host_status': 'terminated',
+                'host_status_count': 'hosts_terminated'
+            },
+            0: {
+                'host_status': 'success',
+                'host_status_count': 'hosts_success'
+            },
+            'failed': {
+                'host_status': 'failed',
+                'host_status_count': 'hosts_failed'
+            }
+        }
+        chain_result = []
+        with (yield from sem):
+            for command in chain.get_commands():
+
+                # command[-1] stands for comment
+                if command[-1] is not None:
+                    log.debug('{}: {}'.format(host_port, command[-1]))
+                future = asyncio.Future()
+
+                if self.async_delegate is not None:
+                    log.debug('Using async_delegate with callback')
+                    callback_called = asyncio.Future()
+                    future.add_done_callback(lambda future: self.async_delegate.on_update(future, callback_called))
+
+                # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
+                result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
+                status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
+                host_status = status['host_status']
+                host_status_count = status['host_status_count']
+
+                if self.async_delegate is not None:
+                    # We need to make sure the callback was executed before we can proceed further
+                    # 5 seconds should be enough for a callback.
+                    try:
+                        yield from asyncio.wait_for(callback_called, 5)
+                    except asyncio.TimeoutError:
+                        log.error('Callback did not execute within 5 sec')
+                        host_status = 'terminated'
+                        break
+
+                _, result = future.result()
+                chain_result.append(result)
+                if host_status != 'success':
+                    break
+
+            if self.async_delegate is not None:
+                # Update chain status
+                self.async_delegate.on_done(chain.namespace, result, host_status_count=host_status_count,
+                                            host_status=host_status)
+        return chain_result
+
+    @asyncio.coroutine
+    def run_commands_chain_async(self, chain, block=False, state_json_dir=None):
+        assert isinstance(chain, CommandChain)
+        sem = asyncio.Semaphore(self.__parallelism)
+        if self.async_delegate is not None and state_json_dir is True:
+            log.error('Cannot use a delegate and update json at the same time')
+            return None
+        elif state_json_dir:
+            log.debug('Using state_json_dir {}'.format(state_json_dir))
+            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), tags=self.tags)
+
+        if block:
+            log.info('Waiting for run_command_chain_async to execute')
+            tasks = []
+            for host in self.__targets:
+                tasks.append(asyncio.async(self.dispatch_chain(host, chain, sem)))
+
+            yield from asyncio.wait(tasks)
+            log.info('run_command_chain_async executed')
+            return [task.result() for task in tasks]
+        else:
+            log.info('Started run_command_chain_async in non-blocking mode')
+            for host in self.__targets:
+                asyncio.async(self.dispatch_chain(host, chain, sem))
 
 
 tuple_to_string_header = """HOST: {}

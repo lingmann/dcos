@@ -10,7 +10,6 @@ import logging
 import os
 import yaml
 
-from dcos_installer import util
 from dcos_installer.validate import DCOSValidateConfig
 log = logging.getLogger(__name__)
 
@@ -19,44 +18,43 @@ class DCOSConfig(dict):
     """
     Return the site configuration object for dcosgen library
     """
-    def __init__(self, overrides={}, config_path=None, post_data={}):
+    def __init__(self, overrides={}, config_path=None):
         defaults = """
 ---
-cluster_config:
-  # The name of your DCOS cluster. Visable in the DCOS user interface.
-  cluster_name: 'Mesosphere: The Data Center Operating System'
+# The name of your DCOS cluster. Visable in the DCOS user interface.
+cluster_name: 'Mesosphere: The Data Center Operating System'
 
-  # The IPv4 addresses of your master hosts
-  master_list:
-  -
+# The IPv4 addresses of your master hosts
+master_list:
+- 127.0.0.1
 
-  # The bootstrapping exhibitor hosts. Format is ip:port.
-  exhibitor_zk_hosts:
+# The IPv4 addresses of your agent hosts
+agent_list:
+- 127.0.0.1
 
-  # Upstream DNS resolvers for MesosDNS
-  resolvers:
-    -
-  # Leaving IP-detect path in here for now
-  ip_detect_path: /tmp/ip-detect
+# The bootstrapping exhibitor hosts. Format is ip:port.
+exhibitor_zk_hosts: 127.0.0.1:2181
 
-# SSH configuration for --deploy, --preflight, --uninstall, --postflight
-ssh_config:
-  # The IPv4 addresses of your target hosts
-  target_hosts:
-  -
-  ssh_key_path: /genconf/ssh_key
-  ssh_user:
-  ssh_port: 22
-  process_timeout: 120
+# Upstream DNS resolvers for MesosDNS
+resolvers:
+- 8.8.8.8
+- 8.8.4.4
 
-  # Optional parameter for executing SSH with an attached TTY. Useful in
-  # AWS or other environments which require a tty with your ssh session
-  # to execute sudo on remote machines.
-  extra_ssh_options: -tt
+ssh_key_path: /genconf/ssh_key
+log_directory: /genconf/logs
+ip_detect_path: /genconf/ip-detect
+
+ssh_user: centos
+ssh_port: 22
+process_timeout: 120
+
+# Optional parameter for executing SSH with an attached TTY. Useful in
+# AWS or other environments which require a tty with your ssh session
+# to execute sudo on remote machines.
+extra_ssh_options: -tt
 """
         # TODO set this to validate()? What does validate return? messages,config?
         self.defaults = yaml.load(defaults)
-        self.post_data = post_data
         self.config_path = config_path
         self.overrides = overrides
         self._update()
@@ -81,21 +79,6 @@ ssh_config:
         # Add overrides, if any
         self._add_overrides()
 
-        # Update with data from POST
-        self._add_post_data()
-
-        # Ensure target list is defined properly
-        self._create_full_inventory()
-
-    def _create_full_inventory(self):
-        '''
-        Join 2 lists of masters and all hosts to make sure we are addressing all available hosts.
-        :config Dict, /genconf/config.yaml object
-        :return: joined unique list of masters and all targets
-        '''
-        self['ssh_config']['target_hosts'] = list(set(self['cluster_config']['master_list']) |
-                                                  set(self['ssh_config']['target_hosts']))
-
     def _add_overrides(self):
         """
         Add overrides. Overrides expects data in the same format as the config file.
@@ -103,62 +86,17 @@ ssh_config:
         arrays = ['master_list', 'resolvers', 'target_hosts']
         if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
-                if isinstance(value, dict):
-                    for k1, v1 in value.items():
-                        log.warning("Overriding %s with %s", self[key][k1], v1)
-                        if k1 in arrays and v1 is None:
-                            self[key][k1] = list(v1)
-                        else:
-                            self[key][k1] = v1
-
-    def _add_post_data(self):
-        """
-        Ingests the data from a POST from the UI and conforms it to our
-        config file standard.
-        """
-        if 'master_ips' in self.post_data and self.post_data['master_ips'] is not None:
-            log.debug("Master IPs found in POST data, adding to config.")
-            self['cluster_config']['master_list'] = self.post_data['master_ips']
-
-        if 'agent_ips' in self.post_data and self.post_data['agent_ips'] is not None:
-            log.debug("Agent IPs found in POST data, adding to config.")
-            self['ssh_config']['target_hosts'] = self.post_data['agent_ips']
-
-        if 'ssh_username' in self.post_data:
-            self['ssh_config']['ssh_user'] = self.post_data['ssh_username']
-
-        if 'ssh_port' in self.post_data:
-            self['ssh_config']['ssh_port'] = self.post_data['ssh_port']
-
-        if 'upstream_dns_servers' in self.post_data:
-            self['cluster_config']['resolvers'] = self.post_data['upstream_dns_servers']
-
-        # Must transform to host1:2181,host2:2181 https://github.com/Netflix/exhibitor/wiki/Running-Exhibitor
-        exhibitor_port = '2181'
-        if 'zk_exhibitor_port' in self.post_data and self.post_data['zk_exhibitor_port'] is not None:
-            exhibitor_port = self.post_data['zk_exhibitor_port']
-
-        if 'zk_exhibitor_hosts' in self.post_data and self.post_data['zk_exhibitor_hosts'] is not None:
-            # Transform to match exepected string type for exhibitor host:port
-            host_list = []
-            for host in self.post_data['zk_exhibitor_hosts']:
-                host_list.append('{}:{}'.format(host, exhibitor_port))
-
-            self['cluster_config']['exhibitor_zk_hosts'] = ','.join(host_list)
-
-        # We have to write these files to separate places
-        if 'ssh_key' in self.post_data and self.post_data['ssh_key'] is not None:
-            key_path = self['ssh_config']['ssh_key_path']
-            util.write_file(self.post_data['ssh_key'], key_path)
-
-        if 'ip_detect_script' in self.post_data and self.post_data['ip_detect_script'] is not None:
-            key_path = self['cluster_config']['ip_detect_path']
-            util.write_file(self.post_data['ip_detect_script'], key_path)
+                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
+                    if key in arrays and value is None:
+                        self[key] = list(value)
+                    else:
+                        self[key] = value
 
     def validate(self):
         # TODO Leverage Gen library from here
         # Convienience function to validate this object
         _, messages = DCOSValidateConfig(self).validate()
+        print(messages)
         return messages
 
     def get_config(self):

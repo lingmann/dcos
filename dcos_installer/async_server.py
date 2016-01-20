@@ -44,19 +44,12 @@ def configure(request):
         together and return a giant JSON of config + messages.
         """
         new_config = yield from request.json()
-        log.info("Received: %s", new_config)
         log.info('POST to configure: {}'.format(new_config))
-        messages = backend.validate_config_from_post(new_config)
+        validation_err, messages = backend.create_config_from_post(new_config)
 
-        #messages = backend.create_config_from_post(new_config)
-        #resp = web.json_response({})
-        if messages['errors'] and len(messages['errors']) > 0:
-            resp = web.json_response(messages['errors'], status=400)
-
-        else:
-            # Execute genconf
-            # backend.configure()
-            resp = web.json_response({"validation": "Success! Executing configuration generation."}, status=200)
+        resp = web.json_response({}, status=200)
+        if validation_err:
+            resp = web.json_response(messages, status=400)
 
         return resp
         # TODO (malnick/cmalony) implement the proper call to the gen
@@ -78,8 +71,8 @@ def configure(request):
 def configure_status(request):
     log.info("Request for configuration validation made.")
     # TODO(malnick) Update this to point to backend.py with call to Gen validation
-    messages = mock.validate()
-    resp = web.json_response({})
+    messages = backend.return_configure_status()
+    resp = web.json_response({}, status=200)
     if messages['errors'] and len(messages['errors']) > 0:
         resp = web.json_response(messages['errors'], status=400)
 

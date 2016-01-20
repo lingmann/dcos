@@ -560,7 +560,7 @@ mock_action_state = {
 }
 
 
-def validate():
+def validate(overrides):
     """
     Take the new data from a post, add it to base defaults if overwritting them
     and validate the entire config, return messages.
@@ -570,6 +570,12 @@ def validate():
     instead of the defualts. For now, the mock version will return only defualts
     on GET and return the complete config with overrides on POST.
     """
-    config = DCOSConfig()
+    config = DCOSConfig(overrides=overrides)
     messages = config.validate()
-    return messages
+    # Return only keys sent in POST
+    return_messages = {}
+    validation_err = False
+    if len(messages['errors']) > 0:
+            return_messages = {param: messages['errors'][param] for param in messages['errors'] if param in overrides}
+            validation_err = True
+    return validation_err, return_messages

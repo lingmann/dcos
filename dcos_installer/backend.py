@@ -18,54 +18,39 @@ def generate_configuration():
     do_genconf(interactive=False)
 
 
-def validate_config_from_post(post_data):
-    """
-    Take any key from post and return tuple of message and bool
-    for passed or did not pass validation.
-    """
-    config = DCOSConfig(post_data=post_data)
-    messages = config.validate()
-    print(messages)
-    # Transform to return only messages for posted config
-    return_data = {}
-    ui_keys = {
-        "master_ips": ['target_hosts'],
-        "agent_ips": ['target_hosts'],
-        "ssh_username": '',
-        "ssh_port": '',
-        "ssh_key": '',
-        "username": '',
-        "password": '',
-        "upstream_dns_servers": '',
-        "zk_exhibitor_port": '',
-        "zk_exhibitor_hosts": '',
-        "ip_detect_script": '',
-    }
-    for ui_key, ui_value in ui_keys.items():
-        if ui_key in post_data:
-            return_data[ui_key] = messages['errors'][ui_value[0]]
-
-    print(return_data)
-
 def create_config_from_post(post_data):
     """
     Take POST data and form it into the dual dictionary we need
     to pass it as overrides to DCOSConfig object.
     """
     log.info("Creating new DCOSConfig object from POST data.")
-    config_obj = DCOSConfig(config_path=CONFIG_PATH, post_data=post_data)
+    val_config_obj = DCOSConfig(config_path=CONFIG_PATH, overrides=post_data)
+    messages = val_config_obj.validate()
 
     log.warning("Updated config to be validated:")
-    config_obj.print_to_screen()
+    val_config_obj.print_to_screen()
+    # Return only keys sent in POST
+    return_messages = {}
+    validation_err = False
+    if len(messages['errors']) > 0:
+        log.warning("Errors in POSTed configuration.")
+        return_messages = {param: messages['errors'][param] for param in messages['errors'] if param in post_data}
+        validation_err = True
 
-    messages = config_obj.validate()
-
-    config_obj.write()
-    return messages
+    val_config_obj.write()
+    return validation_err, return_messages
 
 
 def get_config():
     return DCOSConfig(config_path=CONFIG_PATH).get_config()
+
+
+def return_configure_status():
+    """
+    Read configuration from disk and return validation messages.
+    """
+    messages = DCOSConfig(config_path=CONFIG_PATH).validate()
+    return messages
 
 
 def determine_config_type():

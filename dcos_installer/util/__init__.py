@@ -1,4 +1,5 @@
 import logging
+import os
 
 CONFIG_PATH = '/tmp/config.yaml'
 log = logging.getLogger(__name__)
@@ -37,3 +38,8 @@ def clear_action_jsons():
     return inconsistent state in the get_action_state().
     """
     pass
+
+
+def create_directory(path):
+    if not os.path.exists(path):
+        os.mkdirs(path)

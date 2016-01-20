@@ -69,18 +69,8 @@ def get_config(options):
             log.error('"cluster_config" section of configuration must contain a YAML dictionary.')
             sys.exit(1)
 
-        if 'ssh_config' not in config:
-            log.error('SSH configuration must be present in config.yaml as "ssh_config"')
-            sys.exit(1)
-        if not isinstance(config['ssh_config'], dict):
-            log.error('"ssh_config" section of configuration must contain a YAML dictionary.')
-            sys.exit(1)
-
-        if 'log_directory' not in config['ssh_config']:
-            log.error('log_directory must be present in ssh_config dictionary.')
-            sys.exit(1)
-        else:
-            log_dir = config['ssh_config']['log_directory']
+        if 'ssh_config' in config:
+            log_dir = config['ssh_config'].get('log_directory', '/genconf/logs')
             if not os.path.exists(log_dir):
                 os.makedirs(log_dir)
 

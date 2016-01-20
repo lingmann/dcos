@@ -8,7 +8,6 @@ import os
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
-from deploy.util import create_agent_list
 # Need to build a new provider for config generation from installer
 from providers.genconf import do_genconf
 
@@ -104,9 +103,9 @@ def success():
     """
     # TODO(malnick) implement with DCOSConfig constructor
     data = DCOSConfig(config_path=CONFIG_PATH).get_config()
-    url = 'http://{}'.format(data['cluster_config']['master_list'][0])
-    master_count = len(data['cluster_config']['master_list'])
-    agent_count = len(create_agent_list(data))
+    url = 'http://{}'.format(data['master_list'][0])
+    master_count = len(data['master_list'])
+    agent_count = len(data['agent_list'])
 
     return_success = {
         'success': url,

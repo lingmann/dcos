@@ -11,6 +11,7 @@ import os
 import yaml
 
 from dcos_installer.validate import DCOSValidateConfig
+from dcos_installer.util import SSH_KEY_PATH, IP_DETECT_PATH
 log = logging.getLogger(__name__)
 
 
@@ -43,10 +44,6 @@ resolvers:
 # DCOS username and password
 username:
 password:
-
-ssh_key_path: /genconf/ssh_key
-log_directory: /genconf/logs
-ip_detect_path: /genconf/ip-detect
 
 ssh_user: centos
 ssh_port: 22
@@ -104,9 +101,11 @@ extra_ssh_options: -tt
         arrays = ['master_list', 'resolvers', 'target_hosts']
         if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
-                if key == 'zk_exhibitor_hosts':
-                    value = self.make_zk_exhibitor_hosts()
-                    key = 'exhibitor_zk_hosts'
+                if key == 'ssh_key':
+                    self.write_to_disk(value, SSH_KEY_PATH)
+
+                if key == 'ip_detect_script':
+                    self.write_to_disk(value, IP_DETECT_PATH)
 
                 log.warning("Overriding %s: %s -> %s", key, self[key], value)
                 if key in arrays and value is None:
@@ -141,6 +140,11 @@ extra_ssh_options: -tt
             data.close()
         else:
             log.error("Must pass config_path=/path/to/file to execute .write().")
+
+    def write_to_disk(self, data, path):
+        log.warning("Writing %s to %s.", key, SSH_KEY_PATH)
+        with open(path, 'w') as f:
+            f.write(data)
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

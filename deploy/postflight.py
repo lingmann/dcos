@@ -2,7 +2,7 @@ import logging as log
 
 from deploy.console_printer import clean_logs, print_failures, print_header
 from deploy.util import create_full_inventory, deploy_handler, get_runner
-from ssh.validate import ValidationException
+from ssh.exceptions import ValidationException
 
 
 def execute_local_service_check(executor, dcos_diag):

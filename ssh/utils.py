@@ -4,7 +4,7 @@ import logging
 import os
 from datetime import datetime
 
-from ssh.validate import ExecuteException
+from ssh.exceptions import ExecuteException
 
 log = logging.getLogger(__name__)
 
@@ -13,7 +13,7 @@ def handle_command(command):
     '''
     A wrapper, checks command output.
     :param command:
-    :raises: ssh.validate.ExecuteException if command return code != 0
+    :raises: ExecuteException if command return code != 0
     '''
     failed = []
     for output in command():

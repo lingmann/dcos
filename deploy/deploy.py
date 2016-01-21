@@ -8,7 +8,7 @@ from deploy.util import (CLUSTER_PACKAGES_FILE, REMOTE_TEMP_DIR,
                          cleanup_tmp_dir, create_agent_list,
                          create_full_inventory, deploy_handler, get_runner,
                          init_tmp_dir)
-from ssh.validate import ExecuteException
+from ssh.exceptions import ExecuteException
 
 log = logging.getLogger(__name__)
 

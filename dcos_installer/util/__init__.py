@@ -2,6 +2,9 @@ import logging
 import os
 
 CONFIG_PATH = '/genconf/config.yaml'
+SSH_KEY_PATH = '/genconf/ssh_key'
+IP_DETECT_PATH = '/genconf/ip-detect'
+
 log = logging.getLogger(__name__)
 
 

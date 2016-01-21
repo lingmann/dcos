@@ -13,6 +13,8 @@ log = logging.getLogger()
 
 VERSION = '1'
 
+state_dir = '/genconf/state'
+
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.
 loop = asyncio.get_event_loop()
@@ -129,7 +131,6 @@ def action_action_name(request):
     # ...execute action again.
     #
     # Update the global action
-    state_dir = '/genconf/state'
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
@@ -139,6 +140,9 @@ def action_action_name(request):
             result = {}
             for action in action_key:
                 json_status_file = state_dir + '/{}.json'.format(action)
+                if not os.path.isfile(json_status_file):
+                    return web.json_response({})
+
                 with open(json_status_file) as fh:
                     json_status_json = json.load(fh)
                     _merge_json(result, json_status_json)
@@ -230,6 +234,8 @@ def start(port=9000):
         port)
     srv = loop.run_until_complete(f)
     log.info('Starting server {}'.format(srv.sockets[0].getsockname()))
+    if not os.path.isdir(state_dir):
+        os.mkdir(state_dir)
 
     try:
         loop.run_forever()

@@ -103,7 +103,7 @@ def validate_string(key=None, config=None):
 def validate_int(key=None, config=None):
     if key in config:
         key = config[key]
-        if int(key):
+        if isinstance(key, int):
             return [True, '{} is a valid integer.'.format(key)]
 
         else:

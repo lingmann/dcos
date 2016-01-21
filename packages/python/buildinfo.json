@@ -2,7 +2,8 @@
   "docker": "dcos-builder",
   "requires": ["openssl"],
   "environment": {
-    "PYTHONPATH": "/opt/mesosphere/lib/python3.4/site-packages"
+    "PYTHONPATH": "/opt/mesosphere/lib/python3.4/site-packages",
+    "PYTHONUNBUFFERED": "true"
   },
   "single_source": {
     "kind": "url_extract",

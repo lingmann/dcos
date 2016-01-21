@@ -1,7 +1,8 @@
 import pytest
 
 import gen.template
-from gen.template import Replacement, Switch, Tokenizer, parse_str
+from gen.template import (Replacement, Switch, Tokenizer, UnsetParameter,
+                          parse_str)
 
 just_text = "foo"
 more_complex_text = "foo {"
@@ -135,9 +136,9 @@ def test_render():
         {"a": "1", "b": "2"},
         {'foo': lambda x: x + 'foo'}
     ) == "1fooa2")
-    with pytest.raises(KeyError):
+    with pytest.raises(UnsetParameter):
         parse_str("{{ a }}a{{ b }}").render({"a": "1"})
-    with pytest.raises(KeyError):
+    with pytest.raises(UnsetParameter):
         parse_str("{{ a }}").render({"c": "1"})
-    with pytest.raises(KeyError):
+    with pytest.raises(UnsetParameter):
         parse_str("{{ a | foo }}").render({"a": "1"})

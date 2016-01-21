@@ -275,6 +275,12 @@ class Replacement():
         return isinstance(other, Replacement) and self.identifier == other.identifier
 
 
+class UnsetParameter(KeyError):
+    def __init__(self, message, identifier):
+        super(KeyError, self).__init__(message)
+        self.identifier = identifier
+
+
 class Template():
 
     def __init__(self, ast):
@@ -289,15 +295,24 @@ class Template():
             if isinstance(chunk, Switch):
                 raise NotImplementedError()
             elif isinstance(chunk, Replacement):
+                try:
+                    value = arguments[chunk.identifier]
+                except KeyError:
+                    raise UnsetParameter("Unset parameter {}".format(chunk.identifier), chunk.identifier)
                 if chunk.filter is None:
-                    rendered += str(arguments[chunk.identifier])
+                    rendered += str(value)
                 else:
-                    rendered += str(filters[chunk.filter](arguments[chunk.identifier]))
+                    try:
+                        filter_func = filters[chunk.filter]
+                    except KeyError:
+                        raise UnsetParameter("Unset filter parameter {}".format(chunk.filter), chunk.filter)
+                    rendered += str(filter_func(value))
             elif isinstance(chunk, str):
                 rendered += chunk
             else:
                 raise NotImplementedError(
                     "Unknown chunk type {}".format(type(chunk)))
+
         return rendered
 
     def get_scoped_arguments(self):

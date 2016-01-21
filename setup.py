@@ -150,6 +150,7 @@ class BuildDocker(setuptools.Command):
 setup(
     name='dcos_installer',
     description='The DCOS Installer',
+    version='0.1',
     author='Mesosphere, Inc.',
     author_email='support@mesosphere.io',
     cmdclass={

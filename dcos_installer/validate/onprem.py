@@ -60,9 +60,11 @@ def get_onprem_dependencies(config):
         "master_list": helpers.validate_ip_list('master_list', config),
         "ip_detect_path": helpers.validate_path('ip_detect_path', config),
         "ssh_port": helpers.validate_int('ssh_port', config),
-        "ssh_key_path": helpers.validate_path('ssh_key_path', config),
+        "ssh_key": helpers.validate_ssh_key('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),
         "agent_list": helpers.validate_ip_list('agent_list', config),
+        "username": helpers.validate_string('username', config),
+        "password": helpers.validate_string('password', config),
     }
 
     # For each dependency, read its validation helper func and return

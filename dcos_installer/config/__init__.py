@@ -40,6 +40,10 @@ resolvers:
 - 8.8.8.8
 - 8.8.4.4
 
+# DCOS username and password
+username:
+password:
+
 ssh_key_path: /genconf/ssh_key
 log_directory: /genconf/logs
 ip_detect_path: /genconf/ip-detect

@@ -1,13 +1,12 @@
 import asyncio
+import json
 import logging
 import os
-import json
-
-import pkg_resources
-from aiohttp import web
-from dcos_installer import backend, mock
 
 import action_lib
+import pkg_resources
+from aiohttp import web
+from dcos_installer import backend
 
 log = logging.getLogger()
 
@@ -147,14 +146,14 @@ def action_action_name(request):
                     json_status_json = json.load(fh)
                     _merge_json(result, json_status_json)
             return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
-                content_type='application/json')
+                                content_type='application/json')
 
         json_status_file = state_dir + '/{}.json'.format(action_name)
         if os.path.isfile(json_status_file):
             with open(json_status_file) as fh:
                 result_json = json.load(fh)
             return web.Response(body=json.dumps(result_json, sort_keys=True, indent=4).encode('utf-8'),
-                content_type='application/json')
+                                content_type='application/json')
 
         return web.json_response({})
 

@@ -1,7 +1,7 @@
 import logging
 import os
 
-CONFIG_PATH = '/tmp/config.yaml'
+CONFIG_PATH = '/genconf/config.yaml'
 log = logging.getLogger(__name__)
 
 

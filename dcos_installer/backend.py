@@ -8,59 +8,79 @@ import os
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
-# Need to build a new provider for config generation from installer
-from providers.genconf import do_genconf
-
 log = logging.getLogger()
 
 
-def generate_configuration():
-    do_genconf(interactive=False)
+# def generate_configuration():
+#    do_genconf(interactive=False)
 
 
-def create_config_from_post(post_data):
+def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     """
     Take POST data and form it into the dual dictionary we need
     to pass it as overrides to DCOSConfig object.
     """
     log.info("Creating new DCOSConfig object from POST data.")
-    val_config_obj = DCOSConfig(config_path=CONFIG_PATH, overrides=post_data)
+    # Get a blank config file object
+    val_config_obj = DCOSConfig()
+    # If the config file does not exist, write it.
+    if not os.path.exists(config_path):
+        log.warning('{} not found, writing default configuration.'.format(config_path))
+        val_config_obj.config_path = config_path
+        val_config_obj.write()
+
+    # Add overrides from POST to config
+    val_config_obj.overrides = post_data
+    val_config_obj.update()
     messages = val_config_obj.validate()
 
     log.warning("Updated config to be validated:")
     val_config_obj.print_to_screen()
-    # Return only keys sent in POST
-    return_messages = {}
+
+    # Return only keys sent in POST, do not write if validation
+    # of config fails.
     validation_err = False
-    if len(messages['errors']) > 0:
-        log.warning("Errors in POSTed configuration.")
-        return_messages = {param: messages['errors'][param] for param in messages['errors'] if param in post_data}
+
+    # Create a dictionary of validation that only includes
+    # the messages from keys POSTed for validation.
+    post_data_validation = {param: messages['errors'][param] for param in messages['errors'] if param in post_data}
+
+    # If validation is successful, write the data to disk, otherwise, if
+    # they keys POSTed failed, do not write to disk.
+    if len(post_data_validation) > 0:
+        log.warning("POSTed configuration has errors, not writing to disk.")
+        for key, value in post_data_validation.items():
+            log.error('{}: {}'.format(key, value))
         validation_err = True
 
-    val_config_obj.write()
-    return validation_err, return_messages
+    else:
+        log.info("Success! Configuration looks good, writing to disk.")
+        val_config_obj.config_path = config_path
+        val_config_obj.write()
+
+    return validation_err, post_data_validation
 
 
-def get_config():
-    return DCOSConfig(config_path=CONFIG_PATH).get_config()
+def get_config(config_path=CONFIG_PATH):
+    return DCOSConfig(config_path=config_path).get_config()
 
 
-def return_configure_status():
+def return_configure_status(config_path=CONFIG_PATH):
     """
     Read configuration from disk and return validation messages.
     """
-    messages = DCOSConfig(config_path=CONFIG_PATH).validate()
+    messages = DCOSConfig(config_path=config_path).validate()
     return messages
 
 
-def determine_config_type():
+def determine_config_type(config_path=CONFIG_PATH):
     """
     Return the configuration type to HTTP endpoint. Possible types are
     minimal and advanced. Messages are blank for minimal and detailed
     in the case of advanced so we can warn users they need to remove the
     current advanced config before moving on.
     """
-    config = get_config()
+    config = get_config(config_path=config_path)
     ctype = 'minimal'
     message = ''
     adv_found = {}
@@ -97,15 +117,24 @@ def determine_config_type():
     }
 
 
-def success():
+def success(config_path=CONFIG_PATH):
     """
     Return the success URL, master and agent counts.
     """
-    # TODO(malnick) implement with DCOSConfig constructor
-    data = DCOSConfig(config_path=CONFIG_PATH).get_config()
-    url = 'http://{}'.format(data['master_list'][0])
-    master_count = len(data['master_list'])
-    agent_count = len(data['agent_list'])
+    data = get_config(config_path=config_path)
+    # The config file will have None by default, but just in
+    # case we're setting it here to default.
+    master_ips = data.get('master_list', None)
+    agent_ips = data.get('agent_list', None)
+    url = 'http://{}'.format(master_ips[0])
+    master_count = 0
+    agent_count = 0
+
+    if master_ips[0] is not None:
+        master_count = len(data['master_list'])
+
+    if agent_ips[0] is not None:
+        agent_count = len(data['agent_list'])
 
     return_success = {
         'success': url,

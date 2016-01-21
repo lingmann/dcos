@@ -3,16 +3,9 @@ import socket
 import stat
 
 import ssh.ssh_runner
+from ssh.exceptions import ValidationException
 
 OWNERSHIP_BITMASK = 0b111111
-
-
-class ValidationException(Exception):
-    """Validation Exception class"""
-
-
-class ExecuteException(Exception):
-    """Raised when commend execution fails"""
 
 
 def is_valid_ipv4_address(address):

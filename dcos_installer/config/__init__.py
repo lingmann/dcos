@@ -57,14 +57,14 @@ extra_ssh_options: -tt
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
         self.overrides = overrides
-        self._update()
+        self.update()
         self.errors = []
 
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)
 
-    def _update(self):
+    def update(self):
         # Create defaults
         for key, value in self.defaults.items():
             self[key] = value

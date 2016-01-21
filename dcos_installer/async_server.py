@@ -23,7 +23,8 @@ action_map = {
     'preflight': action_lib.run_preflight,
     'deploy_master': lambda *args, **kwargs: action_lib.install_dcos(*args, role='master', **kwargs),
     'deploy_agent': lambda *args, **kwargs: action_lib.install_dcos(*args, role='agent', **kwargs),
-    'postflight': action_lib.run_postflight
+    'postflight': action_lib.run_postflight,
+    'deploy': ['deploy_master', 'deploy_agent']
 }
 
 remove_on_done = ['preflight', 'postflight']
@@ -102,6 +103,24 @@ def success(request):
     return web.json_response(backend.success())
 
 
+def _merge_json(result, data_json):
+    for key, value in data_json.items():
+        # Increment ints
+        if isinstance(value, int):
+            value = result.get(key, 0) + value
+        elif isinstance(value, dict):
+            if key in result:
+                result[key].update(value)
+                continue
+            else:
+                result[key] = value
+        elif isinstance(value, str):
+            if value.startswith('deploy') and not value.endswith('deploy'):
+                value = 'deploy'
+
+        result.update({key: value})
+
+
 def action_action_name(request):
     action_name = request.match_info['action_name']
     # get_action_status(action_name)
@@ -114,12 +133,19 @@ def action_action_name(request):
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
-        role = request.GET.get('role')
 
-        if role:
-            json_status_file = state_dir + '/{}_{}.json'.format(action_name, role)
-        else:
-            json_status_file = state_dir + '/{}.json'.format(action_name)
+        action_key = action_map.get(action_name)
+        if isinstance(action_key, list):
+            result = {}
+            for action in action_key:
+                json_status_file = state_dir + '/{}.json'.format(action)
+                with open(json_status_file) as fh:
+                    json_status_json = json.load(fh)
+                    _merge_json(result, json_status_json)
+            return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
+                content_type='application/json')
+
+        json_status_file = state_dir + '/{}.json'.format(action_name)
         if os.path.isfile(json_status_file):
             with open(json_status_file) as fh:
                 result_json = json.load(fh)
@@ -152,7 +178,22 @@ def action_action_name(request):
         action = action_map.get(action_name)
         if not action:
             return web.json_response({'error': 'action {} not implemented'.format(action_name)})
-        yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
+
+        if isinstance(action, list):
+            deploy_executed = False
+            for new_action_str in action:
+                if os.path.isfile(state_dir + '/' + new_action_str + '.json'):
+                    deploy_executed = True
+
+            if deploy_executed:
+                return web.json_response({'status': 'deploy was already executed, skipping'})
+            else:
+                for new_action_str in action:
+                    new_action = action_map.get(new_action_str)
+                    log.info('Executing {}'.format(new_action_str))
+                    yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
+        else:
+            yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
         return web.json_response({'status': '{} started'.format(action_name)})
 
 
@@ -175,10 +216,8 @@ app.router.add_route('GET', '/api/v{}/configure/type'.format(VERSION), configure
 app.router.add_route('GET', '/api/v{}/success'.format(VERSION), success)
 # TODO(malnick) The regex handling in the variable routes blows up if we insert another variable to be
 # filled in by .format. Had to hardcode the VERSION into the URL for now. Fix suggestions please!
-app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy_master|deploy_agent}',
-                     action_action_name)
-app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy_master|deploy_agent}',
-                     action_action_name)
+app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
+app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
 
 

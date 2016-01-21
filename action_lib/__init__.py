@@ -6,7 +6,7 @@ import pkgpanda
 import ssh.utils
 
 from .utils import (
-    create_full_inventory, create_agent_list, REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, ExecuteException,
+    REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, ExecuteException,
     get_async_runner, add_post_action, add_pre_action)
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
     if not os.path.isfile(pf_script_path):
         log.error("genconf/serve/dcos_install.sh does not exist. Please run --genconf before executing preflight.")
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
-    targets = create_full_inventory(config)
+    targets = config['master_list'] + config['agent_list']
     pf = get_async_runner(config, targets)
     preflight_chain = ssh.utils.CommandChain('preflight')
 
@@ -97,14 +97,14 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
     roles = {
         'master': {
             'tags': [{'role': 'master'}],
-            'hosts': config['cluster_config']['master_list'],
+            'hosts': config['master_list'],
             'chain_name': 'deploy_master',
             'script_parameter': 'master',
             'comment': 'INSTALLING DCOS ON MASTERS'
         },
         'agent': {
             'tags': [{'role': 'agent'}],
-            'hosts': create_agent_list(config),
+            'hosts': config['agent_list'],
             'chain_name': 'deploy_agent',
             'script_parameter': 'slave',
             'comment': 'INSTALLING DCOS ON AGENTS'
@@ -134,7 +134,7 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 
 @asyncio.coroutine
 def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
-    targets = create_full_inventory(config)
+    targets = config['master_list'] + config['agent_list']
     pf = get_async_runner(config, targets)
     postflight_chain = ssh.utils.CommandChain('postflight')
     add_pre_action(postflight_chain, pf.ssh_user)
@@ -151,7 +151,7 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
 
 @asyncio.coroutine
 def uninstall_dcos(config, block=False, state_json_dir=None):
-    all_targets = create_full_inventory(config)
+    all_targets = config['master_list'] + config['agent_list']
 
     # clean the file to all targets
     runner = get_async_runner(config, all_targets)

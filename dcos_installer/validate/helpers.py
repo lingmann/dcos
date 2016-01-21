@@ -95,7 +95,7 @@ def validate_string(key=None, config=None):
             return [True, '{} is a valid string.'.format(key)]
 
         else:
-            return [False, '{} is not a valid string. Is of type {}.'.format(key, type(key))]
+            return [False, '{} is not a valid string. Is of type {}.'.format(key, str(type(key)))]
 
     return [False, None]
 
@@ -106,8 +106,14 @@ def validate_int(key=None, config=None):
         if isinstance(key, int):
             return [True, '{} is a valid integer.'.format(key)]
 
+        elif isinstance(key, str):
+            try:
+                interger = int(key)
+                return [True, '{} is a valid interger.'.format(interger)]
+            except:
+                return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
         else:
-            return [False, '{} is not a valid integer. Is of type {}.'.format(key, type(key))]
+            return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
 
     return [False, None]
 

@@ -94,22 +94,36 @@ can = {
 }
 
 
-def validate(arguments):
-    assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
+def validate_num_masters(num_masters):
+    assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
-    assert arguments['bootstrap_url'][-1] != '/'
 
-    if 'channel_name' in arguments:
-        assert arguments['channel_name'][0] != '/'
-        assert arguments['channel_name'][-1] != '/'
+def validate_bootstrap_url(bootstrap_url):
+    assert len(bootstrap_url) > 1, "Must be more than one character"
+    assert bootstrap_url[-1] != '/', "Must not end in a '/'"
 
-    assert '\n' not in arguments['dns_search']
-    assert ',' not in arguments['dns_search']
 
-    # TODO(cmaloney): Check dns_search:
-    #   - is < 256 characters
-    #   - Contains at most 6 search domains
-    #   - Each search domain is space separated
+def validate_channel_name(channel_name):
+    assert len(channel_name) > 1, "Must be more than 2 characters"
+    assert channel_name[0] != '/', "Must not start with a '/'"
+    assert channel_name[-1] != '/', "Must not end with a '/'"
+
+
+def validate_dns_search(dns_search):
+    assert '\n' not in dns_search, "Newlines are not allowed"
+    assert ',' not in dns_search, "Commas are not allowed"
+
+    # resolv.conf requirements
+    assert len(dns_search) < 256, "Must be less than 256 characters long"
+    assert len(dns_search.split()) <= 6, "Must contain no more than 6 domains"
+
+
+validate = [
+    validate_num_masters,
+    validate_bootstrap_url,
+    validate_channel_name,
+    validate_dns_search
+]
 
 defaults = {
     "num_masters": "3",

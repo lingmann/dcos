@@ -105,6 +105,11 @@ def merge_dictionaries(base, additions):
                 base_copy[k].extend(v)
                 continue
 
+            # Merge sets
+            if isinstance(v, set) and isinstance(base_copy[k], set):
+                base_copy[k] |= v
+                continue
+
             # Unknwon types
             raise ValueError("Can't merge type {} into type {}".format(type(v), type(base_copy[k])))
         except ValueError as ex:
@@ -160,7 +165,7 @@ def render_templates(template_names, arguments):
 # in order to convert the templates to go from jinja -> final template. These
 # are effectively the set of DCOS parameters.
 def get_parameters(template_dict):
-    parameters = set()
+    parameters = {'variables': set(), 'sub_scopes': dict()}
     for template_list in template_dict.values():
         assert isinstance(template_list, list)
         for template in template_list:
@@ -168,12 +173,7 @@ def get_parameters(template_dict):
             try:
                 ast = gen.template.parse_resources(template)
                 scoped_arguments = ast.get_scoped_arguments()
-
-                # TODO(cmaloney): Allow sub_scopes / teach everything about
-                # scoped_parameters.
-                # Sub scopes / switch / if are not currently supported
-                assert scoped_arguments['sub_scopes'] == {}
-                parameters |= scoped_arguments['variables']
+                parameters = merge_dictionaries(parameters, scoped_arguments)
             except FileNotFoundError as ex:
                 # Needs to be implemented with a logger
                 log.debug("Template not found: %s", ex)
@@ -300,7 +300,6 @@ def add_arguments(parser):
 
 def get_options_object():
     return Bunch({
-        'assume_defaults': True,
         'non_interactive': True,
         })
 
@@ -394,14 +393,10 @@ def prompt_argument(non_interactive, name, can_calc=False, default=None, possibl
         log.error("ERROR: Must provide a value")
 
 
-def prompt_arguments(non_interactive, to_set, defaults, can_calc):
-    if non_interactive and len(to_set) > 0:
-        log.error("Unset variables in configuration: %s", ','.join(to_set))
-        sys.exit(1)
-
+def prompt_arguments(can_set, defaults, can_calc):
     arguments = dict()
-    for name in sorted(to_set):
-        result = prompt_argument(non_interactive, name, name in can_calc, defaults.get(name))
+    for name in sorted(can_set):
+        result = prompt_argument(False, name, name in can_calc, defaults.get(name))
 
         # Only if we got a value (Shouldn't calculate), set the argument.
         if result is not None:
@@ -443,52 +438,46 @@ class Mixin:
         self.can_fn = dict()
         self.defaults = dict()
         self.must_fn = dict()
-        self.implies = dict()
 
         self.validate = []
 
-        module = None
+        self.module = None
         # Load the library and grab things from it as seperate bits so we don't
         # catch the wrong exception by mistake.
         try:
-            module = importlib.import_module(self.modulename)
+            self.module = importlib.import_module(self.modulename)
         except ImportError as ex:
             log.debug("Module not found: %s", ex)
 
-        if module:
+        if self.module:
             try:
-                self.must_fn = module.must
+                self.must_fn = self.module.must
             except AttributeError:
                 pass
 
             try:
-                self.can_fn = module.can
+                self.can_fn = self.module.can
             except AttributeError:
                 pass
 
             # Must and can can take in new parameters as arguments, update the
             # accepted paramters with those.
             for name, func in chain(self.must_fn.items()):
-                self.parameters.add(name)
-                self.parameters |= set(inspect.signature(func).parameters)
+                self.parameters['variables'].add(name)
+                self.parameters['variables'] |= set(inspect.signature(func).parameters)
 
             try:
-                self.validate = module.validate
+                self.validate = self.module.validate
             except AttributeError:
                 pass
 
             try:
-                self.arguments = module.arguments
+                self.arguments = self.module.arguments
             except AttributeError:
                 pass
 
             try:
-                self.defaults = module.defaults
-            except AttributeError:
-                pass
-
-            try:
-                self.implies = module.implies
+                self.defaults = self.module.defaults
             except AttributeError:
                 pass
 
@@ -586,7 +575,7 @@ def do_generate(
     # TODO(cmaloney): Remove flattening and teach lower code to operate on list
     # of mixins.
     templates = dict()
-    parameters = set()
+    parameters = {'variables': set(), 'sub_scopes': dict()}
     must_calc = dict()
     can_calc = dict()
     validate = list()
@@ -610,49 +599,48 @@ def do_generate(
     for mixin in mixins:
         mixin_objs.append(Mixin(mixin, cluster_packages, core_templates))
 
-    # Ask / prompt about "implies", recursively until we've resolved all implies.
-    mixins_to_visit = copy(mixin_objs)
-    while len(mixins_to_visit) > 0:
-        mixin_obj = mixins_to_visit.pop()
-        if not mixin_obj.implies:
-            continue
-
-        # Expand implies, prompt for every choice the user hasn't provided in
-        # user_arguments.
-        for name, value in mixin_obj.implies.items():
-            parameters.add(name)
-            # Prompt if the user hasn't already chosen which option to use.
-            if name not in arguments:
-                arguments[name] = prompt_argument(
-                    options.non_interactive,
-                    name,
-                    can_calc=False,
-                    default=None,
-                    possible_values=value.keys())
-            choice = arguments[name]
-
-            # If there is no mixin for the choice or the mixin has already been
-            # loaded, skip it.
-            mixin_name = value[choice]
-            if mixin_name is None or mixin_name in mixins:
-                continue
-
-            # Add the mixin to the set to be visited
-            mixins.append(mixin_name)
-            new_mixin = Mixin(mixin_name, cluster_packages, core_templates)
-            mixin_objs.append(new_mixin)
-            mixins_to_visit.append(new_mixin)
-
     ensure_no_repeated(mixin_objs)
+
+    # Ask / prompt about "conditional" in the top level config (they aren't
+    # allowed in lower levels for now for simplicity).
+    core_mixin = mixin_objs[-1]
+    assert core_mixin.name == ''
 
     for mixin in mixin_objs:
         templates = merge_dictionaries(templates, mixin.templates)
-        parameters |= mixin.parameters
+        parameters = merge_dictionaries(parameters, mixin.parameters)
         must_calc.update(mixin.must_fn)
         can_calc.update(mixin.can_fn)
         validate = validate + mixin.validate
         arguments.update(mixin.arguments)
         defaults.update(mixin.defaults)
+
+    for name, cond_options in core_mixin.module.conditional.items():
+        parameters['variables'].add(name)
+        # Prompt if the user hasn't already chosen which option to use.
+        if name not in arguments:
+            arguments[name] = prompt_argument(
+                options.non_interactive,
+                name,
+                can_calc=False,
+                default=None,
+                possible_values=cond_options.keys())
+        choice = arguments[name]
+
+        # TODO(cmaloney): Cleaner error message / proper validation.
+        if choice not in cond_options.keys():
+            log.error("Value for %s must be in %s. Got %s", name, ",".join(cond_options.keys()), choice)
+            sys.exit(1)
+
+        # Grab the must, can, validate functions out and attach them to the
+        # mixin's top level lists
+        chosen = cond_options[choice]
+        assert 'parameters' not in chosen  # Simplicity: Can't set parameters anymore.
+        must_calc.update(chosen.get("must", dict()))
+        can_calc.update(chosen.get("can", dict()))
+        validate += chosen.get("validate", list())
+        arguments.update(chosen.get("arguments", dict()))
+        defaults.update(chosen.get("defaults", dict()))
 
     # Make sure only yaml templates have more than one mixin providing them / are provided more than once.
     for name, template_list in templates.items():
@@ -666,38 +654,53 @@ def do_generate(
 
     # Inject extra_templates and parameters inside.
     templates.update(extra_templates)
-    parameters |= get_parameters(extra_templates)
+    merge_dictionaries(parameters, get_parameters(extra_templates))
 
     # Validate all arguments passed in actually correspond to parameters to
     # prevent human typo errors.
+    # This includes all possible sub scopes (Including config for things you don't use is fine).
+    def flatten_parameters(scoped_parameters):
+        flat = copy(scoped_parameters.get('variables', set()))
+        for name, possible_values in scoped_parameters.get('sub_scopes', dict()).items():
+            flat.add(name)
+            for sub_scope in possible_values.values():
+                flat |= flatten_parameters(sub_scope)
+
+        return flat
+
+    flat_parameters = flatten_parameters(parameters)
     for argument in arguments:
-        if argument not in parameters:
-            log.error("ERROR: Argument '%s' given but not in parameters: %s", argument, ', '.join(parameters))
+        if argument not in flat_parameters:
+            log.error("ERROR: Argument '%s' given but not in possible parameters: %s",
+                      argument,
+                      ', '.join(flat_parameters))
             sys.exit(1)
 
     # Calculate the set of parameters which still need to be input.
-    to_set = parameters - arguments.keys()
+    can_set = flat_parameters - arguments.keys()
 
     # Remove calculated parameters from those to calculate.
-    to_set -= must_calc.keys()
+    can_set -= must_calc.keys()
 
-    # If assume_defaults, apply all defaults and calculated values.
-    if options.assume_defaults:
-        for name in copy(to_set):
-            if name in defaults:
-                arguments[name] = defaults[name]
-                to_set.remove(name)
-            elif name in can_calc:
-                to_set.remove(name)
+    # Apply all defaults and calculated values.
+    for name in copy(can_set):
+        if name in defaults:
+            arguments[name] = defaults[name]
+            can_set.remove(name)
+        elif name in can_calc:
+            can_set.remove(name)
 
     # Cluster packages is particularly magic
     # as it depends on the config filename which depends on the initial set
     # of arguments.
-    to_set.remove('cluster_packages')
+    can_set.remove('cluster_packages')
 
     # Prompt user to provide all unset arguments. If a config file was specified
     # output
-    user_arguments = prompt_arguments(options.non_interactive, to_set, defaults, can_calc)
+    if not options.non_interactive:
+        user_arguments = prompt_arguments(options.non_interactive, can_set, defaults, can_calc)
+    else:
+        user_arguments = dict()
     arguments = update_dictionary(arguments, user_arguments)
 
     # Set arguments from command line flags.
@@ -705,17 +708,6 @@ def do_generate(
 
     # Calculate the remaining arguments.
     arguments = calculate_args(must_calc, can_calc, arguments)
-
-    # Validate arguments.
-    validate_arguments_strings(arguments)
-    errors = validate_given(validate, arguments)
-    if errors:
-        for key, msg in errors.items():
-            log.error("ERROR: Argument '%s' with value '%s' didn't pass validation: %s", key, arguments[key], msg)
-        sys.exit(1)
-
-    log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
-
     # ID of this configuration is a hash of the parameters
     config_id = hash_checkout(arguments)
     arguments['config_id'] = config_id
@@ -737,6 +729,43 @@ def do_generate(
 
     # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
     arguments['cluster_packages'] = json.dumps(cluster_package_ids)
+
+    # Validate arguments.
+    validate_arguments_strings(arguments)
+    errors = validate_given(validate, arguments)
+    if errors:
+        for key, msg in errors.items():
+            log.error("ERROR: Argument '%s' with value '%s' didn't pass validation: %s", key, arguments[key], msg)
+        sys.exit(1)
+
+    def check_parameter_set(param_set):
+        assert isinstance(param_set, set)
+
+        unset = param_set - arguments.keys()
+        if len(unset) > 0:
+            log.error("Unset variables in configuration: %s", ','.join(unset))
+            sys.exit(1)
+
+    # Check that all active scopes have all variables set
+    def check_parameters(scoped_parameters):
+        check_parameter_set(scoped_parameters.get('variables', set()))
+
+        for name, possible_values in scoped_parameters.get('sub_scopes', dict()).items():
+            check_parameter_set({name})
+
+            choice = arguments[name]
+            if choice not in possible_values.keys():
+                log.error("ERROR: Invalid choice for '%s'. Must be one of %s. Got '%s'",
+                          name,
+                          ', '.join(possible_values),
+                          choice)
+                sys.exit(1)
+
+            check_parameters(possible_values[choice])
+
+    check_parameters(parameters)
+
+    log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)

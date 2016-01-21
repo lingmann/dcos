@@ -99,16 +99,38 @@ def validate_dns_search(dns_search):
     assert len(dns_search.split()) <= 6, "Must contain no more than 6 domains"
 
 
+def validate_master_list(master_list):
+    try:
+        list_data = json.loads(master_list)
+
+        assert type(list_data) is list, "Must be a JSON list. Got a {}".format(type(list_data))
+    except json.JSONDecodeError as ex:
+        # TODO(cmaloney):
+        assert False, "Must be a valid JSON list. Errors whilewhile parsing at position {}: {}".format(ex.pos, ex.msg)
+
+
+def calc_num_masters(master_list):
+    return str(len(json.loads(master_list)))
+
+
+def validate_zk_hosts(exhibitor_zk_hosts):
+    assert not exhibitor_zk_hosts.startswith('zk://'), "Must be of the form `host:port,host:port', not start with zk://"
+
+
+def validate_zk_path(exhibitor_zk_path):
+    assert exhibitor_zk_path.startswith('/'), "Must be of the form /path/to/znode"
+
 validate = [
     validate_num_masters,
     validate_bootstrap_url,
     validate_channel_name,
-    validate_dns_search
+    validate_dns_search,
+    validate_master_list,
+    validate_zk_hosts,
+    validate_zk_path
 ]
 
 defaults = {
-    "num_masters": "3",
-    "channel_name": "testing/continuous",
     "roles": "slave_public",
     "weights": "slave_public=1",
     "docker_remove_delay": "1hrs",
@@ -116,10 +138,23 @@ defaults = {
     "dns_search": ""
 }
 
-implies = {
+conditional = {
     "master_discovery": {
-        "cloud_dynamic": None,
-        "static": "dns-master-list",
-        "vrrp": "onprem-keepalived"
+        "master_http_loadbalancer": {},
+        "vrrp": {},
+        "static": {
+            "must": {"num_masters": calc_num_masters}
+        }
+    },
+    "provider": {
+        "onprem": {
+            "defaults": {
+                "resolvers": "[\"8.8.8.8\", \"8.8.4.4\"]"
+            }
+        },
+        "azure": {},
+        "aws": {},
+        "vagrant": {},
+        "other": {}
     }
 }

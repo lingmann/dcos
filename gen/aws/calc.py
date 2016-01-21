@@ -1,4 +1,4 @@
-def get_spot_str(name, spot_price):
+def get_spot(name, spot_price):
     if spot_price:
         return '"SpotPrice": "{}",'.format(spot_price)
     else:
@@ -21,12 +21,21 @@ defaults = {
 }
 
 must = {
-    'aws_master_spot_price': lambda master_spot_price: get_spot_str('master', master_spot_price),
-    'aws_slave_spot_price': lambda slave_spot_price: get_spot_str('slave', slave_spot_price),
-    'aws_slave_public_spot_price': lambda slave_public_spot_price: get_spot_str('slave_public', slave_public_spot_price)
+    'aws_master_spot_price': lambda master_spot_price: get_spot('master', master_spot_price),
+    'aws_slave_spot_price': lambda slave_spot_price: get_spot('slave', slave_spot_price),
+    'aws_slave_public_spot_price': lambda slave_public_spot_price: get_spot('slave_public', slave_public_spot_price),
 }
 
 arguments = {
+    'exhibitor_address': '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }',
+    'aws_region': '{ "Ref" : "AWS::Region" }',
+    's3_bucket': '{ "Ref" : "ExhibitorS3Bucket" }',
+    's3_prefix': '{ "Ref" : "AWS::StackName" }',
+    'exhibitor_explicit_keys': 'false',
+    'exhibitor_storage_backend': 'aws_s3',
+    'exhibitor_address': '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }',
+    'cluster_name': '{ "Ref" : "AWS::StackName" }',
+    'master_discovery': 'master_http_loadbalancer',
     'master_cloud_config': '{{ master_cloud_config }}',
     'slave_cloud_config': '{{ slave_cloud_config }}',
     'slave_public_cloud_config': '{{ slave_public_cloud_config }}'

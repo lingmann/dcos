@@ -1,6 +1,0 @@
-package:
-  - path: /etc/exhibitor
-    content: |
-      EXHIBITOR_BACKEND=ZK
-      ZK_CONFIG_CONNECT={{ exhibitor_zk_hosts }}
-      ZK_CONFIG_ZPATH={{ exhibitor_zk_path }}

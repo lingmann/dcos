@@ -3,7 +3,7 @@ import logging
 import os
 
 import pkgpanda
-from ssh.utils import CommandChain
+import ssh.utils
 
 from .utils import (
     create_full_inventory, create_agent_list, REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, ExecuteException,
@@ -26,7 +26,7 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
     targets = create_full_inventory(config)
     pf = get_async_runner(config, targets)
-    preflight_chain = CommandChain('preflight')
+    preflight_chain = ssh.utils.CommandChain('preflight')
 
     add_pre_action(preflight_chain, pf.ssh_user)
     preflight_chain.add_copy(pf_script_path, REMOTE_TEMP_DIR, comment='COPYING PREFLIGHT SCRIPT TO TARGETS')
@@ -118,7 +118,7 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
     log.debug("Local bootstrap found: %s", bootstrap_tarball)
 
     runner = get_async_runner(config, default['hosts'], tags=default['tags'])
-    chain = CommandChain(default['chain_name'])
+    chain = ssh.utils.CommandChain(default['chain_name'])
 
     add_pre_action(chain, runner.ssh_user)
     _add_copy_dcos_install(chain)
@@ -136,12 +136,14 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
     targets = create_full_inventory(config)
     pf = get_async_runner(config, targets)
-    postflight_chain = CommandChain('postflight')
+    postflight_chain = ssh.utils.CommandChain('postflight')
     add_pre_action(postflight_chain, pf.ssh_user)
 
     if dcos_diag is None:
         dcos_diag = '/opt/mesosphere/bin/dcos-diagnostics.py'
 
+    # TODO(mnaboka): remove this
+    postflight_chain.add_execute('for i in 1 2 3 ; do sleep 10 ; done'.split())
     postflight_chain.add_execute([dcos_diag], comment='Executing local post-flight check for DCOS servces...')
     add_post_action(postflight_chain)
 
@@ -155,7 +157,7 @@ def uninstall_dcos(config, block=False, state_json_dir=None):
 
     # clean the file to all targets
     runner = get_async_runner(config, all_targets)
-    uninstall_chain = CommandChain('uninstall')
+    uninstall_chain = ssh.utils.CommandChain('uninstall')
 
     uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall', '&&', 'sudo', 'rm', '-rf',
                                  '/opt/mesosphere/'], comment='Uninstalling DCOS')

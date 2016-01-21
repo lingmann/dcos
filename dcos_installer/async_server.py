@@ -7,9 +7,7 @@ import pkg_resources
 from aiohttp import web
 from dcos_installer import backend, mock
 
-import deploy.preflight
-import deploy.deploy
-import deploy.postflight
+import action_lib
 
 log = logging.getLogger()
 
@@ -22,10 +20,13 @@ app = web.Application(loop=loop)
 app['current_action'] = ''
 
 action_map = {
-    'preflight': deploy.preflight.run_preflight,
-    'deploy': deploy.deploy.install_dcos,
-    'postflight': deploy.postflight.run_postflight
+    'preflight': action_lib.run_preflight,
+    'deploy_master': lambda *args, **kwargs: action_lib.install_dcos(*args, role='master', **kwargs),
+    'deploy_agent': lambda *args, **kwargs: action_lib.install_dcos(*args, role='agent', **kwargs),
+    'postflight': action_lib.run_postflight
 }
+
+remove_on_done = ['postflight']
 
 
 # Aiohttp route handlers. These methods are for the
@@ -129,8 +130,25 @@ def action_action_name(request):
 
     elif request.method == 'POST':
         params = yield from request.post()
-        if os.path.isfile(state_dir + '/{}.json'.format(action_name)):
-            return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
+        state_file_path = state_dir + '/{}.json'.format(action_name)
+        if os.path.isfile(state_file_path):
+            if action_name not in remove_on_done:
+                return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
+
+            running = False
+            with open(state_file_path) as fh:
+                json_dump = json.load(fh)
+            for host, attributes in json_dump['hosts'].items():
+                if attributes['host_status'].lower() == 'running':
+                    running = True
+
+            print('Running: {}'.format(running))
+            if running:
+                return web.json_response({'status': '{} is running, skipping'.format(action_name)})
+            else:
+                log.debug('Removing {}'.format(state_file_path))
+                os.unlink(state_file_path)
+
         action = action_map.get(action_name)
         if not action:
             return web.json_response({'error': 'action {} not implemented'.format(action_name)})
@@ -157,8 +175,10 @@ app.router.add_route('GET', '/api/v{}/configure/type'.format(VERSION), configure
 app.router.add_route('GET', '/api/v{}/success'.format(VERSION), success)
 # TODO(malnick) The regex handling in the variable routes blows up if we insert another variable to be
 # filled in by .format. Had to hardcode the VERSION into the URL for now. Fix suggestions please!
-app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
-app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
+app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy_master|deploy_agent}',
+                     action_action_name)
+app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy_master|deploy_agent}',
+                     action_action_name)
 app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
 
 

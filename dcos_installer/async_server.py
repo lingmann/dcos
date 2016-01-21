@@ -26,7 +26,7 @@ action_map = {
     'postflight': action_lib.run_postflight
 }
 
-remove_on_done = ['postflight']
+remove_on_done = ['preflight', 'postflight']
 
 
 # Aiohttp route handlers. These methods are for the
@@ -142,7 +142,7 @@ def action_action_name(request):
                 if attributes['host_status'].lower() == 'running':
                     running = True
 
-            print('Running: {}'.format(running))
+            log.debug('is action running: {}'.format(running))
             if running:
                 return web.json_response({'status': '{} is running, skipping'.format(action_name)})
             else:

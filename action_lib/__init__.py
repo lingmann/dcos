@@ -142,8 +142,6 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
     if dcos_diag is None:
         dcos_diag = '/opt/mesosphere/bin/dcos-diagnostics.py'
 
-    # TODO(mnaboka): remove this
-    postflight_chain.add_execute('for i in 1 2 3 ; do sleep 10 ; done'.split())
     postflight_chain.add_execute([dcos_diag], comment='Executing local post-flight check for DCOS servces...')
     add_post_action(postflight_chain)
 

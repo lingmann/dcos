@@ -11,7 +11,7 @@ import os
 import yaml
 
 from dcos_installer.validate import DCOSValidateConfig
-from dcos_installer.util import SSH_KEY_PATH, IP_DETECT_PATH
+from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH
 log = logging.getLogger(__name__)
 
 
@@ -45,7 +45,7 @@ resolvers:
 username:
 password:
 
-ssh_user: centos
+ssh_user:
 ssh_port: 22
 process_timeout: 120
 
@@ -54,9 +54,14 @@ process_timeout: 120
 # to execute sudo on remote machines.
 extra_ssh_options: -tt
 """
-        # TODO set this to validate()? What does validate return? messages,config?
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
+        # These are defaults we do not want to expose to the user, but still need
+        # to be included in validation for return. We never write them to disk.
+        self.hidden_defaults = {
+            'ip_detect_path':  IP_DETECT_PATH,
+            'ssh_key_path': SSH_KEY_PATH,
+        }
         self.overrides = overrides
         self.update()
         self.errors = []
@@ -77,22 +82,7 @@ extra_ssh_options: -tt
                 for k, v in user_config.items():
                     self[k] = v
 
-        # Add overrides, if any
         self._add_overrides()
-
-    def make_zk_exhibitor_hosts(self):
-        # Must transform to host1:2181,host2:2181 https://github.com/Netflix/exhibitor/wiki/Running-Exhibitor
-        exhibitor_port = '2181'
-        if 'zk_exhibitor_port' in self.overrides and self.overrides['zk_exhibitor_port'] is not None:
-            exhibitor_port = self.overrides['zk_exhibitor_port']
-
-        if 'zk_exhibitor_hosts' in self.overrides and self.overrides['zk_exhibitor_hosts'] is not None:
-            # Transform to match exepected string type for exhibitor host:port
-            host_list = []
-            for host in self.overrides['zk_exhibitor_hosts']:
-                host_list.append('{}:{}'.format(host, exhibitor_port))
-
-            return ','.join(host_list)
 
     def _add_overrides(self):
         """
@@ -107,17 +97,21 @@ extra_ssh_options: -tt
                 if key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
 
-                log.warning("Overriding %s: %s -> %s", key, self[key], value)
                 if key in arrays and value is None:
+                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = list(value)
-                else:
+                elif key in self:
+                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = value
 
     def validate(self):
         # TODO Leverage Gen library from here
         # Convienience function to validate this object
-        _, messages = DCOSValidateConfig(self).validate()
-        print(messages)
+        file_config = self._unbind_configuration()
+        hidden_config = self.hidden_defaults
+        validate_config = dict(file_config, **hidden_config)
+        log.warning(validate_config)
+        _, messages = DCOSValidateConfig(validate_config).validate()
         return messages
 
     def get_config(self):
@@ -129,7 +123,10 @@ extra_ssh_options: -tt
             with open(self.config_path, 'r') as data:
                 return yaml.load(data)
 
-        log.error("Configuration file not found, %s. Writing new one with all defaults.", self.config_path)
+        log.error(
+            "Configuration file not found, %s. Writing new one with all defaults.",
+            self.config_path)
+        self.config_path = CONFIG_PATH
         self.write()
         return yaml.load(open(self.config_path))
 
@@ -142,9 +139,9 @@ extra_ssh_options: -tt
             log.error("Must pass config_path=/path/to/file to execute .write().")
 
     def write_to_disk(self, data, path):
-        log.warning("Writing %s to %s.", key, SSH_KEY_PATH)
-        with open(path, 'w') as f:
-            f.write(data)
+        log.warning("Writing %s to %s.", path, SSH_KEY_PATH)
+        f = open(path, 'w')
+        f.write(data)
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

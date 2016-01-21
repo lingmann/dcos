@@ -18,8 +18,6 @@
 import os
 import socket
 
-from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH
-
 
 def is_valid_ipv4_address(address):
     try:

@@ -9,7 +9,7 @@ import ssh.validate
 
 class TestMultiRunner(unittest.TestCase):
     def setUp(self):
-        self.multirunner = ssh.ssh_runner.MultiRunner(['127.0.0.1', '10.10.10.10:22022'], ssh_user='ubuntu',
+        self.multirunner = ssh.ssh_runner.MultiRunner(['127.0.0.1', '10.10.10.10:22022'], '/tmp', ssh_user='ubuntu',
                                                       ssh_key_path='/home/ubuntu/.ssh/id_rsa')
 
     def tearDown(self):
@@ -48,7 +48,7 @@ class TestMultiRunner(unittest.TestCase):
                 "pid": 1111,
                 "cmd": ["/usr/bin/ssh", "-oConnectTimeout=10", "-oStrictHostKeyChecking=no",
                         "-oUserKnownHostsFile=/dev/null", "-oBatchMode=yes", "-oPasswordAuthentication=no",
-                        "-p22", "-i", "/home/ubuntu/.ssh/id_rsa", "ubuntu@127.0.0.1", "uname", "-a"]
+                        "-p22", "-i", "/home/ubuntu/.ssh/id_rsa", "-tt", "ubuntu@127.0.0.1", "uname", "-a"]
             },
             {
                 "stdout": ["stdout", "newline"],
@@ -57,8 +57,9 @@ class TestMultiRunner(unittest.TestCase):
                 "stderr": ["stderr", "newline"],
                 "pid": 1111,
                 "cmd": ["/usr/bin/ssh", "-oConnectTimeout=10", "-oStrictHostKeyChecking=no",
-                        "-oUserKnownHostsFile=/dev/null", "-oBatchMode=yes", "-oPasswordAuthentication=no",
-                        "-p22022", "-i", "/home/ubuntu/.ssh/id_rsa", "ubuntu@10.10.10.10", "uname", "-a"]
+                        "-oUserKnownHostsFile=/dev/null", "-oBatchMode=yes",
+                        "-oPasswordAuthentication=no", "-p22022", "-i", "/home/ubuntu/.ssh/id_rsa",
+                        "-tt", "ubuntu@10.10.10.10", "uname", "-a"]
             }]
 
     @unittest.mock.patch('subprocess.Popen')
@@ -151,8 +152,9 @@ class TestSSHRunner(unittest.TestCase):
             }]
 
         self.ssh_runner.execute_cmd('uname -a')
-        mocked_multirunner.assert_called_with(['127.0.0.1', '10.10.10.10:22022'], ssh_user='ubuntu', extra_opts='',
-                                              ssh_key_path='/home/ubuntu/.ssh/id_rsa', process_timeout=120)
+        mocked_multirunner.assert_called_with(['127.0.0.1', '10.10.10.10:22022'], ssh_user='ubuntu',
+                                              extra_opts='', ssh_key_path='/home/ubuntu/.ssh/id_rsa',
+                                              process_timeout=120)
         mocked_multirunner().run.assert_called_with(['uname', '-a'])
 
     @unittest.mock.patch('time.strftime')

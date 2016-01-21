@@ -163,6 +163,7 @@ setup(
         'docker_py',
         'pytest',
         'tox',
+        'webtest',
         'webtest_aiohttp'],
     entry_points={
         'console_scripts': ['dcos_installer = dcos_installer.entrypoint:main']

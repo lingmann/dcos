@@ -4,6 +4,7 @@ aiohttp_jinja2
 docker_py
 pytest
 tox
+webtest
 webtest-aiohttp
 -e git+git@github.com:mesosphere/dcos-image.git@validate-api-mock#egg=dcos_image
 -e git+git@github.com:mesosphere/pkgpanda.git@master#egg=pkgpanda

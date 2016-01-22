@@ -98,7 +98,7 @@ def configure_status(request):
             genconf_failure = {
                 "errors": "Configuration generation failed, please see command line for details"
             }
-            resp = web.json_response(genconf_failure)
+            resp = web.json_response(genconf_failure, status=400)
 
     return resp
 

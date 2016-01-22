@@ -331,7 +331,9 @@ def test_action_deploy(monkeypatch, mocker):
         "chain_name": "deploy",
         "total_hosts": 2,
         "hosts_success": 1,
-        "hosts_failed": 1
+        "hosts_failed": 1,
+        "total_masters": 1,
+        "total_agents": 1
     }
 
     mocked_read_json_state.side_effect = lambda x: {}

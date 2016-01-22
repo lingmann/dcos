@@ -25,7 +25,7 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         log.error("genconf/serve/dcos_install.sh does not exist. Please run --genconf before executing preflight.")
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
     targets = config['master_list'] + config['agent_list']
-    pf = get_async_runner(config, targets)
+    pf = get_async_runner(config, targets, **kwargs)
     preflight_chain = ssh.utils.CommandChain('preflight')
 
     add_pre_action(preflight_chain, pf.ssh_user)
@@ -117,7 +117,7 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
     log.debug('Start deploying {}'.format(role))
     log.debug("Local bootstrap found: %s", bootstrap_tarball)
 
-    runner = get_async_runner(config, default['hosts'], tags=default['tags'])
+    runner = get_async_runner(config, default['hosts'], tags=default['tags'], **kwargs)
     chain = ssh.utils.CommandChain(default['chain_name'])
 
     add_pre_action(chain, runner.ssh_user)
@@ -135,7 +135,7 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 @asyncio.coroutine
 def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
     targets = config['master_list'] + config['agent_list']
-    pf = get_async_runner(config, targets)
+    pf = get_async_runner(config, targets, **kwargs)
     postflight_chain = ssh.utils.CommandChain('postflight')
     add_pre_action(postflight_chain, pf.ssh_user)
 
@@ -150,11 +150,11 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
 
 
 @asyncio.coroutine
-def uninstall_dcos(config, block=False, state_json_dir=None):
+def uninstall_dcos(config, block=False, state_json_dir=None, **kwargs):
     all_targets = config['master_list'] + config['agent_list']
 
     # clean the file to all targets
-    runner = get_async_runner(config, all_targets)
+    runner = get_async_runner(config, all_targets, **kwargs)
     uninstall_chain = ssh.utils.CommandChain('uninstall')
 
     uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall', '&&', 'sudo', 'rm', '-rf',

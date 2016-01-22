@@ -11,9 +11,12 @@ def get_async_runner(config, hosts, **kwargs):
     process_timeout = config.get('process_timeout', 120)
     extra_ssh_options = config.get('extra_ssh_options', '')
     ssh_key_path = config.get('ssh_key_path', '/genconf/ssh_key')
+    args = {}
+    if 'async_delegate' in kwargs:
+        args['async_delegate'] = kwargs['async_delegate']
 
     return ssh.ssh_runner.MultiRunner(hosts, ssh_user=config['ssh_user'], ssh_key_path=ssh_key_path,
-                                      process_timeout=process_timeout, extra_opts=extra_ssh_options, **kwargs)
+                                      process_timeout=process_timeout, extra_opts=extra_ssh_options, **args)
 
 def add_pre_action(chain, ssh_user):
     # Do setup steps for a chain

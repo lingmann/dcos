@@ -3,10 +3,9 @@ import json
 import logging
 import os
 
-from dcos_installer import action_lib
 import pkg_resources
 from aiohttp import web
-from dcos_installer import backend
+from dcos_installer import action_lib, backend
 
 log = logging.getLogger()
 

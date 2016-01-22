@@ -173,68 +173,78 @@ curl localhost:5000/api/v1/preflight | json
 ```
 ```json
 {
-  "10.0.0.3": {
-    "stdout": [
-      ""
-    ],
-    "state": "not_running",
-    "returncode": -1,
-    "cmd": "",
-    "stderr": [
-      ""
-    ],
-    "role": "slave"
-  },
-  "10.0.0.1": {
-    "stdout": [
-      ""
-    ],
-    "state": "not_running",
-    "returncode": -1,
-    "cmd": "",
-    "stderr": [
-      ""
-    ],
-    "role": "master"
-  },
-  "10.0.0.2": {
-    "stdout": [
-      ""
-    ],
-    "state": "running",
-    "returncode": -1,
-    "cmd": "uptime",
-    "stderr": [
-      ""
-    ],
-    "role": "slave"
-  },
-  "10.0.0.4": {
-    "stdout": [
-      ""
-    ],
-    "state": "success",
-    "returncode": 0,
-    "cmd": "uptime",
-    "stderr": [
-      ""
-    ],
-    "stdout": [
-      "13:53  up 13 days, 17:25, 3 users, load averages: 1.59 1.65 1.69",
-    ]
-    "role": "slave"
-  },
-  "10.0.0.5": {
-    "stdout": [
-      ""
-    ],
-    "state": "error",
-    "returncode": 127,
-    "cmd": "uptime",
-    "stderr": [
-      "command not found"
-    ],
-    "role": "slave"
+  "chain_name": "preflight",
+  "total_hosts": 2,
+  "hosts_failed": 2,
+  "hosts": {
+    "10.33.2.21:22": {
+      "host_status": "failed",
+      "commands": [
+        {
+          "date": "2016-01-22 23:51:37.324109",
+          "stdout": [
+            ""
+          ],
+          "stderr": [
+            "ssh: connect to host 10.33.2.21 port 22: No route to host\r",
+            ""
+          ],
+          "pid": 3364,
+          "cmd": [
+            "/usr/bin/ssh",
+            "-oConnectTimeout=10",
+            "-oStrictHostKeyChecking=no",
+            "-oUserKnownHostsFile=/dev/null",
+            "-oBatchMode=yes",
+            "-oPasswordAuthentication=no",
+            "-p22",
+            "-i",
+            "/genconf/ssh_key",
+            "-tt",
+            "vagrant@10.33.2.21",
+            "sudo",
+            "mkdir",
+            "-p",
+            "/opt/dcos_install_tmp"
+          ],
+          "returncode": 255
+        }
+      ]
+    },
+    "10.33.2.22:22": {
+      "host_status": "failed",
+      "commands": [
+        {
+          "date": "2016-01-22 23:51:37.325893",
+          "stdout": [
+            ""
+          ],
+          "stderr": [
+            "ssh: connect to host 10.33.2.22 port 22: No route to host\r",
+            ""
+          ],
+          "pid": 3365,
+          "cmd": [
+            "/usr/bin/ssh",
+            "-oConnectTimeout=10",
+            "-oStrictHostKeyChecking=no",
+            "-oUserKnownHostsFile=/dev/null",
+            "-oBatchMode=yes",
+            "-oPasswordAuthentication=no",
+            "-p22",
+            "-i",
+            "/genconf/ssh_key",
+            "-tt",
+            "vagrant@10.33.2.22",
+            "sudo",
+            "mkdir",
+            "-p",
+            "/opt/dcos_install_tmp"
+          ],
+          "returncode": 255
+        }
+      ]
+    }
   }
 }
 ```

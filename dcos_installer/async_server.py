@@ -103,7 +103,12 @@ def success(request):
     return web.json_response(backend.success())
 
 
-def _merge_json(result, data_json):
+def _merge_json(result, data_json, original_action):
+    total_role = 'total_{}s'.format(original_action.split('_').pop())
+    if total_role not in result:
+        if 'total_hosts' in data_json:
+            result[total_role] = data_json['total_hosts']
+
     for key, value in data_json.items():
         # Increment ints
         if isinstance(value, int):
@@ -161,7 +166,7 @@ def action_action_name(request):
                 json_state = read_json_state(action)
                 if not json_state:
                     return web.json_response({})
-                _merge_json(result, json_state)
+                _merge_json(result, json_state, action)
             return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
                                 content_type='application/json')
         if json_state:

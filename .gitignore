@@ -13,3 +13,4 @@ ui/dist
 dcos_installer/templates
 .idea/
 src/
+!ui/src/

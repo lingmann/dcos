@@ -12,6 +12,11 @@ Sendfile sub system for serving static assets was caching / appending weird bina
 3. ```source test_env```
 4. ```dcos_installer --web```
 
+## Build the UI Assets
+
+1. Install nodejs and npm - OS dependant, on OSx you can use Brew
+
+
 Note: depending on what features in dcos-image are being used, some of the dummy environment variables mmay need to be populated with valid values
 
 ## Compile Frontend Assets

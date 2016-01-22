@@ -232,6 +232,23 @@ def test_action_preflight(monkeypatch, mocker):
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
     route = '/api/v{}/action/preflight'.format(version)
+    featured_methods = {
+        'GET': [200, 'application/json'],
+        'POST': [400, 'application/json'],
+        'PUT': [405, 'text/plain'],
+        'DELETE': [405, 'text/plain'],
+        'HEAD': [405, 'text/plain'],
+        'TRACE': [405, 'text/plain'],
+        'CONNECT': [405, 'text/plain'],
+    }
+    for method, expected in featured_methods.items():
+        res = client.request(route, method=method, expect_errors=True)
+        assert res.status_code == expected[0], '{}: {}'.format(
+            method,
+            expected)
+        assert res.content_type == expected[1], '{}: {}'.format(
+            method,
+            expected)
 
     mocked_read_json_state = mocker.patch('dcos_installer.async_server.read_json_state')
 

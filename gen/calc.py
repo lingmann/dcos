@@ -2,7 +2,6 @@ import json
 import logging as log
 import os
 import sys
-import urllib.request
 from math import floor
 from subprocess import check_output
 
@@ -19,19 +18,6 @@ def calulate_dcos_image_commit():
         raise "Unable to set dcos_image_commit from teamcity or git."
 
     return dcos_image_commit
-
-
-def calculate_bootstrap_url(channel_name):
-    return "https://downloads.mesosphere.com/dcos/" + channel_name
-
-
-def calculate_bootstrap_id(channel_name):
-    # NOTE: We always use our repository for figuring out the current
-    # bootstrap_id because it has all the bootstraps. For on-prem customers who
-    # change the bootstrap_url to point to a local cluster, they still need
-    # to be shipped our canoncial bootstrap for the selected release.
-    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(channel_name)
-    return urllib.request.urlopen(url).read().decode('utf-8')
 
 
 def calculate_resolvers_str(resolvers):
@@ -86,11 +72,6 @@ must = {
     'dcos_version': lambda: "1.6",
     'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
     'curly_pound': lambda: "{#"
-}
-
-can = {
-    'bootstrap_url': calculate_bootstrap_url,
-    'bootstrap_id': calculate_bootstrap_id
 }
 
 

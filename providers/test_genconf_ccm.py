@@ -134,7 +134,6 @@ def main():
     test_config = {
         "cluster_config": {
             "cluster_name": "SSH Installed DCOS",
-            "bootstrap_url": "file:///opt/dcos_install_tmp",
             "docker_remove_delay": "1hrs",
             "exhibitor_storage_backend": "zookeeper",
             "exhibitor_zk_hosts": host_list[0]+":2181",

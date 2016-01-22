@@ -221,6 +221,11 @@ def main():
     parser = argparse.ArgumentParser(description="Generates DCOS configuration.")
     ssh_deployer = parser.add_mutually_exclusive_group()
 
+    # Useful for doign things like "Extract the tar than don't do anything" used
+    # by the azure integration test.
+    if len(sys.argv) == 2 and sys.argv[1] == 'noop':
+        return 0
+
     # Log level
     parser.add_argument(
         '-l',

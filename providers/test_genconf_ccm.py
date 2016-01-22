@@ -131,9 +131,14 @@ def main():
 
     print("VPC host(s): {}".format(host_list))
     # use first node as zk backend, second node as master, all others as slaves
+
+    # before real config is written, try running genconf to make sure it fails
+    run_cmd("--genconf", expect_errors=True)
+    # Now create a real config
     test_config = {
         "cluster_config": {
             "cluster_name": "SSH Installed DCOS",
+            "bootstrap_url": "file:///opt/dcos_install_tmp",
             "docker_remove_delay": "1hrs",
             "exhibitor_storage_backend": "zookeeper",
             "exhibitor_zk_hosts": host_list[0]+":2181",

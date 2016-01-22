@@ -44,7 +44,7 @@ master_discovery: static
 # Since we're defaulting to master list, we pass that static list of masters.
 # Recommended deployment as at least 3 masters and a maximum of 5. It's not
 # Recommended that you deploy even number of masters.
-master_list: '["10.33.2.21"]'
+master_list: '10.33.2.21'
 
 # This is the list of upstream DNS resolvers that Mesos DNS will use.
 resolvers: '["8.8.8.8", "8.8.4.4"]'

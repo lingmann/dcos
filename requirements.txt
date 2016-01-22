@@ -3,6 +3,7 @@ aiohttp
 aiohttp_jinja2
 docker_py
 pytest
+pytest-mock
 tox
 webtest
 webtest-aiohttp

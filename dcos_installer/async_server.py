@@ -3,7 +3,7 @@ import json
 import logging
 import os
 
-import action_lib
+from dcos_installer import action_lib
 import pkg_resources
 from aiohttp import web
 from dcos_installer import backend
@@ -88,7 +88,7 @@ def configure_status(request):
     # TODO(malnick) Update this to point to backend.py with call to Gen validation
     messages = backend.return_configure_status()
     resp = web.json_response({}, status=200)
-    if messages['errors'] and len(messages['errors']) > 0:
+    if 'errors' in messages and len(messages['errors']) > 0:
         resp = web.json_response(messages['errors'], status=400)
 
     return resp
@@ -122,6 +122,25 @@ def _merge_json(result, data_json):
         result.update({key: value})
 
 
+def unlink_state_file(action_name):
+    json_status_file = state_dir + '/{}.json'.format(action_name)
+    if os.path.isfile(json_status_file):
+        log.debug('removing {}'.format(json_status_file))
+        os.unlink(json_status_file)
+        return True
+    log.debug('cannot remove {}, file not found'.format(json_status_file))
+    return False
+
+
+def read_json_state(action_name):
+    json_status_file = state_dir + '/{}.json'.format(action_name)
+    if not os.path.isfile(json_status_file):
+        return False
+
+    with open(json_status_file) as fh:
+        return json.load(fh)
+
+
 def action_action_name(request):
     action_name = request.match_info['action_name']
     # get_action_status(action_name)
@@ -130,44 +149,36 @@ def action_action_name(request):
     # ...execute action again.
     #
     # Update the global action
+    json_state = read_json_state(action_name)
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
 
         action_key = action_map.get(action_name)
         if isinstance(action_key, list):
+            # Deploy action consits of 2 json states: deploy_agent.json and deploy_master.json
             result = {}
             for action in action_key:
-                json_status_file = state_dir + '/{}.json'.format(action)
-                if not os.path.isfile(json_status_file):
+                json_state = read_json_state(action)
+                if not json_state:
                     return web.json_response({})
-
-                with open(json_status_file) as fh:
-                    json_status_json = json.load(fh)
-                    _merge_json(result, json_status_json)
+                _merge_json(result, json_state)
             return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
                                 content_type='application/json')
-
-        json_status_file = state_dir + '/{}.json'.format(action_name)
-        if os.path.isfile(json_status_file):
-            with open(json_status_file) as fh:
-                result_json = json.load(fh)
-            return web.Response(body=json.dumps(result_json, sort_keys=True, indent=4).encode('utf-8'),
+        if json_state:
+            return web.Response(body=json.dumps(json_state, sort_keys=True, indent=4).encode('utf-8'),
                                 content_type='application/json')
 
         return web.json_response({})
 
     elif request.method == 'POST':
         params = yield from request.post()
-        state_file_path = state_dir + '/{}.json'.format(action_name)
-        if os.path.isfile(state_file_path):
+        if json_state:
             if action_name not in remove_on_done:
                 return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
-
             running = False
-            with open(state_file_path) as fh:
-                json_dump = json.load(fh)
-            for host, attributes in json_dump['hosts'].items():
+
+            for host, attributes in json_state['hosts'].items():
                 if attributes['host_status'].lower() == 'running':
                     running = True
 
@@ -175,8 +186,7 @@ def action_action_name(request):
             if running:
                 return web.json_response({'status': '{} is running, skipping'.format(action_name)})
             else:
-                log.debug('Removing {}'.format(state_file_path))
-                os.unlink(state_file_path)
+                unlink_state_file(action_name)
 
         action = action_map.get(action_name)
         if not action:
@@ -185,7 +195,8 @@ def action_action_name(request):
         if isinstance(action, list):
             deploy_executed = False
             for new_action_str in action:
-                if os.path.isfile(state_dir + '/' + new_action_str + '.json'):
+                new_json_state = read_json_state(new_action_str)
+                if new_json_state:
                     deploy_executed = True
 
             if deploy_executed:

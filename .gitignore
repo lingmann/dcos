@@ -7,3 +7,5 @@ __pycache__/
 node_modules
 ui/dist
 dcos_installer/templates
+.idea/
+src/

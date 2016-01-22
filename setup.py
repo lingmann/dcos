@@ -162,6 +162,7 @@ setup(
         'aiohttp_jinja2',
         'docker_py',
         'pytest',
+        'pytest-mock',
         'tox',
         'webtest',
         'webtest_aiohttp'],

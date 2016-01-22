@@ -1,19 +1,33 @@
 import asyncio
+import json
 import logging
+import os
 
 import pkg_resources
 from aiohttp import web
-from dcos_installer import backend, mock
+from dcos_installer import action_lib, backend
 
 log = logging.getLogger()
 
 VERSION = '1'
+
+state_dir = '/genconf/state'
 
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.
 loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app['current_action'] = ''
+
+action_map = {
+    'preflight': action_lib.run_preflight,
+    'deploy_master': lambda *args, **kwargs: action_lib.install_dcos(*args, role='master', **kwargs),
+    'deploy_agent': lambda *args, **kwargs: action_lib.install_dcos(*args, role='agent', **kwargs),
+    'postflight': action_lib.run_postflight,
+    'deploy': ['deploy_master', 'deploy_agent']
+}
+
+remove_on_done = ['preflight', 'postflight']
 
 
 # Aiohttp route handlers. These methods are for the
@@ -73,7 +87,7 @@ def configure_status(request):
     # TODO(malnick) Update this to point to backend.py with call to Gen validation
     messages = backend.return_configure_status()
     resp = web.json_response({}, status=200)
-    if messages['errors'] and len(messages['errors']) > 0:
+    if 'errors' in messages and len(messages['errors']) > 0:
         resp = web.json_response(messages['errors'], status=400)
 
     return resp
@@ -89,6 +103,43 @@ def success(request):
     return web.json_response(backend.success())
 
 
+def _merge_json(result, data_json):
+    for key, value in data_json.items():
+        # Increment ints
+        if isinstance(value, int):
+            value = result.get(key, 0) + value
+        elif isinstance(value, dict):
+            if key in result:
+                result[key].update(value)
+                continue
+            else:
+                result[key] = value
+        elif isinstance(value, str):
+            if value.startswith('deploy') and not value.endswith('deploy'):
+                value = 'deploy'
+
+        result.update({key: value})
+
+
+def unlink_state_file(action_name):
+    json_status_file = state_dir + '/{}.json'.format(action_name)
+    if os.path.isfile(json_status_file):
+        log.debug('removing {}'.format(json_status_file))
+        os.unlink(json_status_file)
+        return True
+    log.debug('cannot remove {}, file not found'.format(json_status_file))
+    return False
+
+
+def read_json_state(action_name):
+    json_status_file = state_dir + '/{}.json'.format(action_name)
+    if not os.path.isfile(json_status_file):
+        return False
+
+    with open(json_status_file) as fh:
+        return json.load(fh)
+
+
 def action_action_name(request):
     action_name = request.match_info['action_name']
     # get_action_status(action_name)
@@ -97,14 +148,66 @@ def action_action_name(request):
     # ...execute action again.
     #
     # Update the global action
+    json_state = read_json_state(action_name)
     app['current_action'] = action_name
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
-        return web.json_response(mock.mock_action_state)
+
+        action_key = action_map.get(action_name)
+        if isinstance(action_key, list):
+            # Deploy action consits of 2 json states: deploy_agent.json and deploy_master.json
+            result = {}
+            for action in action_key:
+                json_state = read_json_state(action)
+                if not json_state:
+                    return web.json_response({})
+                _merge_json(result, json_state)
+            return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
+                                content_type='application/json')
+        if json_state:
+            return web.Response(body=json.dumps(json_state, sort_keys=True, indent=4).encode('utf-8'),
+                                content_type='application/json')
+
+        return web.json_response({})
 
     elif request.method == 'POST':
-        log.info('POST {}'.format(action_name))
-        return web.json_response(mock.mock_action_state)
+        params = yield from request.post()
+        if json_state:
+            if action_name not in remove_on_done:
+                return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
+            running = False
+
+            for host, attributes in json_state['hosts'].items():
+                if attributes['host_status'].lower() == 'running':
+                    running = True
+
+            log.debug('is action running: {}'.format(running))
+            if running:
+                return web.json_response({'status': '{} is running, skipping'.format(action_name)})
+            else:
+                unlink_state_file(action_name)
+
+        action = action_map.get(action_name)
+        if not action:
+            return web.json_response({'error': 'action {} not implemented'.format(action_name)})
+
+        if isinstance(action, list):
+            deploy_executed = False
+            for new_action_str in action:
+                new_json_state = read_json_state(new_action_str)
+                if new_json_state:
+                    deploy_executed = True
+
+            if deploy_executed:
+                return web.json_response({'status': 'deploy was already executed, skipping'})
+            else:
+                for new_action_str in action:
+                    new_action = action_map.get(new_action_str)
+                    log.info('Executing {}'.format(new_action_str))
+                    yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
+        else:
+            yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
+        return web.json_response({'status': '{} started'.format(action_name)})
 
 
 def action_current(request):
@@ -140,6 +243,8 @@ def start(port=9000):
         port)
     srv = loop.run_until_complete(f)
     log.info('Starting server {}'.format(srv.sockets[0].getsockname()))
+    if not os.path.isdir(state_dir):
+        os.mkdir(state_dir)
 
     try:
         loop.run_forever()

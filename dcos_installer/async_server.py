@@ -91,6 +91,9 @@ def configure_status(request):
     if 'errors' in messages and len(messages['errors']) > 0:
         resp = web.json_response(messages['errors'], status=400)
 
+    else:
+        backend.do_configure()
+
     return resp
 
 

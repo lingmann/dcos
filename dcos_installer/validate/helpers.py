@@ -95,7 +95,7 @@ def validate_string(key=None, config=None):
             return [True, '{} is a valid string.'.format(key)]
 
         else:
-            return [False, '{} is not a valid string. Is of type {}.'.format(key, type(key))]
+            return [False, '{} is not a valid string. Is of type {}.'.format(key, str(type(key)))]
 
     return [False, None]
 
@@ -103,11 +103,17 @@ def validate_string(key=None, config=None):
 def validate_int(key=None, config=None):
     if key in config:
         key = config[key]
-        if int(key):
+        if isinstance(key, int):
             return [True, '{} is a valid integer.'.format(key)]
 
+        elif isinstance(key, str):
+            try:
+                interger = int(key)
+                return [True, '{} is a valid interger.'.format(interger)]
+            except:
+                return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
         else:
-            return [False, '{} is not a valid integer. Is of type {}.'.format(key, type(key))]
+            return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
 
     return [False, None]
 
@@ -213,10 +219,21 @@ def validate_comma_list(key=None, config=None):
         key = config[key]
         if type(key) == str:
             if key.split(','):
-                [True, '{} is a valid comma separated list'.format(key)]
+                return [True, '{} is a valid comma separated list'.format(key)]
             else:
-                [True, '{} is a valid single entity string.'.format(key)]
+                return [True, '{} is a valid single entity string.'.format(key)]
         else:
             return [False, '{} is not a valid string. Looking for comma separated list.'.format(key)]
+
+    return [False, None]
+
+
+def validate_ssh_key(key=None, config=None):
+    if key in config:
+        key = config[key]
+        # Validate path exists
+        does_validate, msg = validate_path(key, config)
+        if not does_validate:
+            return does_validate, msg
 
     return [False, None]

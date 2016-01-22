@@ -11,6 +11,7 @@ let requestInterval = null;
 
 function startPolling() {
   if (requestInterval == null) {
+    PreFlightStore.fetchStageStatus();
     requestInterval = setInterval(PreFlightStore.fetchStageStatus, 2000);
   }
 }
@@ -92,9 +93,9 @@ let PreFlightStore = Store.createStore({
         PreFlightStore.processUpdateSuccess(action.data);
         break;
       case ActionTypes.PREFLIGHT_BEGIN_SUCCESS:
-        this.emit(EventTypes.PREFLIGHT_BEGIN_SUCCESS);
+        PreFlightStore.emit(EventTypes.PREFLIGHT_BEGIN_SUCCESS);
       case ActionTypes.PREFLIGHT_BEGIN_ERROR:
-        this.emit(EventTypes.PREFLIGHT_BEGIN_ERROR, action.data);
+        PreFlightStore.emit(EventTypes.PREFLIGHT_BEGIN_ERROR, action.data);
     }
 
     return true;

@@ -1,5 +1,5 @@
 import os
-import yaml
+import json
 
 from dcos_installer import backend
 
@@ -25,7 +25,7 @@ def test_good_create_config_from_post():
 
     assert err is False
     assert msg == expected_good_messages
-    os.remove(config_path)
+#    os.remove(config_path)
 
 
 def test_bad_create_config_from_post():
@@ -50,28 +50,31 @@ def test_bad_create_config_from_post():
 
 def test_get_config():
     expected_file = """
----
-agent_list:
-- null
-cluster_name: 'Mesosphere: The Data Center Operating System'
-exhibitor_zk_hosts: null
-extra_ssh_options: -tt
-ip_detect_path: /genconf/ip-detect
-log_directory: /genconf/logs
-master_list:
-- null
-process_timeout: 120
-resolvers:
-- 8.8.8.8
-- 8.8.4.4
-ssh_key_path: /genconf/ssh_key
-ssh_port: 22
-ssh_user: centos
+{
+  "username": null,
+  "extra_ssh_options": "-tt",
+  "agent_list": [
+    null
+  ],
+  "ssh_port": 22,
+  "master_list": [
+    null
+  ],
+  "cluster_name": "Mesosphere: The Data Center Operating System",
+  "resolvers": [
+    "8.8.8.8",
+    "8.8.4.4"
+  ],
+  "password": null,
+  "ssh_user": null,
+  "exhibitor_zk_hosts": null,
+  "process_timeout": 120
+}
     """
     config = backend.get_config(config_path='/tmp/config.yaml')
-    expected_config = yaml.load(expected_file)
+    expected_config = json.loads(expected_file)
     assert expected_config == config
-    os.remove(config_path)
+#    os.remove(config_path)
 
 
 def test_return_configure_status():
@@ -105,7 +108,7 @@ def test_determine_config_type():
         'type': 'minimal',
     }
     assert got_output == expected_output
-    os.remove(config_path)
+#    os.remove(config_path)
 
 
 def test_success():
@@ -116,4 +119,4 @@ def test_success():
         "agent_count": 0
     }
     assert got_output == expected_output
-    os.remove(config_path)
+#    os.remove(config_path)

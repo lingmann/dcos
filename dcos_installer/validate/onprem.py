@@ -63,6 +63,8 @@ def get_onprem_dependencies(config):
         "ssh_key_path": helpers.validate_path('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),
         "agent_list": helpers.validate_ip_list('agent_list', config),
+        "username": helpers.validate_string('username', config),
+        "password": helpers.validate_string('password', config),
     }
 
     # For each dependency, read its validation helper func and return

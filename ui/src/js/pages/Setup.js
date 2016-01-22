@@ -14,6 +14,7 @@ import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
 import PasswordStrengthMeter from '../components/PasswordStrengthMeter';
+import PreFlightStore from '../stores/PreFlightStore';
 import SectionAction from '../components/SectionAction';
 import SectionBody from '../components/SectionBody';
 import SectionHeader from '../components/SectionHeader';
@@ -28,8 +29,10 @@ const METHODS_TO_BIND = [
   'getErrors',
   'getValidationFn',
   'handleFormChange',
+  'handleSubmitClick',
   'handleUploadSuccess',
   'isLastFormField',
+  'prepareDataForAPI',
   'submitFormData'
 ];
 
@@ -74,6 +77,10 @@ module.exports = class Setup extends mixin(StoreMixin) {
           'currentConfigChangeError',
           'currentConfigChangeSuccess'
         ]
+      },
+      {
+        name: 'preFlight',
+        events: ['beginSuccess', 'beginError']
       }
     ];
 
@@ -94,6 +101,27 @@ module.exports = class Setup extends mixin(StoreMixin) {
 
   onSetupStoreConfigUpdateSuccess() {
     this.setState({isComplete: true});
+  }
+
+  onPreFlightStoreBeginSuccess() {
+    this.props.history.pushState(null, '/pre-flight');
+  }
+
+  onPreFlightStoreBeginError(data) {
+    return data;
+    // Handle pre-flight error.
+  }
+
+  getArrayFromHostsString(string) {
+    return string.replace(/\s/g, '').split(',');
+  }
+
+  getCombinedZKHosts(hosts, port) {
+    // Remove all whitespace, split into array, create new array in format of
+    // host:port, and convert back to string.
+    return this.getArrayFromHostsString(hosts).map(function (host) {
+      return `${host}:${port}`;
+    }).join(', ');
   }
 
   getErrors(key) {
@@ -341,7 +369,6 @@ module.exports = class Setup extends mixin(StoreMixin) {
   }
 
   getNewFormData(newFormData) {
-    newFormData = this.stringifyArrays(newFormData);
     return _.extend({}, this.state.formData, newFormData);
   }
 
@@ -364,7 +391,7 @@ module.exports = class Setup extends mixin(StoreMixin) {
     }
 
     if (eventType === 'blur'
-      || eventType === 'change' && this.isLastFormField(fieldName)) {
+      || (eventType === 'change' && this.isLastFormField(fieldName))) {
       let newFormData = this.getNewFormData(formData);
 
       this.submitFormData({[fieldName]: formData[fieldName]});
@@ -376,9 +403,8 @@ module.exports = class Setup extends mixin(StoreMixin) {
       this.submitFormData.flush();
     }
 
-    if (eventType === 'change' && fieldName === 'reveal_password') {
+    if (eventType === 'multipleChange' && fieldName === 'reveal_password') {
       let passwordFieldType = this.state.passwordFieldType;
-
       if (formData.reveal_password[0].checked) {
         passwordFieldType = 'text';
       } else {
@@ -399,13 +425,21 @@ module.exports = class Setup extends mixin(StoreMixin) {
     }
   }
 
+  handleSubmitClick() {
+    // Do submit click stuff here
+  }
+
+  beginPreFlight() {
+    PreFlightStore.beginStage();
+  }
+
   isLastFormField(fieldName) {
-    let lastRemainingField = false;
+    let lastRemainingField = true;
 
     Object.keys(this.state.formData).forEach((key) => {
-      if (key !== fieldName && this.state.formData[key] !== ''
-        && this.state.formData[key] != null) {
-        lastRemainingField = true;
+      if (key !== fieldName && this.state.formData[key] === ''
+        || this.state.formData[key] == null) {
+        lastRemainingField = false;
       }
     });
 
@@ -417,38 +451,44 @@ module.exports = class Setup extends mixin(StoreMixin) {
     return lastRemainingField;
   }
 
-  stringifyArrays(formData) {
-    let stringifiedData = {};
-
-    Object.keys(formData).forEach(function (key) {
-      if (_.isArray(formData[key])) {
-        stringifiedData[key] = formData[key].join(', ');
-      } else {
-        stringifiedData[key] = formData[key];
-      }
-    });
-
-    return stringifiedData;
-  }
-
   submitFormData(formData) {
-    ConfigActions.updateConfig(this.unstringifyArrays(formData));
+    let preparedData = this.prepareDataForAPI(formData);
+
+    if (preparedData) {
+      ConfigActions.updateConfig(preparedData);
+    }
   }
 
-  unstringifyArrays(formData) {
-    let unstringifiedData = {};
+  prepareDataForAPI(data) {
+    let preparedData = {};
 
-    Object.keys(formData).forEach(function (key) {
-      if (formData[key] != null) {
-        if (key === 'master_list' || key === 'agent_list') {
-          unstringifiedData[key] = formData[key].replace(/\s/g, '').split(',');
+    Object.keys(data).forEach((key) => {
+      if (data[key] != null) {
+        // For zk_exhibitor_hosts and zk_exhibitor_port, we need to send a
+        // string with comma-separated host:port values.
+        // For master_list and agent_list, we need to send an array of the IPs.
+        // Everything else can be sent as entered by the user.
+        if (key === 'zk_exhibitor_hosts'
+          && this.state.formData.zk_exhibitor_hosts != null) {
+          preparedData.exhibitor_zk_hosts = this.getCombinedZKHosts(
+            data[key], this.state.formData.zk_exhibitor_port
+          );
+        } else if (key === 'zk_exhibitor_port' &&
+          this.state.formData.zk_exhibitor_hosts != null) {
+          preparedData.exhibitor_zk_hosts = this.getCombinedZKHosts(
+            this.state.formData.zk_exhibitor_hosts, data[key]
+          );
+        } else if (key === 'master_list' || key === 'agent_list') {
+          preparedData[key] = this.getArrayFromHostsString(data[key]);
         } else {
-          unstringifiedData[key] = formData[key];
+          preparedData = data;
         }
+      } else {
+        preparedData = null;
       }
     });
 
-    return unstringifiedData;
+    return preparedData;
   }
 
   render() {

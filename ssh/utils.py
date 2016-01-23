@@ -85,20 +85,19 @@ class AbstractSSHLibDelegate(metaclass=abc.ABCMeta):
 
 
 class JsonDelegate(AbstractSSHLibDelegate):
-    def __init__(self, state_dir, total_hosts, tags=None, total_masters=None, total_agents=None):
+    def __init__(self, state_dir, total_hosts, total_masters=None, total_agents=None):
         self.state_dir = state_dir
         self.total_hosts = total_hosts
-        self.tags = tags
         self.total_masters = total_masters
         self.total_agents = total_agents
 
     def on_update(self, future, callback_called):
         self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
 
-    def on_done(self, name, result, host_status_count=None, host_status=None):
-        self._update_json_file(name, result, host_status_count=host_status_count, host_status=host_status)
+    def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
+        self._update_json_file(name, result, host_object, host_status_count=host_status_count, host_status=host_status)
 
-    def _update_json_file(self, name, result, future_update=None, host_status_count=None, host_status=None,
+    def _update_json_file(self, name, result, host_object, future_update=None, host_status_count=None, host_status=None,
                           callback_called=None):
         status_json = {}
         status_file = os.path.join(self.state_dir, '{}.json'.format(name))
@@ -132,9 +131,9 @@ class JsonDelegate(AbstractSSHLibDelegate):
                         'commands': [return_values]
                     }
 
-                if self.tags and 'tags' not in status_json['hosts'][host]:
+                if host_object and host_object.tags and 'tags' not in status_json['hosts'][host]:
                     status_json['hosts'][host]['tags'] = {}
-                    for tag in self.tags:
+                    for tag in host_object.tags:
                         status_json['hosts'][host]['tags'].update(tag)
 
                 # Update chain status to running

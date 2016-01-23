@@ -21,10 +21,11 @@ class TestMultiRunner(unittest.TestCase):
 
     @unittest.mock.patch('subprocess.Popen')
     def test_run_cmd_return_tuple(self, mocked_popen):
+        s = ssh.ssh_runner.Node('127.0.0.1:22')
         mocked_popen().communicate.return_value = ('stdout\nnewline'.encode(), 'stderr\nnewline'.encode())
         mocked_popen().pid = 1111
         mocked_popen().returncode = 0
-        assert ssh.ssh_runner.run_cmd_return_tuple({'ip': '127.0.0.1', 'port': 22}, ['uname', '-a']) == \
+        assert ssh.ssh_runner.run_cmd_return_tuple(s, ['uname', '-a']) == \
             {
                 'cmd': ['uname', '-a'],
                 'host': {'ip': '127.0.0.1', 'port': 22},
@@ -71,7 +72,7 @@ class TestMultiRunner(unittest.TestCase):
             {
                 "stdout": ["stdout", "newline"],
                 "returncode": 0,
-                "host": {"port": 22, "ip": "127.0.0.1"},
+                "host": {'ip': '127.0.0.1', 'port': 22},
                 "stderr": ["stderr", "newline"],
                 "pid": 1111,
                 "cmd": ["/usr/bin/scp", "-oConnectTimeout=10", "-oStrictHostKeyChecking=no",
@@ -81,7 +82,7 @@ class TestMultiRunner(unittest.TestCase):
             {
                 "stdout": ["stdout", "newline"],
                 "returncode": 0,
-                "host": {"port": 22022, "ip": "10.10.10.10"},
+                "host": {'ip': '10.10.10.10', 'port': 22022},
                 "stderr": ["stderr", "newline"],
                 "pid": 1111,
                 "cmd": ["/usr/bin/scp", "-oConnectTimeout=10", "-oStrictHostKeyChecking=no",

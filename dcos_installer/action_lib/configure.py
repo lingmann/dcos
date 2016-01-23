@@ -146,7 +146,7 @@ def fetch_bootstrap(bootstrap_id):
     try:
         subprocess.check_output(['mkdir', '-p', '/genconf/serve/bootstrap/'])
         subprocess.check_output(['cp', local_cache_filename, save_path])
-    except (KeyboardInterrupt, CalledProcessError) as ex:
+    except (KeyboardInterrupt, subprocess.CalledProcessError) as ex:
         log.error("Copy failed or interrupted %s", ex.cmd)
         log.error("Failed commandoutput: %s", ex.output)
         cleanup_and_exit()

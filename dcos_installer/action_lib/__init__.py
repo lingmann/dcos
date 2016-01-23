@@ -3,7 +3,7 @@ import logging
 import os
 
 import pkgpanda
-from ssh.ssh_runner import Server
+from ssh.ssh_runner import Node
 from ssh.exceptions import ExecuteException
 import ssh.utils
 
@@ -26,12 +26,12 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
     targets = []
     for host in config['master_list']:
-        s = Server(host)
+        s = Node(host)
         s.add_tag({'role': 'master'})
         targets += [s]
 
     for host in config['agent_list']:
-        s = Server(host)
+        s = Node(host)
         s.add_tag({'role': 'agent'})
         targets += [s]
 
@@ -129,7 +129,7 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 
     targets = []
     for host in default['hosts']:
-        s = Server(host)
+        s = Node(host)
         s.add_tag(default['tags'])
         targets += [s]
 
@@ -152,12 +152,12 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
     targets = []
     for host in config['master_list']:
-        s = Server(host)
+        s = Node(host)
         s.add_tag({'role': 'master'})
         targets += [s]
 
     for host in config['agent_list']:
-        s = Server(host)
+        s = Node(host)
         s.add_tag({'role': 'agent'})
         targets += [s]
 

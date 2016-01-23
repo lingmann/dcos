@@ -169,6 +169,9 @@ setup(
     entry_points={
         'console_scripts': ['dcos_installer = dcos_installer.entrypoint:main']
         },
-    package_data={'dcos_installer': ['templates/*/*']},
+    #include_package_data=True,
+    package_data={'dcos_installer': [
+        'templates/*.html',
+        'templates/assets/*']},
     zip_safe=False
     )

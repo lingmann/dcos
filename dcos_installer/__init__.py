@@ -77,7 +77,7 @@ class DcosInstaller:
 
             if options.configure:
                 log.warning("Executing configuration generation for DCOS.")
-                # backend.configure()
+                backend.do_configure()
 
             if options.preflight:
                 log.warning("Executing preflight on target hosts.")

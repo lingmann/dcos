@@ -12,7 +12,7 @@ import uuid
 import pkgpanda.util
 import pytest
 
-from ssh.ssh_runner import MultiRunner, Server
+from ssh.ssh_runner import MultiRunner, Node
 from ssh.utils import CommandChain
 
 sshd_config = [
@@ -276,7 +276,7 @@ def test_tags_async(tmpdir, loop):
 
     targets = []
     for _port in sshd_ports:
-        _host = Server('127.0.0.1:{}'.format(_port))
+        _host = Node('127.0.0.1:{}'.format(_port))
         _host.add_tag({'tag1': 'test1'})
         _host.add_tag({'tag2': 'test2'})
         targets.append(_host)

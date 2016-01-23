@@ -21,7 +21,7 @@ class TestMultiRunner(unittest.TestCase):
 
     @unittest.mock.patch('subprocess.Popen')
     def test_run_cmd_return_tuple(self, mocked_popen):
-        s = ssh.ssh_runner.Server('127.0.0.1:22')
+        s = ssh.ssh_runner.Node('127.0.0.1:22')
         mocked_popen().communicate.return_value = ('stdout\nnewline'.encode(), 'stderr\nnewline'.encode())
         mocked_popen().pid = 1111
         mocked_popen().returncode = 0

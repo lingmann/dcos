@@ -113,7 +113,7 @@ def save_logs(results, log_directory, log_postfix):
     return results
 
 
-class Server():
+class Node():
     def __init__(self, host, tags=None):
         if tags:
             assert isinstance(tags, list)
@@ -145,9 +145,9 @@ class Server():
 
 
 def add_host(target):
-    if isinstance(target, Server):
+    if isinstance(target, Node):
         return target
-    return Server(target)
+    return Node(target)
 
 
 class MultiRunner():

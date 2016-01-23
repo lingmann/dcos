@@ -1,3 +1,4 @@
+!ui/src
 dcos_install.sh
 packages/
 build/
@@ -12,5 +13,5 @@ node_modules
 ui/dist
 dcos_installer/templates
 .idea/
-/src/
-!/ui/src/
+!ui/src/
+/src

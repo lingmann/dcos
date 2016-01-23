@@ -9,7 +9,6 @@ import ErrorLabel from '../components/ErrorLabel';
 import IconCircleCheckmark from '../components/icons/IconCircleCheckmark';
 import IconSpinner from '../components/icons/IconSpinner';
 import IconWarning from '../components/icons/IconWarning';
-import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -112,13 +111,13 @@ module.exports = class Preflight extends mixin(StoreMixin) {
 
   render() {
     let masterStatus = PreFlightStore.get('masters');
-    let slaveStatus = PreFlightStore.get('slaves');
+    let agentStatus = PreFlightStore.get('agents');
 
-    let completed = masterStatus.completed && slaveStatus.completed;
+    let completed = masterStatus.completed && agentStatus.completed;
     let failed = masterStatus.errors > 0;
-    let totalErrors = masterStatus.errors + slaveStatus.errors;
-    let totalSlaves = InstallerStore.get('totalSlaves');
-    let totalMasters = InstallerStore.get('totalMasters');
+    let totalErrors = masterStatus.errors + agentStatus.errors;
+    let totalMasters = masterStatus.totalMasters;
+    let totalAgents = agentStatus.totalAgents;
 
     return (
       <Page hasNavigationBar={true}>
@@ -137,7 +136,7 @@ module.exports = class Preflight extends mixin(StoreMixin) {
             </SectionHeader>
             <SectionBody>
               {this.getProgressBar('Masters', masterStatus, totalMasters)}
-              {this.getProgressBar('Agents', slaveStatus, totalSlaves)}
+              {this.getProgressBar('Agents', agentStatus, totalAgents)}
             </SectionBody>
           </PageSection>
           <PageSection>

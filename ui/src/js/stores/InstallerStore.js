@@ -25,23 +25,15 @@ let InstallerStore = Store.createStore({
         label: null,
         link: null,
         visible: false
-      },
-      totalSlaves: 0,
-      totalMasters: 0
+      }
     });
 
     this.fetchCurrentStage();
-    this.fetchTotalSlaves();
-    this.fetchTotalMasters();
   },
 
   fetchDCOSURL: SuccessActions.fetchDCOSURL,
 
   fetchCurrentStage: StageActions.fetchCurrentStage,
-
-  fetchTotalSlaves: HostActions.fetchTotalSlaves,
-
-  fetchTotalMasters: HostActions.fetchTotalMasters,
 
   addChangeListener: function (eventName, callback) {
     this.on(eventName, callback);
@@ -80,12 +72,12 @@ let InstallerStore = Store.createStore({
       case ActionTypes.CURRENT_STAGE_CHANGE_SUCCESS:
         InstallerStore.processCurrentStage(action.data);
         break;
-      case ActionTypes.TOTAL_SLAVES_SUCCESS:
-        InstallerStore.set({totalSlaves: action.data});
-        InstallerStore.emit(EventTypes.TOTAL_SLAVES_SUCCESS, action.data);
+      case ActionTypes.TOTAL_AGENTS_SUCCESS:
+        InstallerStore.set({totalAgents: action.data});
+        InstallerStore.emit(EventTypes.TOTAL_AGENTS_SUCCESS, action.data);
         break;
-      case ActionTypes.TOTAL_SLAVES_ERROR:
-        InstallerStore.emit(EventTypes.TOTAL_SLAVES_ERROR);
+      case ActionTypes.TOTAL_AGENTS_ERROR:
+        InstallerStore.emit(EventTypes.TOTAL_AGENTS_ERROR);
         break;
       case ActionTypes.TOTAL_MASTERS_SUCCESS:
         InstallerStore.set({totalMasters: action.data});

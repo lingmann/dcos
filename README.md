@@ -1,5 +1,10 @@
 # DCOS Installer
 
+### DISABLE SENDFILE SUBSYSTEM
+Sendfile sub system for serving static assets was caching / appending weird binary data to the end of our index.js. To prevent aiohttp from using the sendfile subsystem you must do export this ENV var:
+
+```export AIOHTTP_NOSENDFILE=1export AIOHTTP_NOSENDFILE=1```
+
 ## Run locally
 
 1. ```pip install -r requirements.txt```

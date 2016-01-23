@@ -3,12 +3,11 @@ import os
 import subprocess
 import sys
 
-from dcos_installer.util import IP_DETECT_PATH, SERVE_DIR
-
 import gen
 import pkgpanda
 import providers.bash as bash
 import yaml
+from dcos_installer.util import IP_DETECT_PATH, SERVE_DIR
 
 mock_config = yaml.load("""
 ---

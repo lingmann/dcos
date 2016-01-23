@@ -1,5 +1,5 @@
 #!/bin/bash
 export DCOS_INTALLER_COMMIT=deadbeef
 export DCOS_IMAGE_COMMIT=deadbeef
-export CHANNEL_NAME=deadbeef
-export BOOTSTRAP_ID=deadbeef
+export CHANNEL_NAME=testing/continuous
+export BOOTSTRAP_ID=e2ade83b3197150980714635c6752bc9ece1e0ca

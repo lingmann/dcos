@@ -1,11 +1,61 @@
 import argparse
+import asyncio
 import logging
+import sys
 
-from dcos_installer import async_server
+from dcos_installer import action_lib
+from dcos_installer import async_server, backend
+from ssh.utils import AbstractSSHLibDelegate
 
 import coloredlogs
 
 log = logging.getLogger(__name__)
+
+LOG_FORMAT = '%(asctime)-15s %(module)s %(message)s'
+
+
+class CliDelegate(AbstractSSHLibDelegate):
+    def on_update(self, future, callback_called):
+        chain_name, result_object = future.result()
+        callback_called.set_result(True)
+
+    def on_done(self, name, result, host_status_count=None, host_status=None):
+        print('Running {}'.format(name))
+        for host, output in result.items():
+            print('#' * 20)
+            if output['returncode'] != 0:
+                print(host)
+                print('STDOUT')
+                print('{}: {}'.format(host, '\n'.join(output['stdout'])))
+                print('STDERR')
+                print('{}: {}'.format(host, '\n'.join(output['stderr'])))
+
+
+def run_loop(action, options):
+    assert callable(action)
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+
+    log.debug('### START {}'.format(action.__name__))
+    try:
+        config = backend.get_config()
+        cli_delegate = CliDelegate()
+        result = loop.run_until_complete(action(config, block=True, async_delegate=cli_delegate))
+    finally:
+        loop.close()
+    exitcode = 0
+    for host_result in result:
+        for command_result in host_result:
+            for host, process_result in command_result.items():
+                if process_result['returncode'] != 0:
+                    exitcode = process_result['returncode']
+    log.debug('### END {} with returncode: {}'.format(action.__name__, exitcode))
+    print('check logfile {}'.format(options.log_file))
+    if exitcode == 0:
+        print('Success')
+    else:
+        print('Failed')
+    return exitcode
 
 
 class DcosInstaller:
@@ -31,19 +81,24 @@ class DcosInstaller:
 
             if options.preflight:
                 log.warning("Executing preflight on target hosts.")
-                # backend.preflight()
+                sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:
                 log.warning("Executing deploy on target hosts.")
-                # backend.deploy()
+                for role in ['master', 'agent']:
+                    deploy_returncode = run_loop(lambda *args, **kwargs: action_lib.install_dcos(*args, role=role,
+                                                                                                 **kwargs), options)
+                if deploy_returncode != 0:
+                    sys.exit(deploy_returncode)
+                sys.exit(0)
 
             if options.postflight:
                 log.warning("Executing postflight on target hosts.")
-                # backend.postflight()
+                sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
                 log.warning("Executing uninstall on target hosts.")
-                # backend.unsinstall()
+                sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
     def parse_args(self, args):
         """
@@ -51,6 +106,15 @@ class DcosInstaller:
         """
         parser = argparse.ArgumentParser(description='Install DCOS on-premise')
         mutual_exc = parser.add_mutually_exclusive_group()
+
+        # Log level
+        parser.add_argument(
+            '-f',
+            '--log-file',
+            default='/genconf/logs/installer.log',
+            type=str,
+            help='Set log file location, default: /genconf/logs/installer.log'
+        )
 
         parser.add_argument(
             '-v',
@@ -146,6 +210,7 @@ class DcosInstaller:
             },
             fmt='%(asctime)s %(name)s:: %(message)s'
         )
+
         log.debug("Logger set to DEBUG")
 
         return options

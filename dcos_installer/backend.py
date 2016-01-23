@@ -5,14 +5,15 @@ libraries to support the dcos installer.
 import logging
 import os
 
+from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
 log = logging.getLogger()
 
 
-# def generate_configuration():
-#    do_genconf(interactive=False)
+def do_configure():
+    configure.do_configure()
 
 
 def create_config_from_post(post_data={}, config_path=CONFIG_PATH):

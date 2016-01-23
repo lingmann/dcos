@@ -1,3 +1,7 @@
+dcos_install.sh
+packages/
+build/
+.tox/
 *.pyc
 __pycache__/
 *.py[cdo]

@@ -5,6 +5,7 @@ import os
 
 import pkg_resources
 from aiohttp import web
+
 from dcos_installer import action_lib, backend
 
 log = logging.getLogger()
@@ -155,6 +156,7 @@ def action_action_name(request):
     # Update the global action
     json_state = read_json_state(action_name)
     app['current_action'] = action_name
+
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
 
@@ -176,6 +178,19 @@ def action_action_name(request):
         return web.json_response({})
 
     elif request.method == 'POST':
+        log.info('POST {}'.format(action_name))
+        # If the action name is preflight, attempt to run configuration
+        # generation. If genconf fails, present the UI with a usable error
+        # for the end-user
+        if action_name == 'preflight':
+            try:
+                backend.do_configure()
+            except:
+                genconf_failure = {
+                    "errors": "Configuration generation failed, please see command line for details"
+                }
+                return web.json_response(genconf_failure, status=400)
+
         params = yield from request.post()
         if json_state:
             if action_name not in remove_on_done:

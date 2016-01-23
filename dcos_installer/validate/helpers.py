@@ -15,8 +15,11 @@
 # Helper methods should start with 'validate_' and methods that are helpers
 # to those should follow a 'is_something_..' construct as to be able to use
 # them in other validate methods.
+import logging
 import os
 import socket
+
+log = logging.getLogger(__name__)
 
 
 def is_valid_ipv4_address(address):
@@ -50,6 +53,8 @@ def validate_ip_list(key=None, config=None):
                 if ip is not None:
                     if is_valid_ipv4_address(ip):
                         continue
+                    else:
+                        return [False, '{} is not valid IPv4 address.'.format(key)]
 
                 else:
                     return [False, '{} is not valid IPv4 address.'.format(key)]

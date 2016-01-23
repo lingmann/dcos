@@ -16,10 +16,11 @@ Note: depending on what features in dcos-image are being used, some of the dummy
 
 ## Compile Frontend Assets
 
-1. Install node version ```4.2.5```
-2. Change directory to ```/ui/```
-3. Install dependencies by running the command ```npm install```
-4. Transpile JavaScript and CSS assets by running the command ```./node_modules/.bin/gulp dist```
+1. Install NodeJS version `4.2.5` (it is helpful to use a node version manager like [nvm](https://github.com/creationix/nvm) or [n](https://github.com/tj/n)). This should come with NPM version `2.4.12`
+2. Change directory to `/ui/`
+3. Install dependencies by executing the command `npm install`
+4. Transpile JavaScript and CSS assets by executing the command `./node_modules/.bin/gulp dist`
+5. Transpiled files will be placed in `/dcos_installer/templates` which will be served by the Python web server.
 
 ## Run from artifacts
 

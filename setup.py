@@ -117,10 +117,10 @@ class BuildDocker(setuptools.Command):
         docker_client = docker.Client(base_url='unix://var/run/docker.sock', version='auto')
         docker_image_name = "dcos_installer:{}".format(self.dcos_installer_commit)
         build_results = docker_client.build(
-                path=os.getcwd(),
-                tag=docker_image_name,
-                rm=True,
-                decode=True)
+            path=os.getcwd(),
+            tag=docker_image_name,
+            rm=True,
+            decode=True)
         for line in build_results:
             try:
                 print(line['stream'])
@@ -167,13 +167,9 @@ setup(
         'webtest',
         'webtest_aiohttp'],
     entry_points={
-        'console_scripts': ['dcos_installer = dcos_installer.entrypoint:main']
+        'console_scripts': [
+            'dcos_installer = dcos_installer.entrypoint:main']
         },
     include_package_data=True,
-#    package_data={'dcos_installer': [
-#        'templates/*.html',
-#        'templates/assets/*.js',
-#        'templates/assets/*.map',
-#        'templates/assets/*.css']},
     zip_safe=False
     )

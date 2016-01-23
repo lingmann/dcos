@@ -3,6 +3,7 @@ import logging
 import os
 
 import pkgpanda
+from ssh.ssh_runner import Node
 from ssh.exceptions import ExecuteException
 import ssh.utils
 
@@ -23,7 +24,17 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
     if not os.path.isfile(pf_script_path):
         log.error("genconf/serve/dcos_install.sh does not exist. Please run --genconf before executing preflight.")
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
-    targets = config['master_list'] + config['agent_list']
+    targets = []
+    for host in config['master_list']:
+        s = Node(host)
+        s.add_tag({'role': 'master'})
+        targets += [s]
+
+    for host in config['agent_list']:
+        s = Node(host)
+        s.add_tag({'role': 'agent'})
+        targets += [s]
+
     pf = get_async_runner(config, targets, **kwargs)
     preflight_chain = ssh.utils.CommandChain('preflight')
 
@@ -95,14 +106,14 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
     role = kwargs.get('role')
     roles = {
         'master': {
-            'tags': [{'role': 'master'}],
+            'tags': {'role': 'master'},
             'hosts': config['master_list'],
             'chain_name': 'deploy_master',
             'script_parameter': 'master',
             'comment': 'INSTALLING DCOS ON MASTERS'
         },
         'agent': {
-            'tags': [{'role': 'agent'}],
+            'tags': {'role': 'agent'},
             'hosts': config['agent_list'],
             'chain_name': 'deploy_agent',
             'script_parameter': 'slave',
@@ -116,7 +127,13 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
     log.debug('Start deploying {}'.format(role))
     log.debug("Local bootstrap found: %s", bootstrap_tarball)
 
-    runner = get_async_runner(config, default['hosts'], tags=default['tags'], **kwargs)
+    targets = []
+    for host in default['hosts']:
+        s = Node(host)
+        s.add_tag(default['tags'])
+        targets += [s]
+
+    runner = get_async_runner(config, targets, **kwargs)
     chain = ssh.utils.CommandChain(default['chain_name'])
 
     add_pre_action(chain, runner.ssh_user)
@@ -133,7 +150,17 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 
 @asyncio.coroutine
 def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
-    targets = config['master_list'] + config['agent_list']
+    targets = []
+    for host in config['master_list']:
+        s = Node(host)
+        s.add_tag({'role': 'master'})
+        targets += [s]
+
+    for host in config['agent_list']:
+        s = Node(host)
+        s.add_tag({'role': 'agent'})
+        targets += [s]
+
     pf = get_async_runner(config, targets, **kwargs)
     postflight_chain = ssh.utils.CommandChain('postflight')
     add_pre_action(postflight_chain, pf.ssh_user)

@@ -16,10 +16,10 @@ LOG_FORMAT = '%(asctime)-15s %(module)s %(message)s'
 
 class CliDelegate(AbstractSSHLibDelegate):
     def on_update(self, future, callback_called):
-        chain_name, result_object = future.result()
+        chain_name, result_object, host = future.result()
         callback_called.set_result(True)
 
-    def on_done(self, name, result, host_status_count=None, host_status=None):
+    def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
         print('Running {}'.format(name))
         for host, output in result.items():
             print('#' * 20)

@@ -9,6 +9,13 @@
 
 Note: depending on what features in dcos-image are being used, some of the dummy environment variables mmay need to be populated with valid values
 
+## Compile Frontend Assets
+
+1. Install node version ```4.2.5```
+2. Change directory to ```/ui/```
+3. Install dependencies by running the command ```npm install```
+4. Transpile JavaScript and CSS assets by running the command ```./node_modules/.bin/gulp dist```
+
 ## Run from artifacts
 
 1. Go to https://teamcity.mesosphere.io/viewType.html?buildTypeId=ClosedSource_Dcos_Installer_OnPremInstallerCreation

@@ -420,87 +420,14 @@ def get_templates(mixin_name, cluster_packages, core_templates):
     return templates
 
 
-class Mixin:
-
-    def __init__(self, name, cluster_packages, core_templates):
-        self.name = name
-        self.templates = get_templates(name, cluster_packages, core_templates)
-        self.parameters = get_parameters(self.templates)
-
-        # Module for loading functions to calculate, validate arguments as well as defaults.
-        self.modulename = 'gen.' + get_name(name, 'calc', sep='.')
-        # Merge calc into the base portions.
-
-        # Specifying all these is optional, as is having a module at all so we
-        # wrap them all in try / catches to handle non-existence, and give them all
-        # empty defaults of the right type to handle early-exit.
-        self.arguments = dict()
-        self.can_fn = dict()
-        self.defaults = dict()
-        self.must_fn = dict()
-
-        self.validate = []
-
-        self.module = None
-        # Load the library and grab things from it as seperate bits so we don't
-        # catch the wrong exception by mistake.
-        try:
-            self.module = importlib.import_module(self.modulename)
-        except ImportError as ex:
-            log.debug("Module not found: %s", ex)
-
-        if self.module:
-            try:
-                self.must_fn = self.module.must
-            except AttributeError:
-                pass
-
-            try:
-                self.can_fn = self.module.can
-            except AttributeError:
-                pass
-
-            # Must and can can take in new parameters as arguments, update the
-            # accepted paramters with those.
-            for name, func in chain(self.must_fn.items()):
-                self.parameters['variables'].add(name)
-                self.parameters['variables'] |= set(inspect.signature(func).parameters)
-
-            try:
-                self.validate = self.module.validate
-            except AttributeError:
-                pass
-
-            try:
-                self.arguments = self.module.arguments
-            except AttributeError:
-                pass
-
-            try:
-                self.defaults = self.module.defaults
-            except AttributeError:
-                pass
-
-
-# Ensure arguments aren't given repeatedly.
-# Can be once in the set: defaults, can_fn, must_fn
-# Can be once in the set: arguments, must_fn
-def ensure_no_repeated(mixin_objs):
-    check_default_names = set()
-    check_argument_names = set()
-
-    def add_assert_duplicate(base_set, names):
-        for name in names:
-            if name in base_set:
-                raise AssertionError("ERROR: Multiple ways to calculate", name, "one is in", mixin.name)
-        base_set |= set(names)
-
-    for mixin in mixin_objs:
-        add_assert_duplicate(check_default_names, mixin.defaults.keys())
-        add_assert_duplicate(check_default_names, mixin.can_fn.keys())
-
-        add_assert_duplicate(check_argument_names, mixin.arguments.keys())
-        add_assert_duplicate(check_argument_names, mixin.must_fn.keys())
+def get_mixin_functions(name):
+    modulename = 'gen.' + get_name(name, 'calc', sep='.')
+    try:
+        return importlib.import_module(modulename).entry
+    except ImportError as ex:
+        # TODO(cmaloney): Make the module not existing a hard error.
+        log.debug("Module not found: %s", ex)
+        return {}
 
 
 def validate_arguments_strings(arguments):
@@ -575,11 +502,11 @@ def do_generate(
     # TODO(cmaloney): Remove flattening and teach lower code to operate on list
     # of mixins.
     templates = dict()
-    parameters = {'variables': set(), 'sub_scopes': dict()}
     must_calc = dict()
     can_calc = dict()
     validate = list()
     defaults = dict()
+    conditional = dict()
 
     # Make sure all user provided arguments are strings.
     validate_arguments_strings(arguments)
@@ -595,27 +522,35 @@ def do_generate(
     # Add the empty mixin so we pick up top-level config.
     mixins.append('')
 
-    mixin_objs = list()
+    # Make sure no mixins were given twice
+    assert len(set(mixins)) == len(mixins), "Repeated mixin in list of mixins: {}".format(mixins)
+
     for mixin in mixins:
-        mixin_objs.append(Mixin(mixin, cluster_packages, core_templates))
+        mixin_templates = get_templates(mixin, cluster_packages, core_templates)
+        templates = merge_dictionaries(templates, mixin_templates)
 
-    ensure_no_repeated(mixin_objs)
+        mixin_funcs = get_mixin_functions(mixin)
 
-    # Ask / prompt about "conditional" in the top level config (they aren't
-    # allowed in lower levels for now for simplicity).
-    core_mixin = mixin_objs[-1]
-    assert core_mixin.name == ''
+        # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
+        # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
+        assert mixin_funcs.keys() <= {'validate', 'can', 'defaults', 'must', 'conditional', 'arguments'}
 
-    for mixin in mixin_objs:
-        templates = merge_dictionaries(templates, mixin.templates)
-        parameters = merge_dictionaries(parameters, mixin.parameters)
-        must_calc.update(mixin.must_fn)
-        can_calc.update(mixin.can_fn)
-        validate = validate + mixin.validate
-        arguments.update(mixin.arguments)
-        defaults.update(mixin.defaults)
+        # TODO(cmaloney): merge_dictionaries, hard error on duplicate leaf keys.
+        # Right now we arbitrarily get one of them in conflicts.
+        validate += mixin_funcs.get('validate', list())
+        must_calc.update(mixin_funcs.get('must', dict()))
+        can_calc.update(mixin_funcs.get('can', dict()))
+        arguments.update(mixin_funcs.get('arguments', dict()))
+        defaults.update(mixin_funcs.get('defaults', dict()))
+        conditional.update(mixin_funcs.get('conditional', dict()))
 
-    for name, cond_options in core_mixin.module.conditional.items():
+    # The template parameters are what we're aiming for. All must have values
+    # before we can render the templates.
+    parameters = get_parameters(templates)
+
+    # TODO(cmaloney): Support recursively resolving conditionals
+    # Ask / prompt about "conditionals"
+    for name, cond_options in conditional.items():
         parameters['variables'].add(name)
         # Prompt if the user hasn't already chosen which option to use.
         if name not in arguments:
@@ -632,6 +567,7 @@ def do_generate(
             log.error("Value for %s must be in %s. Got %s", name, ",".join(cond_options.keys()), choice)
             sys.exit(1)
 
+        # TODO(cmaloney): These are a _lot_ like loading a modules entry.
         # Grab the must, can, validate functions out and attach them to the
         # mixin's top level lists
         chosen = cond_options[choice]
@@ -655,6 +591,14 @@ def do_generate(
     # Inject extra_templates and parameters inside.
     templates.update(extra_templates)
     merge_dictionaries(parameters, get_parameters(extra_templates))
+
+    # TODO(cmaloney): For any parameter which we have a 'can' for, add the
+    # arguments for that can as parameters and accept the can.
+    # Must can take in new parameters as arguments, update the
+    # accepted paramters with those.
+    for name, func in must_calc.items():
+        parameters['variables'].add(name)
+        parameters['variables'] |= set(inspect.signature(func).parameters)
 
     # Validate all arguments passed in actually correspond to parameters to
     # prevent human typo errors.

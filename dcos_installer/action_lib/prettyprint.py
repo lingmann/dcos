@@ -9,26 +9,32 @@ log = logging.getLogger(__name__)
 def find_data(data):
     failed_data = {}
     success_data = {}
-    for hosts in data:
-        for host in hosts:
-            for ip, results in host.items():
-                for key, value in results.items():
-                    if key == 'returncode' and value == 0:
-                        success_data[ip] = {
-                            'cmd': results['cmd'],
-                            'returncode': results['returncode'],
-                            'stdout': results['stdout'],
-                            'stderr': results['stderr']
-                        }
-                    else:
-                        failed_data[ip] = {
-                            'cmd': results['cmd'],
-                            'returncode': results['returncode'],
-                            'stdout': results['stdout'],
-                            'stderr': results['stderr']
-                        }
+    if data is not None:
+        for hosts in data:
+            for host in hosts:
+                for ip, results in host.items():
+                    for key, value in results.items():
+                        if key == 'returncode' and value == 0:
+                            success_data[ip] = {
+                                'cmd': results['cmd'],
+                                'returncode': results['returncode'],
+                                'stdout': results['stdout'],
+                                'stderr': results['stderr']
+                            }
+                        else:
+                            failed_data[ip] = {
+                                'cmd': results['cmd'],
+                                'returncode': results['returncode'],
+                                'stdout': results['stdout'],
+                                'stderr': results['stderr']
+                            }
 
     return failed_data, success_data
+
+
+def print_header(string):
+    delimiter = '====>'
+    log.warning('{:5s} {:6s}'.format(delimiter, string))
 
 
 class PrettyPrint():

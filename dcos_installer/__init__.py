@@ -4,6 +4,7 @@ import logging
 import sys
 
 from dcos_installer import action_lib
+from dcos_installer.action_lib.prettyprint import print_header
 from dcos_installer import async_server, backend
 from ssh.utils import AbstractSSHLibDelegate
 
@@ -72,19 +73,19 @@ class DcosInstaller:
             options = self.parse_args(args)
 
             if options.web:
-                log.warning("Starting DCOS installer in web mode")
+                print_header("Starting DCOS installer in web mode")
                 async_server.start(options.port)
 
             if options.configure:
-                log.warning("Executing configuration generation for DCOS.")
+                print_header("EXECUTING CONFIGURATION GENERATION")
                 backend.do_configure()
 
             if options.preflight:
-                log.warning("Executing preflight on target hosts.")
+                print_header("EXECUTING PREFLIGHT")
                 sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:
-                log.warning("Executing deploy on target hosts.")
+                print_header("EXECUTING DCOS INSTALLATION")
                 for role in ['master', 'agent']:
                     deploy_returncode = run_loop(lambda *args, **kwargs: action_lib.install_dcos(*args, role=role,
                                                                                                  **kwargs), options)
@@ -93,11 +94,11 @@ class DcosInstaller:
                 sys.exit(0)
 
             if options.postflight:
-                log.warning("Executing postflight on target hosts.")
+                print_header("EXECUTING POSTFLIGHT")
                 sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
-                log.warning("Executing uninstall on target hosts.")
+                print_header("EXECUTING UNINSTALL")
                 sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
     def parse_args(self, args):

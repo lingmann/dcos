@@ -8,6 +8,7 @@ from ssh.exceptions import ExecuteException
 import ssh.utils
 
 from .utils import REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, get_async_runner, add_post_action, add_pre_action
+from .prettyprint import PrettyPrint
 
 log = logging.getLogger(__name__)
 
@@ -48,6 +49,10 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
     add_post_action(preflight_chain)
 
     result = yield from pf.run_commands_chain_async(preflight_chain, block=block, state_json_dir=state_json_dir)
+
+    pp = PrettyPrint(result)
+    pp.beautify('print_data_preflight')
+
     return result
 
 

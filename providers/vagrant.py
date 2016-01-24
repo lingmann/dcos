@@ -32,16 +32,11 @@ def make_vagrant(gen_out):
 
 
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
-    gen_options = gen.get_options_object()
     gen_arguments['master_discovery'] = 'static'
-    gen_arguments['master_list'] = '["127.0.0.1"]'
-
     gen_out = gen.generate(
-        options=gen_options,
+        options=gen.get_options_object(),
         mixins=['vagrant', 'coreos'],
-        arguments=gen_arguments,
-        cc_package_files=['/etc/mesos-master-provider']
-        )
+        arguments=gen_arguments)
 
     vagrant_script = make_vagrant(gen_out)
 

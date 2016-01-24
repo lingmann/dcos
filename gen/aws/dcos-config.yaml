@@ -6,17 +6,3 @@ package:
       AWS_STACK_NAME={ "Ref" : "AWS::StackName" }
       AWS_IAM_MASTER_ROLE_NAME={ "Ref" : "MasterRole" }
       AWS_IAM_SLAVE_ROLE_NAME={ "Ref" : "SlaveRole" }
-  - path: /etc/mesos-master-provider
-    content: |
-      MESOS_CLUSTER={ "Ref" : "AWS::StackName" }
-  - path: /etc/exhibitor
-    content: |
-      EXHIBITOR_BACKEND=AWS_S3
-      AWS_REGION={ "Ref" : "AWS::Region" }
-      AWS_S3_BUCKET={ "Ref" : "ExhibitorS3Bucket" }
-      AWS_S3_PREFIX={ "Ref" : "AWS::StackName" }
-  - path: /etc/dns_config
-    content: |
-      MASTER_SOURCE=exhibitor
-      EXHIBITOR_ADDRESS={ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }
-      RESOLVERS={{ resolvers_str }}

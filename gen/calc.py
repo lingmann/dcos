@@ -63,17 +63,6 @@ def calculate_gen_resolvconf_search(dns_search):
     else:
         return ""
 
-must = {
-    'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
-    'resolvers_str': calculate_resolvers_str,
-    'dcos_image_commit': calulate_dcos_image_commit,
-    'ip_detect_contents': calculate_ip_detect_contents,
-    'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-    'dcos_version': lambda: "1.6",
-    'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
-    'curly_pound': lambda: "{#"
-}
-
 
 def validate_num_masters(num_masters):
     assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
@@ -99,27 +88,71 @@ def validate_dns_search(dns_search):
     assert len(dns_search.split()) <= 6, "Must contain no more than 6 domains"
 
 
-validate = [
-    validate_num_masters,
-    validate_bootstrap_url,
-    validate_channel_name,
-    validate_dns_search
-]
+def validate_master_list(master_list):
+    try:
+        list_data = json.loads(master_list)
 
-defaults = {
-    "num_masters": "3",
-    "channel_name": "testing/continuous",
-    "roles": "slave_public",
-    "weights": "slave_public=1",
-    "docker_remove_delay": "1hrs",
-    "gc_delay": "2days",
-    "dns_search": ""
-}
+        assert type(list_data) is list, "Must be a JSON list. Got a {}".format(type(list_data))
+    except json.JSONDecodeError as ex:
+        # TODO(cmaloney):
+        assert False, "Must be a valid JSON list. Errors whilewhile parsing at position {}: {}".format(ex.pos, ex.msg)
 
-implies = {
-    "master_discovery": {
-        "cloud_dynamic": None,
-        "static": "dns-master-list",
-        "vrrp": "onprem-keepalived"
+
+def calc_num_masters(master_list):
+    return str(len(json.loads(master_list)))
+
+
+def validate_zk_hosts(exhibitor_zk_hosts):
+    assert not exhibitor_zk_hosts.startswith('zk://'), "Must be of the form `host:port,host:port', not start with zk://"
+
+
+def validate_zk_path(exhibitor_zk_path):
+    assert exhibitor_zk_path.startswith('/'), "Must be of the form /path/to/znode"
+
+entry = {
+    'validate': [
+        validate_num_masters,
+        validate_bootstrap_url,
+        validate_channel_name,
+        validate_dns_search,
+        validate_master_list,
+        validate_zk_hosts,
+        validate_zk_path],
+    'defaults': {
+        "roles": "slave_public",
+        "weights": "slave_public=1",
+        "docker_remove_delay": "1hrs",
+        "gc_delay": "2days",
+        "dns_search": ""
+    },
+    'must': {
+        'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
+        'resolvers_str': calculate_resolvers_str,
+        'dcos_image_commit': calulate_dcos_image_commit,
+        'ip_detect_contents': calculate_ip_detect_contents,
+        'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
+        'dcos_version': lambda: "1.6",
+        'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
+        'curly_pound': lambda: "{#"
+    },
+    'conditional': {
+        "master_discovery": {
+            "master_http_loadbalancer": {},
+            "vrrp": {},
+            "static": {
+                "must": {"num_masters": calc_num_masters}
+            }
+        },
+        "provider": {
+            "onprem": {
+                "defaults": {
+                    "resolvers": "[\"8.8.8.8\", \"8.8.4.4\"]"
+                }
+            },
+            "azure": {},
+            "aws": {},
+            "vagrant": {},
+            "other": {}
+        }
     }
 }

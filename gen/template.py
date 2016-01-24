@@ -290,30 +290,39 @@ class Template():
     def render(self, arguments, filters={}):
         assert isinstance(arguments, dict)
 
-        rendered = ""
-        for chunk in self.ast:
-            if isinstance(chunk, Switch):
-                raise NotImplementedError()
-            elif isinstance(chunk, Replacement):
-                try:
-                    value = arguments[chunk.identifier]
-                except KeyError:
-                    raise UnsetParameter("Unset parameter {}".format(chunk.identifier), chunk.identifier)
-                if chunk.filter is None:
-                    rendered += str(value)
-                else:
-                    try:
-                        filter_func = filters[chunk.filter]
-                    except KeyError:
-                        raise UnsetParameter("Unset filter parameter {}".format(chunk.filter), chunk.filter)
-                    rendered += str(filter_func(value))
-            elif isinstance(chunk, str):
-                rendered += chunk
-            else:
-                raise NotImplementedError(
-                    "Unknown chunk type {}".format(type(chunk)))
+        def get_argument(name):
+            try:
+                return arguments[name]
+            except KeyError:
+                raise UnsetParameter("Unset parameter {}".format(name), name)
 
-        return rendered
+        def render_ast(ast):
+            rendered = ""
+            for chunk in ast:
+                if isinstance(chunk, Switch):
+                    choice = get_argument(chunk.identifier)
+                    if choice not in chunk.cases:
+                        raise ValueError("")
+                    rendered += render_ast(chunk.cases[choice])
+                elif isinstance(chunk, Replacement):
+                    value = get_argument(chunk.identifier)
+                    if chunk.filter is None:
+                        rendered += str(value)
+                    else:
+                        try:
+                            filter_func = filters[chunk.filter]
+                        except KeyError:
+                            raise UnsetParameter("Unset filter parameter {}".format(chunk.filter), chunk.filter)
+                        rendered += str(filter_func(value))
+                elif isinstance(chunk, str):
+                    rendered += chunk
+                else:
+                    raise NotImplementedError(
+                        "Unknown chunk type {}".format(type(chunk)))
+
+            return rendered
+
+        return render_ast(self.ast)
 
     def get_scoped_arguments(self):
         def variables_from_ast(ast):

@@ -119,10 +119,8 @@ def do_genconf(options):
     gen_options.output_dir = '/genconf/serve'
 
     if options.interactive:
-        gen_options.assume_defaults = False
         gen_options.non_interactive = False
     else:
-        gen_options.assume_defaults = True
         gen_options.non_interactive = True
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])

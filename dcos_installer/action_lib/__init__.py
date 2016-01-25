@@ -50,9 +50,6 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
 
     result = yield from pf.run_commands_chain_async(preflight_chain, block=block, state_json_dir=state_json_dir)
 
-    pp = PrettyPrint(result)
-    pp.beautify('print_data_preflight')
-
     return result
 
 

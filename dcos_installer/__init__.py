@@ -4,7 +4,7 @@ import logging
 import sys
 
 from dcos_installer import action_lib
-from dcos_installer.action_lib.prettyprint import print_header
+from dcos_installer.action_lib.prettyprint import print_header, PrettyPrint
 from dcos_installer import async_server, backend
 from ssh.utils import AbstractSSHLibDelegate
 
@@ -21,15 +21,15 @@ class CliDelegate(AbstractSSHLibDelegate):
         callback_called.set_result(True)
 
     def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
-        print('Running {}'.format(name))
-        for host, output in result.items():
-            print('#' * 20)
-            if output['returncode'] != 0:
-                print(host)
-                print('STDOUT')
-                print('{}: {}'.format(host, '\n'.join(output['stdout'])))
-                print('STDERR')
-                print('{}: {}'.format(host, '\n'.join(output['stderr'])))
+        print_header('STAGE {}'.format(name))
+#        for host, output in result.items():
+#            print('#' * 20)
+#            if output['returncode'] != 0:
+#                print(host)
+#                print('STDOUT')
+#                print('{}: {}'.format(host, '\n'.join(output['stdout'])))
+#                print('STDERR')
+#                print('{}: {}'.format(host, '\n'.join(output['stderr'])))
 
 
 def run_loop(action, options):
@@ -37,11 +37,15 @@ def run_loop(action, options):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    log.debug('### START {}'.format(action.__name__))
+    print_header('START {}'.format(action.__name__))
     try:
         config = backend.get_config()
         cli_delegate = CliDelegate()
         result = loop.run_until_complete(action(config, block=True, async_delegate=cli_delegate))
+        pp = PrettyPrint(result)
+        pp.stage_name = action.__name__
+        pp.beautify('print_data')
+
     finally:
         loop.close()
     exitcode = 0
@@ -50,13 +54,8 @@ def run_loop(action, options):
             for host, process_result in command_result.items():
                 if process_result['returncode'] != 0:
                     exitcode = process_result['returncode']
-    log.debug('### END {} with returncode: {}'.format(action.__name__, exitcode))
-    print('check logfile {}'.format(options.log_file))
-    if exitcode == 0:
-        print('Success')
-    else:
-        print('Failed')
-    return exitcode
+    print_header('END {} with returncode: {}'.format(action.__name__, exitcode))
+    pp.print_summary()
 
 
 class DcosInstaller:

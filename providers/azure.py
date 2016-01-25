@@ -88,7 +88,7 @@ def render_arm(
         slave_cloudconfig_yaml_str,
         slave_public_cloudconfig_yaml_str):
 
-    template_str = gen.template.parse_resources('azure/azuredeploy.json').render({
+    template_str = gen.template.parse_resources('azure/templates/azuredeploy.json').render({
         'master_cloud_config': transform(master_cloudconfig_yaml_str),
         'slave_cloud_config': transform(slave_cloudconfig_yaml_str),
         'slave_public_cloud_config': transform(slave_public_cloudconfig_yaml_str)

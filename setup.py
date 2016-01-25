@@ -160,7 +160,6 @@ setup(
         'asyncio',
         'aiohttp',
         'aiohttp_jinja2',
-        'coloredlogs',
         'docker_py',
         'pytest',
         'pytest-mock',

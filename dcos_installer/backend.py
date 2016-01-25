@@ -15,9 +15,6 @@ log = logging.getLogger()
 def do_configure():
     configure.do_configure()
 
-def do_configure():
-    configure.do_configure()
-
 
 def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     """

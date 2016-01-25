@@ -1,4 +1,3 @@
-!ui/src
 dcos_install.sh
 packages/
 build/

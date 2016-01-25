@@ -7,24 +7,10 @@ Sendfile sub system for serving static assets was caching / appending weird bina
 
 ## Run locally
 
-### DISABLE SENDFILE SUBSYSTEM
-Sendfile sub system for serving static assets was caching / appending weird binary data to the end of our index.js. To prevent aiohttp from using the sendfile subsystem you must do export this ENV var:
-
-```export AIOHTTP_NOSENDFILE=1export AIOHTTP_NOSENDFILE=1```
-
-Thanks Linus. 
-
-### Run the backend API:
-
 1. ```pip install -r requirements.txt```
 2. ```python setup.py develop```
 3. ```source test_env```
 4. ```dcos_installer --web```
-
-### Build and run the frontend components (TODO @JOHN/@KENNY):
-
-1. Install nodejs and npm - OS dependant, on OSx you can use Brew
-
 
 Note: depending on what features in dcos-image are being used, some of the dummy environment variables mmay need to be populated with valid values
 

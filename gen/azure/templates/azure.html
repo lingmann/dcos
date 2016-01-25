@@ -6,9 +6,12 @@
 <body>
 <h1>DCOS {{ repo_channel_path }} ARM Template</h1>
 
-<a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ template_url }}' target="_blank">
+{% for arm_url in arm_urls %}
+<h2>{{ arm_url['name'] }}</h2>
+<a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ arm_url['encoded_url'] }}' target="_blank">
   <img src="http://azuredeploy.net/deploybutton.png"/>
 </a>
+{% endfor %}
 
 <footer>
 <pre>

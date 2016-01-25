@@ -36,12 +36,12 @@ class ErrorLabel extends React.Component {
   }
 
   getErrorLabel(errors) {
-    if (errors.length === 0) {
+    if (!errors || errors.length === 0) {
       return <span>No Errors Found</span>;
     }
 
     return (
-      <a onClick={this.handleErrorClick}>
+      <a className={this.props.className} onClick={this.handleErrorClick}>
         {`${errors.length} Errors Found`}
       </a>
     );
@@ -49,6 +49,10 @@ class ErrorLabel extends React.Component {
 
   render() {
     let errors = STORE_MAP[this.props.step].get('errorDetails');
+
+    if (errors[0]) {
+      errors = errors[0].errors;
+    }
 
     return (
       <div>
@@ -62,7 +66,12 @@ class ErrorLabel extends React.Component {
   }
 }
 
+ErrorLabel.defaultProps = {
+  className: 'error-label'
+};
+
 ErrorLabel.propTypes = {
+  className: React.PropTypes.string,
   step: React.PropTypes.string // preflight, deploy, postflight
 };
 

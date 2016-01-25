@@ -9,6 +9,7 @@ import ErrorLabel from '../components/ErrorLabel';
 import IconCircleCheckmark from '../components/icons/IconCircleCheckmark';
 import IconSpinner from '../components/icons/IconSpinner';
 import IconWarning from '../components/icons/IconWarning';
+import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -35,6 +36,16 @@ class Preflight extends mixin(StoreMixin) {
 
   componentWillMount() {
     PreFlightStore.init();
+  }
+
+  componentDidMount() {
+    super.componentDidMount();
+    InstallerStore.setNextStep({
+      enabled: false,
+      label: 'Deploy',
+      link: '/deploy',
+      visible: true
+    });
   }
 
   onDeployStoreBeginSuccess() {

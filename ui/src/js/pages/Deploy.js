@@ -9,6 +9,7 @@ import ErrorLabel from '../components/ErrorLabel';
 import IconCircleCheckmark from '../components/icons/IconCircleCheckmark';
 import IconSpinner from '../components/icons/IconSpinner';
 import IconWarning from '../components/icons/IconWarning';
+import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -35,6 +36,16 @@ class Deploy extends mixin(StoreMixin) {
 
   componentWillMount() {
     DeployStore.init();
+  }
+
+  componentDidMount() {
+    super.componentDidMount();
+    InstallerStore.setNextStep({
+      enabled: false,
+      label: 'Post-Flight',
+      link: '/post-flight',
+      visible: true
+    });
   }
 
   onPostFlightStoreBeginSuccess() {

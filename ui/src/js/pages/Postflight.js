@@ -8,6 +8,7 @@ import ErrorLabel from '../components/ErrorLabel';
 import IconCircleCheckmark from '../components/icons/IconCircleCheckmark';
 import IconSpinner from '../components/icons/IconSpinner';
 import IconWarning from '../components/icons/IconWarning';
+import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -34,6 +35,16 @@ class Postflight extends mixin(StoreMixin) {
   componentWillMount() {
     super.componentWillMount();
     PostFlightStore.init();
+  }
+
+  componentDidMount() {
+    super.componentDidMount();
+    InstallerStore.setNextStep({
+      enabled: false,
+      label: 'Success',
+      link: '/success',
+      visible: true
+    });
   }
 
   goToSuccess() {

@@ -12,6 +12,7 @@ import ConfigFormFields from '../constants/ConfigFormFields';
 import ErrorAlert from '../components/ErrorAlert';
 import FormLabel from '../components/FormLabel';
 import FormLabelContent from '../components/FormLabelContent';
+import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -92,8 +93,41 @@ class Setup extends mixin(StoreMixin) {
     );
   }
 
-  onSetupStoreConfigStatusChangeError() {
-    // Show errors with current stored config.
+  componentDidMount() {
+    super.componentDidMount();
+
+    let clickHandler = null;
+    let continueButtonEnabled = false;
+
+    if (SetupStore.get('completed')) {
+      clickHandler = this.handleSubmitClick;
+      continueButtonEnabled = true;
+    }
+
+    InstallerStore.setNextStep({
+      clickHandler,
+      enabled: continueButtonEnabled,
+      label: 'Pre-Flight',
+      link: null,
+      visible: true
+    });
+  }
+
+  onSetupStoreConfigFormCompletionChange() {
+    if (SetupStore.get('completed')) {
+      InstallerStore.setNextStep({
+        clickHandler: this.handleSubmitClick,
+        enabled: true,
+        link: null
+      });
+    } else {
+      InstallerStore.setNextStep({
+        clickHandler: null,
+        enabled: false,
+        link: null
+      });
+    }
+    this.forceUpdate();
   }
 
   onSetupStoreCurrentConfigChangeSuccess() {
@@ -106,7 +140,7 @@ class Setup extends mixin(StoreMixin) {
   }
 
   onPreFlightStoreBeginError(data) {
-    this.setState({errorAlert: data});
+    this.setState({errorAlert: data.errors});
   }
 
   getCurrentConfig() {
@@ -260,13 +294,15 @@ class Setup extends mixin(StoreMixin) {
         validation: this.getValidationFn('ssh_key'),
         value: this.state.formData.ssh_key
       },
-      <SectionHeaderPrimary align="left">
-        DCOS Environment Settings
-        <SectionHeaderPrimarySubheading>
-          Choose a username and password for the DCOS administrator. This user
-          will be able to manage and add other users.
-        </SectionHeaderPrimarySubheading>
-      </SectionHeaderPrimary>,
+      <SectionHeader>
+        <SectionHeaderPrimary align="left" layoutClassName="short short-top">
+          DCOS Environment Settings
+          <SectionHeaderPrimarySubheading>
+            Choose a username and password for the DCOS administrator. This user
+            will be able to manage and add other users.
+          </SectionHeaderPrimarySubheading>
+        </SectionHeaderPrimary>
+      </SectionHeader>,
       [
         {
           fieldType: 'text',

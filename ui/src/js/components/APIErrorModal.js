@@ -60,7 +60,7 @@ class APIErrorModal extends mixin(StoreMixin) {
     });
 
     return (
-      <div className="modal-body container-pod flush-bottom modal-content">
+      <div className="modal-body container-pod modal-content">
         {errors}
       </div>
     );
@@ -84,6 +84,10 @@ class APIErrorModal extends mixin(StoreMixin) {
     );
   }
 }
+
+APIErrorModal.defaultProps = {
+  errors: []
+};
 
 APIErrorModal.propTypes = {
   errors: React.PropTypes.array,

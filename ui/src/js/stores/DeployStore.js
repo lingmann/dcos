@@ -74,7 +74,9 @@ let DeployStore = Store.createStore({
     if (this.isCompleted(processedState)) {
       stopPolling();
       this.set(processedState);
+      this.emit(EventTypes.DEPLOY_STATE_CHANGE, processedState);
       this.emit(EventTypes.POSTFLIGHT_STATE_FINISH, processedState);
+      // AppDispatcher.handleUIAction({type: ActionTypes.DEPLOY_COMPLETE});
       return;
     }
 
@@ -93,10 +95,10 @@ let DeployStore = Store.createStore({
         DeployStore.processUpdateSuccess(action.data);
         break;
       case ActionTypes.DEPLOY_BEGIN_SUCCESS:
-        this.emit(EventTypes.DEPLOY_BEGIN_SUCCESS);
+        DeployStore.emit(EventTypes.DEPLOY_BEGIN_SUCCESS);
         break;
       case ActionTypes.DEPLOY_BEGIN_ERROR:
-        this.emit(EventTypes.DEPLOY_BEGIN_ERROR, action.data);
+        DeployStore.emit(EventTypes.DEPLOY_BEGIN_ERROR, action.data);
         break;
     }
 

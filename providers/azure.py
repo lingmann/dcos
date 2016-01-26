@@ -196,51 +196,42 @@ def master_list_arm_json(num_masters):
     return json.dumps([arm_expression.format(x) for x in range(num_masters)])
 
 
-def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
-    # Generate the template varietals: 1, 3, and 5 master nodes
+def make_template(num_masters, gen_arguments):
+    '''
+    Return a tuple: the generated template for num_masters and the artifact dict.
+
+    @param num_masters: int, number of master nodes to embed in the generated template
+    '''
+
     gen_options = gen.get_options_object()
+    gen_arguments['master_list'] = master_list_arm_json(num_masters)
+    args = deepcopy(gen_arguments)
+    dcos_template = gen_templates(args, gen_options)
+    artifact = {
+        'channel_path': 'azure/dcos-{}master.azuredeploy.json'.format(num_masters),
+        'local_content': dcos_template.arm,
+        'content_type': 'application/json; charset=utf-8'
+    }
+    return dcos_template, artifact
 
-    gen_arguments['master_list'] = master_list_arm_json(1)
-    args_1master = deepcopy(gen_arguments)
-    gen_arguments['master_list'] = master_list_arm_json(3)
-    args_3master = deepcopy(gen_arguments)
-    gen_arguments['master_list'] = master_list_arm_json(5)
-    args_5master = deepcopy(gen_arguments)
 
-    dcos_1master = gen_templates(args_1master, gen_options)
-    dcos_3master = gen_templates(args_3master, gen_options)
-    dcos_5master = gen_templates(args_5master, gen_options)
-
-    # Make sure we upload the packages for all template varietals.
+def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     extra_packages = list()
-    extra_packages += util.cluster_to_extra_packages(dcos_1master.results.cluster_packages)
-    extra_packages += util.cluster_to_extra_packages(dcos_3master.results.cluster_packages)
-    extra_packages += util.cluster_to_extra_packages(dcos_5master.results.cluster_packages)
+    artifacts = list()
+    for num_masters in [1, 3, 5]:
+        dcos_template, artifact = make_template(num_masters, gen_arguments)
+        extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
+        artifacts.append(artifact)
+
+    artifacts.append({
+        'channel_path': 'azure.html',
+        'local_content': gen_buttons(repo_channel_path, channel_commit_path, tag, commit),
+        'content_type': 'text/html; charset=utf-8'
+    })
 
     return {
         'packages': extra_packages,
-        'artifacts': [
-            {
-                'channel_path': 'azure/dcos-1master.azuredeploy.json',
-                'local_content': dcos_1master.arm,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'azure/dcos-3master.azuredeploy.json',
-                'local_content': dcos_3master.arm,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'azure/dcos-5master.azuredeploy.json',
-                'local_content': dcos_5master.arm,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'azure.html',
-                'local_content': gen_buttons(repo_channel_path, channel_commit_path, tag, commit),
-                'content_type': 'text/html; charset=utf-8'
-            }
-        ]
+        'artifacts': artifacts
     }
 
 

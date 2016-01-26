@@ -50,13 +50,6 @@ def load_yaml_dict(yaml_str):
     return config
 
 
-def check_for_ssh_config(config):
-    if 'ssh_config' in config:
-        return True
-    else:
-        return False
-
-
 def get_config(options):
     """
     Checks the YAML config for baseline errors and

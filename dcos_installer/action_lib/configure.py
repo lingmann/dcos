@@ -20,7 +20,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 cluster_name: 'Mesosphere: The Data Center Operating System'
 
 # Docker GC defaults, recommended to leave as default unless you're advanced.
-docker_remove_delay: '1hrs'
+#docker_remove_delay: '1hrs'
 
 # The default backend for Exhibitor is Zookeeper. Advanced options are
 # shared_fs and aws_s3
@@ -32,10 +32,10 @@ exhibitor_storage_backend: zookeeper
 exhibitor_zk_hosts: 10.33.2.20:2181
 
 # This is an arbitrary path for Exhibitor to dump its zk config to.
-exhibitor_zk_path: /home/vagrant
+exhibitor_zk_path: /dcos
 
 # More garbage collection, don't change unless you're advanced.
-gc_delay: '2days'
+#gc_delay: '2days'
 
 # We default master discovery to a static list of masters. Advanced options
 # are 'keepalived' and 'cloud_dynamic'
@@ -50,10 +50,10 @@ master_list: '["10.33.2.21"]'
 resolvers: '["8.8.8.8", "8.8.4.4"]'
 
 # Default roles, do not change unless you're advanced.
-roles: slave_public
+#roles: slave_public
 
 # Default weights, do not change unless you're advanced.
-weights: slave_public=1
+#weights: slave_public=1
 """)
 
 log = logging.getLogger(__name__)

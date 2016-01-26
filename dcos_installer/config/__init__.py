@@ -49,10 +49,7 @@ ssh_user:
 ssh_port: 22
 process_timeout: 120
 
-# Optional parameter for executing SSH with an attached TTY. Useful in
-# AWS or other environments which require a tty with your ssh session
-# to execute sudo on remote machines.
-extra_ssh_options: -tt
+bootstrap_url: file:///opt/dcos_install_tmp
 """
         self.defaults = yaml.load(defaults)
         self.config_path = config_path

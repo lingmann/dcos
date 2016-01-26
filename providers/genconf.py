@@ -50,6 +50,13 @@ def load_yaml_dict(yaml_str):
     return config
 
 
+def check_for_ssh_config(config):
+    if 'ssh_config' in config:
+        return True
+    else:
+        return False
+
+
 def get_config(options):
     """
     Checks the YAML config for baseline errors and
@@ -162,7 +169,7 @@ def ensure_ssh(config):
 
     def log_exit(*args):
         log.error(*args)
-        sys.ext(1)
+        sys.exit(1)
 
     # Checks that things set in the config match what the deploy library needs.
     if 'ssh_config' not in config:

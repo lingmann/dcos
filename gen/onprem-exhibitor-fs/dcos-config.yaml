@@ -1,5 +1,0 @@
-package:
-  - path: /etc/exhibitor
-    content: |
-      EXHIBITOR_BACKEND=SHARED_FS
-      EXHIBITOR_FSCONFIGDIR={{ exhibitor_fs_config_dir }}

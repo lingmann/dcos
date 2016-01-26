@@ -21,6 +21,7 @@ from multiprocessing import Pool
 
 import ssh.helpers
 import ssh.validate
+from ssh.exceptions import CmdRunException
 from ssh.utils import CommandChain, JsonDelegate
 
 log = logging.getLogger(__name__)
@@ -69,7 +70,7 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None, ignore_warning=Tr
               'pid': 123
             }
     '''
-    log.debug('EXECUTING ON {}\n         COMMAND: {}\n'.format(host['ip'], ' '.join(cmd)))
+    log.debug('EXECUTING ON {}\n         COMMAND: {}\n'.format(host.ip, ' '.join(cmd)))
     if env is None:
         env = os.environ
 
@@ -88,7 +89,7 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None, ignore_warning=Tr
 
     return {
         "cmd": cmd,
-        "host": host,
+        "host": {'ip': host.ip, 'port': host.port},
         "stdout": stdout.decode().split('\n'),
         "stderr": stderr.decode().split('\n'),
         "returncode": process.returncode,
@@ -112,9 +113,46 @@ def save_logs(results, log_directory, log_postfix):
     return results
 
 
+class Node():
+    def __init__(self, host, tags=None):
+        if tags:
+            assert isinstance(tags, list)
+        if not tags:
+            tags = []
+        self.tags = tags
+        self.host = parse_ip(host)
+        self.ip = self.host['ip']
+        self.port = self.host['port']
+
+    def add_tag(self, tag):
+        assert isinstance(tag, dict)
+        self.tags.append(tag)
+
+    def remove_tag(self, tag):
+        assert isinstance(tag, dict)
+        if tag not in self.tags:
+            return None
+        _index = self.tags.index(tag)
+        del self.tags[_index]
+
+    def get_full_host(self):
+        _host = self.host.copy()
+        _host.update({'tags': self.tags})
+        return _host
+
+    def __repr__(self):
+        return '{}:{} tags={}'.format(self.ip, self.port, self.tags)
+
+
+def add_host(target):
+    if isinstance(target, Node):
+        return target
+    return Node(target)
+
+
 class MultiRunner():
     def __init__(self, targets, async_delegate=None, ssh_user=None, ssh_key_path=None, extra_opts='',
-                 process_timeout=120, parallelism=10, tags=None):
+                 process_timeout=120, parallelism=10):
         assert isinstance(targets, list)
         # TODO(cmaloney): accept an "ssh_config" object which generates an ssh
         # config file, then add a '-F' to that temporary config file rather than
@@ -128,8 +166,9 @@ class MultiRunner():
         self.ssh_bin = '/usr/bin/ssh'
         self.scp_bin = '/usr/bin/scp'
         self.async_delegate = async_delegate
-        self.tags = tags
-        self.__targets = [parse_ip(ip) for ip in targets]
+        self.__targets = []
+        for target in targets:
+            self.__targets.append(add_host(target))
         self.__parallelism = parallelism
 
     def _get_base_args(self, bin_name, host):
@@ -150,7 +189,7 @@ class MultiRunner():
             '-oUserKnownHostsFile=/dev/null',
             '-oBatchMode=yes',
             '-oPasswordAuthentication=no',
-            '{}{}'.format(port_option, host['port']),
+            '{}{}'.format(port_option, host.port),
             '-i', self.ssh_key_path
             ]
         shared_opts.extend(add_opts)
@@ -162,7 +201,7 @@ class MultiRunner():
             copy_command = []
             if recursive:
                 copy_command += ['-r']
-            remote_full_path = '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)
+            remote_full_path = '{}@{}:{}'.format(self.ssh_user, host.ip, remote_path)
             if remote_to_local:
                 copy_command += [remote_full_path, local_path]
             else:
@@ -191,7 +230,7 @@ class MultiRunner():
 
         def build_ssh(host):
             return self._get_base_args(self.ssh_bin, host) + [
-                '{}@{}'.format(self.ssh_user, host['ip'])] + cmd
+                '{}@{}'.format(self.ssh_user, host.ip)] + cmd
         return self.__run_on_hosts(build_ssh)
 
     @asyncio.coroutine
@@ -210,7 +249,7 @@ class MultiRunner():
                 log.info('process with pid {} not found'.format(process.pid))
 
         process_output = {
-            '{}:{}'.format(host['ip'], host['port']): {
+            '{}:{}'.format(host.ip, host.port): {
                 "cmd": cmd,
                 "stdout": stdout.decode().split('\n'),
                 "stderr": stderr.decode().split('\n'),
@@ -219,7 +258,7 @@ class MultiRunner():
             }
         }
 
-        future.set_result((namespace, process_output))
+        future.set_result((namespace, process_output, host))
         return process_output
 
     @asyncio.coroutine
@@ -227,7 +266,7 @@ class MultiRunner():
         # command consists of (command_flag, command, rollback, comment)
         # we will ignore all but command for now
         _, cmd, _, _ = command
-        full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host['ip'])] + cmd
+        full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host.ip)] + cmd
         log.debug('executing command {}'.format(full_cmd))
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
@@ -240,7 +279,7 @@ class MultiRunner():
         copy_command = []
         if recursive:
             copy_command += ['-r']
-        remote_full_path = '{}@{}:{}'.format(self.ssh_user, host['ip'], remote_path)
+        remote_full_path = '{}@{}:{}'.format(self.ssh_user, host.ip, remote_path)
         if remote_to_local:
             copy_command += [remote_full_path, local_path]
         else:
@@ -254,7 +293,7 @@ class MultiRunner():
     def dispatch_chain(self, host, chain, sem):
         log.debug('Started dispatch_chain for host {}'.format(host))
         host_status = 'hosts_success'
-        host_port = '{}:{}'.format(host['ip'], host['port'])
+        host_port = '{}:{}'.format(host.ip, host.port)
 
         command_map = {
             CommandChain.execute_flag: self.run_async,
@@ -305,14 +344,14 @@ class MultiRunner():
                         host_status = 'terminated'
                         break
 
-                _, result = future.result()
+                _, result, host_object = future.result()
                 chain_result.append(result)
                 if host_status != 'success':
                     break
 
             if self.async_delegate is not None:
                 # Update chain status
-                self.async_delegate.on_done(chain.namespace, result, host_status_count=host_status_count,
+                self.async_delegate.on_done(chain.namespace, result, host_object, host_status_count=host_status_count,
                                             host_status=host_status)
         return chain_result
 
@@ -325,7 +364,7 @@ class MultiRunner():
             return None
         elif state_json_dir:
             log.debug('Using state_json_dir {}'.format(state_json_dir))
-            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), tags=self.tags)
+            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets))
 
         if block:
             log.info('Waiting for run_command_chain_async to execute')
@@ -340,37 +379,6 @@ class MultiRunner():
             log.info('Started run_command_chain_async in non-blocking mode')
             for host in self.__targets:
                 asyncio.async(self.dispatch_chain(host, chain, sem))
-
-
-tuple_to_string_header = """HOST: {}
-COMMAND: {}
-RETURNCODE: {}
-PID: {}
-"""
-
-
-def cmd_tuple_to_string(cmd_tuple):
-    """Transforms the given tuple returned from run_cmd_return_tuple into a user-friendly string message"""
-    string = tuple_to_string_header.format(
-        cmd_tuple['host'],
-        " ".join(cmd_tuple['cmd']),
-        cmd_tuple['returncode'],
-        cmd_tuple['pid'])
-
-    if cmd_tuple['stdout']:
-        string += "STDOUT:\n" + '\n'.join(cmd_tuple['stdout'])
-    if cmd_tuple['stderr']:
-        string += "STDERR:\n" + '\n'.join(cmd_tuple['stderr'])
-
-    return string
-
-
-class CmdRunException(Exception):
-
-    def __init__(self, results):
-        message = "\n".join(map(cmd_tuple_to_string, results))
-        super(CmdRunException, self).__init__(message)
-        self.results = results
 
 
 class SSHRunner():

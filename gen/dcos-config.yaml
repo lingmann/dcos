@@ -24,6 +24,11 @@ package:
   - path: /etc/mesos-master
     content: |
       MESOS_LOG_DIR=/var/log/mesos
+      MESOS_REGISTRY_STORE_TIMEOUT=60secs
+      MESOS_REGISTRY_FETCH_TIMEOUT=60secs
+      MESOS_REGISTRY_STRICT=false
+      MESOS_SLAVE_REMOVAL_RATE_LIMIT=1/20mins
+      MESOS_OFFER_TIMEOUT=2mins
       MESOS_WORK_DIR=/var/lib/mesos/master
       MESOS_ZK=zk://127.0.0.1:2181/mesos
       MESOS_ROLES={{ roles }}
@@ -32,16 +37,22 @@ package:
       MESOS_HOSTNAME_LOOKUP=false
       GLOG_drop_log_memory=false
       SASL_PATH=/opt/mesosphere/lib/sasl2
+  - path: /etc/mesos-master-provider
+    content: |
+      MESOS_CLUSTER={{ cluster_name }}
   - path: /etc/mesos-slave-common
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
       MESOS_LOG_DIR=/var/log/mesos
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
-      MESOS_ISOLATION=cgroups/cpu,cgroups/mem
+      MESOS_ISOLATION=cgroups/cpu,cgroups/mem,posix/disk
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json
+      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=10mins
+      MESOS_CGROUPS_ENABLE_CFS=true
+      MESOS_CGROUPS_LIMIT_SWAP=false
       MESOS_DOCKER_REMOVE_DELAY={{ docker_remove_delay }}
       MESOS_GC_DELAY={{ gc_delay }}
       MESOS_HOSTNAME_LOOKUP=false
@@ -65,3 +76,75 @@ package:
   - path: /etc/dns_search_config
     content: |
       {{ dcos_gen_resolvconf_search_str }}
+{% switch master_discovery %}
+{% case "master_http_loadbalancer" %}
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS={{ exhibitor_address }}
+      RESOLVERS={{ resolvers_str }}
+{% case "static" %}
+  - path: /etc_master/dns_config_master
+    content: |
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=master_list
+      RESOLVERS={{ resolvers_str }}
+  - path: /etc/master_list
+    content: |
+      {{ master_list }}
+{% case "vrrp" %}
+  - path: /etc/keepalived
+    content: |
+      KEEPALIVED_VIRTUAL_IPADDRESS={{ keepalived_virtual_ipaddress }}
+      KEEPALIVED_INTERFACE={{ keepalived_interface }}
+      KEEPALIVED_ROUTER_ID={{ keepalived_router_id }}
+      KEEPALIVED_PASS={{ keepalived_pass }}
+  - path: /etc_master/dns_config_master
+    content: |
+      TRY_LOCALHOST=true
+  - path: /etc/dns_config
+    content: |
+      MASTER_SOURCE=exhibitor
+      EXHIBITOR_ADDRESS={{ keepalived_virtual_ipaddress }}
+      RESOLVERS={{ resolvers_str }}
+{% endswitch %}
+{% switch exhibitor_storage_backend %}
+{% case "aws_s3" %}
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_BACKEND=AWS_S3
+      AWS_REGION={{ aws_region }}
+      AWS_S3_BUCKET={{ s3_bucket }}
+      AWS_S3_PREFIX={{ s3_prefix }}
+{% switch exhibitor_explicit_keys %}
+{% case "true" %}
+  - path: /etc/exhibitor.properties
+    content: |
+      com.netflix.exhibitor.s3.access-key-id={{ aws_access_key_id }}
+      com.netflix.exhibitor.s3.access-secret-key={{ aws_secret_access_key }}
+{% case "false" %}
+{% endswitch %}
+{% case "shared_filesystem" %}
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_BACKEND=SHARED_FS
+      EXHIBITOR_FSCONFIGDIR={{ exhibitor_fs_config_dir }}
+{% case "zookeeper" %}
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_BACKEND=ZK
+      ZK_CONFIG_CONNECT={{ exhibitor_zk_hosts }}
+      ZK_CONFIG_ZPATH={{ exhibitor_zk_path }}
+{% case "azure" %}
+  - path: /etc/exhibitor
+    content: |
+      EXHIBITOR_BACKEND=AZURE
+      AZURE_CONTAINER=dcos-exhibitor
+      AZURE_PREFIX={{ exhibitor_azure_prefix }}
+  - path: /etc/exhibitor.properties
+    content: |
+      com.netflix.exhibitor.azure.account-name={{ exhibitor_azure_account_name }}
+      com.netflix.exhibitor.azure.account-key={{ exhibitor_azure_account_key }}
+{% endswitch %}

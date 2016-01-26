@@ -162,7 +162,6 @@ def gen_templates(user_args, options):
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
     gen_options = gen.get_options_object()
-    gen_arguments['master_discovery'] = 'cloud_dynamic'
     single_args = deepcopy(gen_arguments)
     single_args['num_masters'] = '1'
     single_master = gen_templates(single_args, gen_options)

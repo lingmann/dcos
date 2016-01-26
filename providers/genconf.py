@@ -109,10 +109,8 @@ def do_genconf(options):
     gen_options.output_dir = '/genconf/serve'
 
     if options.interactive:
-        gen_options.assume_defaults = False
         gen_options.non_interactive = False
     else:
-        gen_options.assume_defaults = True
         gen_options.non_interactive = True
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
@@ -160,6 +158,24 @@ def do_provider(options, provider_module, mixins, genconf_config):
     return gen_out
 
 
+def ensure_ssh(config):
+
+    def log_exit(*args):
+        log.error(*args)
+        sys.ext(1)
+
+    # Checks that things set in the config match what the deploy library needs.
+    if 'ssh_config' not in config:
+        log_exit("Must set ssh_config parameters to use this option. Refer to the DCOS documentation.")
+
+    if 'cluster_config' not in config:
+        log_exit("Must set cluster_config options in order to use this option. Refer to the DCOS documentation.")
+
+    if config['cluster_config']['bootstrap_url'] != 'file:///opt/dcos_install_tmp':
+        log_exit("cluster_config.bootstrap_url must be set to 'file:///opt/dcos_install_tmp' to use "
+                 "the SSH deploy utilities.")
+
+
 def fetch_bootstrap(bootstrap_id):
     bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
@@ -192,6 +208,11 @@ def fetch_bootstrap(bootstrap_id):
 def main():
     parser = argparse.ArgumentParser(description="Generates DCOS configuration.")
     ssh_deployer = parser.add_mutually_exclusive_group()
+
+    # Useful for doign things like "Extract the tar than don't do anything" used
+    # by the azure integration test.
+    if len(sys.argv) == 2 and sys.argv[1] == 'noop':
+        return 0
 
     # Log level
     parser.add_argument(
@@ -270,21 +291,25 @@ def main():
 
     if options.preflight:
         _, config = get_config(options)
+        ensure_ssh(config)
         run_preflight(config)
         sys.exit(0)
 
     if options.deploy:
         _, config = get_config(options)
+        ensure_ssh(config)
         install_dcos(config)
         sys.exit(0)
 
     if options.postflight:
         _, config = get_config(options)
+        ensure_ssh(config)
         run_postflight(config)
         sys.exit(0)
 
     if options.uninstall:
         _, config = get_config(options)
+        ensure_ssh(config)
         uninstall_dcos(config)
         sys.exit(0)
 

@@ -1,9 +1,0 @@
-package:
-  - path: /etc/mesos-master-provider
-    content: |
-      MESOS_CLUSTER={{ cluster_name }}
-  - path: /etc/exhibitor
-    content: |
-      EXHIBITOR_BACKEND=SHARED_FS
-      ZOOKEEPER_CLUSTER_SIZE=1
-      EXHIBITOR_FSCONFIGDIR=/var/run/exhibitor

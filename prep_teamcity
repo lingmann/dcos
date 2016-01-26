@@ -16,16 +16,20 @@ fi
 git clone file://$PWD ext/dcos-image
 git -C ext/dcos-image checkout -qf `git rev-parse --verify HEAD^{commit}`
 
+# We have wheel as a dependency since we use it to build the wheels
+pip install wheel
+
 # Download distro independent artifacts
-pip install --download wheelhouse ext/dcos-image
-pip install --download wheelhouse ext/pkgpanda
+pip install --download wheelhouse --no-binary :all: ext/dcos-image
+pip install --download wheelhouse --no-binary :all: ext/pkgpanda
 
 # Make the wheels, they will be output into the folder `wheelhouse` by default.
-pip wheel --no-index --find-links=wheelhouse ext/pkgpanda
-pip wheel --no-index --find-links=wheelhouse ext/dcos-image
+pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/pkgpanda
+pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image
 
 # Install the wheels
-pip install --no-index --find-links=wheelhouse dcos-image pkgpanda
+pip install --no-index --find-links=wheelhouse pkgpanda
+pip install --no-index --find-links=wheelhouse dcos-image
 
 # Cleanup the checkout
 rm -rf ext/dcos-image

@@ -2,7 +2,6 @@ import json
 import logging as log
 import os
 import sys
-import urllib.request
 from math import floor
 from subprocess import check_output
 
@@ -19,19 +18,6 @@ def calulate_dcos_image_commit():
         raise "Unable to set dcos_image_commit from teamcity or git."
 
     return dcos_image_commit
-
-
-def calculate_bootstrap_url(channel_name):
-    return "https://downloads.mesosphere.com/dcos/" + channel_name
-
-
-def calculate_bootstrap_id(channel_name):
-    # NOTE: We always use our repository for figuring out the current
-    # bootstrap_id because it has all the bootstraps. For on-prem customers who
-    # change the bootstrap_url to point to a local cluster, they still need
-    # to be shipped our canoncial bootstrap for the selected release.
-    url = 'https://downloads.mesosphere.com/dcos/{}/bootstrap.latest'.format(channel_name)
-    return urllib.request.urlopen(url).read().decode('utf-8')
 
 
 def calculate_resolvers_str(resolvers):
@@ -77,54 +63,96 @@ def calculate_gen_resolvconf_search(dns_search):
     else:
         return ""
 
-must = {
-    'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
-    'resolvers_str': calculate_resolvers_str,
-    'dcos_image_commit': calulate_dcos_image_commit,
-    'ip_detect_contents': calculate_ip_detect_contents,
-    'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-    'dcos_version': lambda: "1.6",
-    'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
-    'curly_pound': lambda: "{#"
-}
 
-can = {
-    'bootstrap_url': calculate_bootstrap_url,
-    'bootstrap_id': calculate_bootstrap_id
-}
+def validate_num_masters(num_masters):
+    assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
 
-def validate(arguments):
-    assert(int(arguments['num_masters']) in [1, 3, 5, 7, 9])
+def validate_bootstrap_url(bootstrap_url):
+    assert len(bootstrap_url) > 1, "Must be more than one character"
+    assert bootstrap_url[-1] != '/', "Must not end in a '/'"
 
-    assert arguments['bootstrap_url'][-1] != '/'
 
-    if 'channel_name' in arguments:
-        assert arguments['channel_name'][0] != '/'
-        assert arguments['channel_name'][-1] != '/'
+def validate_channel_name(channel_name):
+    assert len(channel_name) > 1, "Must be more than 2 characters"
+    assert channel_name[0] != '/', "Must not start with a '/'"
+    assert channel_name[-1] != '/', "Must not end with a '/'"
 
-    assert '\n' not in arguments['dns_search']
-    assert ',' not in arguments['dns_search']
 
-    # TODO(cmaloney): Check dns_search:
-    #   - is < 256 characters
-    #   - Contains at most 6 search domains
-    #   - Each search domain is space separated
+def validate_dns_search(dns_search):
+    assert '\n' not in dns_search, "Newlines are not allowed"
+    assert ',' not in dns_search, "Commas are not allowed"
 
-defaults = {
-    "num_masters": "3",
-    "channel_name": "testing/continuous",
-    "roles": "slave_public",
-    "weights": "slave_public=1",
-    "docker_remove_delay": "1hrs",
-    "gc_delay": "2days",
-    "dns_search": ""
-}
+    # resolv.conf requirements
+    assert len(dns_search) < 256, "Must be less than 256 characters long"
+    assert len(dns_search.split()) <= 6, "Must contain no more than 6 domains"
 
-implies = {
-    "master_discovery": {
-        "cloud_dynamic": None,
-        "static": "dns-master-list",
-        "vrrp": "onprem-keepalived"
+
+def validate_master_list(master_list):
+    try:
+        list_data = json.loads(master_list)
+
+        assert type(list_data) is list, "Must be a JSON list. Got a {}".format(type(list_data))
+    except json.JSONDecodeError as ex:
+        # TODO(cmaloney):
+        assert False, "Must be a valid JSON list. Errors whilewhile parsing at position {}: {}".format(ex.pos, ex.msg)
+
+
+def calc_num_masters(master_list):
+    return str(len(json.loads(master_list)))
+
+
+def validate_zk_hosts(exhibitor_zk_hosts):
+    assert not exhibitor_zk_hosts.startswith('zk://'), "Must be of the form `host:port,host:port', not start with zk://"
+
+
+def validate_zk_path(exhibitor_zk_path):
+    assert exhibitor_zk_path.startswith('/'), "Must be of the form /path/to/znode"
+
+entry = {
+    'validate': [
+        validate_num_masters,
+        validate_bootstrap_url,
+        validate_channel_name,
+        validate_dns_search,
+        validate_master_list,
+        validate_zk_hosts,
+        validate_zk_path],
+    'defaults': {
+        "roles": "slave_public",
+        "weights": "slave_public=1",
+        "docker_remove_delay": "1hrs",
+        "gc_delay": "2days",
+        "dns_search": ""
+    },
+    'must': {
+        'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
+        'resolvers_str': calculate_resolvers_str,
+        'dcos_image_commit': calulate_dcos_image_commit,
+        'ip_detect_contents': calculate_ip_detect_contents,
+        'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
+        'dcos_version': lambda: "1.6",
+        'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
+        'curly_pound': lambda: "{#"
+    },
+    'conditional': {
+        "master_discovery": {
+            "master_http_loadbalancer": {},
+            "vrrp": {},
+            "static": {
+                "must": {"num_masters": calc_num_masters}
+            }
+        },
+        "provider": {
+            "onprem": {
+                "defaults": {
+                    "resolvers": "[\"8.8.8.8\", \"8.8.4.4\"]"
+                }
+            },
+            "azure": {},
+            "aws": {},
+            "vagrant": {},
+            "other": {}
+        }
     }
 }

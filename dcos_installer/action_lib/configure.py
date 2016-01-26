@@ -62,7 +62,7 @@ log = logging.getLogger(__name__)
 def do_configure():
     # TODO(malnick) we're setting bootstrap to our foo bootstrap
     # for demo purposes only
-    os.environ['BOOTSTRAP_ID'] = 'e2ade83b3197150980714635c6752bc9ece1e0ca'
+    #os.environ['BOOTSTRAP_ID'] = 'e2ade83b3197150980714635c6752bc9ece1e0ca'
 #    os.environ['CHANNEL_NAME'] = 'testing/continuous'
 
     gen_options = gen.get_options_object()

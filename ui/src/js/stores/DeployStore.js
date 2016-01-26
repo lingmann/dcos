@@ -3,10 +3,9 @@ import {GetSetMixin, Store} from 'mesosphere-shared-reactjs';
 import ActionTypes from '../constants/ActionTypes';
 import AppDispatcher from '../events/AppDispatcher';
 import EventTypes from '../constants/EventTypes';
+import getActionMixin from '../mixins/getActionMixin';
 import ProcessStageUtil from '../utils/ProcessStageUtil';
-import StageActions from '../events/StageActions';
 
-const stageID = 'deploy';
 let requestInterval = null;
 
 function startPolling() {
@@ -22,35 +21,17 @@ function stopPolling() {
 }
 
 let DeployStore = Store.createStore({
-  storeID: stageID,
+  storeID: 'deploy',
 
-  mixins: [GetSetMixin],
+  mixins: [GetSetMixin, getActionMixin('deploy')],
 
   init: function () {
-    let initialState = {
-      agents: {
-        errors: 0,
-        totalStarted: 0,
-        completed: false
-      },
-      errorDetails: [],
-      masters: {
-        errors: 0,
-        totalStarted: 0,
-        completed: false
-      }
-    }
+    let initialState = this.getInitialState();
     this.set(initialState);
     this.emit(EventTypes.DEPLOY_STATE_CHANGE, initialState);
 
     startPolling();
   },
-
-  beginStage: StageActions.beginStage.bind(null, stageID),
-
-  fetchLogs: StageActions.fetchLogs.bind(null, stageID),
-
-  fetchStageStatus: StageActions.fetchStageStatus.bind(null, stageID),
 
   addChangeListener: function (eventName, callback) {
     this.on(eventName, callback);
@@ -60,10 +41,6 @@ let DeployStore = Store.createStore({
     this.removeListener(eventName, callback);
   },
 
-  isCompleted: function (data) {
-    return data.agents.completed && data.masters.completed;
-  },
-
   processUpdateError: function () {
     this.emit(EventTypes.DEPLOY_STATE_CHANGE);
   },
@@ -71,14 +48,15 @@ let DeployStore = Store.createStore({
   processUpdateSuccess: function (data) {
     var processedState = ProcessStageUtil.processState(data);
 
-    if (this.isCompleted(processedState)) {
+    this.set(processedState);
+    this.emit(EventTypes.DEPLOY_STATE_CHANGE, processedState);
+
+    if (this.isCompleted()) {
       stopPolling();
-      this.set(processedState);
       this.emit(EventTypes.POSTFLIGHT_STATE_FINISH, processedState);
       return;
     }
 
-    this.set(processedState);
     this.emit(EventTypes.DEPLOY_STATE_CHANGE);
   },
 
@@ -93,10 +71,10 @@ let DeployStore = Store.createStore({
         DeployStore.processUpdateSuccess(action.data);
         break;
       case ActionTypes.DEPLOY_BEGIN_SUCCESS:
-        this.emit(EventTypes.DEPLOY_BEGIN_SUCCESS);
+        DeployStore.emit(EventTypes.DEPLOY_BEGIN_SUCCESS);
         break;
       case ActionTypes.DEPLOY_BEGIN_ERROR:
-        this.emit(EventTypes.DEPLOY_BEGIN_ERROR, action.data);
+        DeployStore.emit(EventTypes.DEPLOY_BEGIN_ERROR, action.data);
         break;
     }
 

@@ -6,6 +6,8 @@ import React from 'react';
 import {StoreMixin} from 'mesosphere-shared-reactjs';
 
 import IconDownload from './icons/IconDownload';
+import ProcessStageUtil from '../utils/ProcessStageUtil';
+import StoreMap from '../constants/StoreMap';
 
 const METHODS_TO_BIND = [
   'handleDownloadLogs'
@@ -23,14 +25,16 @@ class APIErrorModal extends mixin(StoreMixin) {
   }
 
   handleDownloadLogs() {
-    // Handle the download of logs here.
+    StoreMap[this.props.step].fetchLogs(this.props.step);
   }
 
   getFooter() {
     return (
       <div className="text-align-center">
-        <button
+        <a
           className="button button-stroke button-rounded button-large"
+          href={ProcessStageUtil.getLogsURL()}
+          target="_blank"
           onClick={this.handleDownloadLogs} >
           <ul className="list-inline">
             <li>
@@ -40,17 +44,29 @@ class APIErrorModal extends mixin(StoreMixin) {
               Download Logs
             </li>
           </ul>
-        </button>
+        </a>
       </div>
     );
   }
 
+  getMessage(message) {
+    return message.split('\n').map(function (line, i) {
+      if (line === '') {
+        return null;
+      }
+
+      return (
+        <p key={i}>{line}</p>
+      );
+    })
+  }
+
   getContent() {
-    let errors = this.props.errors.map(function (error, i) {
+    let errors = this.props.errors.map((error, i) => {
       return (
         <div key={i} className="error-message-container">
           <p>
-            {error.message}
+            {this.getMessage(error.message)}
           </p>
           <p className="emphasize flush-bottom">
             {error.host}
@@ -60,7 +76,7 @@ class APIErrorModal extends mixin(StoreMixin) {
     });
 
     return (
-      <div className="modal-body container-pod flush-bottom modal-content">
+      <div className="modal-body container-pod modal-content">
         {errors}
       </div>
     );
@@ -84,6 +100,10 @@ class APIErrorModal extends mixin(StoreMixin) {
     );
   }
 }
+
+APIErrorModal.defaultProps = {
+  errors: []
+};
 
 APIErrorModal.propTypes = {
   errors: React.PropTypes.array,

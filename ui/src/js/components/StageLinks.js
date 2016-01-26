@@ -3,6 +3,7 @@ import React from 'react';
 
 import IconDownload from './icons/IconDownload';
 import IconEdit from './icons/IconEdit';
+import ProcessStageUtil from '../utils/ProcessStageUtil';
 import StageActions from '../events/StageActions';
 
 const METHODS_TO_BIND = ['handleDownloadClick', 'handleEditSetupClick'];
@@ -17,7 +18,7 @@ class StageLinks extends React.Component {
   }
 
   handleEditSetupClick() {
-    // TODO
+    this.context.router.push('/setup');
   }
 
   handleDownloadClick() {
@@ -30,25 +31,27 @@ class StageLinks extends React.Component {
     }
 
     return (
-      <button className="button button-link stage-link"
+      <a className="stage-link"
         key="editSetup"
         onClick={this.handleEditSetupClick}>
         <IconEdit />Edit Setup
-      </button>
+      </a>
     );
   }
 
   getDownloadLink(disabled) {
-    let classes = classnames('button button-link stage-link', {
+    let classes = classnames('stage-link', {
       disabled: disabled
     });
 
     return (
-      <button className={classes}
+      <a className={classes}
+        href={ProcessStageUtil.getLogsURL()}
         key="download"
+        target="_blank"
         onClick={this.handleDownloadClick}>
         <IconDownload />Download Logs
-      </button>
+      </a>
     );
   }
 
@@ -82,6 +85,10 @@ class StageLinks extends React.Component {
     );
   }
 }
+
+StageLinks.contextTypes = {
+  router: React.PropTypes.object
+};
 
 StageLinks.defaultProps = {
   disableEditSetup: false

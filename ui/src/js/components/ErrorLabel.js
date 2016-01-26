@@ -3,16 +3,9 @@ import React from 'react';
 /* eslint-enable no-unused-vars */
 
 import APIErrorModal from './APIErrorModal';
-import PreFlightStore from '../stores/PreFlightStore';
-import DeployStore from '../stores/DeployStore';
-import PostFlightStore from '../stores/PostFlightStore';
+import StoreMap from '../constants/StoreMap';
 
 const METHODS_TO_BIND = ['handleErrorClose', 'handleErrorClick'];
-const STORE_MAP = {
-  preflight: PreFlightStore,
-  deploy: DeployStore,
-  postflight: PostFlightStore
-};
 
 class ErrorLabel extends React.Component {
   constructor() {
@@ -36,19 +29,19 @@ class ErrorLabel extends React.Component {
   }
 
   getErrorLabel(errors) {
-    if (errors.length === 0) {
+    if (!errors || errors.length === 0) {
       return <span>No Errors Found</span>;
     }
 
     return (
-      <a onClick={this.handleErrorClick}>
+      <a className={this.props.className} onClick={this.handleErrorClick}>
         {`${errors.length} Errors Found`}
       </a>
     );
   }
 
   render() {
-    let errors = STORE_MAP[this.props.step].get('errorDetails');
+    let errors = StoreMap[this.props.step].get('errorDetails');
 
     return (
       <div>
@@ -56,13 +49,19 @@ class ErrorLabel extends React.Component {
         <APIErrorModal
           errors={errors}
           onClose={this.handleErrorClose}
-          open={this.state.openErrorModal} />
+          open={this.state.openErrorModal}
+          step={this.props.step} />
       </div>
     );
   }
 }
 
+ErrorLabel.defaultProps = {
+  className: 'error-label'
+};
+
 ErrorLabel.propTypes = {
+  className: React.PropTypes.string,
   step: React.PropTypes.string // preflight, deploy, postflight
 };
 

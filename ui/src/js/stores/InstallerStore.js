@@ -1,8 +1,12 @@
+import _ from 'lodash';
 import {GetSetMixin, Store} from 'mesosphere-shared-reactjs';
 
 import ActionTypes from '../constants/ActionTypes';
 import AppDispatcher from '../events/AppDispatcher';
+import DeployStore from './DeployStore';
 import EventTypes from '../constants/EventTypes';
+import PostFlightStore from './PostFlightStore';
+import PreFlightStore from './PreFlightStore';
 import StageActions from '../events/StageActions';
 import SuccessActions from '../events/SuccessActions';
 
@@ -23,6 +27,7 @@ let InstallerStore = Store.createStore({
         enabled: false,
         label: null,
         link: null,
+        clickHandler: null,
         visible: false
       }
     });
@@ -55,12 +60,9 @@ let InstallerStore = Store.createStore({
   },
 
   setNextStep: function (stepData) {
-    this.set({
-      enabled: stepData.enabled,
-      label: stepData.label,
-      link: stepData.link,
-      visible: stepData.visible
-    });
+    let nextStep = _.extend({}, this.get('nextStep'), stepData);
+
+    this.set({nextStep});
     this.emit(EventTypes.GLOBAL_NEXT_STEP_CHANGE);
   },
 
@@ -84,6 +86,34 @@ let InstallerStore = Store.createStore({
         break;
       case ActionTypes.TOTAL_MASTERS_ERROR:
         InstallerStore.emit(EventTypes.TOTAL_MASTERS_ERROR);
+        break;
+      case ActionTypes.DCOS_UI_URL_CHANGE:
+        InstallerStore.set({dcosURL: action.data});
+        InstallerStore.emit(EventTypes.DCOS_URL_CHANGE, action.data);
+        break;
+      case ActionTypes.PREFLIGHT_UPDATE_SUCCESS:
+        AppDispatcher.waitFor([PreFlightStore.dispatcherIndex]);
+        if (PreFlightStore.isCompleted()) {
+          InstallerStore.setNextStep({
+            enabled: true
+          });
+        }
+        break;
+      case ActionTypes.POSTFLIGHT_UPDATE_SUCCESS:
+        AppDispatcher.waitFor([PostFlightStore.dispatcherIndex]);
+        if (PostFlightStore.isCompleted()) {
+          InstallerStore.setNextStep({
+            enabled: true
+          });
+        }
+        break;
+      case ActionTypes.DEPLOY_UPDATE_SUCCESS:
+        AppDispatcher.waitFor([DeployStore.dispatcherIndex]);
+        if (DeployStore.isCompleted()) {
+          InstallerStore.setNextStep({
+            enabled: true
+          });
+        }
         break;
     }
 

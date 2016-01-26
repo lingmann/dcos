@@ -8,6 +8,7 @@ import ErrorLabel from '../components/ErrorLabel';
 import IconCircleCheckmark from '../components/icons/IconCircleCheckmark';
 import IconSpinner from '../components/icons/IconSpinner';
 import IconWarning from '../components/icons/IconWarning';
+import InstallerStore from '../stores/InstallerStore';
 import Page from '../components/Page';
 import PageContent from '../components/PageContent';
 import PageSection from '../components/PageSection';
@@ -33,6 +34,21 @@ class Postflight extends mixin(StoreMixin) {
 
   componentWillMount() {
     super.componentWillMount();
+    PostFlightStore.init();
+  }
+
+  componentDidMount() {
+    super.componentDidMount();
+    InstallerStore.setNextStep({
+      enabled: false,
+      label: 'Success',
+      link: '/success',
+      visible: true
+    });
+  }
+
+  handleRetryClick() {
+    PostFlightStore.beginStage();
     PostFlightStore.init();
   }
 
@@ -68,8 +84,8 @@ class Postflight extends mixin(StoreMixin) {
     return 'Running Post-Flight...';
   }
 
-  getProgressBarDetail(status, total) {
-    if (status.completed) {
+  getProgressBarDetail(status, completed, total) {
+    if (completed) {
       return '';
     }
 
@@ -89,8 +105,7 @@ class Postflight extends mixin(StoreMixin) {
     return `Checking ${type}`;
   }
 
-  getProgressBar(type, status, totalOfType) {
-    let completed = status.completed;
+  getProgressBar(type, completed, status, totalOfType) {
     let progress = ((status.totalStarted / totalOfType) * 100) || 0;
     let state = 'ongoing';
 
@@ -102,8 +117,8 @@ class Postflight extends mixin(StoreMixin) {
 
     return (
       <ProgressBar
-        detail={this.getProgressBarDetail(status, totalOfType)}
-        label={this.getProgressBarLabel(type, status.completed, status.errors)}
+        detail={this.getProgressBarDetail(status, completed, totalOfType)}
+        label={this.getProgressBarLabel(type, completed, status.errors)}
         progress={progress} state={state} />
     );
   }
@@ -116,7 +131,7 @@ class Postflight extends mixin(StoreMixin) {
     let masterStatus = PostFlightStore.get('masters');
     let agentStatus = PostFlightStore.get('agents');
 
-    let completed = masterStatus.completed && agentStatus.completed;
+    let completed = PostFlightStore.isCompleted();
     let failed = masterStatus.errors > 0;
     let totalErrors = masterStatus.errors + agentStatus.errors;
     let totalAgents = agentStatus.totalAgents;
@@ -138,8 +153,22 @@ class Postflight extends mixin(StoreMixin) {
               </SectionHeaderSecondary>
             </SectionHeader>
             <SectionBody>
-              {this.getProgressBar('Masters', masterStatus, totalMasters)}
-              {this.getProgressBar('Agents', agentStatus, totalAgents)}
+              {
+                this.getProgressBar(
+                  'Masters',
+                  PostFlightStore.isMasterCompleted(),
+                  masterStatus,
+                  totalMasters
+                )
+              }
+              {
+                this.getProgressBar(
+                  'Agents',
+                  PostFlightStore.isAgentCompleted(),
+                  agentStatus,
+                  totalAgents
+                )
+              }
             </SectionBody>
           </PageSection>
           <PageSection>
@@ -149,7 +178,7 @@ class Postflight extends mixin(StoreMixin) {
                 failed={failed}
                 nextText="Continue"
                 onNextClick={this.goToSuccess.bind(this)}
-                onRetryClick={PostFlightStore.init.bind(PostFlightStore)}
+                onRetryClick={this.handleRetryClick.bind(this)}
                 totalErrors={totalErrors} />
               <StageLinks
                 completed={completed}

@@ -3,10 +3,9 @@ import {GetSetMixin, Store} from 'mesosphere-shared-reactjs';
 import ActionTypes from '../constants/ActionTypes';
 import AppDispatcher from '../events/AppDispatcher';
 import EventTypes from '../constants/EventTypes';
+import getActionMixin from '../mixins/getActionMixin';
 import ProcessStageUtil from '../utils/ProcessStageUtil';
-import StageActions from '../events/StageActions';
 
-const stageID = 'postflight';
 let requestInterval = null;
 
 function startPolling() {
@@ -24,33 +23,15 @@ function stopPolling() {
 let PostFlightStore = Store.createStore({
   storeID: 'postFlight',
 
-  mixins: [GetSetMixin],
+  mixins: [GetSetMixin, getActionMixin('postflight')],
 
   init: function () {
-    let initialState = {
-      agents: {
-        errors: 0,
-        totalStarted: 0,
-        completed: false
-      },
-      errorDetails: [],
-      masters: {
-        errors: 0,
-        totalStarted: 0,
-        completed: false
-      }
-    };
+    let initialState = this.getInitialState();
     this.set(initialState);
     this.emit(EventTypes.POSTFLIGHT_STATE_CHANGE, initialState);
 
     startPolling();
   },
-
-  beginStage: StageActions.beginStage.bind(null, stageID),
-
-  fetchLogs: StageActions.fetchLogs.bind(null, stageID),
-
-  fetchStageStatus: StageActions.fetchStageStatus.bind(null, stageID),
 
   addChangeListener: function (eventName, callback) {
     this.on(eventName, callback);
@@ -60,10 +41,6 @@ let PostFlightStore = Store.createStore({
     this.removeListener(eventName, callback);
   },
 
-  isCompleted: function (data) {
-    return data.agents.completed && data.masters.completed;
-  },
-
   processUpdateError: function () {
     this.emit(EventTypes.POSTFLIGHT_STATE_CHANGE);
   },
@@ -71,15 +48,14 @@ let PostFlightStore = Store.createStore({
   processUpdateSuccess: function (data) {
     var processedState = ProcessStageUtil.processState(data);
 
-    if (this.isCompleted(processedState)) {
+    this.set(processedState);
+    this.emit(EventTypes.POSTFLIGHT_STATE_CHANGE);
+
+    if (this.isCompleted()) {
       stopPolling();
-      this.set(processedState);
       this.emit(EventTypes.DEPLOY_STATE_FINISH, processedState);
       return;
     }
-
-    this.set(processedState);
-    this.emit(EventTypes.POSTFLIGHT_STATE_CHANGE);
   },
 
   dispatcherIndex: AppDispatcher.register((payload) => {

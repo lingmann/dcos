@@ -19,9 +19,9 @@ class PrettyPrint():
     """
     def __init__(self, output):
         self.ssh_out = output
-        self.fail_hosts = {}
-        self.success_hosts = {}
-        self.stage_name = 'NULL'
+        self.fail_hosts = []
+        self.success_hosts = []
+        self.preflight = False
 
     def beautify(self, mode='print_data_basic'):
         self.failed_data, self.success_data = self.find_data(self.ssh_out)
@@ -35,49 +35,73 @@ class PrettyPrint():
             for host in hosts:
                 for ip, results in host.items():
                     if results['returncode'] == 0:
-                        self.fail_hosts[ip] = 1
+                        if ip not in self.success_hosts:
+                            self.success_hosts.append(ip)
                         success_data.append(host)
+
                     else:
-                        self.success_hosts[ip] = 1
+                        if ip not in self.fail_hosts:
+                            self.fail_hosts.append(ip)
                         failed_data.append(host)
 
+        # Remove failed from success hosts
+        self.success_hosts = [ip for ip in self.success_hosts if ip not in self.fail_hosts]
         return failed_data, success_data
-
 
     def print_data(self):
         if len(self.failed_data) > 0:
             for host in self.failed_data:
                 for ip, data in host.items():
                     log = logging.getLogger(str(ip))
-                    log.error('{} FAILED'.format(ip))
+                    log.error('====> {} FAILED'.format(ip))
                     log.debug('     CODE:\n{}'.format(data['returncode']))
                     log.error('     TASK:\n{}'.format(' '.join(data['cmd'])))
-                    log.error('     STDERR:\n{}'.format(''.join(data['stderr'])))
-                    if len(data['stdout']) > 0:
-                        log.error('     STDOUT:\n{}'.format('\n'.join(data['stdout'])))
+                    log.error('     STDERR:')
+                    self.color_preflight(host=ip, data_array=data['stderr'])
+                    log.error('     STDOUT:')
+                    self.color_preflight(host=ip, data_array=data['stdout'])
+                    log.info('')
 
         if len(self.success_data) > 0:
             for host in self.success_data:
                 for ip, data in host.items():
                     log = logging.getLogger(str(ip))
-                    log.debug('{} SUCCESS'.format(ip))
-                    log.debug('     CODE\n{}'.format(data['returncode']))
-                    log.debug('     TASK\n{}'.format(' '.join(data['cmd'])))
-                    log.debug('     STDERR\n{}'.format('\n'.join(data['stderr'])))
-                    if len(data['stdout']) > 0 and data['stdout'] != ['']:
-                        log.info('      STDOUT\n{}'.format('\n'.join(data['stdout'])))
+                    log.debug('====> {} SUCCESS'.format(ip))
+                    log.debug('     CODE:{}'.format(data['returncode']))
+                    log.debug('     TASK:{}'.format(' '.join(data['cmd'])))
+                    log.debug('     STDERR:\n{}'.format(
+                        self.color_preflight(host=ip, data_array=data['stderr'])))
+                    log.debug('     STDOUT:\n{}'.format(
+                        self.color_preflight(host=ip, data_array=data['stdout'])))
+                    log.debug('')
 
     def print_summary(self):
         print_header('SUMMARY')
-        log.warning('{} hosts failed {} stage.'.format(len(self.fail_hosts), self.stage_name))
-        for host, index in self.failed_hosts.items():
-            log.error('     {} failures detected.'.format(host))
+        total = len(self.fail_hosts) + len(self.success_hosts)
+        log.warning('{} out of {} hosts successfully completed {} stage.'.format(len(self.success_hosts), total, self.stage_name))
+        if len(self.fail_hosts) > 0:
+            log.error('The following hosts had failures detected during {} stage:'.format(self.stage_name))
+            for host in self.fail_hosts:
+                log.error('     {} failures detected.'.format(host))
 
+    def color_preflight(self, host='NULL', data_array=[]):
+        """
+        A subroutine to parse the output from the dcos_install.sh script's pass or fail
+        output.
+        """
+        log = logging.getLogger(host)
+        does_pass = re.compile('PASS')
+        does_fail = re.compile('FAIL')
+        for line in data_array:
+            if line is not None and line != '':
+                if does_pass.search(line):
+                    log.debug('          {}'.format(line))
+
+                elif does_fail.search(line):
+                    log.error('          {}'.format(line))
+
+                else:
+                    log.debug('          {}'.format(line))
 
     def print_json(self):
         pprint.pprint(json.dumps(self.ssh_out))
-#        if len(self.success_data) > 0:
-#            pprint.pprint(json.dumps(self.success_data))
-#
-#        if len(self.failed_data) > 0:
-#            pprint.pprint(json.dumps(self.failed_data))

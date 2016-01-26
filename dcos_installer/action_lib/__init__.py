@@ -45,9 +45,14 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         'sudo bash {} --preflight-only master'.format(
             os.path.join(REMOTE_TEMP_DIR, os.path.basename(pf_script_path))).split(),
         comment='EXECUTING PREFLIGHT CHECK ON TARGETS')
-    add_post_action(preflight_chain)
 
     result = yield from pf.run_commands_chain_async(preflight_chain, block=block, state_json_dir=state_json_dir)
+
+    # Do the cleanup
+    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    add_post_action(cleanup_chain)
+    yield from pf.run_commands_chain_async(cleanup_chain, block=block)
+
     return result
 
 
@@ -145,6 +150,12 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
                       comment=default['comment'])
     add_post_action(chain)
     result = yield from runner.run_commands_chain_async(chain, block=block, state_json_dir=state_json_dir)
+
+    # Do the cleanup
+    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    add_post_action(cleanup_chain)
+    yield from runner.run_commands_chain_async(cleanup_chain, block=block)
+
     return result
 
 
@@ -172,6 +183,12 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
     add_post_action(postflight_chain)
 
     result = yield from pf.run_commands_chain_async(postflight_chain, block=block, state_json_dir=state_json_dir)
+
+    # Do the cleanup
+    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    add_post_action(cleanup_chain)
+    yield from pf.run_commands_chain_async(cleanup_chain, block=block)
+
     return result
 
 
@@ -186,4 +203,10 @@ def uninstall_dcos(config, block=False, state_json_dir=None, **kwargs):
     uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall', '&&', 'sudo', 'rm', '-rf',
                                  '/opt/mesosphere/'], comment='Uninstalling DCOS')
     result = yield from runner.run_commands_chain_async(uninstall_chain, block=block, state_json_dir=state_json_dir)
+
+        # Do the cleanup
+    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    add_post_action(cleanup_chain)
+    yield from runner.run_commands_chain_async(cleanup_chain, block=block)
+
     return result

@@ -24,11 +24,13 @@ COPY . /dcos-installer
 WORKDIR /dcos-installer
 
 RUN pip install --find-links=ext dcos_image pkgpanda
-RUN pip install .
+RUN pip install webtest
+RUN python setup.py install
 
 ENV DCOS_IMAGE_COMMIT={DCOS_IMAGE_COMMIT}
 ENV CHANNEL_NAME={CHANNEL_NAME}
 ENV BOOTSTRAP_ID={BOOTSTRAP_ID}
+ENV AIOHTTP_NOSENDFILE=1
 '''
 
 SCRIPT_TEMPLATE = '''

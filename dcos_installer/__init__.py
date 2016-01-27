@@ -20,8 +20,9 @@ class CliDelegate(AbstractSSHLibDelegate):
         chain_name, result_object, host = future.result()
         callback_called.set_result(True)
 
-    def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
+    def on_done(self, name, result, host_object, host_status=None):
         print_header('STAGE {}'.format(name))
+
 
 def run_loop(action, options):
     assert callable(action)

@@ -24,9 +24,9 @@ const StageActions = {
     });
   },
 
-  beginStage: function (stage) {
+  beginStage: function (stage, data) {
     let capitalizedStage = stage.toUpperCase();
-    RequestUtil.json({
+    let options = {
       url: `${Config.rootUrl}${Config.apiPrefix}action/${stage}`,
       method: 'post',
       success: function () {
@@ -40,7 +40,13 @@ const StageActions = {
           data: RequestUtil.parseResponseBody(xhr)
         });
       }
-    });
+    };
+
+    if (data && data.retry && Object.keys(data) === 1) {
+      options.data = data;
+    }
+
+    RequestUtil.json(options);
   },
 
   fetchLogs: function (stage) {

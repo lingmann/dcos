@@ -43,7 +43,8 @@ class Deploy extends mixin(StoreMixin) {
     InstallerStore.setNextStep({
       enabled: false,
       label: 'Post-Flight',
-      link: '/post-flight',
+      link: null,
+      clickHandler: PostFlightStore.beginStage,
       visible: true
     });
   }
@@ -53,7 +54,7 @@ class Deploy extends mixin(StoreMixin) {
   }
 
   handleRetryClick() {
-    DeployStore.beginStage();
+    DeployStore.beginStage({retry: true});
     DeployStore.init();
   }
 

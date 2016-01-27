@@ -43,7 +43,8 @@ class Preflight extends mixin(StoreMixin) {
     InstallerStore.setNextStep({
       enabled: false,
       label: 'Deploy',
-      link: '/deploy',
+      link: null,
+      clickHandler: DeployStore.beginStage,
       visible: true
     });
   }
@@ -53,7 +54,7 @@ class Preflight extends mixin(StoreMixin) {
   }
 
   handleRetryClick() {
-    PreFlightStore.beginStage();
+    PreFlightStore.beginStage({retry: true});
     PreFlightStore.init();
   }
 

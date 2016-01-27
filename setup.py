@@ -168,10 +168,6 @@ setup(
         'tox',
         'webtest',
         'webtest_aiohttp'],
-    #package_data={
-    #    'dcos_installer': [
-    #        'templates',
-    #        'templates/assets']},
     entry_points={
         'console_scripts': [
             'dcos_installer = dcos_installer.entrypoint:main']

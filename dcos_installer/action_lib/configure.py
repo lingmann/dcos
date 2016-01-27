@@ -59,7 +59,7 @@ resolvers: '["8.8.8.8", "8.8.4.4"]'
 log = logging.getLogger(__name__)
 
 
-def do_configure():
+def do_configure(real_config):
     # TODO(malnick) we're setting bootstrap to our foo bootstrap
     # for demo purposes only
     # os.environ['BOOTSTRAP_ID'] = 'e2ade83b3197150980714635c6752bc9ece1e0ca'
@@ -75,7 +75,7 @@ def do_configure():
         gen_options,
         bash,
         ['bash', 'centos', 'onprem'],
-        mock_config)
+        real_config)
 
     # Get bootstrap from artifacts
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])

@@ -369,16 +369,16 @@ class MultiRunner():
             self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets))
 
         if block:
-            log.info('Waiting for run_command_chain_async to execute')
+            log.debug('Waiting for run_command_chain_async to execute')
             tasks = []
             for host in self.__targets:
                 tasks.append(asyncio.async(self.dispatch_chain(host, chains, sem)))
 
             yield from asyncio.wait(tasks)
-            log.info('run_command_chain_async executed')
+            log.debug('run_command_chain_async executed')
             return [task.result() for task in tasks]
         else:
-            log.info('Started run_command_chain_async in non-blocking mode')
+            log.debug('Started run_command_chain_async in non-blocking mode')
             for host in self.__targets:
                 asyncio.async(self.dispatch_chain(host, chains, sem))
 

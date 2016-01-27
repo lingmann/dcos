@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import os
 
@@ -14,7 +15,8 @@ log = logging.getLogger(__name__)
 
 
 @asyncio.coroutine
-def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block=False, state_json_dir=None, **kwargs):
+def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block=False, state_json_dir=None,
+                  async_delegate=None):
     '''
     Copies preflight.sh to target hosts and executes the script. Gathers
     stdout, sterr and return codes and logs them to disk via SSH library.
@@ -36,7 +38,7 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         s.add_tag({'role': 'agent'})
         targets += [s]
 
-    pf = get_async_runner(config, targets, **kwargs)
+    pf = get_async_runner(config, targets, async_delegate=async_delegate)
     preflight_chain = ssh.utils.CommandChain('preflight')
 
     add_pre_action(preflight_chain, pf.ssh_user)
@@ -47,13 +49,12 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
             os.path.join(REMOTE_TEMP_DIR, os.path.basename(pf_script_path))).split(),
         comment='EXECUTING PREFLIGHT CHECK ON TARGETS')
 
-    result = yield from pf.run_commands_chain_async(preflight_chain, block=block, state_json_dir=state_json_dir)
-
-    # Do the cleanup
-    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    # Setup the cleanup chain
+    cleanup_chain = ssh.utils.CommandChain('preflight_cleanup')
     add_post_action(cleanup_chain)
-    yield from pf.run_commands_chain_async(cleanup_chain, block=block)
 
+    result = yield from pf.run_commands_chain_async([preflight_chain, cleanup_chain], block=block,
+                                                    state_json_dir=state_json_dir)
     return result
 
 
@@ -107,20 +108,60 @@ def _get_bootstrap_tarball(tarball_base_dir='/genconf/serve/bootstrap'):
     return tarball
 
 
+def _remove_host(state_file, host):
+    if not os.path.isfile(state_file):
+        return False
+
+    with open(state_file) as fh:
+        json_state = json.load(fh)
+
+    if 'hosts' not in json_state or host not in json_state['hosts']:
+        return False
+
+    log.debug('removing host {} from {}'.format(host, state_file))
+    try:
+        del json_state['hosts'][host]
+    except KeyError:
+        return False
+
+    with open(state_file, 'w') as fh:
+        json.dump(json_state, fh)
+
+    return True
+
+
+def _null_failed_counters(state_file):
+    if not os.path.isfile(state_file):
+        return False
+
+    with open(state_file) as fh:
+        json_state = json.load(fh)
+
+    for failed_field in ['hosts_terminated', 'hosts_failed']:
+        if failed_field not in json_state:
+            continue
+        log.debug('set {} to null'.format(failed_field))
+        json_state[failed_field] = 0
+
+    with open(state_file, 'w') as fh:
+        json.dump(json_state, fh)
+
+
 @asyncio.coroutine
-def install_dcos(config, block=False, state_json_dir=None, **kwargs):
+def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_delegate=None, try_remove_stale_dcos=False,
+                 **kwargs):
     role = kwargs.get('role')
     roles = {
         'master': {
             'tags': {'role': 'master'},
-            'hosts': config['master_list'],
+            'hosts': hosts if hosts else config['master_list'],
             'chain_name': 'deploy_master',
             'script_parameter': 'master',
             'comment': 'INSTALLING DCOS ON MASTERS'
         },
         'agent': {
             'tags': {'role': 'agent'},
-            'hosts': config['agent_list'],
+            'hosts': hosts if hosts else config['agent_list'],
             'chain_name': 'deploy_agent',
             'script_parameter': 'slave',
             'comment': 'INSTALLING DCOS ON AGENTS'
@@ -139,8 +180,20 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
         s.add_tag(default['tags'])
         targets += [s]
 
-    runner = get_async_runner(config, targets, **kwargs)
+    runner = get_async_runner(config, targets, async_delegate=async_delegate)
+    chains = []
+    if try_remove_stale_dcos:
+        pkgpanda_uninstall_chain = ssh.utils.CommandChain('remove_stale_dcos')
+        pkgpanda_uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall'],
+                                             comment='TRYING pkgpanda uninstall')
+        chains.append(pkgpanda_uninstall_chain)
+
+        remove_dcos_chain = ssh.utils.CommandChain('remove_stale_dcos')
+        remove_dcos_chain.add_execute(['rm', '-rf', '/opt/mesosphere', '/etc/mesosphere'])
+        chains.append(remove_dcos_chain)
+
     chain = ssh.utils.CommandChain(default['chain_name'])
+    chains.append(chain)
 
     add_pre_action(chain, runner.ssh_user)
     _add_copy_dcos_install(chain)
@@ -149,19 +202,25 @@ def install_dcos(config, block=False, state_json_dir=None, **kwargs):
 
     chain.add_execute(['sudo', 'bash', '{}/dcos_install.sh'.format(REMOTE_TEMP_DIR), default['script_parameter']],
                       comment=default['comment'])
-    add_post_action(chain)
-    result = yield from runner.run_commands_chain_async(chain, block=block, state_json_dir=state_json_dir)
 
-    # Do the cleanup
-    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    if kwargs.get('retry') and state_json_dir:
+        state_file_path = os.path.join(state_json_dir, '{}.json'.format(default['chain_name']))
+        log.debug('retry executed for a state file {}'.format(state_file_path))
+        for _host in default['hosts']:
+            _remove_host(state_file_path, _host)
+
+    # Setup the cleanup chain
+    cleanup_chain = ssh.utils.CommandChain('{}_cleanup'.format(default['chain_name']))
     add_post_action(cleanup_chain)
-    yield from runner.run_commands_chain_async(cleanup_chain, block=block)
+    chains.append(cleanup_chain)
 
+    result = yield from runner.run_commands_chain_async(chains, block=block,
+                                                        state_json_dir=state_json_dir)
     return result
 
 
 @asyncio.coroutine
-def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **kwargs):
+def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, async_delegate=None):
     targets = []
     for host in config['master_list']:
         s = Node(host)
@@ -173,7 +232,7 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
         s.add_tag({'role': 'agent'})
         targets += [s]
 
-    pf = get_async_runner(config, targets, **kwargs)
+    pf = get_async_runner(config, targets, async_delegate=async_delegate)
     postflight_chain = ssh.utils.CommandChain('postflight')
     add_pre_action(postflight_chain, pf.ssh_user)
 
@@ -183,31 +242,25 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, **k
     postflight_chain.add_execute([dcos_diag], comment='Executing local post-flight check for DCOS servces...')
     add_post_action(postflight_chain)
 
-    result = yield from pf.run_commands_chain_async(postflight_chain, block=block, state_json_dir=state_json_dir)
-
-    # Do the cleanup
-    cleanup_chain = ssh.utils.CommandChain('cleanup')
+    # Setup the cleanup chain
+    cleanup_chain = ssh.utils.CommandChain('postflight_cleanup')
     add_post_action(cleanup_chain)
-    yield from pf.run_commands_chain_async(cleanup_chain, block=block)
 
+    result = yield from pf.run_commands_chain_async([postflight_chain, cleanup_chain], block=block,
+                                                    state_json_dir=state_json_dir)
     return result
 
 
 @asyncio.coroutine
-def uninstall_dcos(config, block=False, state_json_dir=None, **kwargs):
+def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None):
     all_targets = config['master_list'] + config['agent_list']
 
     # clean the file to all targets
-    runner = get_async_runner(config, all_targets, **kwargs)
+    runner = get_async_runner(config, all_targets, async_delegate=async_delegate)
     uninstall_chain = ssh.utils.CommandChain('uninstall')
 
     uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall', '&&', 'sudo', 'rm', '-rf',
                                  '/opt/mesosphere/'], comment='Uninstalling DCOS')
-    result = yield from runner.run_commands_chain_async(uninstall_chain, block=block, state_json_dir=state_json_dir)
-
-        # Do the cleanup
-    cleanup_chain = ssh.utils.CommandChain('cleanup')
-    add_post_action(cleanup_chain)
-    yield from runner.run_commands_chain_async(cleanup_chain, block=block)
+    result = yield from runner.run_commands_chain_async([uninstall_chain], block=block, state_json_dir=state_json_dir)
 
     return result

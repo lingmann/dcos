@@ -162,6 +162,7 @@ setup(
         'aiohttp_jinja2',
         'coloredlogs',
         'docker_py',
+        'passlib',
         'pytest',
         'pytest-mock',
         'pyyaml',

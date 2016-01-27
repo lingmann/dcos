@@ -127,7 +127,7 @@ def render_arm(
     return json.dumps(template_json)
 
 
-def gen_templates(user_args, options):
+def gen_templates(user_args):
     '''
     Render the cloud_config template given a particular set of options
 
@@ -138,7 +138,6 @@ def gen_templates(user_args, options):
                      is non-interactive
     '''
     results = gen.generate(
-        options=options,
         # Mixins which add mounting the drive, disabling etcd, provider config
         # around how to access the master load balancer, etc.
         mixins=['azure', 'coreos'],
@@ -203,10 +202,9 @@ def make_template(num_masters, gen_arguments):
     @param num_masters: int, number of master nodes to embed in the generated template
     '''
 
-    gen_options = gen.get_options_object()
     gen_arguments['master_list'] = master_list_arm_json(num_masters)
     args = deepcopy(gen_arguments)
-    dcos_template = gen_templates(args, gen_options)
+    dcos_template = gen_templates(args)
     artifact = {
         'channel_path': 'azure/dcos-{}master.azuredeploy.json'.format(num_masters),
         'local_content': dcos_template.arm,

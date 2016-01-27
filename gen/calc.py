@@ -5,7 +5,10 @@ import sys
 from math import floor
 from subprocess import check_output
 
+import pkgpanda.exceptions
 import yaml
+from pkgpanda import PackageId
+from pkgpanda.build import hash_checkout
 
 
 def calulate_dcos_image_commit():
@@ -102,6 +105,32 @@ def calc_num_masters(master_list):
     return str(len(json.loads(master_list)))
 
 
+def calculate_config_id(dcos_image_commit, user_arguments, mixins):
+    return hash_checkout({
+        "commit": dcos_image_commit,
+        "user_arguments": json.loads(user_arguments),
+        "mixins": json.loads(mixins)})
+
+
+def calculate_cluster_packages(package_names, config_id):
+    def get_package_id(package_name):
+        pkg_id_str = "{}--setup_{}".format(package_name, config_id)
+        # validate the pkg_id_str generated is a valid PackageId
+        return pkg_id_str
+
+    cluster_package_ids = list(sorted(map(get_package_id, json.loads(package_names))))
+    return json.dumps(cluster_package_ids)
+
+
+def validate_cluster_packages(cluster_packages):
+    pkg_id_list = json.loads(cluster_packages)
+    for pkg_id in pkg_id_list:
+        try:
+            PackageId(pkg_id)
+        except pkgpanda.exceptions.ValidationError as ex:
+            raise AssertionError(str(ex)) from ex
+
+
 def validate_zk_hosts(exhibitor_zk_hosts):
     assert not exhibitor_zk_hosts.startswith('zk://'), "Must be of the form `host:port,host:port', not start with zk://"
 
@@ -117,7 +146,8 @@ entry = {
         validate_dns_search,
         validate_master_list,
         validate_zk_hosts,
-        validate_zk_path],
+        validate_zk_path,
+        validate_cluster_packages],
     'defaults': {
         "roles": "slave_public",
         "weights": "slave_public=1",
@@ -133,7 +163,9 @@ entry = {
         'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
         'dcos_version': lambda: "1.6",
         'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
-        'curly_pound': lambda: "{#"
+        'curly_pound': lambda: "{#",
+        'cluster_packages': calculate_cluster_packages,
+        'config_id': calculate_config_id
     },
     'conditional': {
         "master_discovery": {

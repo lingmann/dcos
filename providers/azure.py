@@ -7,11 +7,37 @@ import sys
 import urllib
 from copy import deepcopy
 
+import jinja2
 import yaml
+from pkg_resources import resource_string
 
 import gen
 import gen.template
 import providers.util as util
+
+
+# TODO(cmaloney): Remove this last use of jinja2. It contains a for loop which
+# is beyond what we compute currently.
+# Function to allow jinja to load our templates folder layout. This uses
+# resource_string from pkg_resources which is the recommended way of getting
+# files out of a package however it is distributed
+# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
+# For the jinja function loader documentation, see:
+# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
+def load_template(name):
+    contents = resource_string("gen", name).decode()
+
+    # The templates from our perspective are always invalidated / never cacheable.
+    def false_func():
+        return False
+
+    return (contents, name, false_func)
+
+# NOTE: Strict undefined behavior since we're doing generation / validation here.
+env = jinja2.Environment(
+    loader=jinja2.FunctionLoader(load_template),
+    undefined=jinja2.StrictUndefined,
+    keep_trailing_newline=True)
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
 late_services = ""
@@ -20,8 +46,7 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
-UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{channel_commit_path}"
-              "/azure/single-master.azuredeploy.json")
+UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{channel_commit_path}/azure/{arm_template_name}")
 
 INSTANCE_GROUPS = {
     'master': {
@@ -84,11 +109,12 @@ def transform(cloud_config_yaml_str):
 
 
 def render_arm(
+        arm_template,
         master_cloudconfig_yaml_str,
         slave_cloudconfig_yaml_str,
         slave_public_cloudconfig_yaml_str):
 
-    template_str = gen.template.parse_resources('azure/azuredeploy.json').render({
+    template_str = gen.template.parse_str(arm_template).render({
         'master_cloud_config': transform(master_cloudconfig_yaml_str),
         'slave_cloud_config': transform(slave_cloudconfig_yaml_str),
         'slave_public_cloud_config': transform(slave_public_cloudconfig_yaml_str)
@@ -116,13 +142,13 @@ def gen_templates(user_args, options):
         # Mixins which add mounting the drive, disabling etcd, provider config
         # around how to access the master load balancer, etc.
         mixins=['azure', 'coreos'],
-        # jinja template
+        extra_templates={'azuredeploy': ['azure/templates/azuredeploy.json']},
         arguments=user_args,
         cc_package_files=[
-            '/etc/dns_config',
             '/etc/exhibitor',
             '/etc/exhibitor.properties',
-            '/etc/mesos-master-provider']
+            '/etc/mesos-master-provider',
+            '/etc/master_list']
         )
 
     # Add general services
@@ -148,6 +174,7 @@ def gen_templates(user_args, options):
 
     # Render the arm
     arm = render_arm(
+        results.templates['azuredeploy'],
         variant_cloudconfig['master'],
         variant_cloudconfig['slave'],
         variant_cloudconfig['slave_public']
@@ -159,30 +186,52 @@ def gen_templates(user_args, options):
     })
 
 
-def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
-    # Generate the single-master and multi-master templates.
-    gen_options = gen.get_options_object()
-    single_args = deepcopy(gen_arguments)
-    single_args['num_masters'] = '1'
-    single_master = gen_templates(single_args, gen_options)
+def master_list_arm_json(num_masters):
+    '''
+    Return a JSON string containing a list of ARM expressions for the master IP's of the cluster.
 
-    # Make sure we upload the packages for both the multi-master templates as
-    # well as the single-master templates.
-    extra_packages = util.cluster_to_extra_packages(single_master.results.cluster_packages)
+    @param num_masters: int, number of master nodes in the cluster
+    '''
+    arm_expression = "[[[reference('masterNodeNic{}').ipConfigurations[0].properties.privateIPAddress]]]"
+    return json.dumps([arm_expression.format(x) for x in range(num_masters)])
+
+
+def make_template(num_masters, gen_arguments):
+    '''
+    Return a tuple: the generated template for num_masters and the artifact dict.
+
+    @param num_masters: int, number of master nodes to embed in the generated template
+    '''
+
+    gen_options = gen.get_options_object()
+    gen_arguments['master_list'] = master_list_arm_json(num_masters)
+    args = deepcopy(gen_arguments)
+    dcos_template = gen_templates(args, gen_options)
+    artifact = {
+        'channel_path': 'azure/dcos-{}master.azuredeploy.json'.format(num_masters),
+        'local_content': dcos_template.arm,
+        'content_type': 'application/json; charset=utf-8'
+    }
+    return dcos_template, artifact
+
+
+def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
+    extra_packages = list()
+    artifacts = list()
+    for num_masters in [1, 3, 5]:
+        dcos_template, artifact = make_template(num_masters, gen_arguments)
+        extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
+        artifacts.append(artifact)
+
+    artifacts.append({
+        'channel_path': 'azure.html',
+        'local_content': gen_buttons(repo_channel_path, channel_commit_path, tag, commit),
+        'content_type': 'text/html; charset=utf-8'
+    })
 
     return {
         'packages': extra_packages,
-        'artifacts': [
-            {
-                'channel_path': 'azure/single-master.azuredeploy.json',
-                'local_content': single_master.arm
-            },
-            {
-                'channel_path': 'azure.html',
-                'local_content': gen_buttons(repo_channel_path, channel_commit_path, tag, commit),
-                'content_type': 'text/html; charset=utf-8'
-            }
-        ]
+        'artifacts': artifacts
     }
 
 
@@ -190,12 +239,30 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
     '''
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
-    template_upload_url = UPLOAD_URL.format(channel_commit_path=channel_commit_path)
-    return gen.template.parse_resources('azure/templates/azure.html').render({
+    arm_urls = [
+        {
+            'name': '1 Master',
+            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
+                channel_commit_path=channel_commit_path,
+                arm_template_name='dcos-1master.azuredeploy.json'))
+        },
+        {
+            'name': '3 Masters',
+            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
+                channel_commit_path=channel_commit_path,
+                arm_template_name='dcos-3master.azuredeploy.json'))
+        },
+        {
+            'name': '5 Masters',
+            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
+                channel_commit_path=channel_commit_path,
+                arm_template_name='dcos-5master.azuredeploy.json'))
+        }]
+    return env.get_template('azure/templates/azure.html').render({
         'repo_channel_path': repo_channel_path,
         'tag': tag,
         'commit': commit,
-        'template_url': encode_url_as_param(template_upload_url)
+        'arm_urls': arm_urls
     })
 
 

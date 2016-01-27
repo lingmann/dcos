@@ -69,6 +69,8 @@ def make_vpc():
 
 def prep_hosts(ssh_runner):
     # TODO(mellenburg): replace setup with --preflightfix functionality
+    ssh_runner.execute_cmd("sudo yum update -y", True)
+    ssh_runner.execute_cmd("sudo yum upgrade -y", True)
     ssh_runner.execute_cmd("sudo yum install -y tar xz unzip curl", True)
     ssh_runner.execute_cmd("sudo curl -sSL https://get.docker.com/ | sh", True)
     ssh_runner.execute_cmd("sudo service docker start", True)

@@ -19,6 +19,7 @@ class CliDelegate(AbstractSSHLibDelegate):
     def on_update(self, future, callback_called):
         chain_name, result_object, host = future.result()
         callback_called.set_result(True)
+        log.debug('on_update executed for {}'.format(chain_name))
 
     def on_done(self, name, result, host_object, host_status=None):
         print_header('STAGE {}'.format(name))

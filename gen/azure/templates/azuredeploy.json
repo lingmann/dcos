@@ -19,16 +19,6 @@
       },
       "defaultValue": "0.0.0.0/0"
     },
-    "numberOfMasters": {
-      "type": "int",
-      "metadata": {
-        "Description": "Number of Master nodes"
-      },
-      "defaultValue": 1,
-      "allowedValues": [
-        1
-      ]
-    },
     "numberOfPrivateSlaves": {
       "type": "int",
       "metadata": {
@@ -102,7 +92,8 @@
     "publicSlaveLoadBalancerID": "[resourceId('Microsoft.Network/loadBalancers',variables('publicSlaveLoadBalancerName'))]",
     "publicSlavesLBBackEndPoolName": "publicSlavesLBBackEndPool",
     "publicSlaveFrontEndIPConfigID": "[concat(variables('publicSlaveLoadBalancerID'),'/frontendIPConfigurations/loadBalancerFrontEnd')]",
-    "publicSlaveBackEndIPConfigID": "[concat(variables('publicSlaveLoadBalancerID'),'/backendAddressPools/',variables('publicSlavesLBBackEndPoolName'))]"
+    "publicSlaveBackEndIPConfigID": "[concat(variables('publicSlaveLoadBalancerID'),'/backendAddressPools/',variables('publicSlavesLBBackEndPoolName'))]",
+    "numberOfMasters": {{ num_masters }}
   },
   "resources": [
     {
@@ -519,7 +510,7 @@
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "ipLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "properties": {
         "publicIPAllocationMethod": "Dynamic",
@@ -535,7 +526,7 @@
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterNicLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
@@ -575,7 +566,7 @@
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterVmLoop",
-        "count": "[parameters('numberOfMasters')]"
+        "count": "[variables('numberOfMasters')]"
       },
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', 'masterNodeNic', copyindex())]",

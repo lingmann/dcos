@@ -149,7 +149,6 @@ def run():
             "fwy1fzR8X8pEOaLhXkUTZb7Oex97H81yrau15PI1OGjDrQQtMpWU8tGVfXECh07/Rg1ODnza9ddY+x0xLBFjfyTY7PrIwcdhNCP82QKSfH"
             "DltDbssw4wIm+NPsnZ9NodtjgAFxC8HEDFTozYueHOTi4DzgRjGfTHjkhwZd/LPAYXNb8PxB82cermpqn4tn0nOT76fPGg==")},
         "authorizedSubnet": {"value": "0.0.0.0/0"},
-        "numberOfMasters": {"value": 1},
         "numberOfPrivateSlaves": {"value": 1},
         "numberOfPublicSlaves": {"value": 1}
         }

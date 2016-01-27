@@ -1,7 +1,7 @@
 import pytest
 
 import gen.template
-from gen.template import (Replacement, Switch, Tokenizer, UnsetParameter,
+from gen.template import (For, Replacement, Switch, Tokenizer, UnsetParameter,
                           parse_str)
 
 just_text = "foo"
@@ -57,6 +57,12 @@ def test_lex():
             ('eof', None)
             ])
 
+    assert(get_tokens("{% for foo in bar %}{{ foo }}{% endfor %}") == [
+            ('for', ('foo', 'bar')),
+            ('replacement', ('foo', None)),
+            ('endfor', None),
+            ('eof', None)])
+
     with pytest.raises(gen.template.SyntaxError):
         get_tokens("{{ test |}}")
     with pytest.raises(gen.template.SyntaxError):
@@ -93,6 +99,8 @@ def test_parse():
     ])
     # TODO(cmaloney): Add parse syntax error tests
 
+    assert parse_str("{% for foo in bar %}{{ foo }}{% endfor %}").ast == [For("foo", "bar", [Replacement('foo')])]
+
 
 def test_get_variables():
     assert(parse_str("a").get_scoped_arguments() ==
@@ -120,6 +128,13 @@ def test_get_variables():
         }
     })
 
+    assert (parse_str("{% for foo in bar %}{{ foo }}{{ bar }}{{ baz }}{% endfor %}").get_scoped_arguments() ==
+            {'variables': {'bar', 'baz'}, 'sub_scopes': dict()})
+
+    # TODO(cmaloney): Disallow reusing a for new variable as a general variable.
+    assert (parse_str("{% for foo in bar %}{{ foo }}{{ bar }}{{ baz }}{% endfor %}{{ foo }}").get_scoped_arguments() ==
+            {'variables': {'foo', 'bar', 'baz'}, 'sub_scopes': dict()})
+
 
 def test_get_filters():
     assert(parse_str("{{ a }}").get_filters() == set())
@@ -127,6 +142,7 @@ def test_get_filters():
     assert(parse_str(
         "a{{ a | baz }}b{{ a | bar }}c{{ c | bar }}").get_filters() == {"baz", "bar"})
     assert(parse_str("a{% switch foo %}{% case \"test\" %}{{ a | baz }}b{{ a | bar }}{% endswitch %}c{{ c | bar }}{{ a | foo }}").get_filters() == {"foo", "baz", "bar"})  # noqa
+    assert parse_str("{% for foo in bar %}{{ foo | bang }}{% endfor %}").get_filters() == {'bang'}
 
 
 def test_render():
@@ -142,3 +158,9 @@ def test_render():
         parse_str("{{ a }}").render({"c": "1"})
     with pytest.raises(UnsetParameter):
         parse_str("{{ a | foo }}").render({"a": "1"})
+    assert parse_str("{% for a in b %}{{ a }}{% endfor %}").render({"b": ['a', 'test']}) == "atest"
+
+    assert (parse_str("{% for a in b %}{{ a }}{% endfor %}else{{ a }}").render({"b": ['b', 't', 'c'], "a": "foo"}) ==
+            "btcelsefoo")
+    with pytest.raises(UnsetParameter):
+        parse_str("{% for a in b %}{{ a }}{% endfor %}else{{ a }}").render({"b": ['b', 't', 'c']})

@@ -29,7 +29,6 @@ setup(
         'boto3',
         'botocore',
         'coloredlogs',
-        'jinja2',
         'pyyaml',
         'pytest',
         'retrying',

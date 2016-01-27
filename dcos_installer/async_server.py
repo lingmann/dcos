@@ -242,6 +242,7 @@ def action_action_name(request):
                     print_header('EXECUTING {}'.format(new_action_str))
                     new_action = action_map.get(new_action_str)
                     yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
+                return web.json_response({'status': 'retry {} started'.format(action)})
         else:
             yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
         return web.json_response({'status': '{} started'.format(action_name)})

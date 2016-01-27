@@ -94,11 +94,10 @@ class JsonDelegate(AbstractSSHLibDelegate):
     def on_update(self, future, callback_called):
         self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
 
-    def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
-        self._update_json_file(name, result, host_object, host_status_count=host_status_count, host_status=host_status)
+    def on_done(self, name, result, host_object, host_status=None):
+        self._update_json_file(name, result, host_object, host_status=host_status)
 
-    def _update_json_file(self, name, result, host_object, future_update=None, host_status_count=None, host_status=None,
-                          callback_called=None):
+    def _update_json_file(self, name, result, host_object, future_update=None, host_status=None, callback_called=None):
         status_json = {}
         status_file = os.path.join(self.state_dir, '{}.json'.format(name))
         if os.path.isfile(status_file):
@@ -143,9 +142,6 @@ class JsonDelegate(AbstractSSHLibDelegate):
             # Update chain status: success or fail
             if host_status:
                 status_json['hosts'][host]['host_status'] = host_status
-
-            if host_status_count:
-                status_json[host_status_count] = status_json.get(host_status_count, 0) + 1
 
         with open(status_file, 'w') as f:
             json.dump(status_json, f)

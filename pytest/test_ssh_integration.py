@@ -91,7 +91,7 @@ def test_ssh_async(tmpdir, loop):
     chain = CommandChain('test')
     chain.add_execute(['uname', '-a'])
     try:
-        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True))
+        results = loop.run_until_complete(runner.run_commands_chain_async([chain], block=True))
     finally:
         loop.close()
 
@@ -125,7 +125,7 @@ def test_scp_remote_to_local_async(tmpdir, loop):
     chain = CommandChain('test')
     chain.add_copy(workspace + '/pilot.txt.copied', workspace + '/pilot.txt', remote_to_local=True)
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async([chain], block=True,
                                                                                state_json_dir=workspace))
     finally:
         loop.close()
@@ -160,7 +160,7 @@ def test_scp_async(tmpdir, loop):
     chain = CommandChain('test')
     chain.add_copy(workspace + '/pilot.txt', workspace + '/pilot.txt.copied')
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async([chain], block=True,
                                                                                state_json_dir=workspace))
     finally:
         loop.close()
@@ -194,7 +194,7 @@ def test_scp_recursive_async(tmpdir, loop):
     chain = CommandChain('test')
     chain.add_copy(workspace + '/recursive_pilot.txt', workspace + '/recursive_pilot.txt.copied', recursive=True)
     try:
-        copy_results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True,
+        copy_results = loop.run_until_complete(runner.run_commands_chain_async([chain], block=True,
                                                                                state_json_dir=workspace))
     finally:
         loop.close()
@@ -244,7 +244,8 @@ def test_ssh_command_terminate_async(tmpdir, loop):
     chain.add_execute(['sleep', '20'])
     start_time = time.time()
     try:
-        results = loop.run_until_complete(runner.run_commands_chain_async(chain, block=True, state_json_dir=workspace))
+        results = loop.run_until_complete(runner.run_commands_chain_async([chain], block=True,
+                                                                          state_json_dir=workspace))
     finally:
         loop.close()
     elapsed_time = time.time() - start_time
@@ -254,13 +255,13 @@ def test_ssh_command_terminate_async(tmpdir, loop):
     with open(workspace + '/test.json') as fh:
         result_json = json.load(fh)
         assert result_json['total_hosts'] == 1
-        assert result_json['hosts_terminated'] == 1
         assert 'hosts_failed' not in result_json
         assert 'hosts_success' not in result_json
 
     for host_result in results:
         for command_result in host_result:
             for host, process_result in command_result.items():
+                assert result_json['hosts'][host]['host_status'] == 'terminated'
                 assert process_result['stdout'] == ['']
                 assert process_result['stderr'] == ['']
                 assert process_result['returncode'] is None
@@ -286,7 +287,7 @@ def test_tags_async(tmpdir, loop):
     chain = CommandChain('test')
     chain.add_execute(['sleep', '1'])
     try:
-        loop.run_until_complete(runner.run_commands_chain_async(chain, block=True, state_json_dir=workspace))
+        loop.run_until_complete(runner.run_commands_chain_async([chain], block=True, state_json_dir=workspace))
     finally:
         loop.close()
 

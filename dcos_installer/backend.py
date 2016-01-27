@@ -20,7 +20,7 @@ def do_configure():
 
 def hash_password(string):
     new_hash = sha512_crypt.encrypt(string)
-    log.warning('Please place this in genconf/config.yaml under \'password\' key:\n{}'.format(new_hash))
+    log.warning('Hashed password for \'password\' key:\n{}'.format(new_hash))
     return new_hash
 
 
@@ -30,6 +30,11 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     to pass it as overrides to DCOSConfig object.
     """
     log.info("Creating new DCOSConfig object from POST data.")
+    # Check for password in post_data, and if it exists hash it right away
+    if 'password' in post_data:
+        hashed = hash_password(post_data['password'])
+        post_data['password'] = hashed
+
     # Get a blank config file object
     val_config_obj = DCOSConfig()
     # If the config file does not exist, write it.

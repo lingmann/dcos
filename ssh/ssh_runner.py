@@ -289,9 +289,8 @@ class MultiRunner():
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
         return result
 
-    @asyncio.coroutine
-    def dispatch_chain(self, host, chain, sem):
-        log.debug('Started dispatch_chain for host {}'.format(host))
+    def _run_chain_command(self, chain, host, chain_result):
+        assert isinstance(chain, CommandChain)
         host_status = 'hosts_success'
         host_port = '{}:{}'.format(host.ip, host.port)
 
@@ -314,50 +313,53 @@ class MultiRunner():
                 'host_status_count': 'hosts_failed'
             }
         }
-        chain_result = []
-        with (yield from sem):
-            for command in chain.get_commands():
-
-                # command[-1] stands for comment
-                if command[-1] is not None:
-                    log.debug('{}: {}'.format(host_port, command[-1]))
-                future = asyncio.Future()
-
-                if self.async_delegate is not None:
-                    log.debug('Using async_delegate with callback')
-                    callback_called = asyncio.Future()
-                    future.add_done_callback(lambda future: self.async_delegate.on_update(future, callback_called))
-
-                # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
-                result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
-                status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
-                host_status = status['host_status']
-                host_status_count = status['host_status_count']
-
-                if self.async_delegate is not None:
-                    # We need to make sure the callback was executed before we can proceed further
-                    # 5 seconds should be enough for a callback.
-                    try:
-                        yield from asyncio.wait_for(callback_called, 5)
-                    except asyncio.TimeoutError:
-                        log.error('Callback did not execute within 5 sec')
-                        host_status = 'terminated'
-                        break
-
-                _, result, host_object = future.result()
-                chain_result.append(result)
-                if host_status != 'success':
-                    break
+        for command in chain.get_commands():
+            # command[-1] stands for comment
+            if command[-1] is not None:
+                log.debug('{}: {}'.format(host_port, command[-1]))
+            future = asyncio.Future()
 
             if self.async_delegate is not None:
-                # Update chain status
-                self.async_delegate.on_done(chain.namespace, result, host_object, host_status_count=host_status_count,
-                                            host_status=host_status)
+                log.debug('Using async_delegate with callback')
+                callback_called = asyncio.Future()
+                future.add_done_callback(lambda future: self.async_delegate.on_update(future, callback_called))
+
+            # command[0] is a type of a command, could be CommandChain.execute_flag, CommandChain.copy_flag
+            result = yield from command_map.get(command[0], None)(host, command, chain.namespace, future)
+            status = process_exit_code_map.get(result[host_port]['returncode'], process_exit_code_map['failed'])
+            host_status = status['host_status']
+
+            if self.async_delegate is not None:
+                # We need to make sure the callback was executed before we can proceed further
+                # 5 seconds should be enough for a callback.
+                try:
+                    yield from asyncio.wait_for(callback_called, 5)
+                except asyncio.TimeoutError:
+                    log.error('Callback did not execute within 5 sec')
+                    host_status = 'terminated'
+                    break
+
+            _, result, host_object = future.result()
+            chain_result.append(result)
+            if host_status != 'success':
+                break
+
+        if self.async_delegate is not None:
+            # Update chain status
+            self.async_delegate.on_done(chain.namespace, result, host_object, host_status=host_status)
+
+    @asyncio.coroutine
+    def dispatch_chain(self, host, chains, sem):
+        log.debug('Started dispatch_chain for host {}'.format(host))
+        chain_result = []
+        with (yield from sem):
+            for chain in chains:
+                yield from self._run_chain_command(chain, host, chain_result)
         return chain_result
 
     @asyncio.coroutine
-    def run_commands_chain_async(self, chain, block=False, state_json_dir=None):
-        assert isinstance(chain, CommandChain)
+    def run_commands_chain_async(self, chains, block=False, state_json_dir=None):
+        assert isinstance(chains, list)
         sem = asyncio.Semaphore(self.__parallelism)
         if self.async_delegate is not None and state_json_dir is True:
             log.error('Cannot use a delegate and update json at the same time')
@@ -370,7 +372,7 @@ class MultiRunner():
             log.info('Waiting for run_command_chain_async to execute')
             tasks = []
             for host in self.__targets:
-                tasks.append(asyncio.async(self.dispatch_chain(host, chain, sem)))
+                tasks.append(asyncio.async(self.dispatch_chain(host, chains, sem)))
 
             yield from asyncio.wait(tasks)
             log.info('run_command_chain_async executed')
@@ -378,7 +380,7 @@ class MultiRunner():
         else:
             log.info('Started run_command_chain_async in non-blocking mode')
             for host in self.__targets:
-                asyncio.async(self.dispatch_chain(host, chain, sem))
+                asyncio.async(self.dispatch_chain(host, chains, sem))
 
 
 class SSHRunner():

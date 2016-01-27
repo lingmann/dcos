@@ -15,6 +15,7 @@ import asyncio
 import json
 import logging
 import os
+import pty
 import subprocess
 import warnings
 from multiprocessing import Pool
@@ -74,7 +75,8 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None, ignore_warning=Tr
     if env is None:
         env = os.environ
 
-    process = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    master, slave = pty.openpty()
+    process = subprocess.Popen(cmd, stdin=master, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = process.communicate(timeout=timeout_sec)
 
     if ignore_warning and isinstance(stderr, bytes):

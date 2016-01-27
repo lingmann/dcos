@@ -4,6 +4,7 @@ import logging
 import sys
 
 from dcos_installer import action_lib
+from dcos_installer.action_lib.prettyprint import print_header, PrettyPrint
 from dcos_installer import async_server, backend
 from ssh.utils import AbstractSSHLibDelegate
 
@@ -20,27 +21,22 @@ class CliDelegate(AbstractSSHLibDelegate):
         callback_called.set_result(True)
 
     def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
-        print('Running {}'.format(name))
-        for host, output in result.items():
-            print('#' * 20)
-            if output['returncode'] != 0:
-                print(host)
-                print('STDOUT')
-                print('{}: {}'.format(host, '\n'.join(output['stdout'])))
-                print('STDERR')
-                print('{}: {}'.format(host, '\n'.join(output['stderr'])))
-
+        print_header('STAGE {}'.format(name))
 
 def run_loop(action, options):
     assert callable(action)
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    log.debug('### START {}'.format(action.__name__))
+    print_header('START {}'.format(action.__name__))
     try:
         config = backend.get_config()
         cli_delegate = CliDelegate()
         result = loop.run_until_complete(action(config, block=True, async_delegate=cli_delegate))
+        pp = PrettyPrint(result)
+        pp.stage_name = action.__name__
+        pp.beautify('print_data')
+
     finally:
         loop.close()
     exitcode = 0
@@ -49,13 +45,8 @@ def run_loop(action, options):
             for host, process_result in command_result.items():
                 if process_result['returncode'] != 0:
                     exitcode = process_result['returncode']
-    log.debug('### END {} with returncode: {}'.format(action.__name__, exitcode))
-    print('check logfile {}'.format(options.log_file))
-    if exitcode == 0:
-        print('Success')
-    else:
-        print('Failed')
-    return exitcode
+    print_header('END {} with returncode: {}'.format(action.__name__, exitcode))
+    pp.print_summary()
 
 
 class DcosInstaller:
@@ -70,21 +61,26 @@ class DcosInstaller:
         # parser or anything else
         if args:
             options = self.parse_args(args)
+            if len(options.hash_password) > 0:
+                print_header("HASHING PASSWORD TO SHA512")
+                backend.hash_password(options.hash_password)
+                sys.exit(0)
 
             if options.web:
-                log.warning("Starting DCOS installer in web mode")
+                print_header("Starting DCOS installer in web mode")
                 async_server.start(options.port)
 
-            if options.configure:
-                log.warning("Executing configuration generation for DCOS.")
+            if options.genconf:
+                print_header("EXECUTING CONFIGURATION GENERATION")
                 backend.do_configure()
+                sys.exit(0)
 
             if options.preflight:
-                log.warning("Executing preflight on target hosts.")
+                print_header("EXECUTING PREFLIGHT")
                 sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:
-                log.warning("Executing deploy on target hosts.")
+                print_header("EXECUTING DCOS INSTALLATION")
                 for role in ['master', 'agent']:
                     deploy_returncode = run_loop(lambda *args, **kwargs: action_lib.install_dcos(*args, role=role,
                                                                                                  **kwargs), options)
@@ -93,11 +89,11 @@ class DcosInstaller:
                 sys.exit(0)
 
             if options.postflight:
-                log.warning("Executing postflight on target hosts.")
+                print_header("EXECUTING POSTFLIGHT")
                 sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
-                log.warning("Executing uninstall on target hosts.")
+                print_header("EXECUTING UNINSTALL")
                 sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
     def parse_args(self, args):
@@ -114,6 +110,13 @@ class DcosInstaller:
             default='/genconf/logs/installer.log',
             type=str,
             help='Set log file location, default: /genconf/logs/installer.log'
+        )
+
+        parser.add_argument(
+            '--hash-password',
+            default='',
+            type=str,
+            help='Hash a password on the CLI for use in the config.yaml.'
         )
 
         parser.add_argument(
@@ -138,8 +141,8 @@ class DcosInstaller:
             help='Run the web interface.')
 
         mutual_exc.add_argument(
-            '-c',
-            '--configure',
+            '-gen',
+            '--genconf',
             action='store_true',
             default=False,
             help='Execute the configuration generation (genconf).')

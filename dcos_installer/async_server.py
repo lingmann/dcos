@@ -7,6 +7,7 @@ import pkg_resources
 from aiohttp import web
 
 from dcos_installer import action_lib, backend
+from dcos_installer.action_lib.prettyprint import print_header
 
 log = logging.getLogger()
 
@@ -184,6 +185,7 @@ def action_action_name(request):
         # for the end-user
         if action_name == 'preflight':
             try:
+                print_header("GENERATING CONFIGURATION")
                 backend.do_configure()
             except:
                 genconf_failure = {
@@ -222,8 +224,8 @@ def action_action_name(request):
                 return web.json_response({'status': 'deploy was already executed, skipping'})
             else:
                 for new_action_str in action:
+                    print_header('EXECUTING {}'.format(new_action_str))
                     new_action = action_map.get(new_action_str)
-                    log.info('Executing {}'.format(new_action_str))
                     yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
         else:
             yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))

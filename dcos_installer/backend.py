@@ -4,8 +4,9 @@ libraries to support the dcos installer.
 """
 import logging
 import os
+from passlib.hash import sha512_crypt
 
-from dcos_installer.action_lib import configure
+# from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
@@ -13,7 +14,14 @@ log = logging.getLogger()
 
 
 def do_configure():
-    configure.do_configure()
+    pass
+#    configure.do_configure()
+
+
+def hash_password(string):
+    new_hash = sha512_crypt.encrypt(string)
+    log.warning('Please place this in genconf/config.yaml under \'password\' key:\n{}'.format(new_hash))
+    return new_hash
 
 
 def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
@@ -87,10 +95,9 @@ def determine_config_type(config_path=CONFIG_PATH):
     message = ''
     adv_found = {}
     advanced_cluster_config = {
-        "bootstrap_url": None,
+        "bootstrap_url": 'file:///opt/dcos_install_tmp',
         "docker_remove_delay": None,
         "exhibitor_storage_backend": 'zookeeper',
-        "exhibitor_zk_path": None,
         "gc_delay": None,
         "master_discovery": 'static',
         "roles": None,
@@ -106,6 +113,7 @@ def determine_config_type(config_path=CONFIG_PATH):
         # value is set to, and the value present in the config is not
         # what we want it to be, add it to adv config hash.
         if value is not None and key in config and value != config[key]:
+            log.error('Advanced configuration found in config.yaml: {}: value'.format(key, value))
             adv_found[key] = config[key]
 
     if len(adv_found) > 0:

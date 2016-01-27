@@ -4,8 +4,9 @@ libraries to support the dcos installer.
 """
 import logging
 import os
+from passlib.hash import sha512_crypt
 
-#from dcos_installer.action_lib import configure
+# from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
@@ -15,6 +16,12 @@ log = logging.getLogger()
 def do_configure():
     pass
 #    configure.do_configure()
+
+
+def hash_password(string):
+    new_hash = sha512_crypt.encrypt(string)
+    log.warning('Please place this in genconf/config.yaml under \'password\' key:\n{}'.format(new_hash))
+    return new_hash
 
 
 def create_config_from_post(post_data={}, config_path=CONFIG_PATH):

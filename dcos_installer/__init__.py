@@ -22,15 +22,6 @@ class CliDelegate(AbstractSSHLibDelegate):
 
     def on_done(self, name, result, host_object, host_status_count=None, host_status=None):
         print_header('STAGE {}'.format(name))
-#        for host, output in result.items():
-#            print('#' * 20)
-#            if output['returncode'] != 0:
-#                print(host)
-#                print('STDOUT')
-#                print('{}: {}'.format(host, '\n'.join(output['stdout'])))
-#                print('STDERR')
-#                print('{}: {}'.format(host, '\n'.join(output['stderr'])))
-
 
 def run_loop(action, options):
     assert callable(action)
@@ -70,14 +61,19 @@ class DcosInstaller:
         # parser or anything else
         if args:
             options = self.parse_args(args)
+            if len(options.hash_password) > 0:
+                print_header("HASHING PASSWORD TO SHA512")
+                backend.hash_password(options.hash_password)
+                sys.exit(0)
 
             if options.web:
                 print_header("Starting DCOS installer in web mode")
                 async_server.start(options.port)
 
-            if options.configure:
+            if options.genconf:
                 print_header("EXECUTING CONFIGURATION GENERATION")
                 backend.do_configure()
+                sys.exit(0)
 
             if options.preflight:
                 print_header("EXECUTING PREFLIGHT")
@@ -117,6 +113,13 @@ class DcosInstaller:
         )
 
         parser.add_argument(
+            '--hash-password',
+            default='',
+            type=str,
+            help='Hash a password on the CLI for use in the config.yaml.'
+        )
+
+        parser.add_argument(
             '-v',
             '--verbose',
             action='store_true',
@@ -138,8 +141,8 @@ class DcosInstaller:
             help='Run the web interface.')
 
         mutual_exc.add_argument(
-            '-c',
-            '--configure',
+            '-gen',
+            '--genconf',
             action='store_true',
             default=False,
             help='Execute the configuration generation (genconf).')

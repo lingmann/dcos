@@ -68,7 +68,9 @@ def test_get_config():
   "password": null,
   "ssh_user": null,
   "exhibitor_zk_hosts": null,
-  "process_timeout": 120
+  "process_timeout": 120,
+  "exhibitor_storage_backend": "zookeeper",
+  "exhibitor_zk_path": "/dcos"
 }
     """
     config = backend.get_config(config_path='/tmp/config.yaml')
@@ -122,3 +124,10 @@ def test_success():
     }
     assert got_output == expected_output
 #    os.remove(config_path)
+
+
+def test_hash_password():
+    key = 'test'
+    expect = '$6$rounds=656000$7rjEbF.tcca5V5lY$FNKalkqiWsrTQWIwnaX7.D9JJpo4D0NxV7LUJQHufNce8qknElZ2cdwmUmjh4jY/H7VVZiSNJmP1PrEC95FfY/'
+    got = backend.hash_password(key)
+    assert got == expect

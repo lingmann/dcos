@@ -147,17 +147,6 @@ def read_json_state(action_name):
         return json.load(fh)
 
 
-def _set_failed_hosts(app, json_state, action):
-    if 'hosts' in json_state:
-        if action not in app:
-            app[action] = []
-
-        for host, params in json_state['hosts']:
-            if params['host_status'] != 'success':
-                log.debug('add {} to failed hosts for action {}'.format(host, action))
-                app[action].append(host)
-
-
 def action_action_name(request):
     action_name = request.match_info['action_name']
     # get_action_status(action_name)
@@ -181,7 +170,6 @@ def action_action_name(request):
                 if not json_state:
                     return web.json_response({})
                 _merge_json(result, json_state, action)
-                ###_set_failed_hosts(request.app, json_state, action)
             return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
                                 content_type='application/json')
         if json_state:

@@ -103,19 +103,15 @@ def do_genconf(options):
     # Interpolate the commands in genconf.py to gen library | i.e., set the args
     # in gen/__init__.py from our genconf.py commands
     genconf_config = {}
-    gen_options = gen.get_options_object()
     if not options.interactive:
         genconf_config, config = get_config(options)
-    gen_options.output_dir = '/genconf/serve'
 
     if options.interactive:
-        gen_options.non_interactive = False
-    else:
-        gen_options.non_interactive = True
+        raise NotImplementedError()
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
 
-    gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'], genconf_config)
+    gen_out = do_provider(bash, ['bash', 'centos', 'onprem'], genconf_config)
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
@@ -124,7 +120,7 @@ def do_genconf(options):
     pkgpanda.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
-def do_provider(options, provider_module, mixins, genconf_config):
+def do_provider(provider_module, mixins, genconf_config):
     # We set the bootstrap_id in env as to not expose it to users but still make it switchable
     if 'BOOTSTRAP_ID' in os.environ:
         bootstrap_id = os.environ['BOOTSTRAP_ID']
@@ -151,7 +147,6 @@ def do_provider(options, provider_module, mixins, genconf_config):
 
     gen_out = gen.generate(
         arguments=arguments,
-        options=options,
         mixins=mixins
         )
     provider_module.generate(gen_out, '/genconf/serve')

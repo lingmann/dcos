@@ -653,7 +653,7 @@ def make_channel_artifacts(metadata):
 
     provider_data = {}
     providers = load_providers()
-    for name, module in providers.items():
+    for name, module in sorted(providers.items()):
         bootstrap_url = metadata['repository_url']
 
         # If the particular provider has its own storage by the same name then

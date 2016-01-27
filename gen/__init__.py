@@ -14,7 +14,6 @@ NOTE:
       have people on.
 """
 
-import collections
 import importlib
 import inspect
 import json
@@ -30,7 +29,6 @@ from tempfile import TemporaryDirectory
 import yaml
 from pkg_resources import resource_string
 from pkgpanda import PackageId
-from pkgpanda.build import hash_checkout
 from pkgpanda.util import make_tar
 
 import gen.template
@@ -188,76 +186,101 @@ def update_dictionary(base, addition):
 
 
 def get_function_parameters(function):
-    return inspect.signature(function).parameters
+    return set(inspect.signature(function).parameters)
 
 
-class LazyArgumentCalculator(collections.Mapping):
-
-    def __init__(self, must_fn, can_fn, arguments):
-        self._calculators = deepcopy(must_fn)
-        self._calculators.update(can_fn)
-        self._arguments = arguments
+# Depth first search argument calculator. Detects cycles, as well as unmet
+# dependencies.
+# TODO(cmaloney): Separate chain / path building when unwinding from the root
+#                 error messages.
+class DFSArgumentCalculator():
+    def __init__(self, setters):
+        self._setters = setters
+        self._arguments = dict()
         self.__in_progress = set()
+
+    def _calculate_argument(self, name):
+        # Filter out any setters which have predicates / conditions which are
+        # satisfiably false.
+        def all_conditions_met(setter):
+            for condition_name, condition_value in setter.conditions:
+                try:
+                    if self[condition_name] != condition_value:
+                        return False
+                except AssertionError as ex:
+                    raise AssertionError(
+                        str(ex) +
+                        " trying to test condition {}={}".format(condition_name, condition_value))
+            return True
+
+        # Find the right setter to calculate the argument.
+        feasible = list(filter(all_conditions_met, self._setters.get(name, list())))
+
+        if len(feasible) == 0:
+            raise AssertionError("No known way to set {}".format(name))
+
+        # Filtier out all optional setters if there is more than one way to set.
+        if len(feasible) > 1:
+            feasible = list(filter(lambda setter: not setter.is_optional, feasible))
+
+        assert len(feasible) > 0, "Had multiple optionals. Template internal error."
+
+        # Must be calculated but user tried to provide.
+        if len(feasible) == 2 and (feasible[0].is_user or feasible[1].is_user):
+            raise AssertionError(
+                "{} must be calculated but was explicitly set in config. Remove it from the config.".format(name))
+
+        if len(feasible) > 1:
+            # TODO(cmaloney): Include the different calc functions / conditions.
+            raise AssertionError("Internal error, Multiple ways to set {}.".format())
+
+        setter = feasible[0]
+
+        # Get values for the parameters, then call. the setter function.
+        kwargs = {}
+        for parameter in setter.parameters:
+            kwargs[parameter] = self[parameter]
+
+        return setter.calc(**kwargs)
 
     def __getitem__(self, name):
         if name in self._arguments:
+            if self._arguments[name] is None:
+                raise AssertionError("{} cannot be calculated. See previous error.".format(name))
             return self._arguments[name]
 
         # Detect cycles by checking if we're in the middle of calculating the
         # argument being asked for
         if name in self.__in_progress:
-            raise AssertionError("Cycle detected. Encountered {}".format(name))
+            raise AssertionError("Internal error, cycle detected. re-encountered {}".format(name))
 
+        self.__in_progress.add(name)
         try:
-            self.__in_progress.add(name)
-            calc_func = self._calculators[name]
-            parameters = get_function_parameters(self._calculators[name])
-            # Iterate over the argument list, and force all the arguments to
-            # be calculated. This pulls that out of the implicit in the body
-            # of every function, allowing incremental work towards using the
-            # full graph of parameters.
-            kwargs = {}
-            for parameter in parameters:
-                kwargs[parameter] = self[parameter]
-
-            self._arguments[name] = calc_func(**kwargs)
+            self._arguments[name] = self._calculate_argument(name)
+            return self._arguments[name]
         except AssertionError as ex:
+            self._arguments[name] = None
             raise AssertionError(str(ex) + " while calculating {}".format(name)) from ex
-        return self._arguments[name]
+        except:
+            self._arguments[name] = None
+            raise
+        finally:
+            self.__in_progress.remove(name)
 
-    def __iter__(self):
-        raise NotImplementedError()
+    def calculate(self, scope):
+        # TODO(cmaloney): Collect exceptions and return as structured results.
+        # Force calculation of all arguments by accessing the arguments in this
+        # scope and recursively all sub-scopes.
+        for name in scope.get('variables', set()):
+            self[name]
 
-    def __len__(self):
-        return len(self._arguments)
+        for name, sub_scope in scope.get('sub_scopes', 'dict').items():
+            choice = self[name]
+            if choice not in sub_scope:
+                raise AssertionError("Illegal choice. {} for {}".format(choice, name))
+            self.calculate(sub_scope[choice])
 
-    def get_arguments(self):
         return self._arguments
-
-
-def calculate_args(must_fn, can_fn, arguments):
-    start_arguments = deepcopy(arguments)
-
-    # Build the argument dictionary
-    arg_calculator = LazyArgumentCalculator(must_fn, can_fn, arguments)
-
-    # Force calculation of all arguments by accessing
-    for key in must_fn.keys():
-        if key in start_arguments:
-            log.error(must_fn[key])
-            raise AssertionError("Argument which must be calculated '", key, "' manually specified in arguments")
-
-        arg_calculator[key]
-
-    # Force calculation of optional arguments.
-    # Seperated from mandatory ones since we just pass on pre-specified
-    for key in can_fn.keys():
-        if key in start_arguments:
-            pass
-
-        arg_calculator[key]
-
-    return arg_calculator.get_arguments()
 
 
 json_prettyprint_args = {
@@ -296,12 +319,6 @@ def add_arguments(parser):
         help='Logging level. Default: info. Options: info, debug.')
 
     return parser
-
-
-def get_options_object():
-    return Bunch({
-        'non_interactive': True,
-        })
 
 
 def do_gen_package(config, package_filename):
@@ -475,8 +492,8 @@ def validate_given(validate_fns, arguments):
         # Get out the one and only parameter's name. This will break really badly
         # if functions have more than one parameter (We'll call for
         # each parameter with only one parameter)
-        for param in parameters.keys():
-            fns_by_arg[param] = fn
+        for parameter in parameters:
+            fns_by_arg[parameter] = fn
 
     errors = {}
 
@@ -492,30 +509,68 @@ def validate_given(validate_fns, arguments):
     return errors
 
 
+class Setter():
+    # NOTE: value may either be a function or a string.
+    def __init__(self, name, value, is_optional, conditions, is_user):
+        assert isinstance(conditions, list)
+        self.name = name
+        self.is_optional = is_optional
+        self.conditions = conditions
+        self.is_user = is_user
+
+        def get_value():
+            return value
+
+        if isinstance(value, str):
+            self.calc = get_value
+            self.parameters = set()
+        else:
+            assert callable(value), "{} should be a string or callable. Got: {}".format(name, value)
+            self.calc = value
+            self.parameters = get_function_parameters(value)
+
+    def __repr__(self):
+        return "<Setter {}{}{}, conditions: {}{}>".format(
+            self.name,
+            ", optional" if self.is_optional else "",
+            ", user" if self.is_user else "",
+            self.conditions,
+            ", parameters {}".format(self.parameters))
+
+
+# Validate all arguments passed in actually correspond to parameters to
+# prevent human typo errors.
+# This includes all possible sub scopes (Including config for things you don't use is fine).
+def flatten_parameters(scoped_parameters):
+    flat = copy(scoped_parameters.get('variables', set()))
+    for name, possible_values in scoped_parameters.get('sub_scopes', dict()).items():
+        flat.add(name)
+        for sub_scope in possible_values.values():
+            flat |= flatten_parameters(sub_scope)
+
+    return flat
+
+
 def do_generate(
-        options,
         mixins,
         extra_templates,
-        arguments,
+        user_arguments,
         cc_package_files):
 
     # TODO(cmaloney): Remove flattening and teach lower code to operate on list
     # of mixins.
     templates = dict()
-    must_calc = dict()
-    can_calc = dict()
+    setters = dict()
     validate = list()
-    defaults = dict()
-    conditional = dict()
 
     # Make sure all user provided arguments are strings.
-    validate_arguments_strings(arguments)
+    validate_arguments_strings(user_arguments)
 
     # Empty string (top level directory) is always implicitly included
     assert '' not in mixins
     assert None not in mixins
 
-    cluster_packages = list(sorted(set(
+    package_names = list(sorted(set(
         ['dcos-config', 'dcos-detect-ip', 'dcos-metadata'])))
     core_templates = ['cloud-config', 'dcos-services']
 
@@ -525,58 +580,40 @@ def do_generate(
     # Make sure no mixins were given twice
     assert len(set(mixins)) == len(mixins), "Repeated mixin in list of mixins: {}".format(mixins)
 
+    def add_setter(name, value, is_optional, conditions, is_user):
+        setters.setdefault(name, list()).append(Setter(name, value, is_optional, conditions, is_user))
+
+    # Add in all user arguments as setters
+    for name, value in user_arguments.items():
+        add_setter(name, value, False, [], True)
+
     for mixin in mixins:
-        mixin_templates = get_templates(mixin, cluster_packages, core_templates)
+        mixin_templates = get_templates(mixin, package_names, core_templates)
         templates = merge_dictionaries(templates, mixin_templates)
-
-        mixin_funcs = get_mixin_functions(mixin)
-
-        # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
-        # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
-        assert mixin_funcs.keys() <= {'validate', 'can', 'defaults', 'must', 'conditional', 'arguments'}
 
         # TODO(cmaloney): merge_dictionaries, hard error on duplicate leaf keys.
         # Right now we arbitrarily get one of them in conflicts.
-        validate += mixin_funcs.get('validate', list())
-        must_calc.update(mixin_funcs.get('must', dict()))
-        can_calc.update(mixin_funcs.get('can', dict()))
-        arguments.update(mixin_funcs.get('arguments', dict()))
-        defaults.update(mixin_funcs.get('defaults', dict()))
-        conditional.update(mixin_funcs.get('conditional', dict()))
 
-    # The template parameters are what we're aiming for. All must have values
-    # before we can render the templates.
-    parameters = get_parameters(templates)
+        def add_conditional_scope(scope, conditions):
+            nonlocal validate
 
-    # TODO(cmaloney): Support recursively resolving conditionals
-    # Ask / prompt about "conditionals"
-    for name, cond_options in conditional.items():
-        parameters['variables'].add(name)
-        # Prompt if the user hasn't already chosen which option to use.
-        if name not in arguments:
-            arguments[name] = prompt_argument(
-                options.non_interactive,
-                name,
-                can_calc=False,
-                default=None,
-                possible_values=cond_options.keys())
-        choice = arguments[name]
+            # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
+            # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
+            assert scope.keys() <= {'validate', 'can', 'defaults', 'must', 'arguments', 'conditional'}
 
-        # TODO(cmaloney): Cleaner error message / proper validation.
-        if choice not in cond_options.keys():
-            log.error("Value for %s must be in %s. Got %s", name, ",".join(cond_options.keys()), choice)
-            sys.exit(1)
+            validate += scope.get('validate', list())
 
-        # TODO(cmaloney): These are a _lot_ like loading a modules entry.
-        # Grab the must, can, validate functions out and attach them to the
-        # mixin's top level lists
-        chosen = cond_options[choice]
-        assert 'parameters' not in chosen  # Simplicity: Can't set parameters anymore.
-        must_calc.update(chosen.get("must", dict()))
-        can_calc.update(chosen.get("can", dict()))
-        validate += chosen.get("validate", list())
-        arguments.update(chosen.get("arguments", dict()))
-        defaults.update(chosen.get("defaults", dict()))
+            for name, fn in chain(scope.get('must', dict()).items(), scope.get('arguments', dict()).items()):
+                add_setter(name, fn, False, conditions, False)
+
+            for name, fn in chain(scope.get('can', dict()).items(), scope.get('defaults', dict()).items()):
+                add_setter(name, fn, True, conditions, False)
+
+            for name, cond_options in scope.get('conditional', dict()).items():
+                for value, sub_scope in cond_options.items():
+                    add_conditional_scope(sub_scope, conditions + [(name, value)])
+
+        add_conditional_scope(get_mixin_functions(mixin), [])
 
     # Make sure only yaml templates have more than one mixin providing them / are provided more than once.
     for name, template_list in templates.items():
@@ -590,89 +627,29 @@ def do_generate(
 
     # Inject extra_templates and parameters inside.
     templates.update(extra_templates)
-    merge_dictionaries(parameters, get_parameters(extra_templates))
+    mandatory_parameters = get_parameters(templates)
 
-    # TODO(cmaloney): For any parameter which we have a 'can' for, add the
-    # arguments for that can as parameters and accept the can.
-    # Must can take in new parameters as arguments, update the
-    # accepted paramters with those.
-    for name, func in must_calc.items():
-        parameters['variables'].add(name)
-        parameters['variables'] |= set(inspect.signature(func).parameters)
+    all_parameters = flatten_parameters(mandatory_parameters)
+    for setter_list in setters.values():
+        for setter in setter_list:
+            all_parameters |= setter.parameters
 
-    # Validate all arguments passed in actually correspond to parameters to
-    # prevent human typo errors.
-    # This includes all possible sub scopes (Including config for things you don't use is fine).
-    def flatten_parameters(scoped_parameters):
-        flat = copy(scoped_parameters.get('variables', set()))
-        for name, possible_values in scoped_parameters.get('sub_scopes', dict()).items():
-            flat.add(name)
-            for sub_scope in possible_values.values():
-                flat |= flatten_parameters(sub_scope)
-
-        return flat
-
-    flat_parameters = flatten_parameters(parameters)
-    for argument in arguments:
-        if argument not in flat_parameters:
+    for argument in user_arguments:
+        if argument not in all_parameters:
             log.error("ERROR: Argument '%s' given but not in possible parameters: %s",
                       argument,
-                      ', '.join(flat_parameters))
+                      ', '.join(all_parameters))
             sys.exit(1)
 
-    # Calculate the set of parameters which still need to be input.
-    can_set = flat_parameters - arguments.keys()
+    def add_builtin(name, value):
+        add_setter(name, value, False, [], False)
 
-    # Remove calculated parameters from those to calculate.
-    can_set -= must_calc.keys()
-
-    # Apply all defaults and calculated values.
-    for name in copy(can_set):
-        if name in defaults:
-            arguments[name] = defaults[name]
-            can_set.remove(name)
-        elif name in can_calc:
-            can_set.remove(name)
-
-    # Cluster packages is particularly magic
-    # as it depends on the config filename which depends on the initial set
-    # of arguments.
-    can_set.remove('cluster_packages')
-
-    # Prompt user to provide all unset arguments. If a config file was specified
-    # output
-    if not options.non_interactive:
-        user_arguments = prompt_arguments(options.non_interactive, can_set, defaults, can_calc)
-    else:
-        user_arguments = dict()
-    arguments = update_dictionary(arguments, user_arguments)
-
-    # Set arguments from command line flags.
-    arguments['mixins'] = json.dumps(mixins)
+    add_builtin('mixins', json.dumps(mixins, **json_prettyprint_args))
+    add_builtin('package_names', json.dumps(list(package_names), **json_prettyprint_args))
+    add_builtin('user_arguments', json.dumps(user_arguments, **json_prettyprint_args))
 
     # Calculate the remaining arguments.
-    arguments = calculate_args(must_calc, can_calc, arguments)
-    # ID of this configuration is a hash of the parameters
-    config_id = hash_checkout(arguments)
-    arguments['config_id'] = config_id
-
-    # Calculate the set of cluster package ids, put them into 'cluster_packages'
-    # This isn't included in the 'final arguments', but it is computable from it
-    # so this isn't a "new" argument, just a "derived" argument.
-    def get_package_id(package_name):
-        pkg_id_str = "{}--setup_{}".format(package_name, config_id)
-        # validate the pkg_id_str generated is a valid PackageId
-        PackageId(pkg_id_str)
-        return pkg_id_str
-
-    cluster_package_ids = []
-
-    # Calculate all the cluster package IDs.
-    for package_name in cluster_packages:
-        cluster_package_ids.append(get_package_id(package_name))
-
-    # NOTE: Not pretty-printed to make it easier to drop into YAML as a one-liner
-    arguments['cluster_packages'] = json.dumps(cluster_package_ids)
+    arguments = DFSArgumentCalculator(setters).calculate(mandatory_parameters)
 
     # Validate arguments.
     validate_arguments_strings(arguments)
@@ -681,33 +658,6 @@ def do_generate(
         for key, msg in errors.items():
             log.error("ERROR: Argument '%s' with value '%s' didn't pass validation: %s", key, arguments[key], msg)
         sys.exit(1)
-
-    def check_parameter_set(param_set):
-        assert isinstance(param_set, set)
-
-        unset = param_set - arguments.keys()
-        if len(unset) > 0:
-            log.error("Unset variables in configuration: %s", ','.join(unset))
-            sys.exit(1)
-
-    # Check that all active scopes have all variables set
-    def check_parameters(scoped_parameters):
-        check_parameter_set(scoped_parameters.get('variables', set()))
-
-        for name, possible_values in scoped_parameters.get('sub_scopes', dict()).items():
-            check_parameter_set({name})
-
-            choice = arguments[name]
-            if choice not in possible_values.keys():
-                log.error("ERROR: Invalid choice for '%s'. Must be one of %s. Got '%s'",
-                          name,
-                          ', '.join(possible_values),
-                          choice)
-                sys.exit(1)
-
-            check_parameters(possible_values[choice])
-
-    check_parameters(parameters)
 
     log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 
@@ -754,17 +704,17 @@ def do_generate(
     cluster_package_info = {}
 
     # Render all the cluster packages
-    for package_name in cluster_packages:
-        package_id = get_package_id(package_name)
+    for package_id_str in json.loads(arguments['cluster_packages']):
+        package_id = PackageId(package_id_str)
         package_filename = 'packages/{}/{}.tar.xz'.format(
-            package_name,
-            package_id)
+            package_id.name,
+            package_id_str)
 
         # Build the package
-        do_gen_package(rendered_templates[package_name], package_filename)
+        do_gen_package(rendered_templates[package_id.name], package_filename)
 
-        cluster_package_info[package_name] = {
-            'id': package_id,
+        cluster_package_info[package_id.name] = {
+            'id': package_id_str,
             'filename': package_filename
         }
 
@@ -800,8 +750,6 @@ def do_generate(
 
 
 def generate(
-        # CLI options
-        options,
         # Which template directories to include
         mixins,
         # Arbitrary jinja template to parse
@@ -811,4 +759,4 @@ def generate(
         cc_package_files=[]):
 
     log.info("Generating configuration files...")
-    return do_generate(options, mixins, extra_templates, arguments, cc_package_files)
+    return do_generate(mixins, extra_templates, arguments, cc_package_files)

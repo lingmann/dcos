@@ -145,10 +145,19 @@ def do_provider(provider_module, mixins, genconf_config):
     # update arguments with the genconf_config
     arguments.update(genconf_config)
 
-    gen_out = gen.generate(
-        arguments=arguments,
-        mixins=mixins
-        )
+    try:
+        gen_out = gen.generate(
+            arguments=arguments,
+            mixins=mixins
+            )
+    except gen.ValidationError as ex:
+        for key, error in ex.errors:
+            if key == '':
+                log.error("Error: %s", error)
+            else:
+                log.error("Error in configration key %s: %s", key, error)
+        sys.exit(1)
+
     provider_module.generate(gen_out, '/genconf/serve')
     return gen_out
 

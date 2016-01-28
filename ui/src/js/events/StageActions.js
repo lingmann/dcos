@@ -42,7 +42,7 @@ const StageActions = {
       }
     };
 
-    if (data && data.retry && Object.keys(data) === 1) {
+    if (data && data.retry && Object.keys(data).length === 1) {
       options.data = 'retry=true';
     }
 

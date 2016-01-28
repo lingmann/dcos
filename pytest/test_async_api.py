@@ -391,6 +391,23 @@ def test_configure_type(monkeypatch, mocker):
             expected)
 
 
+def test_action_deploy_xxx(monkeypatch, mocker):
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
+    route = '/api/v{}/action/deploy'.format(version)
+
+    mocked_read_json_state = mocker.patch('dcos_installer.async_server.read_json_state')
+
+    mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
+    mocked_get_config.return_value = {"test": "config"}
+
+    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
+    mocked_install_dcos.return_value = (i for i in range(10))
+
+    mocked_read_json_state.side_effect = action_side_effect_return_config
+    res = client.request(route, method='GET')
+
+
 # def test_serve_assets(monkeypatch):
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)

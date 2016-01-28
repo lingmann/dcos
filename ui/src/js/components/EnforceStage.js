@@ -2,7 +2,8 @@ import mixin from 'reactjs-mixin';
 import React from 'react';
 import {StoreMixin} from 'mesosphere-shared-reactjs';
 
-import IconSpinner from './icons/IconSpinner';
+import AlertPanel from './AlertPanel';
+import IconLoadingIndicator from './icons/IconLoadingIndicator';
 import InstallerStore from '../stores/InstallerStore';
 import SetupStore from '../stores/SetupStore';
 
@@ -110,20 +111,26 @@ class EnforceStage extends mixin(StoreMixin) {
   }
 
   getAdvancedConfigurationWarning() {
-    return 'You cannot modify this configuration.';
+    return (
+      <AlertPanel content="Please use the command line to install DCOS."
+        heading="Advanced Configuration Detected" />
+    );
   }
 
   getLoadingScreen() {
     return (
       <div className="spinner-wrapper flex-box flex-box-align-vertical-center
         flex-box-align-horizontal-center">
-        <IconSpinner />
+        <IconLoadingIndicator />
       </div>
     );
   }
 
   getServerError() {
-    return 'Server error.'
+    return (
+      <AlertPanel content="Please try again later."
+        heading="Cannot Connect to Server" />
+    );
   }
 
   render() {
@@ -132,9 +139,9 @@ class EnforceStage extends mixin(StoreMixin) {
     //   return this.getServerError();
     // }
 
-    // if (this.state.configType.type === 'advanced') {
-    //   return this.getAdvancedConfigurationWarning();
-    // }
+    if (this.state.configType.type === 'advanced') {
+      return this.getAdvancedConfigurationWarning();
+    }
 
     // let state = this.state;
     // if (this.isLoading()) {

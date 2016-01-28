@@ -221,12 +221,28 @@ def action_action_name(request):
                     deploy_executed = True
 
             if deploy_executed:
-                return web.json_response({'status': 'deploy was already executed, skipping'})
+                for new_action_str in action:
+                    new_json_state = read_json_state(new_action_str)
+                    if 'retry' in params and params['retry'] == 'true':
+                        failed_hosts = []
+                        if 'hosts' in new_json_state:
+                            for deploy_host, deploy_params in new_json_state['hosts'].items():
+                                if deploy_params['host_status'] != 'success':
+                                    failed_hosts.append(deploy_host)
+                        log.debug('failed hosts: {}, action: {}'.format(failed_hosts, new_action_str))
+                        new_action = action_map.get(new_action_str)
+                        if failed_hosts:
+                            yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir,
+                                                                hosts=failed_hosts, try_remove_stale_dcos=True,
+                                                                **params))
+                else:
+                    return web.json_response({'status': 'deploy was already executed, skipping'})
             else:
                 for new_action_str in action:
                     print_header('EXECUTING {}'.format(new_action_str))
                     new_action = action_map.get(new_action_str)
                     yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
+                return web.json_response({'status': 'retry {} started'.format(action)})
         else:
             yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
         return web.json_response({'status': '{} started'.format(action_name)})

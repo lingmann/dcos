@@ -53,6 +53,7 @@ class Postflight extends mixin(StoreMixin) {
   }
 
   goToSuccess() {
+    InstallerStore.processCurrentStage(null);
     this.context.router.push('/success');
   }
 
@@ -124,7 +125,9 @@ class Postflight extends mixin(StoreMixin) {
   }
 
   onPostflightStoreStateFinish() {
-    this.goToSuccess();
+    if (!PostFlightStore.isFailed()) {
+      this.goToSuccess();
+    }
   }
 
   render() {
@@ -132,7 +135,7 @@ class Postflight extends mixin(StoreMixin) {
     let agentStatus = PostFlightStore.get('agents');
 
     let completed = PostFlightStore.isCompleted();
-    let failed = masterStatus.errors > 0;
+    let failed = PostFlightStore.isFailed();
     let totalErrors = masterStatus.errors + agentStatus.errors;
     let totalAgents = agentStatus.totalAgents;
     let totalMasters = masterStatus.totalMasters;

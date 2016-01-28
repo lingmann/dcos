@@ -81,7 +81,12 @@ def fetch_bootstrap(bootstrap_id):
     # Check if there is an in-container copy of the bootstrap tarball, and
     # if so copy it across
     local_cache_filename = "/artifacts/" + bootstrap_filename
-    assert os.path.exists(local_cache_filename)
+    if not os.path.exists(local_cache_filename):
+        log.error("""
+genconf/serve/bootstrap/{} not found, please make sure the correct BOOTSTRAP_ID is set in the environment.
+""".format(bootstrap_filename))
+        raise
+
     log.info("Copying bootstrap out of cache")
     try:
         subprocess.check_output(['mkdir', '-p', '/genconf/serve/bootstrap/'])

@@ -25,6 +25,9 @@ class DCOSConfig(dict):
 # The name of your DCOS cluster. Visable in the DCOS user interface.
 cluster_name: 'Mesosphere: The Data Center Operating System'
 
+# Master discovery must be static
+master_discovery: static
+
 # The IPv4 addresses of your master hosts
 master_list:
 -

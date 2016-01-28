@@ -2,4 +2,4 @@
 export DCOS_INTALLER_COMMIT=deadbeef
 export DCOS_IMAGE_COMMIT=deadbeef
 export CHANNEL_NAME=testing/continuous
-export BOOTSTRAP_ID=e2ade83b3197150980714635c6752bc9ece1e0ca
+export BOOTSTRAP_ID=52bde24802c8e987bcb5beed72ddf1edfb0fab

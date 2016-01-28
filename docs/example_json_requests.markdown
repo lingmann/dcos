@@ -282,4 +282,17 @@ curl -XGET 10.33.2.20:9000/api/v1/action/postflight
 }
 ```
 ## Success
+When the postflight runs successfully, you can test the endpoint with:
+
+```
+curl -XGET 10.33.2.20:9000/api/v1/success
+```
+
+**Example Response**:
+
+```json
+{"master_count": 1, "agent_count": 1, "success": "http://10.0.0.1"}
+```
+
+However, this step is probably unneccessary as we should be running the integration test script which waits to determine if the cluster is in a running state. We should execute `action/postflight` after that step to ensure it's working as expected.
 

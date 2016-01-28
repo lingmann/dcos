@@ -4,10 +4,10 @@ package:
       {
       }
   - path: /bin/detect_ip
-    mode: 755
+    permissions: "0755"
     content: {{ ip_detect_contents }}
   - path: /check/check_ip
-    mode: 755
+    permissions: "0755"
     content: |
       #!/bin/bash
       ip=$(/opt/mesosphere/bin/detect_ip)

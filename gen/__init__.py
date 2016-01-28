@@ -599,14 +599,14 @@ def do_generate(
 
             # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
             # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
-            assert scope.keys() <= {'validate', 'can', 'defaults', 'must', 'arguments', 'conditional'}
+            assert scope.keys() <= {'validate', 'default', 'must', 'conditional'}
 
             validate += scope.get('validate', list())
 
-            for name, fn in chain(scope.get('must', dict()).items(), scope.get('arguments', dict()).items()):
+            for name, fn in scope.get('must', dict()).items():
                 add_setter(name, fn, False, conditions, False)
 
-            for name, fn in chain(scope.get('can', dict()).items(), scope.get('defaults', dict()).items()):
+            for name, fn in scope.get('default', dict()).items():
                 add_setter(name, fn, True, conditions, False)
 
             for name, cond_options in scope.get('conditional', dict()).items():

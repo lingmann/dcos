@@ -2,11 +2,12 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
+import json
 import logging
 import os
 from passlib.hash import sha512_crypt
 
-# from dcos_installer.action_lib import configure
+from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
 from dcos_installer.util import CONFIG_PATH
 
@@ -14,8 +15,29 @@ log = logging.getLogger()
 
 
 def do_configure():
-    pass
-#    configure.do_configure()
+    config = get_config()
+    # Decouple the configuration to be just what gen expects
+    gen_config = {
+        'bootstrap_url': None,
+        'cluster_name': None,
+        'exhibitor_storage_backend': None,
+        'exhibitor_zk_hosts': None,
+        'exhibitor_zk_path': None,
+        'master_discovery': None,
+        'master_list': None,
+        'resolvers': None}
+    for key, value in config.items():
+        if key in gen_config:
+            log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
+            # stringify the keys as they're added in:
+            if isinstance(value, list):
+                log.debug("Caught list, transforming to JSON string: %s", list)
+                value = json.dumps(value)
+            else:
+                pass
+            gen_config[key] = value
+
+    configure.do_configure(gen_config)
 
 
 def hash_password(string):

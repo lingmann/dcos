@@ -39,7 +39,8 @@ pushd /pkg/src/curl
             --without-polarssl \
             --without-spnego \
             --without-winidn \
-            --without-winssl
+            --without-winssl \
+            --with-ca-bundle=/opt/mesosphere/active/python-requests/lib/python3.4/site-packages/requests/cacert.pem
 make -j8
 make install
 popd

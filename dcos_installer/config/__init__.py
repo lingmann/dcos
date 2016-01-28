@@ -47,8 +47,8 @@ resolvers:
 - 8.8.4.4
 
 # DCOS username and password
-username:
-password:
+superuser_username:
+superuser_password:
 
 ssh_user:
 ssh_port: 22

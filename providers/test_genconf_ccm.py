@@ -6,7 +6,6 @@ REQUIREMENTS:
     dcos_generate_config.sh artifact is in current working dir
 """
 import os
-import pty
 import random
 import stat
 import string
@@ -26,9 +25,8 @@ def run_cmd(mode, expect_errors=False):
     print("Running: dcos_generate_config with mode", mode)
     # NOTE: We use `bash` as a wrapper here to make it so dcos_generate_config.sh
     # doesn't have to be executable.
-    master, slave = pty.openpty()
     cmd = ['bash', './dcos_generate_config.sh', '--log-level', 'debug', mode]
-    p = subprocess.Popen(cmd, stdin=master, stdout=subprocess.PIPE)
+    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)
     out = p.communicate()[0].decode()
     # TODO(cmaloney): Only print on an error.
     print(out)

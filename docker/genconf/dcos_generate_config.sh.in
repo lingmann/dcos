@@ -16,6 +16,5 @@ fi
 
 echo "Running mesosphere/dcos-genconf docker with BUILD_DIR set to $PWD/genconf"
 mkdir -p genconf
-docker_cmd="docker run -ti -v $(pwd)/genconf/:/genconf {docker_image_name} $@"
-script -qfe -c "$docker_cmd"
-exit 0
+docker run -i -v $(pwd)/genconf/:/genconf {docker_image_name} "$@"
+exit $?

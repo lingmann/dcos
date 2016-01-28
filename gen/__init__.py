@@ -189,6 +189,15 @@ def get_function_parameters(function):
     return set(inspect.signature(function).parameters)
 
 
+class CalculatorError(Exception):
+    def __init__(self, message, chain=[]):
+        assert isinstance(message, str)
+        assert isinstance(chain, list)
+        self.message = message
+        self.chain = chain
+        super().__init__(message)
+
+
 # Depth first search argument calculator. Detects cycles, as well as unmet
 # dependencies.
 # TODO(cmaloney): Separate chain / path building when unwinding from the root
@@ -198,6 +207,7 @@ class DFSArgumentCalculator():
         self._setters = setters
         self._arguments = dict()
         self.__in_progress = set()
+        self._errors = dict()
 
     def _calculate_argument(self, name):
         # Filter out any setters which have predicates / conditions which are
@@ -207,17 +217,17 @@ class DFSArgumentCalculator():
                 try:
                     if self[condition_name] != condition_value:
                         return False
-                except AssertionError as ex:
-                    raise AssertionError(
-                        str(ex) +
-                        " trying to test condition {}={}".format(condition_name, condition_value))
+                except CalculatorError as ex:
+                    raise CalculatorError(
+                        ex.msg,
+                        ex.chain + ['trying to test condition {}={}'.format(condition_name, condition_value)]) from ex
             return True
 
         # Find the right setter to calculate the argument.
         feasible = list(filter(all_conditions_met, self._setters.get(name, list())))
 
         if len(feasible) == 0:
-            raise AssertionError("No known way to set {}".format(name))
+            raise CalculatorError("No known way to set {}".format(name), [])
 
         # Filtier out all optional setters if there is more than one way to set.
         if len(feasible) > 1:
@@ -227,12 +237,12 @@ class DFSArgumentCalculator():
 
         # Must be calculated but user tried to provide.
         if len(feasible) == 2 and (feasible[0].is_user or feasible[1].is_user):
-            raise AssertionError(
-                "{} must be calculated but was explicitly set in config. Remove it from the config.".format(name))
+            raise CalculatorError("{} must be calculated, but was explicitly set in the " +
+                                  "configuration. Remove it from the configuration.".format(name))
 
         if len(feasible) > 1:
-            # TODO(cmaloney): Include the different calc functions / conditions.
-            raise AssertionError("Internal error, Multiple ways to set {}.".format())
+            raise CalculatorError("Internal error: Multiple ways to set {}.".format(name),
+                                  ["options: {}".format(feasible)])
 
         setter = feasible[0]
 
@@ -246,39 +256,52 @@ class DFSArgumentCalculator():
     def __getitem__(self, name):
         if name in self._arguments:
             if self._arguments[name] is None:
-                raise AssertionError("{} cannot be calculated. See previous error.".format(name))
+                raise CalculatorError("{} cannot be calculated. See other errors for key error.".format(name))
             return self._arguments[name]
 
         # Detect cycles by checking if we're in the middle of calculating the
         # argument being asked for
         if name in self.__in_progress:
-            raise AssertionError("Internal error, cycle detected. re-encountered {}".format(name))
+            raise CalculatorError("Internal error. cycle detected. re-encountered {}".format(name))
 
         self.__in_progress.add(name)
         try:
             self._arguments[name] = self._calculate_argument(name)
             return self._arguments[name]
-        except AssertionError as ex:
+        except CalculatorError as ex:
             self._arguments[name] = None
-            raise AssertionError(str(ex) + " while calculating {}".format(name)) from ex
+            raise CalculatorError(ex.message, ex.chain + ['while calculating {}'.format(name)]) from ex
         except:
             self._arguments[name] = None
             raise
         finally:
             self.__in_progress.remove(name)
 
+    # Force calculation of all arguments by accessing the arguments in this
+    # scope and recursively all sub-scopes.
     def calculate(self, scope):
-        # TODO(cmaloney): Collect exceptions and return as structured results.
-        # Force calculation of all arguments by accessing the arguments in this
-        # scope and recursively all sub-scopes.
         for name in scope.get('variables', set()):
-            self[name]
+            try:
+                self[name]
+            except CalculatorError as ex:
+                self._errors[name] = ex.message
+                log.debug("Error calculating %s: %s. Chain: %s", name, ex.message, ex.chain)
 
         for name, sub_scope in scope.get('sub_scopes', 'dict').items():
-            choice = self[name]
+            try:
+                choice = self[name]
+            except CalculatorError as ex:
+                self._errors[name] = ex.message
+                log.debug("Error calculating %s: %s. Chain: %s", name, ex.message, ex.chain)
+                continue
+
             if choice not in sub_scope:
-                raise AssertionError("Illegal choice. {} for {}".format(choice, name))
+                self._errors[name] = CalculatorError("Illegal choice {}. Must choose one of {}".format(
+                    choice, ", ".join(sub_scope.keys())))
             self.calculate(sub_scope[choice])
+
+        if len(self._errors):
+            raise ValidationError(self._errors)
 
         return self._arguments
 
@@ -448,19 +471,16 @@ def get_mixin_functions(name):
 
 
 def validate_arguments_strings(arguments):
-    has_error = False
+    errors = dict()
     # Validate that all keys and vlaues of arguments are strings
     for k, v in arguments.items():
         if not isinstance(k, str):
-            print("ERROR: all keys in arguments must be strings. '{}' isn't.".format(k))
-            has_error = True
+            errors[''] = "All keys in arguments must be strings. '{}' isn't.".format(k)
         if not isinstance(v, str):
-            print("ERROR: all values in arguments must be strings. Value for argument ", k,
-                  " isn't. Given value: {}".format(v))
-            has_error = True
-
-    if has_error:
-        sys.exit(1)
+            errors[k] = ("All values in arguments must be strings. Value for argument {} isn't. " +
+                         "Given value: {}").format(k, v)
+    if len(errors):
+        raise ValidationError(errors)
 
 
 def extract_files_with_path(start_files, paths):
@@ -484,8 +504,11 @@ def extract_files_with_path(start_files, paths):
 
 
 def validate_given(validate_fns, arguments):
-    fns_by_arg = dict()
+    errors = {}
 
+    # Re-arrange the validation functions so we can more easily access them by
+    # argument name.
+    fns_by_arg = dict()
     for fn in validate_fns:
         parameters = get_function_parameters(fn)
         assert len(parameters) == 1, "Validate functions must take exactly one parameter currently."
@@ -495,18 +518,18 @@ def validate_given(validate_fns, arguments):
         for parameter in parameters:
             fns_by_arg[parameter] = fn
 
-    errors = {}
-
     def noop(_):
         return
 
+    # Check each argument
     for name, value in arguments.items():
         try:
             fns_by_arg.get(name, noop)(value)
         except AssertionError as ex:
             errors[name] = ex.args[0]
 
-    return errors
+    if len(errors):
+        raise ValidationError(errors)
 
 
 class Setter():
@@ -551,14 +574,41 @@ def flatten_parameters(scoped_parameters):
     return flat
 
 
-def do_generate(
-        mixins,
-        extra_templates,
-        user_arguments,
-        cc_package_files):
+class ValidationError(Exception):
+    def __init__(self, errors):
+        self.errors = errors
+        super().__init__(str(errors))
 
-    # TODO(cmaloney): Remove flattening and teach lower code to operate on list
-    # of mixins.
+
+def validate_all_arguments_match_parameters(parameters, setters, arguments):
+    errors = dict()
+
+    # Gather all possible parameters from templates as well as setter parameters.
+    all_parameters = flatten_parameters(parameters)
+    for setter_list in setters.values():
+        for setter in setter_list:
+            all_parameters |= setter.parameters
+
+    # Check every argument is in the set of parameters.
+    for argument in arguments:
+        if argument not in all_parameters:
+            errors[argument] = 'Argument {} given but not in possible parameters {}'.format(argument, all_parameters)
+
+    if len(errors):
+        raise ValidationError(errors)
+
+
+def generate(
+        mixins,
+        arguments,
+        extra_templates=dict(),
+        cc_package_files=list()):
+    log.info("Generating configuration files...")
+
+    # To maintain the old API where we passed arguments rather than the new name.
+    user_arguments = arguments
+    arguments = None
+
     templates = dict()
     setters = dict()
     validate = list()
@@ -620,26 +670,16 @@ def do_generate(
         if len(template_list) > 1:
             for template in template_list:
                 if not template.endswith('.yaml'):
-                    log.error(
-                        "Only know how to merge YAML templates at this point in time. Can't" +
-                        " merge template %s in template_list %s", name, template_list)
-                    sys.exit(1)
+                    raise Exception(
+                        "Internal Error: Only know how to merge YAML templates at this "
+                        "point in time. Can't merge template {} in template_list {}".format(
+                            name, template_list))
 
     # Inject extra_templates and parameters inside.
     templates.update(extra_templates)
     mandatory_parameters = get_parameters(templates)
 
-    all_parameters = flatten_parameters(mandatory_parameters)
-    for setter_list in setters.values():
-        for setter in setter_list:
-            all_parameters |= setter.parameters
-
-    for argument in user_arguments:
-        if argument not in all_parameters:
-            log.error("ERROR: Argument '%s' given but not in possible parameters: %s",
-                      argument,
-                      ', '.join(all_parameters))
-            sys.exit(1)
+    validate_all_arguments_match_parameters(mandatory_parameters, setters, user_arguments)
 
     def add_builtin(name, value):
         add_setter(name, value, False, [], False)
@@ -653,11 +693,8 @@ def do_generate(
 
     # Validate arguments.
     validate_arguments_strings(arguments)
-    errors = validate_given(validate, arguments)
-    if errors:
-        for key, msg in errors.items():
-            log.error("ERROR: Argument '%s' with value '%s' didn't pass validation: %s", key, arguments[key], msg)
-        sys.exit(1)
+    # Check against validation functions
+    validate_given(validate, arguments)
 
     log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 
@@ -747,16 +784,3 @@ def do_generate(
         'templates': rendered_templates,
         'utils': utils
     })
-
-
-def generate(
-        # Which template directories to include
-        mixins,
-        # Arbitrary jinja template to parse
-        extra_templates=dict(),
-        # config.json parameters
-        arguments=dict(),
-        cc_package_files=[]):
-
-    log.info("Generating configuration files...")
-    return do_generate(mixins, extra_templates, arguments, cc_package_files)

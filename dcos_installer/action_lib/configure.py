@@ -66,7 +66,6 @@ def do_onprem(gen_options, provider_module, mixins, genconf_config):
 def fetch_bootstrap(bootstrap_id):
     bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
-
     def cleanup_and_exit():
         if os.path.exists(save_path):
             try:
@@ -82,7 +81,7 @@ def fetch_bootstrap(bootstrap_id):
     # if so copy it across
     local_cache_filename = "/artifacts/" + bootstrap_filename
     assert os.path.exists(local_cache_filename)
-    log.info("Copying bootstrap out of cache")
+    log.warning('Copying {} into genconf/serve/bootstrap/'.format(bootstrap_filename))
     try:
         subprocess.check_output(['mkdir', '-p', '/genconf/serve/bootstrap/'])
         subprocess.check_output(['cp', local_cache_filename, save_path])

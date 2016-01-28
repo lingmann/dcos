@@ -51,7 +51,7 @@ def test_bad_create_config_from_post():
 def test_get_config():
     expected_file = """
 {
-  "username": null,
+  "superuser_username": null,
   "bootstrap_url": "file:///opt/dcos_install_tmp",
   "agent_list": [
     null
@@ -65,12 +65,13 @@ def test_get_config():
     "8.8.8.8",
     "8.8.4.4"
   ],
-  "password": null,
+  "superuser_password": null,
   "ssh_user": null,
   "exhibitor_zk_hosts": null,
   "process_timeout": 120,
   "exhibitor_storage_backend": "zookeeper",
-  "exhibitor_zk_path": "/dcos"
+  "exhibitor_zk_path": "/dcos",
+  "master_discovery": "static"
 }
     """
     config = backend.get_config(config_path='/tmp/config.yaml')

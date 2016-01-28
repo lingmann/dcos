@@ -598,11 +598,27 @@ def validate_all_arguments_match_parameters(parameters, setters, arguments):
         raise ValidationError(errors)
 
 
+def validate(mixins, arguments, extra_templates, cc_package_files):
+    try:
+        generate(mixins, arguments, extra_templates, cc_package_files, validate_only=True)
+        return {'status': 'ok'}
+    except ValidationError as ex:
+        messages = {}
+        for key, msg in ex.errors.items():
+            messages[key] = {'message': msg}
+
+        return {
+            'status': 'errors',
+            'errors': messages
+        }
+
+
 def generate(
         mixins,
         arguments,
         extra_templates=dict(),
-        cc_package_files=list()):
+        cc_package_files=list(),
+        validate_only=False):
     log.info("Generating configuration files...")
 
     # To maintain the old API where we passed arguments rather than the new name.
@@ -697,6 +713,9 @@ def generate(
     validate_given(validate, arguments)
 
     log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
+
+    if validate_only:
+        return
 
     # Fill in the template parameters
     rendered_templates = render_templates(templates, arguments)

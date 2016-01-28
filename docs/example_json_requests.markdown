@@ -59,3 +59,113 @@ This will attempt to build configuration packages using `gen.generate()` and the
 {"errors": "Configuration generation failed, please see command line for details"}
 ```
 
+### Check Preflight
+
+```
+curl -XGET 10.33.2.20:9000/api/v1/action/preflight
+```
+
+## Begin Deploy
+
+```
+curl -XPOST 10.33.2.20:9000/api/v1/action/deploy
+```
+
+**On Success**:
+
+```json
+{"status": "retry ['deploy_master', 'deploy_agent'] started"}
+```
+
+### Check Deploy
+
+```
+curl -XGET 10.33.2.20:9000/api/v1/action/deploy
+```
+
+**Example Response**:
+
+```json
+{
+    "chain_name": "deploy",
+    "hosts": {
+        "10.0.0.1:22": {
+            "commands": [
+                {
+                    "cmd": [
+                        "/usr/bin/ssh",
+                        "-oConnectTimeout=10",
+                        "-oStrictHostKeyChecking=no",
+                        "-oUserKnownHostsFile=/dev/null",
+                        "-oBatchMode=yes",
+                        "-oPasswordAuthentication=no",
+                        "-p22",
+                        "-i",
+                        "/genconf/ssh_key",
+                        "-tt",
+                        "vagrant@10.0.0.1",
+                        "sudo",
+                        "mkdir",
+                        "-p",
+                        "/opt/dcos_install_tmp"
+                    ],
+                    "date": "2016-01-28 21:19:49.939101",
+                    "pid": 8965,
+                    "returncode": 255,
+                    "stderr": [
+                        "ssh: connect to host 10.0.0.1 port 22: Connection timed out\r",
+                        ""
+                    ],
+                    "stdout": [
+                        ""
+                    ]
+                }
+            ],
+            "host_status": "failed",
+            "tags": {
+                "role": "master"
+            }
+        },
+        "10.0.0.2:22": {
+            "commands": [
+                {
+                    "cmd": [
+                        "/usr/bin/ssh",
+                        "-oConnectTimeout=10",
+                        "-oStrictHostKeyChecking=no",
+                        "-oUserKnownHostsFile=/dev/null",
+                        "-oBatchMode=yes",
+                        "-oPasswordAuthentication=no",
+                        "-p22",
+                        "-i",
+                        "/genconf/ssh_key",
+                        "-tt",
+                        "vagrant@10.0.0.2",
+                        "sudo",
+                        "mkdir",
+                        "-p",
+                        "/opt/dcos_install_tmp"
+                    ],
+                    "date": "2016-01-28 21:19:49.978304",
+                    "pid": 8966,
+                    "returncode": 255,
+                    "stderr": [
+                        "ssh: connect to host 10.0.0.2 port 22: Connection timed out\r",
+                        ""
+                    ],
+                    "stdout": [
+                        ""
+                    ]
+                }
+            ],
+            "host_status": "failed",
+            "tags": {
+                "role": "agent"
+            }
+        }
+    },
+    "total_agents": 1,
+    "total_hosts": 2,
+    "total_masters": 1
+}
+```

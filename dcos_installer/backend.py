@@ -17,6 +17,7 @@ log = logging.getLogger()
 def do_configure():
     config = get_config()
     # Decouple the configuration to be just what gen expects
+    # TODO(malnick) add super_username and password fileds
     gen_config = {
         'bootstrap_url': None,
         'cluster_name': None,

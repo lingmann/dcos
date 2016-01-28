@@ -85,7 +85,8 @@ def fetch_bootstrap(bootstrap_id):
         log.error("""
 genconf/serve/bootstrap/{} not found, please make sure the correct BOOTSTRAP_ID is set in the environment.
 """.format(bootstrap_filename))
-        raise
+        log.warning(local_cache_filename)
+        raise FileNotFoundError
 
     log.info("Copying bootstrap out of cache")
     try:

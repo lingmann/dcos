@@ -32,9 +32,7 @@ def make_vagrant(gen_out):
 
 
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
-    gen_arguments['master_discovery'] = 'static'
     gen_out = gen.generate(
-        options=gen.get_options_object(),
         mixins=['vagrant', 'coreos'],
         arguments=gen_arguments)
 

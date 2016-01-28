@@ -69,20 +69,10 @@ def get_config(options):
             log.error('"cluster_config" section of configuration must contain a YAML dictionary.')
             sys.exit(1)
 
-        if 'ssh_config' not in config:
-            log.error('SSH configuration must be present in config.yaml as "ssh_config"')
-            sys.exit(1)
-        if not isinstance(config['ssh_config'], dict):
-            log.error('"ssh_config" section of configuration must contain a YAML dictionary.')
-            sys.exit(1)
-
-        # Default the log directory to /genconf/logs
-        log_directory = '/genconf/logs'
-        if 'log_directory' in config['ssh_config']:
-            log_directory = config['ssh_config']['log_directory']
-
-        if not os.path.exists(log_directory):
-            os.makedirs(log_directory)
+        if 'ssh_config' in config:
+            log_dir = config['ssh_config'].get('log_directory', '/genconf/logs')
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
 
         genconf_config = stringify_dict((config)['cluster_config'])
         # Check a value always / only in computed configs to give a cleaner
@@ -113,19 +103,15 @@ def do_genconf(options):
     # Interpolate the commands in genconf.py to gen library | i.e., set the args
     # in gen/__init__.py from our genconf.py commands
     genconf_config = {}
-    gen_options = gen.get_options_object()
     if not options.interactive:
         genconf_config, config = get_config(options)
-    gen_options.output_dir = '/genconf/serve'
 
     if options.interactive:
-        gen_options.non_interactive = False
-    else:
-        gen_options.non_interactive = True
+        raise NotImplementedError()
 
     subprocess.check_output(['mkdir', '-p', '/genconf/serve'])
 
-    gen_out = do_provider(gen_options, bash, ['bash', 'centos', 'onprem'], genconf_config)
+    gen_out = do_provider(bash, ['bash', 'centos', 'onprem'], genconf_config)
 
     # Pass the arguments from gen_out to download, specifically calling the bootstrap_id value
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
@@ -134,7 +120,7 @@ def do_genconf(options):
     pkgpanda.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
-def do_provider(options, provider_module, mixins, genconf_config):
+def do_provider(provider_module, mixins, genconf_config):
     # We set the bootstrap_id in env as to not expose it to users but still make it switchable
     if 'BOOTSTRAP_ID' in os.environ:
         bootstrap_id = os.environ['BOOTSTRAP_ID']
@@ -161,7 +147,6 @@ def do_provider(options, provider_module, mixins, genconf_config):
 
     gen_out = gen.generate(
         arguments=arguments,
-        options=options,
         mixins=mixins
         )
     provider_module.generate(gen_out, '/genconf/serve')
@@ -172,7 +157,7 @@ def ensure_ssh(config):
 
     def log_exit(*args):
         log.error(*args)
-        sys.ext(1)
+        sys.exit(1)
 
     # Checks that things set in the config match what the deploy library needs.
     if 'ssh_config' not in config:

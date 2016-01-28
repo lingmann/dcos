@@ -158,9 +158,8 @@ def render_cloudformation(
     return json.dumps(template_json)
 
 
-def gen_templates(arguments, options):
+def gen_templates(arguments):
     results = gen.generate(
-        options=options,
         mixins=['aws', 'coreos', 'coreos-aws'],
         extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
         arguments=arguments,
@@ -233,15 +232,14 @@ def get_spot_args(base_args):
 
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
-    gen_options = gen.get_options_object()
     single_args = deepcopy(gen_arguments)
     multi_args = deepcopy(gen_arguments)
     single_args['num_masters'] = "1"
     multi_args['num_masters'] = "3"
-    single_master = gen_templates(single_args, gen_options)
-    multi_master = gen_templates(multi_args, gen_options)
-    single_master_spot = gen_templates(get_spot_args(single_args), gen_options)
-    multi_master_spot = gen_templates(get_spot_args(single_args), gen_options)
+    single_master = gen_templates(single_args)
+    multi_master = gen_templates(multi_args)
+    single_master_spot = gen_templates(get_spot_args(single_args))
+    multi_master_spot = gen_templates(get_spot_args(single_args))
     button_page = gen_buttons(repo_channel_path, channel_commit_path, tag, commit)
 
     # Make sure we upload the packages for both the multi-master templates as well

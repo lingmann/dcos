@@ -69,20 +69,10 @@ def get_config(options):
             log.error('"cluster_config" section of configuration must contain a YAML dictionary.')
             sys.exit(1)
 
-        if 'ssh_config' not in config:
-            log.error('SSH configuration must be present in config.yaml as "ssh_config"')
-            sys.exit(1)
-        if not isinstance(config['ssh_config'], dict):
-            log.error('"ssh_config" section of configuration must contain a YAML dictionary.')
-            sys.exit(1)
-
-        # Default the log directory to /genconf/logs
-        log_directory = '/genconf/logs'
-        if 'log_directory' in config['ssh_config']:
-            log_directory = config['ssh_config']['log_directory']
-
-        if not os.path.exists(log_directory):
-            os.makedirs(log_directory)
+        if 'ssh_config' in config:
+            log_dir = config['ssh_config'].get('log_directory', '/genconf/logs')
+            if not os.path.exists(log_dir):
+                os.makedirs(log_dir)
 
         genconf_config = stringify_dict((config)['cluster_config'])
         # Check a value always / only in computed configs to give a cleaner
@@ -167,7 +157,7 @@ def ensure_ssh(config):
 
     def log_exit(*args):
         log.error(*args)
-        sys.ext(1)
+        sys.exit(1)
 
     # Checks that things set in the config match what the deploy library needs.
     if 'ssh_config' not in config:

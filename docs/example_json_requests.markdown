@@ -1,7 +1,7 @@
 # Example JSON Requests
 Mock requests to emulate API calls to the backend. 
 
-## Generate Configuration 
+## Create Configuration File
 
 ```
 curl -XPOST -H 'application/json' -d@generate_config_example.json 10.33.2.20:9000/api/v1/configure
@@ -29,14 +29,33 @@ Generate Config Example JSON:
 
 **IP DETECT SCRIPT**: You should test this on your nodes before assuming it works!
 
-Example Response for this configuration POST:
+**On Success**:
 
 ```json
 {}
 ```
 
-If the validation is not successful, for example master and agent list are not arrays, you'll get:
+**On Failure**:
 
 ```json
 {"master_list": "10.0.0.1 is not of type list.", "agent_list": "10.0.0.2 is not of type list."}
 ```
+
+## Generate Packages & Begin Preflight
+
+```
+curl -XPOST 10.33.2.20:9000/api/v1/action/preflight
+```
+
+This will attempt to build configuration packages using `gen.generate()` and then kick off preflight.
+
+**On Success**:
+```json
+{}
+```
+
+**On Failure**:
+```json
+{"errors": "Configuration generation failed, please see command line for details"}
+```
+

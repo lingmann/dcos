@@ -127,7 +127,7 @@ docker run -v $PWD/../integration_test.py:/integration_test.py \
     -e REGISTRY_HOST="172.17.10.1" \
     -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-}" \
     -e "DNS_SEARCH=true" \
-    --net=host py.test py.test -s ${CI_FLAGS:-} /integration_test.py
+    --net=host py.test py.test -vv -s ${CI_FLAGS:-} /integration_test.py
 RET=$?
 
 if [ $RET -ne 0 ]; then

@@ -45,7 +45,7 @@ CMD="cd dcos-image && \
         -e TEAMCITY_VERSION=\"${TEAMCITY_VERSION:-''}\" \
         -e DNS_SEARCH=false \
         --net=host \
-        py.test py.test -s ${CI_FLAGS:-} /integration_test.py"
+        py.test py.test -vv -s ${CI_FLAGS:-} /integration_test.py"
 
 if ! vagrant ssh -c "$CMD"; then
   echo "TEST FAILED"

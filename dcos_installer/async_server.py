@@ -253,6 +253,7 @@ def action_current(request):
 
 def logs_handler(request):
     log.info("Request for logs endpoint made.")
+    complete_log_path = '/genconf/state/complete.log'
     json_files = glob.glob('/genconf/state/*.json')
     complete_log = []
     for f in json_files:
@@ -260,10 +261,14 @@ def logs_handler(request):
         with open(f) as blob:
             complete_log.append(json.loads(blob.read()))
 
-    return web.json_response(complete_log)
+    with open(complete_log_path, 'w') as f:
+        f.write(json.dumps(complete_log, indent=4, sort_keys=True))
+
+    return web.HTTPFound('/download/log/complete.log'.format(VERSION))
 
 
 app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
+app.router.add_static('/download/log', '/genconf/state/')
 
 app.router.add_route('GET', '/', root)
 app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
@@ -278,6 +283,7 @@ app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|de
 app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
 app.router.add_route('GET', '/api/v{}/logs'.format(VERSION), logs_handler)
+
 
 def start(port=9000):
     log.debug('DCOS Installer v{}'.format(VERSION))

@@ -39,7 +39,7 @@ def run_cmd(mode, expect_errors=False):
             mode, p.returncode)
     else:
         assert p.returncode is 0, "{} exited with error code {}".format(mode, p.returncode)
-    assert "Errors encountered" not in out, "Errors encountered in running {}".format(mode)
+        assert "Errors encountered" not in out, "Errors encountered in running {}".format(mode)
 
 
 def make_vpc():
@@ -182,11 +182,8 @@ def main():
     # Run Configuratator
     run_cmd('--genconf')
     if do_setup:
-        # TODO(cmaloney): Run Preflight Checks before hosts are ready. and find
-        # that the hosts aren't ready. Currently running --preflight exits with
-        # success even though checks fail (dcos_generate_config.sh should exit
-        # with an error)...
-        # run_cmd('--preflight', expect_errors=True)
+        # Check that --preflight gives an error
+        run_cmd('--preflight', expect_errors=True)
 
         # Prep the hosts
         prep_hosts(ssh_runner)
@@ -197,6 +194,8 @@ def main():
     # Run Deploy Process
     run_cmd('--deploy')
 
+    # Immediately check post-flight to make sure it fails
+    run_cmd('--postflight', expect_errors=True)
     # TODO(cmaloney): Run integration_test.py as part of --postflight / before
     # dcos-diagnostics.py so that we get both "waiting properly" for the cluster
     # to come up as well as validation that DCOS is actually working.

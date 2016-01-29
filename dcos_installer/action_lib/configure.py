@@ -12,14 +12,9 @@ log = logging.getLogger(__name__)
 
 
 def do_configure(real_config):
-    gen_options = gen.get_options_object()
-    gen_options.output_dir = SERVE_DIR
-    gen_options.assume_defaults = True
-    gen_options.non_interactive = True
     subprocess.check_output(['mkdir', '-p', SERVE_DIR])
 
     gen_out = do_onprem(
-        gen_options,
         bash,
         ['bash', 'centos', 'onprem'],
         real_config)
@@ -30,7 +25,7 @@ def do_configure(real_config):
     pkgpanda.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
-def do_onprem(gen_options, provider_module, mixins, genconf_config):
+def do_onprem(provider_module, mixins, genconf_config):
     if 'BOOTSTRAP_ID' in os.environ:
         bootstrap_id = os.environ['BOOTSTRAP_ID']
     else:
@@ -49,16 +44,23 @@ def do_onprem(gen_options, provider_module, mixins, genconf_config):
         if k in arguments.keys():
             log.error("User config contains option `{}` already ".format(k) +
                       "provided by caller of gen.generate()")
-            sys.exit(1)
+            return
 
     # update arguments with the genconf_config
     arguments.update(genconf_config)
+    try:
+        gen_out = gen.generate(
+            arguments=arguments,
+            mixins=mixins
+            )
+    except gen.ValidationError as ex:
+        for key, error in ex.errors:
+            if key == '':
+                log.error("Error: %s", error)
+            else:
+                log.error("Error in configration key %s: %s", key, error)
+        return
 
-    gen_out = gen.generate(
-        arguments=arguments,
-        options=gen_options,
-        mixins=mixins
-        )
     provider_module.generate(gen_out, '/genconf/serve')
     return gen_out
 

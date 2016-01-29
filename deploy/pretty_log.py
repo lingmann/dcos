@@ -23,6 +23,7 @@ def colored_log(level):
                 'bold': True
             }
         },
-        fmt='%(asctime)s %(message)s'
+        fmt='%(asctime)s %(message)s',
+        isatty=True
 
     )

@@ -49,6 +49,7 @@ def print_failures(log_type, directory):
         log.warning('Errors detected during {} stage, please check the following logs for details:'.format(log_type))
         for file_path in check_logs:
             log.warning(file_path)
+        exit(1)
     else:
         log.info('{} out of {} hosts successfully completed {} stage:'.format(total_hosts, total_hosts, log_type))
         log.info('Success, no errors found during {}'.format(log_type))

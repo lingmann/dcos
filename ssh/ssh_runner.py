@@ -74,9 +74,9 @@ def run_cmd_return_tuple(host, cmd, timeout_sec=120, env=None, ignore_warning=Tr
     log.debug('EXECUTING ON {}\n         COMMAND: {}\n'.format(host.ip, ' '.join(cmd)))
     if env is None:
         env = os.environ
-
-    master, slave = pty.openpty()
-    process = subprocess.Popen(cmd, stdin=master, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
+    env['TERM'] = 'linux'
+    _, slave_pty = pty.openpty()
+    process = subprocess.Popen(cmd, stdin=slave_pty, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=env)
     stdout, stderr = process.communicate(timeout=timeout_sec)
 
     if ignore_warning and isinstance(stderr, bytes):
@@ -237,9 +237,12 @@ class MultiRunner():
 
     @asyncio.coroutine
     def run_cmd_return_dict_async(self, cmd, host, namespace, future):
-        process = yield from asyncio.create_subprocess_exec(*cmd, stdout=asyncio.subprocess.PIPE,
-                                                            stderr=asyncio.subprocess.PIPE,
-                                                            stdin=asyncio.subprocess.DEVNULL)
+        _, slave_pty = pty.openpty()
+        process = yield from asyncio.create_subprocess_exec(
+            *cmd, stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            stdin=slave_pty,
+            env={'TERM': 'linux'})
         stdout = b''
         stderr = b''
         try:

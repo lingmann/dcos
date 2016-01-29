@@ -26,8 +26,12 @@ def run_cmd(mode, expect_errors=False):
     # NOTE: We use `bash` as a wrapper here to make it so dcos_generate_config.sh
     # doesn't have to be executable.
     cmd = ['bash', './dcos_generate_config.sh', '--log-level', 'debug', mode]
-    p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE)
-    out = p.communicate()[0].decode()
+    p = subprocess.Popen(
+        cmd,
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE)
+    out = p.communicate()[1].decode()
     # TODO(cmaloney): Only print on an error.
     print(out)
     if expect_errors:

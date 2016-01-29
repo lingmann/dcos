@@ -29,6 +29,14 @@ Generate Config Example JSON:
 
 **IP DETECT SCRIPT**: You should test this on your nodes before assuming it works!
 
+**Example I used in vagrant on CentOS**:
+
+```bash
+#!/usr/bin/env bash
+PATH=/usr/sbin:/usr/bin:$PATH
+ip addr show eth1 | awk '{match($0,/[0-9]+\.[0-9\.[0-9]+/); ip = substr($0,RSTART,RLENGTH); print ip}' | xargs echo -n
+```
+
 **On Success**:
 
 ```json

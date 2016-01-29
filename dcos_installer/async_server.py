@@ -232,6 +232,7 @@ def action_action_name(request):
                             yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir,
                                                                 hosts=failed_hosts, try_remove_stale_dcos=True,
                                                                 **params))
+                            return web.json_response({'status': '{} retried'.format(new_action_str)})
                 else:
                     return web.json_response({'status': 'deploy was already executed, skipping'})
             else:
@@ -294,7 +295,16 @@ def start(port=9000):
         port)
     srv = loop.run_until_complete(f)
     log.info('Starting server {}'.format(srv.sockets[0].getsockname()))
-    if not os.path.isdir(state_dir):
+    if os.path.isdir(state_dir):
+        for state_file in glob.glob(state_dir + '/*.json'):
+            try:
+                os.unlink(state_file)
+                log.debug('removing {}'.format(state_file))
+            except FileNotFoundError:
+                log.error('{} not found'.format(state_file))
+            except PermissionError:
+                log.error('cannot remove {}, Permission denied'.format(state_file))
+    else:
         os.mkdir(state_dir)
 
     try:

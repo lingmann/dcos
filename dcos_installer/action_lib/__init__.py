@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 
 @asyncio.coroutine
 def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block=False, state_json_dir=None,
-                  async_delegate=None):
+                  async_delegate=None, retry=False):
     '''
     Copies preflight.sh to target hosts and executes the script. Gathers
     stdout, sterr and return codes and logs them to disk via SSH library.
@@ -220,7 +220,7 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
 
 
 @asyncio.coroutine
-def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, async_delegate=None):
+def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, async_delegate=None, retry=False):
     targets = []
     for host in config['master_list']:
         s = Node(host)

@@ -165,6 +165,10 @@ class Setup extends mixin(StoreMixin) {
         displayedConfig.zk_exhibitor_hosts = zkExhibitorHosts;
         displayedConfig.zk_exhibitor_port = zkExhibitorPort;
       }
+
+      if (key === 'superuser_password') {
+        displayedConfig.superuser_password = '';
+      }
     });
 
     this.setState({formData: displayedConfig});
@@ -609,17 +613,17 @@ class Setup extends mixin(StoreMixin) {
       <Page hasNavigationBar={true} size="large" pageName="setup" ref="page">
         <PageContent>
           <PageSection>
-            {this.getErrorAlert()}
-            <SectionHeader>
-              <SectionHeaderPrimary align="left">
-                Deployment Settings
-                <SectionHeaderPrimarySubheading>
-                  Enter the IP addresses of your target hosts and their SSH
-                  settings.
-                </SectionHeaderPrimarySubheading>
-              </SectionHeaderPrimary>
-            </SectionHeader>
             <SectionBody>
+              {this.getErrorAlert()}
+              <SectionHeader>
+                <SectionHeaderPrimary align="left">
+                  Deployment Settings
+                  <SectionHeaderPrimarySubheading>
+                    Enter the IP addresses of your target hosts and their SSH
+                    settings.
+                  </SectionHeaderPrimarySubheading>
+                </SectionHeaderPrimary>
+              </SectionHeader>
               <Form definition={this.getFormDefinition()}
                 onChange={this.handleFormChange} />
             </SectionBody>

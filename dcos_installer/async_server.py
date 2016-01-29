@@ -3,6 +3,7 @@ import glob
 import json
 import logging
 import os
+import pprint
 
 import pkg_resources
 from aiohttp import web
@@ -48,7 +49,7 @@ def root(request):
 
 # Redirect to root method handler
 def redirect_to_root(request):
-    log.info("/api/v{} -> redirecting -> /".format(VERSION))
+    log.warning("/api/v{} -> redirecting -> /".format(VERSION))
     return web.HTTPFound('/'.format(VERSION))
 
 
@@ -69,9 +70,6 @@ def configure(request):
             resp = web.json_response(messages, status=400)
 
         return resp
-        # TODO (malnick/cmalony) implement the proper call to the gen
-        # library to write, validate and generate genconf configuration.
-        # backend.configure()
 
     elif request.method == 'GET':
         """
@@ -84,10 +82,8 @@ def configure(request):
     return resp
 
 
-# Configuration validation route handler
 def configure_status(request):
     log.info("Request for configuration validation made.")
-    # TODO(malnick) Update this to point to backend.py with call to Gen validation
     messages = backend.return_configure_status()
     resp = web.json_response({}, status=200)
     if 'errors' in messages and len(messages['errors']) > 0:
@@ -101,8 +97,8 @@ def configure_type(request):
     return web.json_response(backend.determine_config_type())
 
 
-# Success route handler
 def success(request):
+    log.info("Request for success made.")
     return web.json_response(backend.success())
 
 
@@ -256,10 +252,25 @@ def action_current(request):
     return web.json_response(return_json)
 
 
-# Serve static files:
-app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
+def logs_handler(request):
+    log.info("Request for logs endpoint made.")
+    complete_log_path = '/genconf/state/complete.log'
+    json_files = glob.glob('/genconf/state/*.json')
+    complete_log = []
+    for f in json_files:
+        log.debug('Adding {} to complete log file.'.format(f))
+        with open(f) as blob:
+            complete_log.append(json.loads(blob.read()))
 
-# Static routes
+    with open(complete_log_path, 'w') as f:
+        f.write(json.dumps(complete_log, indent=4, sort_keys=True))
+
+    return web.HTTPFound('/download/log/complete.log'.format(VERSION))
+
+
+app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
+app.router.add_static('/download/log', '/genconf/state/')
+
 app.router.add_route('GET', '/', root)
 app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
 app.router.add_route('GET', '/api/v{}/configure'.format(VERSION), configure)
@@ -272,10 +283,11 @@ app.router.add_route('GET', '/api/v{}/success'.format(VERSION), success)
 app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
+app.router.add_route('GET', '/api/v{}/logs'.format(VERSION), logs_handler)
 
 
 def start(port=9000):
-    log.debug('DCOS Installer V{}'.format(VERSION))
+    log.debug('DCOS Installer v{}'.format(VERSION))
     handler = app.make_handler()
     f = loop.create_server(
         handler,

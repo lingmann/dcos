@@ -408,6 +408,11 @@ def test_action_deploy_xxx(monkeypatch, mocker):
     res = client.request(route, method='GET')
 
 
+# def test_logs(monkeypatch):
+#    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
+#    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
+#    route = '/api/v{}/logs'.format(version)
+
 # def test_serve_assets(monkeypatch):
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
 #    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)

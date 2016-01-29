@@ -94,7 +94,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
-                    self.write_to_disk(value, SSH_KEY_PATH)
+                    self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
 
                 if key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
@@ -140,10 +140,11 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         else:
             log.error("Must pass config_path=/path/to/file to execute .write().")
 
-    def write_to_disk(self, data, path):
-        log.warning("Writing %s to %s.", path, SSH_KEY_PATH)
+    def write_to_disk(self, data, path, mode=0o644):
+        log.warning('Writing {} with mode {}: {}'.format(path, mode, data))
         f = open(path, 'w')
         f.write(data)
+        os.chmod(path, mode)
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

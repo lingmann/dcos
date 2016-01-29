@@ -38,8 +38,6 @@ agent_list:
 
 # The bootstrapping exhibitor hosts. Format is ip:port.
 exhibitor_zk_hosts:
-exhibitor_storage_backend: zookeeper
-exhibitor_zk_path: '/dcos'
 
 # Upstream DNS resolvers for MesosDNS
 resolvers:
@@ -52,9 +50,6 @@ superuser_password:
 
 ssh_user:
 ssh_port: 22
-process_timeout: 120
-
-bootstrap_url: 'file:///opt/dcos_install_tmp'
 """
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
@@ -63,6 +58,10 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         self.hidden_defaults = {
             'ip_detect_path':  IP_DETECT_PATH,
             'ssh_key_path': SSH_KEY_PATH,
+            'process_timeout': '120',
+            'bootstrap_url': 'file:///opt/dcos_install_tmp',
+            'exhibitor_storage_backend': 'zookeeper',
+            'exhibitor_zk_path': '/dcos'
         }
         self.overrides = overrides
         self.update()

@@ -44,6 +44,7 @@ setup(
             'aws/templates/aws.html',
             'aws/templates/cloudformation.json',
             'azure/azuredeploy-parameters.json',
+            'azure/templates/acs.json',
             'azure/templates/azure.html',
             'azure/templates/azuredeploy.json',
             'vagrant/config.rb',

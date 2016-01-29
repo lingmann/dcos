@@ -68,7 +68,6 @@ def do_onprem(provider_module, mixins, genconf_config):
 def fetch_bootstrap(bootstrap_id):
     bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
     save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
-
     def cleanup_and_exit():
         if os.path.exists(save_path):
             try:

@@ -1,6 +1,6 @@
 {
   "docker": "dcos-builder",
-  "requires": ["openssl"],
+  "requires": ["openssl", "python-requests"],
   "single_source": {
     "kind": "url_extract",
     "url": "http://curl.haxx.se/download/curl-7.46.0.tar.gz",

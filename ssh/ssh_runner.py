@@ -252,6 +252,7 @@ class MultiRunner():
                 process.terminate()
             except ProcessLookupError:
                 log.info('process with pid {} not found'.format(process.pid))
+            log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
 
         process_output = {
             '{}:{}'.format(host.ip, host.port): {

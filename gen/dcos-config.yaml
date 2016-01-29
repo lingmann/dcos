@@ -3,11 +3,13 @@ package:
     content: |
       {
         "environment": {
-          "ZOOKEEPER_CLUSTER_SIZE": {{ num_masters }},
           "MESOS_IP_DISCOVERY_COMMAND": "/opt/mesosphere/bin/detect_ip",
           "PROVIDER": "{{ provider }}"
         }
       }
+  - path: /etc_master/num_masters.env
+    content: |
+      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
   - path: /etc/mesos-dns.json
     content: |
       {

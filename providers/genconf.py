@@ -131,7 +131,8 @@ def do_provider(provider_module, mixins, genconf_config):
     arguments = {
         'ip_detect_filename': '/genconf/ip-detect',
         'bootstrap_id': bootstrap_id,
-        'provider': 'onprem'}
+        'provider': 'onprem',
+        'cluster_id': 'ONPREM-TODO'}
 
     # Make sure there are no overlaps between arguments and genconf_config.
     # TODO(cmaloney): Switch to a better dictionary diff here which will

@@ -1,8 +1,4 @@
 root:
-  - path: /etc/mesosphere/cluster-id
-    permissions: "0644"
-    content: |
-      [[[resourceid('Microsoft.Resources/deployments', deployment().name)]]]
   - path: /etc/systemd/system/dcos-link-env.service
     permissions: "0644"
     content: |

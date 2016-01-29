@@ -43,6 +43,7 @@ def deprecated(func):
 
 
 def parse_ip(ip):
+    assert isinstance(ip, str), 'IP should be string, {} given'.format(ip)
     tmp = ip.split(':')
     if len(tmp) == 2:
         return {"ip": tmp[0], "port": int(tmp[1])}

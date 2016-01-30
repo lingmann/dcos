@@ -99,6 +99,14 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     return validation_err, post_data_validation
 
 
+def do_validate_config(config_path=CONFIG_PATH):
+    config = DCOSConfig()
+    config.config_path = CONFIG_PATH
+    config.update()
+    messages = config.validate()
+    return messages
+
+
 def get_config(config_path=CONFIG_PATH):
     return DCOSConfig(config_path=config_path).get_config()
 

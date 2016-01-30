@@ -98,21 +98,41 @@ class DcosInstaller:
                 print_header("EXECUTING UNINSTALL")
                 sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
+            if options.validate_config:
+                print_header('VALIDATING CONFIGURATION FILE: genconf/config.yaml')
+                backend.do_validate_config()
+                sys.exit(0)
+
     def parse_args(self, args):
+        def print_usage():
+            return """
+Install Mesosophere's Data Center Operating System
+
+dcos_installer [-h] [-f LOG_FILE] [--hash-password HASH_PASSWORD] [-v]
+                      [--web | --genconf | --preflight | --deploy | --postflight | --uninstall | --validate-config | --test]
+
+Environment Settings:
+
+  PORT                  Set the :port to run the web UI
+  CHANNEL_NAME          ADVANCED - Set build channel name
+  BOOTSTRAP_ID          ADVANCED - Set bootstrap ID for build
+
+"""
+
         """
         Parse CLI arguments and return a map of options.
         """
-        parser = argparse.ArgumentParser(description='Install DCOS on-premise')
+        parser = argparse.ArgumentParser(usage=print_usage())
         mutual_exc = parser.add_mutually_exclusive_group()
 
         # Log level
-        parser.add_argument(
-            '-f',
-            '--log-file',
-            default='/genconf/logs/installer.log',
-            type=str,
-            help='Set log file location, default: /genconf/logs/installer.log'
-        )
+#        parser.add_argument(
+#            '-f',
+#            '--log-file',
+#            default='/genconf/logs/installer.log',
+#            type=str,
+#            help='Set log file location, default: /genconf/logs/installer.log'
+#        )
 
         parser.add_argument(
             '--hash-password',
@@ -133,59 +153,51 @@ class DcosInstaller:
             '--port',
             type=int,
             default=9000,
-            help='Web server port number.')
+            help=argparse.SUPPRESS)
 
         mutual_exc.add_argument(
-            '-w',
             '--web',
             action='store_true',
             default=False,
             help='Run the web interface.')
 
         mutual_exc.add_argument(
-            '-gen',
             '--genconf',
             action='store_true',
             default=False,
             help='Execute the configuration generation (genconf).')
 
         mutual_exc.add_argument(
-            '-pre',
             '--preflight',
             action='store_true',
             default=False,
             help='Execute the preflight checks on a series of nodes.')
 
         mutual_exc.add_argument(
-            '-d',
             '--deploy',
             action='store_true',
             default=False,
             help='Execute a deploy.')
 
         mutual_exc.add_argument(
-            '-pos',
             '--postflight',
             action='store_true',
             default=False,
             help='Execute postflight checks on a series of nodes.')
 
         mutual_exc.add_argument(
-            '-u',
             '--uninstall',
             action='store_true',
             default=False,
             help='Execute uninstall on target hosts.')
 
         mutual_exc.add_argument(
-            '-vc',
             '--validate-config',
             action='store_true',
             default=False,
             help='Validate the configuration in config.yaml')
 
         mutual_exc.add_argument(
-            '-t',
             '--test',
             action='store_true',
             default=False,

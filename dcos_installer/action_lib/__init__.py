@@ -237,7 +237,20 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, asy
     add_pre_action(postflight_chain, pf.ssh_user)
 
     if dcos_diag is None:
-        dcos_diag = '/opt/mesosphere/bin/dcos-diagnostics.py'
+        dcos_diag = """
+#!/usr/bin/env bash
+# Run the DCOS diagnostic script for up to 15 minutes (900 seconds) to ensure
+# we do not return ERROR on a cluster that hasn't fully achieved quorum.
+T=900
+until OUT=$(/opt/mesosphere/bin/dcos-diagnostics.py) || [[ T -eq 0 ]]; do
+    sleep 1
+    let T=T-1
+done
+RETCODE=$?
+for value in $OUT; do
+    echo $value
+done
+exit $RETCODE"""
 
     postflight_chain.add_execute([dcos_diag], comment='Executing local post-flight check for DCOS servces...')
     add_post_action(postflight_chain)

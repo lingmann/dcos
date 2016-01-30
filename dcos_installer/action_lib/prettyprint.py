@@ -57,9 +57,9 @@ class PrettyPrint():
                     log.debug('     CODE:\n{}'.format(data['returncode']))
                     log.error('     TASK:\n{}'.format(' '.join(data['cmd'])))
                     log.error('     STDERR:')
-                    self.color_preflight(host=ip, data_array=data['stderr'])
+                    self.color_preflight(host=ip, rc=data['returncode'], data_array=data['stderr'])
                     log.error('     STDOUT:')
-                    self.color_preflight(host=ip, data_array=data['stdout'])
+                    self.color_preflight(host=ip, rc=data['returncode'], data_array=data['stdout'])
                     log.info('')
 
         if len(self.success_data) > 0:
@@ -69,10 +69,10 @@ class PrettyPrint():
                     log.debug('====> {} SUCCESS'.format(ip))
                     log.debug('     CODE:{}'.format(data['returncode']))
                     log.debug('     TASK:{}'.format(' '.join(data['cmd'])))
-                    log.debug('     STDERR:\n{}'.format(
-                        self.color_preflight(host=ip, data_array=data['stderr'])))
-                    log.debug('     STDOUT:\n{}'.format(
-                        self.color_preflight(host=ip, data_array=data['stdout'])))
+                    log.debug('     STDERR:')
+                    self.color_preflight(host=ip, rc=data['returncode'], data_array=data['stderr'])
+                    log.debug('     STDOUT:')
+                    self.color_preflight(host=ip, rc=data['returncode'], data_array=data['stdout'])
                     log.debug('')
 
     def print_summary(self):
@@ -84,7 +84,7 @@ class PrettyPrint():
             for host in self.fail_hosts:
                 log.error('     {} failures detected.'.format(host))
 
-    def color_preflight(self, host='NULL', data_array=[]):
+    def color_preflight(self, host='NULL', rc=0, data_array=[]):
         """
         A subroutine to parse the output from the dcos_install.sh script's pass or fail
         output.
@@ -98,6 +98,9 @@ class PrettyPrint():
                     log.debug('          {}'.format(line))
 
                 elif does_fail.search(line):
+                    log.error('          {}'.format(line))
+
+                elif rc != 0:
                     log.error('          {}'.format(line))
 
                 else:

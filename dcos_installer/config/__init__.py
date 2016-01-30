@@ -38,7 +38,7 @@ agent_list:
 
 # The bootstrapping exhibitor hosts. Format is ip:port.
 exhibitor_zk_hosts:
-exhibitor_storage_backend: zookeeper
+exhibitor_storage_backend: 'zookeeper'
 exhibitor_zk_path: '/dcos'
 
 # Upstream DNS resolvers for MesosDNS
@@ -52,8 +52,8 @@ superuser_password:
 
 ssh_user:
 ssh_port: 22
-process_timeout: 120
 
+process_timeout: 10000
 bootstrap_url: 'file:///opt/dcos_install_tmp'
 """
         self.defaults = yaml.load(defaults)
@@ -62,7 +62,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         # to be included in validation for return. We never write them to disk.
         self.hidden_defaults = {
             'ip_detect_path':  IP_DETECT_PATH,
-            'ssh_key_path': SSH_KEY_PATH,
+            'ssh_key_path': SSH_KEY_PATH
         }
         self.overrides = overrides
         self.update()
@@ -94,7 +94,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         if self.overrides is not None and len(self.overrides) > 0:
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
-                    self.write_to_disk(value, SSH_KEY_PATH)
+                    self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
 
                 if key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
@@ -112,7 +112,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         file_config = self._unbind_configuration()
         hidden_config = self.hidden_defaults
         validate_config = dict(file_config, **hidden_config)
-        log.warning(validate_config)
+        log.warning('Configuration to be validated: {}'.format(validate_config))
         _, messages = DCOSValidateConfig(validate_config).validate()
         return messages
 
@@ -140,10 +140,11 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         else:
             log.error("Must pass config_path=/path/to/file to execute .write().")
 
-    def write_to_disk(self, data, path):
-        log.warning("Writing %s to %s.", path, SSH_KEY_PATH)
+    def write_to_disk(self, data, path, mode=0o644):
+        log.warning('Writing {} with mode {}: {}'.format(path, mode, data))
         f = open(path, 'w')
         f.write(data)
+        os.chmod(path, mode)
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

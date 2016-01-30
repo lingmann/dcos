@@ -210,9 +210,9 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
             _remove_host(state_file_path, _host)
 
     # Setup the cleanup chain
-    #cleanup_chain = ssh.utils.CommandChain('{}_cleanup'.format(default['chain_name']))
-    #add_post_action(cleanup_chain)
-    #chains.append(cleanup_chain)
+    cleanup_chain = ssh.utils.CommandChain('{}_cleanup'.format(default['chain_name']))
+    add_post_action(cleanup_chain)
+    chains.append(cleanup_chain)
 
     result = yield from runner.run_commands_chain_async(chains, block=block,
                                                         state_json_dir=state_json_dir)

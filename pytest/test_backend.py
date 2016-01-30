@@ -68,7 +68,7 @@ def test_get_config():
   "superuser_password": null,
   "ssh_user": null,
   "exhibitor_zk_hosts": null,
-  "process_timeout": 120,
+  "process_timeout": 10000,
   "exhibitor_storage_backend": "zookeeper",
   "exhibitor_zk_path": "/dcos",
   "master_discovery": "static"

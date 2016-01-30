@@ -63,18 +63,6 @@
         81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100
       ]
     },
-    "masterCount": {
-      "type": "int",
-      "defaultValue": 1,
-      "allowedValues": [
-        1,
-        3,
-        5
-      ],
-      "metadata": {
-        "description": "The number of Mesos masters for the cluster."
-      }
-    },
     "agentVMSize": {
       "type": "string",
       "defaultValue": "Standard_A1",
@@ -197,7 +185,7 @@
     "agentPrivateVMSSCount": 1,
     "agentPublicCount": "[parameters('agentCount')]",
     "agentPrivateCount": "[parameters('agentCount')]",
-    "masterCount": "[parameters('masterCount')]",
+    "masterCount": {{ num_masters }},
     "agentVMSize": "[parameters('agentVMSize')]",
     "sshRSAPublicKey": "[parameters('sshRSAPublicKey')]",
     "linuxPublisher": "[parameters('linuxPublisher')]",
@@ -275,6 +263,15 @@
     "masterNSGName": "[concat(variables('orchestratorName'), '-master-nsg-', variables('nameSuffix'))]",
     "masterNSGID": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('masterNSGName'))]",
     "masterVMNamePrefix": "[concat(variables('orchestratorName'), '-master-', variables('nameSuffix'), '-')]",
+    "masterVMNic": [
+      "[concat(variables('masterVMNamePrefix'), 'nic-0')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-1')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-2')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-3')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-4')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-5')]",
+      "[concat(variables('masterVMNamePrefix'), 'nic-6')]"
+    ],
     "masterFirstAddr": 5,
     "masterAvailabilitySet": "[concat(variables('orchestratorName'), '-master-availabilitySet-', variables('nameSuffix'))]",
     "masterLbName": "[concat(variables('orchestratorName'), '-master-lb-', variables('nameSuffix'))]",

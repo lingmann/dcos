@@ -53,7 +53,7 @@ superuser_password:
 ssh_user:
 ssh_port: 22
 
-process_timeout: 120
+process_timeout: 10000
 bootstrap_url: 'file:///opt/dcos_install_tmp'
 """
         self.defaults = yaml.load(defaults)

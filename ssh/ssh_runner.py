@@ -255,6 +255,13 @@ class MultiRunner():
                 log.info('process with pid {} not found'.format(process.pid))
             log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
 
+        # For each possible line in stderr, match from the beginning of the line for the
+        # the confusing warning: "Warning: Permanently added ...". If the warning exists,
+        # remove it from the string.
+        err_arry = stderr.decode().split('\r')
+        stderr = bytes('\n'.join([line for line in err_arry if not line.startswith(
+            'Warning: Permanently added')]), 'utf-8')
+
         process_output = {
             '{}:{}'.format(host.ip, host.port): {
                 "cmd": cmd,

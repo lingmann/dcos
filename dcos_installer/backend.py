@@ -196,7 +196,7 @@ def make_default_directories():
     So users do not have to set the directories in the config.yaml,
     we build them using sane defaults here first.
     """
-    make_these_first = ['/genconf', '/genconf/state']
+    make_these_first = ['/genconf/state']
     for d in make_these_first:
         if not os.path.exists(d):
             os.makedirs(d)

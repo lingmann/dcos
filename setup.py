@@ -35,7 +35,10 @@ setup(
         ],
     },
     package_data={
-        '': ['*.yaml', '*/*.yaml', 'install_requirements'],
+        '': [
+            '*.yaml',
+            '*/*.yaml',
+            'install_requirements'],
         'gen': [
             '*/*.yaml',
             'aws/templates/aws.html',
@@ -46,6 +49,11 @@ setup(
             'vagrant/config.rb',
             'vagrant/make_dcos_vagrant.sh.in',
             'vagrant/Vagrantfile'],
+        'providers': [
+            '../docker/py.test/Dockerfile',
+            '../docker/test_server/Dockerfile',
+            '../docker/test_server/test_server.py',
+            '../integration_test.py'],
     },
     zip_safe=False
 )

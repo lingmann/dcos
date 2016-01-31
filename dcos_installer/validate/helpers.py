@@ -49,15 +49,20 @@ def validate_ip_list(key=None, config=None):
     if key in config:
         key = config[key]
         if type(key) == list:
+            failed_ips = []
             for ip in key:
                 if ip is not None:
                     if is_valid_ipv4_address(ip):
                         continue
                     else:
-                        return [False, '{} is not valid IPv4 address.'.format(key)]
+                        failed_ips.append(ip)
 
                 else:
-                    return [False, '{} is not valid IPv4 address.'.format(key)]
+                    return [False, '{} is not valid IPv4 address.'.format(ip)]
+
+            if len(failed_ips) > 0:
+                return [False, '{} is not valid IPv4 address.'.format(failed_ips)]
+
         else:
             return [False, '{} is not of type list.'.format(key)]
 
@@ -150,24 +155,21 @@ def validate_list(key=None, config=None):
 def validate_exhibitor_zk_hosts(key=None, config=None):
     if key in config and key is not None:
         key = config[key]
-        if key.split(','):
+        try:
             for address in key.split(','):
-                if is_valid_ipv4_address(address.split(':')[0]):
+                if is_valid_ipv4_address(address.split(':')[0].strip()):
                     continue
-
                 else:
-                    return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0])]
+                    return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0].strip())]
 
-        elif key.split(':'):
+        except:
             if is_valid_ipv4_address(key.split(':')[0]):
                 pass
-
             else:
-                return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0])]
-        else:
-            return [False, '{} is not a valid zk host format. Expected $IP:$PORT comma list.'.format(key)]
+                return [False, '{} is not a valid IPv4 address'.format(key.split(':')[0].strip())]
 
-        return [True, '{} is valid exhibitor ZK hosts format.'.format(key)]
+        else:
+            return [True, '{} is valid exhibitor ZK hosts format.'.format(key)]
 
     return [False, None]
 

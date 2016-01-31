@@ -388,7 +388,7 @@ def make_bash(gen_out):
         setup_flags += file_template.format(
             filename=file_dict['path'],
             content=file_dict['content'],
-            mode=oct(file_dict.get('permissions', 0o644))[2:],
+            mode=file_dict.get('permissions', "0644"),
             owner=file_dict.get('owner', 'root'),
             group=file_dict.get('group', 'root')
             )
@@ -397,10 +397,13 @@ def make_bash(gen_out):
     # Write out the units as files
     setup_services = ""
     for service in gen_out.templates['dcos-services']:
+        # If no content, service is assumed to already exist
+        if 'content' not in service:
+            continue
         setup_services += file_template.format(
             filename='/etc/systemd/system/{}'.format(service['name']),
             content=service['content'],
-            mode='644',
+            mode='0644',
             owner='root',
             group='root'
             )
@@ -413,8 +416,8 @@ def make_bash(gen_out):
         name = service['name'][:-8]
         if service.get('enable'):
             setup_services += "systemctl enable {}\n".format(name)
-        if service.get('command') == 'start':
-            setup_services += "systemctl start {}\n".format(name)
+        if 'command' in service:
+            setup_services += "systemctl {} {}\n".format(service['command'], name)
 
     # Populate in the bash script template
     bash_script = gen.template.parse_str(bash_template).render({

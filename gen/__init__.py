@@ -358,6 +358,7 @@ def do_gen_package(config, package_filename):
 
         # Write out the individual files
         for file_info in config["package"]:
+            assert file_info.keys() <= {"path", "content", "permissions"}
             if file_info['path'].startswith('/'):
                 path = tmpdir + file_info['path']
             else:
@@ -372,8 +373,9 @@ def do_gen_package(config, package_filename):
                 f.write(file_info['content'])
 
             # the file has special mode defined, handle that.
-            if 'mode' in file_info:
-                os.chmod(path, int(str(file_info['mode']), 8))
+            if 'permissions' in file_info:
+                assert isinstance(file_info['permissions'], str)
+                os.chmod(path, int(file_info['permissions'], 8))
             else:
                 os.chmod(path, 0o644)
 

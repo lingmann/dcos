@@ -148,8 +148,8 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             f.write(data)
             os.chmod(path, mode)
         else:
-            log.warning("""
-Request to write file {} ignored. Cowardly refusing to write empty values or None data to disk.""".format(path))
+            log.warning('Request to write file {} ignored.'.format(path))
+            log.warning('Cowardly refusing to write empty values or None data to disk.')
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

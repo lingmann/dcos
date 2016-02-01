@@ -110,11 +110,11 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
     def validate(self):
         # TODO Leverage Gen library from here
         # Convienience function to validate this object
-        file_config = self._unbind_configuration()
-        hidden_config = self.hidden_defaults
-        validate_config = dict(file_config, **hidden_config)
-        log.warning('Configuration to be validated: {}'.format(validate_config))
-        _, messages = DCOSValidateConfig(validate_config).validate()
+        config = self._unbind_configuration()
+        config.update(self.hidden_defaults)
+        # validate_config = dict(file_config, **hidden_config)
+        log.warning('Configuration to be validated: {}'.format(config))
+        _, messages = DCOSValidateConfig(config).validate()
         return messages
 
     def get_config(self):

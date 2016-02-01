@@ -57,8 +57,8 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     val_config_obj.update()
     messages = val_config_obj.validate()
 
-    log.warning("Updated config to be validated:")
-    val_config_obj.print_to_screen()
+    #log.warning("Updated config to be validated:")
+    #val_config_obj.print_to_screen()
 
     # Return only keys sent in POST, do not write if validation
     # of config fails.

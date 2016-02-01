@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-modules-private.git",
-    "ref" : "150bc44239d13af6b1fe2a51385fbc7f39b5f4f7",
-    "ref_origin": "mesos-0.26.0-update"
+    "ref" : "90fb07b2c3c7af6a5ab853d8b36f30f74fb0f277",
+    "ref_origin": "kapil/picojson-fix"
   }
 }

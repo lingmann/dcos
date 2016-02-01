@@ -89,8 +89,9 @@ class DcosInstaller:
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
                 for role in ['master', 'agent']:
-                    deploy_returncode = run_loop(lambda *args, **kwargs: action_lib.install_dcos(*args, role=role,
-                                                                                                 **kwargs), options)
+                    action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
+                    action.__name__ = 'deploy_{}'.format(role)
+                    deploy_returncode = run_loop(action, options)
                 if deploy_returncode != 0:
                     sys.exit(deploy_returncode)
                 sys.exit(0)

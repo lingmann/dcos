@@ -62,8 +62,6 @@ def test_do_validate_config():
             'agent_list': 'None is not valid IPv4 address.',
             'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
             'master_list': 'None is not valid IPv4 address.',
-            'ssh_key': 'None',
-            'ip_detect_script': 'None',
             'ssh_key_path': 'File does not exist genconf/ssh_key',
             'superuser_username': 'None is not a valid string'}}
     messages = backend.do_validate_config(config_path)

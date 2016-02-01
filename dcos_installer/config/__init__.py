@@ -6,6 +6,7 @@
 #
 # c = DcosConfig()
 # print(c)
+import json
 import logging
 import os
 import yaml
@@ -159,3 +160,29 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             dictionary[k] = v
 
         return dictionary
+
+    def make_gen_config(self):
+        bootstrap_id = os.getenv('BOOTSTRAP_ID', '')
+        gen_config = {
+            'bootstrap_url': None,
+            'cluster_name': None,
+            'exhibitor_storage_backend': None,
+            'exhibitor_zk_hosts': None,
+            'exhibitor_zk_path': None,
+            'master_discovery': None,
+            'master_list': None,
+            'resolvers': None}
+
+        for key, value in self.items():
+            if key in gen_config:
+                log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
+                # stringify the keys as they're added in:
+                if isinstance(value, list):
+                    log.debug("Caught list for genconf configuration, transforming to JSON string: %s", list)
+                    value = json.dumps(value)
+                else:
+                    pass
+                gen_config[key] = value
+
+        log.debug('Complete genconf configuration: \n{}'.format(gen_config))
+        return gen_config

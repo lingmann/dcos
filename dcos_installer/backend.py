@@ -182,6 +182,5 @@ def make_default_directories():
     So users do not have to set the directories in the config.yaml,
     we build them using sane defaults here first.
     """
-    state_dir = STATE_DIR
-    if not os.path.exists(state_dir):
-        os.makedirs(state_dir)
+    if not os.path.exists(STATE_DIR):
+        os.makedirs(STATE_DIR)

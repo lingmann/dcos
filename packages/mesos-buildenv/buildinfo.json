@@ -4,6 +4,6 @@
     "kind": "git",
     "git": "git@github.com:mesosphere/mesos-buildenv.git",
     "ref": "333a8528f29555b25f5942c4f79665f9e44fc0c1",
-    "ref_origin": "remove-picojson"
+    "ref_origin": "master"
   }
 }

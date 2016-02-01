@@ -1,14 +1,9 @@
-# The directories for aiohttp handlers need to be made before the server
-# library is initialized. This probably isn't PEP8 compatible.
-from dcos_installer import backend
-backend.make_default_directories()
-
 import argparse
 import asyncio
 import logging
 import sys
 
-from dcos_installer import action_lib
+from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header, PrettyPrint
 from dcos_installer import async_server
 from ssh.utils import AbstractSSHLibDelegate
@@ -89,8 +84,9 @@ class DcosInstaller:
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
                 for role in ['master', 'agent']:
-                    deploy_returncode = run_loop(lambda *args, **kwargs: action_lib.install_dcos(*args, role=role,
-                                                                                                 **kwargs), options)
+                    action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
+                    action.__name__ = 'deploy_{}'.format(role)
+                    deploy_returncode = run_loop(action, options)
                 if deploy_returncode != 0:
                     sys.exit(deploy_returncode)
                 sys.exit(0)

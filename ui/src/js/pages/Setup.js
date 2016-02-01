@@ -192,12 +192,14 @@ class Setup extends mixin(StoreMixin) {
     }
 
     if (key === 'zk_exhibitor_hosts') {
-      error = errors['exhibitor_zk_hosts'];
+      key = 'exhibitor_zk_hosts';
     } else if (key === 'ip_detect_script') {
-      error = errors['ip_detect_path'];
+      key = 'ip_detect_path';
     } else if (key === 'ssh_key') {
-      error = errors['ssh_key_path'];
-    } else if (localValidationErrors[key]) {
+      key = 'ssh_key_path';
+    }
+
+    if (localValidationErrors[key]) {
       error = localValidationErrors[key];
     } else if (errors[key]) {
       error = errors[key];
@@ -290,9 +292,9 @@ class Setup extends mixin(StoreMixin) {
               </FormLabelContent>
             </FormLabel>
           ),
-          showError: this.getErrors('ssh_port'),
-          validationErrorText: this.getErrors('ssh_port'),
-          validation: this.getValidationFn('ssh_port'),
+          showError: this.getErrors('ssh_port', 'port'),
+          validationErrorText: this.getErrors('ssh_port', 'port'),
+          validation: this.getValidationFn('ssh_port', 'port'),
           value: this.state.formData.ssh_port
         }
       ],
@@ -417,8 +419,8 @@ class Setup extends mixin(StoreMixin) {
               </FormLabelContent>
             </FormLabel>
           ),
-          showError: this.getErrors('zk_exhibitor_port'),
-          validation: this.getValidationFn('zk_exhibitor_port'),
+          showError: this.getErrors('zk_exhibitor_port', 'port'),
+          validation: this.getValidationFn('zk_exhibitor_port', 'port'),
           validationErrorText: this.getErrors('zk_exhibitor_port'),
           value: this.state.formData.zk_exhibitor_port
         }
@@ -495,8 +497,6 @@ class Setup extends mixin(StoreMixin) {
 
   getValidationFn(key, type) {
     return (fieldValue) => {
-      let errors = SetupStore.get('errors');
-
       if (type === 'list' && fieldValue != null && fieldValue !== '') {
         // Remove whitespace, commas, periods, and digits.
         let unwantedChars = fieldValue.replace(/\s|\.|,|\d/g, '');
@@ -517,11 +517,11 @@ class Setup extends mixin(StoreMixin) {
             this.setState({localValidationErrors});
           }
         }
-      } else if (type === 'integer' && fieldValue != null && fieldValue !== '') {
+      } else if (type === 'port' && fieldValue != null && fieldValue !== '') {
         if (parseInt(fieldValue) > 65535) {
           this.setState({
             localValidationErrors: {
-              [key]: 'Port cannot be greater than 65535.'
+              [key]: 'Ports must be less than or equal to 65535'
             }
           });
 
@@ -536,7 +536,7 @@ class Setup extends mixin(StoreMixin) {
         }
       }
 
-      if (this.getErrors(key, type)) {
+      if (this.getErrors(key)) {
         return false;
       }
 

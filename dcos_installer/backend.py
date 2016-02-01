@@ -175,12 +175,3 @@ def success(config_path=CONFIG_PATH):
     }
 
     return return_success
-
-
-def make_default_directories():
-    """
-    So users do not have to set the directories in the config.yaml,
-    we build them using sane defaults here first.
-    """
-    if not os.path.exists(STATE_DIR):
-        os.makedirs(STATE_DIR)

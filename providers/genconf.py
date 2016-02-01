@@ -151,7 +151,7 @@ def do_provider(provider_module, mixins, genconf_config):
             mixins=mixins
             )
     except gen.ValidationError as ex:
-        for key, error in ex.errors:
+        for key, error in ex.errors.items():
             if key == '':
                 log.error("Error: %s", error)
             else:

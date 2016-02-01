@@ -268,8 +268,11 @@ def logs_handler(request):
     return web.HTTPFound('/download/log/complete.log'.format(VERSION))
 
 
-app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
-app.router.add_static('/download/log', '/genconf/state/')
+try:
+    app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
+    app.router.add_static('/download/log', '/genconf/state/')
+except ValueError as err:
+    log.warning(err)
 
 app.router.add_route('GET', '/', root)
 app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
@@ -306,6 +309,9 @@ def start(port=9000):
                 log.error('cannot remove {}, Permission denied'.format(state_file))
     else:
         os.makedirs(STATE_DIR)
+
+    assert os.path.isdir(pkg_resources.resource_filename(__name__, 'templates/assets/'))
+    assert os.path.isdir('/genconf/state/')
 
     try:
         loop.run_forever()

@@ -17,6 +17,7 @@
 # them in other validate methods.
 import logging
 import os
+import re
 import socket
 
 log = logging.getLogger(__name__)
@@ -105,7 +106,7 @@ def validate_string(key=None, config=None):
             return [True, '{} is a valid string.'.format(key)]
 
         else:
-            return [False, '{} is not a valid string. Is of type {}.'.format(key, str(type(key)))]
+            return [False, '{} is not a valid string'.format(key)]
 
     return [False, None]
 
@@ -124,6 +125,22 @@ def validate_int(key=None, config=None):
                 return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
         else:
             return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+
+    return [False, None]
+
+
+def validate_port(key=None, config=None):
+    if key in config:
+        is_int, msg = validate_int(key, config)
+        if not is_int:
+            return is_int, msg
+
+        key = config[key]
+        if int(key) > 65535:
+            return [False, "Ports must be less than or equal to 65535"]
+
+        else:
+            return [True, "Port is less than or equal to 65535"]
 
     return [False, None]
 
@@ -171,20 +188,26 @@ def validate_exhibitor_zk_hosts(key=None, config=None):
         else:
             return [True, '{} is valid exhibitor ZK hosts format.'.format(key)]
 
-    return [False, None]
+    return [False, 'None is not a valid Exhibitor Zookeeper host']
 
 
 def validate_path(key=None, config=None):
     """
     Validate a path exists.
     """
+    truncate_paths = {
+        '/genconf/ip-detect': 'genconf/ip-detect',
+        '/genconf/ssh_key': 'genconf/ssh_key'}
     if key in config:
         key = config[key]
         if os.path.exists(key):
             return [True, 'File exists {}'.format(key)]
 
         else:
-            return [False, 'File does not exist {}'.format(key)]
+            if key in truncate_paths.keys():
+                return [False, 'File does not exist {}'.format(truncate_paths[key])]
+            else:
+                return [False, 'File does not exist {}'.format(key)]
 
     return [False, None]
 
@@ -236,11 +259,38 @@ def validate_comma_list(key=None, config=None):
 
 
 def validate_ssh_key(key=None, config=None):
-    if key in config:
+    if key in config and key is not None:
+        is_string, msg = validate_string(key, config)
+        if not is_string:
+            return is_string, msg
+
         key = config[key]
         # Validate path exists
-        does_validate, msg = validate_path(key, config)
-        if not does_validate:
-            return does_validate, msg
+        exists, msg = validate_path(key, config)
+        if not exists:
+            return exists, msg
+
+        else:
+            # Validate the PEM encoded file
+            if key.startswith('-----BEGIN RSA PRIVATE KEY-----'):
+                return [True, 'Is an RSA encoded SSH key']
+            else:
+                return [False, 'Is not an RSA encoded SSH key']
+
+    return [False, None]
+
+
+def validate_ip_detect_script(key=None, config=None):
+    if key in config and key is not None:
+        key = config[key]
+        exists, msg = validate_path(key, config)
+        if not exists:
+            return exists, msg
+        else:
+            # Validate it's a script of some sort, i.e. #!/
+            if key.startswith('#!/'):
+                return [True, 'Is an executable script']
+            else:
+                return [False, 'Is not an executable script']
 
     return [False, None]

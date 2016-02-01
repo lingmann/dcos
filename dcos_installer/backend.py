@@ -9,7 +9,7 @@ from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
-from dcos_installer.util import CONFIG_PATH
+from dcos_installer.util import CONFIG_PATH, STATE_DIR
 
 log = logging.getLogger()
 
@@ -197,6 +197,6 @@ def make_default_directories():
     we build them using sane defaults here first.
     """
     config = get_config()
-    state_dir = config['state_dir'].get('state_dir', '/genconf/state')
+    state_dir = STATE_DIR
     if not os.path.exists(state_dir):
         os.makedirs(state_dir)

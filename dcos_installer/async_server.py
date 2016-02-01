@@ -10,12 +10,12 @@ from aiohttp import web
 
 from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header
+from dcos_installer.util import STATE_DIR
 
 log = logging.getLogger()
 
 VERSION = '1'
 
-STATE_DIR = '/genconf/state'
 
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.

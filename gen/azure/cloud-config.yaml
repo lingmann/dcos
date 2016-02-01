@@ -86,8 +86,6 @@ root:
       EnvironmentFile=/opt/mesosphere/environment
       # config-writer service should eventually be removed, see: DCOS-3719
       ExecStart=/usr/bin/bash -c "echo $(detect_ip) $(hostname) > /etc/hosts"
-apt_sources:
-    - source: "deb https://apt.dockerproject.org/repo ubuntu-wily main"
 runcmd:
     - [ ln, -s, /bin/rm, /usr/bin/rm ]
     - [ ln, -s, /bin/mkdir, /usr/bin/mkdir ]
@@ -109,8 +107,7 @@ runcmd:
     - [ systemctl, start, dcos-download.service ]
     - [ systemctl, start, dcos-setup.service ]
     - [ systemctl, start, dcos-config-writer.service ]
-    - apt-key adv --keyserver hkp://p80.pool.sks-keyservers.net:80 --recv-keys 58118E89F3A912897C070ADBF76221572C52609D
     - [ apt-get, -y, update ]
-    - DEBIAN_FRONTEND=noninteractive apt-get install -y -q docker-engine=1.9.1-0~wily
-    - [ usermod, -aG, docker, core ]
+    - curl -fLsSv --retry 20 -C - -o /tmp/docker-engine_1.9.1-0~wily_amd64.deb http://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.9.1-0~wily_amd64.deb
+    - DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/docker-engine_1.9.1-0~wily_amd64.deb
     - [ systemctl, restart, docker ]

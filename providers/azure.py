@@ -127,21 +127,20 @@ def render_arm(
     return json.dumps(template_json)
 
 
-def gen_templates(user_args):
+def gen_templates(user_args, arm_template):
     '''
     Render the cloud_config template given a particular set of options
 
     @param user_args: dict, args to pass to the gen library. These are user
                      input arguments which get filled in/prompted for.
-    @param options: Options to control the gen library itself, such as whether
-                     to save the user config, the final generated config, if it
-                     is non-interactive
+    @param arm_template: string, path to the source arm template for rendering
+                         by the gen library (e.g. 'azure/templates/azuredeploy.json')
     '''
     results = gen.generate(
         # Mixins which add mounting the drive, disabling etcd, provider config
         # around how to access the master load balancer, etc.
-        mixins=['azure', 'coreos'],
-        extra_templates={'azuredeploy': ['azure/templates/azuredeploy.json']},
+        mixins=['azure'],
+        extra_templates={'azuredeploy': [arm_template]},
         arguments=user_args,
         cc_package_files=[
             '/etc/exhibitor',
@@ -150,8 +149,7 @@ def gen_templates(user_args):
             '/etc/master_list']
         )
 
-    # Add general services
-    cloud_config = results.utils.add_services(results.templates['cloud-config'])
+    cloud_config = results.templates['cloud-config']
 
     # Specialize for master, slave, slave_public
     variant_cloudconfig = {}
@@ -185,41 +183,71 @@ def gen_templates(user_args):
     })
 
 
-def master_list_arm_json(num_masters):
+def master_list_arm_json(num_masters, varietal):
     '''
     Return a JSON string containing a list of ARM expressions for the master IP's of the cluster.
 
     @param num_masters: int, number of master nodes in the cluster
+    @param varietal: string, indicate template varietal to build for either 'acs' or 'dcos'
     '''
-    arm_expression = "[[[reference('masterNodeNic{}').ipConfigurations[0].properties.privateIPAddress]]]"
+
+    if varietal == 'dcos':
+        arm_expression = "[[[reference('masterNodeNic{}').ipConfigurations[0].properties.privateIPAddress]]]"
+    elif varietal == 'acs':
+        arm_expression = "[[[reference(variables('masterVMNic')[{}]).ipConfigurations[0].properties.privateIPAddress]]]"
+    else:
+        raise ValueError("Unknown Azure varietal specified")
+
     return json.dumps([arm_expression.format(x) for x in range(num_masters)])
 
 
-def make_template(num_masters, gen_arguments):
+def make_template(num_masters, gen_arguments, varietal):
     '''
     Return a tuple: the generated template for num_masters and the artifact dict.
 
     @param num_masters: int, number of master nodes to embed in the generated template
+    @param gen_arguments: dict, args to pass to the gen library. These are user
+                          input arguments which get filled in/prompted for.
+    @param varietal: string, indicate template varietal to build for either 'acs' or 'dcos'
     '''
 
-    gen_arguments['master_list'] = master_list_arm_json(num_masters)
+    gen_arguments['master_list'] = master_list_arm_json(num_masters, varietal)
     args = deepcopy(gen_arguments)
-    dcos_template = gen_templates(args)
+
+    if varietal == 'dcos':
+        args['exhibitor_azure_prefix'] = "[[[variables('uniqueName')]]]"
+        args['exhibitor_azure_account_name'] = "[[[variables('storageAccountName')]]]"
+        args['exhibitor_azure_account_key'] = ("[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', "
+                                               "variables('storageAccountName')), '2015-05-01-preview').key1]]]")
+        args['cluster_name'] = "[[[variables('uniqueName')]]]"
+        dcos_template = gen_templates(args, 'azure/templates/azuredeploy.json')
+    elif varietal == 'acs':
+        args['exhibitor_azure_prefix'] = "[[[variables('masterPublicIPAddressName')]]]"
+        args['exhibitor_azure_account_name'] = "[[[variables('masterStorageAccountName')]]]"
+        args['exhibitor_azure_account_key'] = ("[[[listKeys(resourceId('Microsoft.Storage/storageAccounts', "
+                                               "variables('masterStorageAccountName')), '2015-06-15').key1]]]")
+        args['cluster_name'] = "[[[variables('masterPublicIPAddressName')]]]"
+        dcos_template = gen_templates(args, 'azure/templates/acs.json')
+    else:
+        raise ValueError("Unknown Azure varietal specified")
+
     artifact = {
-        'channel_path': 'azure/dcos-{}master.azuredeploy.json'.format(num_masters),
+        'channel_path': 'azure/{}-{}master.azuredeploy.json'.format(varietal, num_masters),
         'local_content': dcos_template.arm,
         'content_type': 'application/json; charset=utf-8'
     }
+
     return dcos_template, artifact
 
 
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     extra_packages = list()
     artifacts = list()
-    for num_masters in [1, 3, 5]:
-        dcos_template, artifact = make_template(num_masters, gen_arguments)
-        extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
-        artifacts.append(artifact)
+    for arm_t in ['dcos', 'acs']:
+        for num_masters in [1, 3, 5]:
+            dcos_template, artifact = make_template(num_masters, gen_arguments, arm_t)
+            extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
+            artifacts.append(artifact)
 
     artifacts.append({
         'channel_path': 'azure.html',
@@ -237,30 +265,23 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
     '''
     Generate the button page, that is, "Deploy a cluster to Azure" page
     '''
-    arm_urls = [
-        {
-            'name': '1 Master',
-            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
-                channel_commit_path=channel_commit_path,
-                arm_template_name='dcos-1master.azuredeploy.json'))
-        },
-        {
-            'name': '3 Masters',
-            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
-                channel_commit_path=channel_commit_path,
-                arm_template_name='dcos-3master.azuredeploy.json'))
-        },
-        {
-            'name': '5 Masters',
-            'encoded_url': encode_url_as_param(UPLOAD_URL.format(
-                channel_commit_path=channel_commit_path,
-                arm_template_name='dcos-5master.azuredeploy.json'))
-        }]
+    dcos_urls = [
+        encode_url_as_param(UPLOAD_URL.format(
+            channel_commit_path=channel_commit_path,
+            arm_template_name='dcos-{}master.azuredeploy.json'.format(x)))
+        for x in [1, 3, 5]]
+    acs_urls = [
+        encode_url_as_param(UPLOAD_URL.format(
+            channel_commit_path=channel_commit_path,
+            arm_template_name='acs-{}master.azuredeploy.json'.format(x)))
+        for x in [1, 3, 5]]
+
     return env.get_template('azure/templates/azure.html').render({
         'repo_channel_path': repo_channel_path,
         'tag': tag,
         'commit': commit,
-        'arm_urls': arm_urls
+        'dcos_urls': dcos_urls,
+        'acs_urls': acs_urls
     })
 
 

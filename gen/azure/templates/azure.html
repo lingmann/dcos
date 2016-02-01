@@ -1,23 +1,45 @@
 <!doctype html>
 <html>
-<head>
-  <title>DCOS {{ repo_channel_path }} ARM Template</title>
-</head>
+  <head>
+    <title>DCOS {{ repo_channel_path }} ARM Template</title>
+  </head>
 <body>
-<h1>DCOS {{ repo_channel_path }} ARM Template</h1>
 
-{% for arm_url in arm_urls %}
-<h2>{{ arm_url['name'] }}</h2>
-<a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ arm_url['encoded_url'] }}' target="_blank">
-  <img src="http://azuredeploy.net/deploybutton.png"/>
-</a>
-{% endfor %}
+  <h1>DCOS {{ repo_channel_path }} ARM Templates</h1>
 
-<footer>
-<pre>
-DCOS Release: {{ tag }}
-DCOS Commit: {{ commit }}
-</pre>
-</footer>
+  <h2>DCOS</h2>
+  <table>
+    <tr><th>1 Master</th><th>3 Masters</th><th>5 Masters</th></tr>
+    <tr>
+      {% for url in dcos_urls %}
+      <td>
+        <a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ url }}' target="_blank">
+          <img src="http://azuredeploy.net/deploybutton.png"/>
+        </a>
+      </td>
+      {% endfor %}
+    </tr>
+  </table>
+
+  <h2>DCOS for Azure Container Service</h2>
+  <table>
+    <tr><th>1 Master</th><th>3 Masters</th><th>5 Masters</th></tr>
+    <tr>
+      {% for url in acs_urls %}
+      <td>
+        <a href='https://portal.azure.com/#create/Microsoft.Template/uri/{{ url }}' target="_blank">
+          <img src="http://azuredeploy.net/deploybutton.png"/>
+        </a>
+      </td>
+      {% endfor %}
+    </tr>
+  </table>
+
+  <footer>
+    <pre>
+    DCOS Release: {{ tag }}
+    DCOS Commit: {{ commit }}
+    </pre>
+  </footer>
 </body>
 </html>

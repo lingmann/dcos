@@ -1,14 +1,9 @@
-# The directories for aiohttp handlers need to be made before the server
-# library is initialized. This probably isn't PEP8 compatible.
-from dcos_installer import backend
-backend.make_default_directories()
-
 import argparse
 import asyncio
 import logging
 import sys
 
-from dcos_installer import action_lib
+from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header, PrettyPrint
 from dcos_installer import async_server
 from ssh.utils import AbstractSSHLibDelegate

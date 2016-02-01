@@ -10,12 +10,12 @@ from aiohttp import web
 
 from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header
+from dcos_installer.util import STATE_DIR
 
 log = logging.getLogger()
 
 VERSION = '1'
 
-state_dir = '/genconf/state'
 
 # Define the aiohttp web application framework and setup
 # the routes to be used in the API.
@@ -126,7 +126,7 @@ def _merge_json(result, data_json, original_action):
 
 
 def unlink_state_file(action_name):
-    json_status_file = state_dir + '/{}.json'.format(action_name)
+    json_status_file = STATE_DIR + '/{}.json'.format(action_name)
     if os.path.isfile(json_status_file):
         log.debug('removing {}'.format(json_status_file))
         os.unlink(json_status_file)
@@ -136,7 +136,7 @@ def unlink_state_file(action_name):
 
 
 def read_json_state(action_name):
-    json_status_file = state_dir + '/{}.json'.format(action_name)
+    json_status_file = STATE_DIR + '/{}.json'.format(action_name)
     if not os.path.isfile(json_status_file):
         return False
 
@@ -229,7 +229,7 @@ def action_action_name(request):
                         log.debug('failed hosts: {}, action: {}'.format(failed_hosts, new_action_str))
                         new_action = action_map.get(new_action_str)
                         if failed_hosts:
-                            yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir,
+                            yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR,
                                                                 hosts=failed_hosts, try_remove_stale_dcos=True,
                                                                 **params))
                             return web.json_response({'status': '{} retried'.format(new_action_str)})
@@ -239,10 +239,10 @@ def action_action_name(request):
                 for new_action_str in action:
                     print_header('EXECUTING {}'.format(new_action_str))
                     new_action = action_map.get(new_action_str)
-                    yield from asyncio.async(new_action(backend.get_config(), state_json_dir=state_dir, **params))
+                    yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR, **params))
                 return web.json_response({'status': 'retry {} started'.format(action)})
         else:
-            yield from asyncio.async(action(backend.get_config(), state_json_dir=state_dir, **params))
+            yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, **params))
         return web.json_response({'status': '{} started'.format(action_name)})
 
 
@@ -295,8 +295,8 @@ def start(port=9000):
         port)
     srv = loop.run_until_complete(f)
     log.info('Starting server {}'.format(srv.sockets[0].getsockname()))
-    if os.path.isdir(state_dir):
-        for state_file in glob.glob(state_dir + '/*.json'):
+    if os.path.isdir(STATE_DIR):
+        for state_file in glob.glob(STATE_DIR + '/*.json'):
             try:
                 os.unlink(state_file)
                 log.debug('removing {}'.format(state_file))
@@ -305,7 +305,7 @@ def start(port=9000):
             except PermissionError:
                 log.error('cannot remove {}, Permission denied'.format(state_file))
     else:
-        os.mkdir(state_dir)
+        os.makedirs(STATE_DIR)
 
     try:
         loop.run_forever()

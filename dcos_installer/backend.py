@@ -8,7 +8,7 @@ from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
-from dcos_installer.util import CONFIG_PATH
+from dcos_installer.util import CONFIG_PATH, STATE_DIR
 
 log = logging.getLogger()
 
@@ -182,7 +182,5 @@ def make_default_directories():
     So users do not have to set the directories in the config.yaml,
     we build them using sane defaults here first.
     """
-    make_these_first = ['/genconf/state']
-    for d in make_these_first:
-        if not os.path.exists(d):
-            os.makedirs(d)
+    if not os.path.exists(STATE_DIR):
+        os.makedirs(STATE_DIR)

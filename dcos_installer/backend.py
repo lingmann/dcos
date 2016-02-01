@@ -89,6 +89,7 @@ def do_validate_config(config_path=CONFIG_PATH):
     config.config_path = CONFIG_PATH
     config.update()
     messages = config.validate()
+    print(messages)
     return messages
 
 

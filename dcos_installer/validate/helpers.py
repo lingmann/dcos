@@ -163,9 +163,9 @@ def validate_exhibitor_zk_hosts(key=None, config=None):
                     return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0].strip())]
 
         except:
-            if is_valid_ipv4_address(key.split(':')[0]):
+            if key is not None and is_valid_ipv4_address(key.split(':')[0]):
                 pass
-            else:
+            elif key is not None:
                 return [False, '{} is not a valid IPv4 address'.format(key.split(':')[0].strip())]
 
         else:

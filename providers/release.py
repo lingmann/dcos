@@ -639,16 +639,16 @@ def make_stable_artifacts(cache_repository_url, skip_build):
 def make_channel_artifacts(metadata):
     artifacts = []
 
-    genconfs = build_genconfs(metadata['bootstrap_dict'])
+    installers = build_installers(metadata['bootstrap_dict'])
 
-    artifacts.append({'channel_path': 'docker-tag', 'local_content': genconfs[None][0]})
-    artifacts.append({'channel_path': 'docker-tag.txt', 'local_content': genconfs[None][0]})
+    artifacts.append({'channel_path': 'docker-tag', 'local_content': installers[None][0]})
+    artifacts.append({'channel_path': 'docker-tag.txt', 'local_content': installers[None][0]})
 
-    # Add genconf scripts for all bootstraps.
-    for variant, (genconf_version, genconf_filename) in genconfs.items():
+    # Add installer scripts for all bootstraps.
+    for variant, (installer_version, installer_filename) in installers.items():
         artifacts.append({
             'channel_path': 'dcos_generate_config.{}sh'.format(variant_prefix(variant)),
-            'local_path': genconf_filename
+            'local_path': installer_filename
             })
 
     provider_data = {}
@@ -716,8 +716,9 @@ def do_variable_set_or_exists(env_var, path):
 def get_src_dirs():
     pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
     dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
+    dcos_installer_src = make_abs(do_variable_set_or_exists('DCOS_INSTALLER_SRC', 'ext/dcos-installer'))
 
-    return pkgpanda_src, dcos_image_src
+    return pkgpanda_src, dcos_image_src, dcos_installer_src
 
 
 def do_build_packages(cache_repository_url, skip_build):
@@ -766,12 +767,12 @@ def do_build_packages(cache_repository_url, skip_build):
     return get_build()
 
 
-def make_genconf_docker(variant, bootstrap_id):
+def make_installer_docker(variant, bootstrap_id):
     assert len(bootstrap_id) > 0
 
     # TODO(cmaloney): If a pre-existing wheelhouse exists assert that the wheels
     # inside of it match the current versions / working commits of pkganda, dcos-image.
-    pkgpanda_src, dcos_image_src = get_src_dirs()
+    pkgpanda_src, dcos_image_src, dcos_installer_src = get_src_dirs()
     wheel_dir = os.getcwd() + '/wheelhouse'
     if not os.path.exists(wheel_dir):
         print("Building wheels for dcos-image, pkgpanda, and all dependencies")
@@ -779,21 +780,22 @@ def make_genconf_docker(variant, bootstrap_id):
         # Make the wheels
         subprocess.check_call(['pip', 'wheel', pkgpanda_src])
         subprocess.check_call(['pip', 'wheel', dcos_image_src])
+        subprocess.check_call(['pip', 'wheel', dcos_installer_src])
 
-    genconf_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
-    genconf_tar = "dcos-genconf." + genconf_version + ".tar"
-    genconf_filename = "dcos_generate_config." + variant_prefix(variant) + "sh"
+    image_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
+    genconf_tar = "dcos-genconf." + image_version + ".tar"
+    installer_filename = "dcos_generate_config." + variant_prefix(variant) + "sh"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
     bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
 
     metadata = {
         'variant': variant_name(variant),
         'bootstrap_id': bootstrap_id,
-        'docker_tag': genconf_version,
+        'docker_tag': image_version,
         'genconf_tar': genconf_tar,
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
-        'docker_image_name': 'mesosphere/dcos-genconf:' + genconf_version,
+        'docker_image_name': 'mesosphere/dcos-genconf:' + image_version,
         'dcos_image_commit': util.dcos_image_commit
     }
 
@@ -802,11 +804,11 @@ def make_genconf_docker(variant, bootstrap_id):
 
         pkgpanda.util.write_string(
             build_dir + '/Dockerfile',
-            pkgpanda.util.load_string('docker/genconf/Dockerfile.template').format(**metadata))
+            pkgpanda.util.load_string('docker/installer/Dockerfile.template').format(**metadata))
 
         pkgpanda.util.write_string(
-            genconf_filename,
-            pkgpanda.util.load_string('docker/genconf/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
+            installer_filename,
+            pkgpanda.util.load_string('docker/installer/dcos_generate_config.sh.in').format(**metadata) + '\n#EOF#\n')
 
         # Copy across the wheelhouse
         subprocess.check_call(['cp', '-r', wheel_dir, build_dir + '/wheelhouse'])
@@ -818,18 +820,18 @@ def make_genconf_docker(variant, bootstrap_id):
         subprocess.check_call(['cp', metadata['bootstrap_path'], build_dir + '/' + metadata['bootstrap_filename']])
         subprocess.check_call(['docker', 'build', '-t', metadata['docker_image_name'], build_dir])
 
-        print("Building", genconf_filename)
+        print("Building", installer_filename)
         subprocess.check_call(
             ['docker', 'save', metadata['docker_image_name']],
             stdout=open(metadata['genconf_tar'], 'w'))
-        subprocess.check_call(['tar', 'cvf', '-', metadata['genconf_tar']], stdout=open(genconf_filename, 'a'))
-        subprocess.check_call(['chmod', '+x', genconf_filename])
+        subprocess.check_call(['tar', 'cvf', '-', metadata['genconf_tar']], stdout=open(installer_filename, 'a'))
+        subprocess.check_call(['chmod', '+x', installer_filename])
 
-    return genconf_version, genconf_filename
+    return image_version, installer_filename
 
 
-def build_genconfs(bootstrap_dict):
-    """Create a genconf script for each variant in bootstrap_dict.
+def build_installers(bootstrap_dict):
+    """Create a installer script for each variant in bootstrap_dict.
 
     Writes a dcos_generate_config.<variant>.sh for each variant in
     bootstrap_dict to the working directory, except for the default variant's
@@ -837,14 +839,14 @@ def build_genconfs(bootstrap_dict):
     variants to (genconf_version, genconf_filename) tuples.
 
     """
-    genconfs = {}
+    installers = {}
 
-    # TODO(cmaloney): Build genconfs in parallel.
+    # TODO(cmaloney): Build installers in parallel.
     # Variants are sorted for stable ordering.
     for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: variant_str(kv[0])):
-        print("Building genconf for variant:", variant_name(variant))
-        genconfs[variant] = make_genconf_docker(variant, bootstrap_id)
-    return genconfs
+        print("Building installer for variant:", variant_name(variant))
+        installers[variant] = make_installer_docker(variant, bootstrap_id)
+    return installers
 
 
 def validate_options(options):

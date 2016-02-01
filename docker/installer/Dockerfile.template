@@ -11,7 +11,7 @@ RUN apt-get update && \
   rm -rf /var/lib/apt/lists/* && apt-get clean
 
 COPY wheelhouse /wheelhouse
-RUN pip install --no-index --find-links=/wheelhouse dcos-image pkgpanda && rm -rf /wheelhouse
+RUN pip install --no-index --find-links=/wheelhouse dcos-image pkgpanda dcos-installer && rm -rf /wheelhouse
 
 WORKDIR /
 
@@ -23,5 +23,7 @@ COPY {bootstrap_filename} /artifacts/{bootstrap_filename}
 ENV BOOTSTRAP_ID={bootstrap_id}
 ENV PYTHONUNBUFFERED="notemtpy"
 ENV DCOS_IMAGE_COMMIT={dcos_image_commit}
+ENV AIOHTTP_NOSENDFILE=1
 
-ENTRYPOINT ["genconf"]
+EXPOSE 9000
+ENTRYPOINT ["dcos_installer"]

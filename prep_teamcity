@@ -2,6 +2,7 @@
 set -o errexit -o nounset -o pipefail
 
 ./fetch_pkgpanda
+./fetch_installer
 
 # NOTE: If the directory already exists that is indeed a hard error. Should be
 # cleaned up between builds to guarantee we get the artifacts we expect.
@@ -21,15 +22,18 @@ pip install wheel
 
 # Download distro independent artifacts
 pip install --download wheelhouse --no-binary :all: ext/dcos-image
+pip install --download wheelhouse --no-binary :all: ext/dcos-installer
 pip install --download wheelhouse --no-binary :all: ext/pkgpanda
 
 # Make the wheels, they will be output into the folder `wheelhouse` by default.
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/pkgpanda
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image
+pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-installer
 
 # Install the wheels
 pip install --no-index --find-links=wheelhouse pkgpanda
 pip install --no-index --find-links=wheelhouse dcos-image
+pip install --no-index --find-links=wheelhouse dcos-installer
 
 # Cleanup the checkout
 rm -rf ext/dcos-image

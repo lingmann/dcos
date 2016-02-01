@@ -13,13 +13,13 @@ import subprocess
 import sys
 import time
 from copy import copy
+from multiprocessing import Process
 
 import pkg_resources
 import yaml
 from retrying import retry
 
 import providers.ccm
-from deploy.console_printer import clean_logs, print_failures
 from ssh.ssh_runner import SSHRunner
 
 
@@ -27,7 +27,7 @@ def run_cmd(mode, expect_errors=False):
     print("Running: dcos_generate_config with mode", mode)
     # NOTE: We use `bash` as a wrapper here to make it so dcos_generate_config.sh
     # doesn't have to be executable.
-    cmd = ['bash', './dcos_generate_config.sh', '--log-level', 'debug', mode]
+    cmd = ['bash', './dcos_generate_config.sh', mode]
     p = subprocess.Popen(
         cmd,
         stdin=subprocess.DEVNULL,
@@ -53,7 +53,7 @@ def make_vpc():
         name=unique_cluster_id,
         time=60,
         instance_count=3,
-        instance_type="m3.large",
+        instance_type="m3.xlarge",
         instance_os="cent-os-7",
         key_pair_name=unique_cluster_id
         )
@@ -77,7 +77,7 @@ def get_local_addresses(ssh_runner):
     mapping = {}
     postfix = copy(ssh_runner.log_postfix)
     ssh_runner.log_postfix = 'ip'
-    ssh_runner.execute_cmd("curl -fsSL http://169.254.169.254/latest/meta-data/local-ipv4")
+    ssh_runner.execute_cmd("curl -fsSL http://169.254.169.254/latest/meta-data/local-ipv4", True)
     for host in ssh_runner.targets:
         with open("{}/{}_{}.log".format(ssh_runner.log_directory, host, 'ip'), 'r') as yaml_fh:
             host_data = yaml.load(yaml_fh)
@@ -87,14 +87,9 @@ def get_local_addresses(ssh_runner):
     return mapping
 
 
-def setup_docker_registry(ssh_runner):
-    targets = copy(ssh_runner.targets)
+def test_setup(ssh_runner, registry):
     postfix = copy(ssh_runner.log_postfix)
-    ssh_runner.targets = targets[1:]
     ssh_runner.log_postfix = 'registry_setup'
-    clean_logs(ssh_runner.log_postfix, ssh_runner.log_directory)
-    print("Setting up test server docker app and registry on all hosts")
-    print("Copying setup files")
     ssh_runner.execute_cmd('rm -rf /home/centos/test_server')
     ssh_runner.execute_cmd('mkdir -p /home/centos/test_server')
     test_server_docker = pkg_resources.resource_filename(__name__, "../docker/test_server/Dockerfile")
@@ -102,93 +97,75 @@ def setup_docker_registry(ssh_runner):
     test_server_script = pkg_resources.resource_filename(__name__, "../docker/test_server/test_server.py")
     ssh_runner.copy_cmd(test_server_script, '/home/centos/test_server/test_server.py')
     print("Starting docker registry")
-    ssh_runner.execute_cmd('docker run -d -p 5000:5000 --restart=always --name registry registry:2')
+    ssh_runner.execute_cmd('docker run -d -p 5000:5000 --restart=always --name registry registry:2', True)
     print("Building dockerized test server")
-    ssh_runner.execute_cmd('cd /home/centos/test_server && docker build -t 127.0.0.1:5000/test_server .')
+    build_test_server = 'cd /home/centos/test_server && docker build -t {}:5000/test_server .'.format(registry)
+    ssh_runner.execute_cmd(build_test_server, True)
     print("Push test server to registry")
-    ssh_runner.execute_cmd('docker push 127.0.0.1:5000/test_server')
-    print_failures(ssh_runner.log_postfix, ssh_runner.log_directory)
-    ssh_runner.targets = targets
-    ssh_runner.log_postfix = postfix
-
-
-def setup_pytest(ssh_runner):
-    targets = copy(ssh_runner.targets)
-    postfix = copy(ssh_runner.log_postfix)
-    ssh_runner.targets = [targets[0]]
-    ssh_runner.log_postfix = 'pytest_setup'
-    clean_logs(ssh_runner.log_postfix, ssh_runner.log_directory)
-    # Get the stuff there
-    print("Cleaning out old dirs")
+    ssh_runner.execute_cmd('docker push {}:5000/test_server'.format(registry), True)
     ssh_runner.execute_cmd('rm -rf /home/centos/py.test')
     ssh_runner.execute_cmd('mkdir -p /home/centos/py.test')
-    print("Copy files")
     pytest_docker = pkg_resources.resource_filename(__name__, "../docker/py.test/Dockerfile")
     ssh_runner.copy_cmd(pytest_docker, '/home/centos/py.test/Dockerfile')
     test_script = pkg_resources.resource_filename(__name__, '../integration_test.py')
     ssh_runner.copy_cmd(test_script, '/home/centos/integration_test.py')
     print("Building docker py.test")
-    ssh_runner.execute_cmd('cd /home/centos/py.test && docker build -t py.test .')
-    print_failures(ssh_runner.log_postfix, ssh_runner.log_directory)
-    ssh_runner.targets = targets
+    ssh_runner.execute_cmd('cd /home/centos/py.test && docker build -t py.test .', True)
     ssh_runner.log_postfix = postfix
 
 
-def integration_test(ssh_runner):
-    setup_docker_registry(ssh_runner)
-    setup_pytest(ssh_runner)
-    local_ip = get_local_addresses(ssh_runner)
-    print("Running legacy integration test")
-    targets = copy(ssh_runner.targets)
+def integration_test(ssh_runner, dcos_dns, master_list, slave_list, registry_host):
     postfix = copy(ssh_runner.log_postfix)
-    ssh_runner.targets = [targets[0]]
     ssh_runner.log_postfix = 'pytest'
-    clean_logs(ssh_runner.log_postfix, ssh_runner.log_directory)
-    # Run integration_test.py against new cluster
     test_cmd = """
 docker run \
 -v /home/centos/integration_test.py:/integration_test.py \
 -e "DCOS_DNS_ADDRESS=http://{dcos_dns}" \
 -e "MASTER_HOSTS={master_list}" \
 -e "SLAVE_HOSTS={slave_list}" \
--e "REGISTRY_HOST=127.0.0.1" \
+-e "REGISTRY_HOST={registry_host}" \
 -e "DNS_SEARCH=true" \
 --net=host py.test py.test -vv /integration_test.py \
 """.format(
-        dcos_dns=local_ip[targets[1]],
-        master_list=local_ip[targets[1]],
-        slave_list=",".join([local_ip[_] for _ in targets[2:]]),
-        registry_host=targets[0])
+        dcos_dns=dcos_dns,
+        master_list=master_list,
+        slave_list=slave_list,
+        registry_host=registry_host)
     print("Running test in remote docker")
     ssh_runner.execute_cmd(test_cmd)
-    test_log_file = "{}/{}_{}.log".format(ssh_runner.log_directory, ssh_runner.targets[0], 'pytest')
-    with open(test_log_file, 'r') as yaml_fh:
-        host_data = yaml.load(yaml_fh)
-        for timestamp, values in host_data[ssh_runner.targets[0]].items():
-            for line in values['stdout']:
+    host = ssh_runner.targets[0]
+    log_path = "{}/{}_{}.log".format(ssh_runner.log_directory, host, 'pytest')
+    failed = False
+    with open(log_path, 'r') as log_fh:
+        yaml_log = yaml.load(log_fh)
+        for timestamp in yaml_log[host]:
+            if yaml_log[host][timestamp]['returncode'] != 0:
+                failed = True
+            for line in yaml_log[host][timestamp]['stdout']:
                 print(line)
-    # Will exit as error if return code is nonzero
-    print_failures(ssh_runner.log_postfix, ssh_runner.log_directory)
-    ssh_runner.targets = targets
     ssh_runner.log_postfix = postfix
+    if failed:
+        exit(1)
 
 
-def prep_hosts(ssh_runner):
+def prep_hosts(ssh_runner, registry):
     # TODO(mellenburg): replace setup with --preflightfix functionality
+    print("Setting up Docker and other DCOS requirements...")
+    ssh_runner.execute_cmd("sudo yum update -y ", True)
+    ssh_runner.execute_cmd("curl -sSL https://get.docker.com/ | sh", True)
     ssh_runner.execute_cmd("sudo yum install -y tar xz unzip curl", True)
-    ssh_runner.execute_cmd("sudo curl -sSL https://get.docker.com/ | sh", True)
-    ssh_runner.execute_cmd("sudo service docker start", True)
-    ssh_runner.execute_cmd("sudo groupadd nogroup", True)
+    # registry_add = """sudo sed -i -e "s/OPTIONS='/OPTIONS='--insecure-registry {}:5000 /" /etc/sysconfig/docker"""
+    registry_add = """
+sudo sed -i '/ExecStart/ !b; s/$/ --insecure-registry {}:5000/' /usr/lib/systemd/system/docker.service"""
+    ssh_runner.execute_cmd(registry_add.format(registry), True)
+    # dm_fix = "echo STORAGE_DRIVER=overlay | sudo tee --append /etc/sysconfig/docker-storage-setup"
+    # ssh_runner.execute_cmd(dm_fix, True)
+    # dm_fix = "echo DOCKER_STORAGE_OPTIONS= -s overlay | sudo tee --append /etc/sysconfig/docker-storage"
+    # ssh_runner.execute_cmd(dm_fix, True)
+    ssh_runner.execute_cmd("sudo systemctl enable docker", True)
+    ssh_runner.execute_cmd("sudo systemctl start docker", True)
+    ssh_runner.execute_cmd("sudo groupadd -g 65500 nogroup", True)
     ssh_runner.execute_cmd("sudo usermod -aG docker centos", True)
-
-    targets = copy(ssh_runner.targets)
-
-    # Setup and start the first host in the list only as the bootstrap ZK.
-    ssh_runner.targets = [targets[0]]
-    ssh_runner.execute_cmd("docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 jplock/zookeeper")
-
-    # Restore the target list for future ssh_runner users
-    ssh_runner.targets = targets
 
 
 def main():
@@ -240,29 +217,26 @@ def main():
     # use first node as zk backend, second node as master, all others as slaves
 
     # before real config is written, try running genconf to make sure it fails
-    run_cmd("--genconf", expect_errors=True)
+    # run_cmd("--genconf", expect_errors=True)
+    # FIX ME: this will create a genconf/config.yaml that is owned by root
     # Now create a real config
     test_config = {
-        "cluster_config": {
-            "cluster_name": "SSH Installed DCOS",
-            "bootstrap_url": "file:///opt/dcos_install_tmp",
-            "dns_search": "mesos",
-            "exhibitor_storage_backend": "zookeeper",
-            "exhibitor_zk_hosts": host_list[0]+":2181",
-            "exhibitor_zk_path": "/exhibitor",
-            "master_discovery": "static",
-            "master_list": [host_list[1]],
-            },
-        "ssh_config": {
-            "ssh_user": "centos",
-            "ssh_port": 22,
-            "ssh_key_path": "/genconf/ssh_key",
-            # skip exhibitor_zk_host
-            "target_hosts": host_list[1:],
-            "log_directory": "/genconf/",
-            "process_timeout": 1200
-            }
-        }
+        "cluster_name": "SSH Installed DCOS",
+        "bootstrap_url": "file:///opt/dcos_install_tmp",
+        "dns_search": "mesos",
+        'ip_detect_path': '/genconf/ip-detect',
+        "exhibitor_storage_backend": "zookeeper",
+        "exhibitor_zk_hosts": host_list[0]+":2181",
+        "exhibitor_zk_path": "/exhibitor",
+        "master_discovery": "static",
+        "master_list": [host_list[1]],
+        "ssh_user": "centos",
+        # skip exhibitor_zk_host and master
+        "agent_list": host_list[2:],
+        "process_timeout": 1200,
+        "superuser_username": 'sysadmin',
+        "superuser_password_hash": 'mycrazywierdhash'
+    }
     with open("genconf/config.yaml", "w") as config_fh:
         config_fh.write(yaml.dump(test_config))
     with open("genconf/ip-detect", "w") as ip_detect_fh:
@@ -272,10 +246,11 @@ def main():
     # Create custom SSH Runnner to setup the nodes for install
     ssh_runner = SSHRunner()
     ssh_runner.ssh_key_path = "genconf/ssh_key"
-    ssh_runner.ssh_user = test_config["ssh_config"]["ssh_user"]
+    ssh_runner.ssh_user = test_config["ssh_user"]
     ssh_runner.log_directory = "genconf"
     ssh_runner.process_timeout = 1200
     ssh_runner.targets = host_list
+    local_ip = get_local_addresses(ssh_runner)
 
     # Run Configuratator
     run_cmd('--genconf')
@@ -284,24 +259,47 @@ def main():
         run_cmd('--preflight', expect_errors=True)
 
         # Prep the hosts
-        prep_hosts(ssh_runner)
+        prep_hosts(ssh_runner, registry=local_ip[host_list[0]])
+
+    # Only touch the bootstap node from now on
+    ssh_runner.targets = [host_list[0]]
+
+    # Start ZK for the install
+    ssh_runner.execute_cmd("docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 jplock/zookeeper")
 
     # Run Preflight Checks
     run_cmd('--preflight')
 
-    # Run Deploy Process
-    run_cmd('--deploy')
+    # Start off deploy in background (takes ~8 minutes)
+    deploy = Process(target=run_cmd, args=('--deploy',))
+    deploy.start()
+
+    # While deploy is running, prep the testing node (takes ~6min)
+    setup = Process(target=test_setup, args=(ssh_runner, local_ip[host_list[0]]))
+    setup.start()
+
+    # Wait for both to finish
+    deploy.join()
+    setup.join()
 
     # Retry postflight for a while until it passes.
-    @retry(wait_fixed=1000, stop_max_attempt_number=100)
+    @retry(wait_fixed=1000, stop_max_attempt_number=3)
     def postflight():
         run_cmd('--postflight')
 
     postflight()
 
     # Runs dcos-image/integration_test.py inside the cluster
-    integration_test(ssh_runner)
+    @retry(wait_fixed=1000, stop_max_attempt_number=10)
+    def test_deployment():
+        integration_test(
+            ssh_runner,
+            dcos_dns=local_ip[host_list[1]],
+            master_list=local_ip[host_list[1]],
+            slave_list=",".join([local_ip[_] for _ in host_list[2:]]),
+            registry_host=local_ip[host_list[0]])
 
+    test_deployment()
     # TODO(cmaloney): add a `--healthcheck` option which runs dcos-diagnostics
     # on every host to see if they are working.
 

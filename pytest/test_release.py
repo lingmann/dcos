@@ -527,7 +527,7 @@ def test_make_stable_artifacts(monkeypatch, tmpdir):
 
 # NOTE: Implicitly tests all providers do_create functions since it calls them.
 # TODO(cmaloney): Test make_channel_artifacts, module do_create functions
-def mock_build_genconfs(bootstrap_dict):
+def mock_build_installers(bootstrap_dict):
     return {
         None: ('genconf-id', 'dcos_generate_config.sh'),
         'ee': ('genconf-id-ee', 'dcos_generate_config.ee.sh')
@@ -537,7 +537,7 @@ def mock_build_genconfs(bootstrap_dict):
 # Test that the do_create functions for each provider output data in the right
 # shape.
 def test_make_channel_artifacts(monkeypatch):
-    monkeypatch.setattr('providers.release.build_genconfs', mock_build_genconfs)
+    monkeypatch.setattr('providers.release.build_installers', mock_build_installers)
 
     metadata = {
         'commit': 'sha-1',

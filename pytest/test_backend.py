@@ -51,20 +51,19 @@ def test_bad_create_config_from_post():
 def test_do_validate_config():
     expected_output = {
         'success': {
-            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.',
-            'ip_detect_path': 'File exists /genconf/ip-detect',
-            'ssh_key_path': 'File exists /genconf/ssh_key',
-            'ssh_port': '22 is a valid integer.',
-            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses."},
+            'ssh_port': 'Port is less than or equal to 65535',
+            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
+            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.'},
+        'warning': {},
         'errors': {
-            'exhibitor_zk_hosts': "None is not a valid string. Is of type <class 'NoneType'>.",
-            'superuser_username': "None is not a valid string. Is of type <class 'NoneType'>.",
-            'agent_list': '[None] is not valid IPv4 address.',
-            'superuser_password': "None is not a valid string. Is of type <class 'NoneType'>.",
-            'master_list': '[None] is not valid IPv4 address.',
-            'ssh_user': "None is not a valid string. Is of type <class 'NoneType'>."},
-        'warning': {}}
-
+            'ssh_user': 'None is not a valid string',
+            'ip_detect_path': 'File does not exist genconf/ip-detect',
+            'superuser_password': 'None is not a valid string',
+            'agent_list': 'None is not valid IPv4 address.',
+            'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
+            'master_list': 'None is not valid IPv4 address.',
+            'ssh_key_path': 'File does not exist genconf/ssh_key',
+            'superuser_username': 'None is not a valid string'}}
     messages = backend.do_validate_config(config_path)
     assert messages == expected_output
 

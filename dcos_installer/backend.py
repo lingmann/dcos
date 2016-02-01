@@ -2,43 +2,27 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
-import json
 import logging
 import os
 from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
-from dcos_installer.util import CONFIG_PATH
+from dcos_installer.util import CONFIG_PATH, STATE_DIR
 
 log = logging.getLogger()
 
 
 def do_configure():
-    config = get_config()
-    # Decouple the configuration to be just what gen expects
-    # TODO(malnick) add super_username and password fileds
-    gen_config = {
-        'bootstrap_url': None,
-        'cluster_name': None,
-        'exhibitor_storage_backend': None,
-        'exhibitor_zk_hosts': None,
-        'exhibitor_zk_path': None,
-        'master_discovery': None,
-        'master_list': None,
-        'resolvers': None}
-    for key, value in config.items():
-        if key in gen_config:
-            log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
-            # stringify the keys as they're added in:
-            if isinstance(value, list):
-                log.debug("Caught list, transforming to JSON string: %s", list)
-                value = json.dumps(value)
-            else:
-                pass
-            gen_config[key] = value
-
-    configure.do_configure(gen_config)
+    config = DCOSConfig()
+    config.config_path = CONFIG_PATH
+    config.update()
+    messages = config.validate()
+    if len(messages['errors']) > 0:
+        log.error('Please fix validation errors before generating configuration. Try --validate-config.')
+    else:
+        gen_config = config.make_gen_config()
+        configure.do_configure(gen_config)
 
 
 def hash_password(string):
@@ -69,6 +53,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     # Add overrides from POST to config
     val_config_obj.overrides = post_data
     val_config_obj.config_path = CONFIG_PATH
+
     val_config_obj.update()
     messages = val_config_obj.validate()
 
@@ -104,6 +89,7 @@ def do_validate_config(config_path=CONFIG_PATH):
     config.config_path = CONFIG_PATH
     config.update()
     messages = config.validate()
+    print(messages)
     return messages
 
 
@@ -196,7 +182,5 @@ def make_default_directories():
     So users do not have to set the directories in the config.yaml,
     we build them using sane defaults here first.
     """
-    config = get_config()
-    state_dir = config['state_dir'].get('state_dir', '/genconf/state')
-    if not os.path.exists(state_dir):
-        os.makedirs(state_dir)
+    if not os.path.exists(STATE_DIR):
+        os.makedirs(STATE_DIR)

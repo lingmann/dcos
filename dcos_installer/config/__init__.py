@@ -143,9 +143,13 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 
     def write_to_disk(self, data, path, mode=0o644):
         log.warning('Writing {} with mode {}: {}'.format(path, mode, data))
-        f = open(path, 'w')
-        f.write(data)
-        os.chmod(path, mode)
+        if data is not None and data is not "":
+            f = open(path, 'w')
+            f.write(data)
+            os.chmod(path, mode)
+        else:
+            log.warning("""
+Request to write file {} ignored. Cowardly refusing to write empty values or None data to disk.""".format(path))
 
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))

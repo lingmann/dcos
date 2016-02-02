@@ -49,6 +49,7 @@ def run_loop(action, options):
                     exitcode = process_result['returncode']
     print_header('END {} with returncode: {}'.format(action.__name__, exitcode))
     pp.print_summary()
+    return exitcode
 
 
 class DcosInstaller:

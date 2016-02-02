@@ -72,6 +72,25 @@ def validate_ip_list(key=None, config=None):
     return [False, None]
 
 
+def validate_master_list(key=None, config=None):
+    if key in config and key is not None:
+        is_ip_list, msg = validate_ip_list(key, config)
+        print(is_ip_list)
+        if not is_ip_list:
+            return [is_ip_list, msg]
+
+        key = config[key]
+        num_mstrs = len(key)
+        print(num_mstrs)
+        if int(num_mstrs) in [1, 3, 5, 7, 9]:
+            return [True, 'Master list is 1, 3, 5, 7, or 9 hosts. Found {}'.format(num_mstrs)]
+
+        return [False, 'Master list must have 1, 3, 5, 7, or 9 hosts. Found {}.'.format(num_mstrs)]
+
+
+    return [False, None]
+
+
 def validate_string(key=None, config=None):
     if key in config and key is not None:
         key = config[key]

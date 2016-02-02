@@ -242,7 +242,8 @@ Environment Settings:
                     'color': 'blue'
                 }
             },
-            fmt='%(asctime)s %(name)s:: %(message)s'
+            fmt='%(asctime)s %(name)s:: %(message)s',
+            isatty=True
         )
 
         log.debug("Logger set to DEBUG")

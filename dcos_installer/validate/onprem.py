@@ -53,16 +53,13 @@ def get_onprem_dependencies(config):
     # it in 'messages' and continue parsing the tree.
 
     dep_tree = {
-        "master_list": helpers.validate_ip_list('master_list', config),
+        "master_list": helpers.validate_master_list('master_list', config),
         "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config),
         "cluster_name": helpers.validate_string('cluster_name', config),
         "resolvers": helpers.validate_ip_list('resolvers', config),
-        "master_list": helpers.validate_ip_list('master_list', config),
         "ip_detect_path": helpers.validate_path('ip_detect_path', config),
-        # Only validating path for script currently
         "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
         "ssh_port": helpers.validate_port('ssh_port', config),
-        # Only validating path for key currently.
         "ssh_key": helpers.validate_ssh_key('ssh_key', config),
         "ssh_key_path": helpers.validate_path('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),

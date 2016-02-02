@@ -3,7 +3,6 @@ import glob
 import json
 import logging
 import os
-import pprint
 
 import pkg_resources
 from aiohttp import web
@@ -23,6 +22,7 @@ loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app['current_action'] = ''
 
+# Action map is a dict that contains an action name and an action handler from action_lib.
 action_map = {
     'preflight': action_lib.run_preflight,
     'deploy_master': lambda *args, **kwargs: action_lib.install_dcos(*args, role='master', **kwargs),
@@ -146,11 +146,7 @@ def read_json_state(action_name):
 
 def action_action_name(request):
     action_name = request.match_info['action_name']
-    # get_action_status(action_name)
-    # if action_status == not_running
-    #     cleanup_action_jsons(action_name)
-    # ...execute action again.
-    #
+
     # Update the global action
     json_state = read_json_state(action_name)
     app['current_action'] = action_name
@@ -160,7 +156,8 @@ def action_action_name(request):
 
         action_key = action_map.get(action_name)
         if isinstance(action_key, list):
-            # Deploy action consits of 2 json states: deploy_agent.json and deploy_master.json
+            # Deploy action consists of 2 json states: deploy_agent.json and deploy_master.json
+            # Use a _merge_json to unite both states into one common response.
             result = {}
             for action in action_key:
                 json_state = read_json_state(action)

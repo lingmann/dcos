@@ -207,6 +207,7 @@ def action_action_name(request):
         if not action:
             return web.json_response({'error': 'action {} not implemented'.format(action_name)})
 
+        failed_hosts = {}
         if isinstance(action, list):
             deploy_executed = False
             for new_action_str in action:
@@ -218,18 +219,19 @@ def action_action_name(request):
                 for new_action_str in action:
                     new_json_state = read_json_state(new_action_str)
                     if 'retry' in params and params['retry'] == 'true':
-                        failed_hosts = []
                         if 'hosts' in new_json_state:
                             for deploy_host, deploy_params in new_json_state['hosts'].items():
                                 if deploy_params['host_status'] != 'success':
-                                    failed_hosts.append(deploy_host)
-                        log.debug('failed hosts: {}, action: {}'.format(failed_hosts, new_action_str))
-                        new_action = action_map.get(new_action_str)
-                        if failed_hosts:
-                            yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR,
-                                                                hosts=failed_hosts, try_remove_stale_dcos=True,
-                                                                **params))
-                            return web.json_response({'status': '{} retried'.format(new_action_str)})
+                                    failed_hosts.setdefault(new_action_str, []).append(deploy_host)
+                            log.debug('failed hosts: {}'.format(failed_hosts))
+
+                if failed_hosts:
+                    for failed_host_action, failed_hosts_list in failed_hosts.items():
+                        new_action = action_map.get(failed_host_action)
+                        yield from asyncio.async(
+                            new_action(backend.get_config(), state_json_dir=STATE_DIR,
+                                       hosts=failed_hosts_list, try_remove_stale_dcos=True, **params))
+                    return web.json_response({'status': 'retried', 'details': failed_hosts})
                 else:
                     return web.json_response({'status': 'deploy was already executed, skipping'})
             else:
@@ -237,7 +239,6 @@ def action_action_name(request):
                     print_header('EXECUTING {}'.format(new_action_str))
                     new_action = action_map.get(new_action_str)
                     yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR, **params))
-                return web.json_response({'status': 'retry {} started'.format(action)})
         else:
             yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, **params))
         return web.json_response({'status': '{} started'.format(action_name)})

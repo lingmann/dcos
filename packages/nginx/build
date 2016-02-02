@@ -76,7 +76,7 @@ Description=Reload nginx
 Type=oneshot
 EnvironmentFile=/etc/environment
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=$PKG_PATH/nginx/sbin/nginx -s reload
+ExecStart=-$PKG_PATH/nginx/sbin/nginx -s reload
 EOF
 
 systemd_master_timer="$PKG_PATH"/dcos.target.wants_master/dcos-nginx-reload.timer

@@ -73,7 +73,7 @@ def test_do_validate_config(tmpdir):
             'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
             'superuser_username': 'Please enter a valid string',
             'master_list': 'Please enter a valid IPv4 address.',
-            'superuser_password': 'Please enter a valid string',
+            'superuser_password_hash': 'Please enter a valid string',
             'ip_detect_path': 'File does not exist genconf/ip-detect',
             'ssh_user': 'Please enter a valid string',
             'agent_list': 'Please enter a valid IPv4 address.',
@@ -113,7 +113,7 @@ def test_get_config(tmpdir):
     "8.8.8.8",
     "8.8.4.4"
   ],
-  "superuser_password": null,
+  "superuser_password_hash": null,
   "ssh_user": null,
   "exhibitor_zk_hosts": null,
   "process_timeout": 10000,

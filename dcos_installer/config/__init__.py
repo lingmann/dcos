@@ -176,6 +176,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 
     def make_gen_config(self):
         bootstrap_id = os.getenv('BOOTSTRAP_ID', '')
+        # Minimum required parameters
         gen_config = {
             'bootstrap_url': None,
             'cluster_name': None,
@@ -187,6 +188,18 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             'resolvers': None}
 
         for key, value in self.items():
+            # Remove config values that don't concern gen
+            if key in [
+                    'log_directory',
+                    'ssh_user',
+                    'ssh_port',
+                    'ssh_key',
+                    'ssh_key_path',
+                    'agent_list',
+                    'ip_detect_path',
+                    'ip_detect',
+                    'process_timeout']:
+                continue
             log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
             # stringify the keys as they're added in:
             if isinstance(value, list):

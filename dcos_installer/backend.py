@@ -41,7 +41,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     # Check for password in post_data, and if it exists hash it right away
     if 'superuser_password' in post_data:
         hashed = hash_password(post_data['superuser_password'])
-        post_data['superuser_password'] = hashed
+        post_data['superuser_password_hash'] = hashed
 
     # Get a blank config file object
     config_obj = DCOSConfig()

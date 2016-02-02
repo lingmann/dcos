@@ -49,7 +49,7 @@ resolvers:
 
 # DCOS username and password
 superuser_username:
-superuser_password:
+superuser_password_hash:
 
 ssh_user:
 ssh_port: 22

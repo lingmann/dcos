@@ -8,7 +8,7 @@ from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
-from dcos_installer.util import CONFIG_PATH, STATE_DIR
+from dcos_installer.util import CONFIG_PATH
 
 log = logging.getLogger()
 
@@ -52,7 +52,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Add overrides from POST to config
     val_config_obj.overrides = post_data
-    val_config_obj.config_path = CONFIG_PATH
+    #val_config_obj.config_path = CONFIG_PATH
 
     val_config_obj.update()
     messages = val_config_obj.validate()
@@ -86,10 +86,9 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
 def do_validate_config(config_path=CONFIG_PATH):
     config = DCOSConfig()
-    config.config_path = CONFIG_PATH
+    config.config_path = config_path
     config.update()
     messages = config.validate()
-    print(messages)
     return messages
 
 

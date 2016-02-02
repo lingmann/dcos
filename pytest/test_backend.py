@@ -1,16 +1,21 @@
-import os
 import json
 
 from dcos_installer import backend
+from dcos_installer.config import DCOSConfig
 
-config_path = '/tmp/config.yaml'
 
-
-def test_good_create_config_from_post():
+def test_good_create_config_from_post(tmpdir):
     """
     Test that it creates the config
     """
-    config_path = '/tmp/config.yaml'
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
+
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
+
     good_post_data = {
         "agent_list": ["10.0.0.2"],
         "master_list": ["10.0.0.1"],
@@ -21,15 +26,21 @@ def test_good_create_config_from_post():
 
     err, msg = backend.create_config_from_post(
         post_data=good_post_data,
-        config_path=config_path)
+        config_path=temp_config_path)
 
     assert err is False
     assert msg == expected_good_messages
-#    os.remove(config_path)
 
 
-def test_bad_create_config_from_post():
-    config_path = '/tmp/config.yaml'
+def test_bad_create_config_from_post(tmpdir):
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
+
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
+
     bad_post_data = {
         "agent_list": "",
         "master_list": "",
@@ -42,13 +53,20 @@ def test_bad_create_config_from_post():
     }
     err, msg = backend.create_config_from_post(
         post_data=bad_post_data,
-        config_path=config_path)
+        config_path=temp_config_path)
     assert err is True
     assert msg == expected_bad_messages
-    os.remove(config_path)
 
 
-def test_do_validate_config():
+def test_do_validate_config(tmpdir):
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
+
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
+
     expected_output = {
         'success': {
             'ssh_port': 'Port is less than or equal to 65535',
@@ -64,11 +82,19 @@ def test_do_validate_config():
             'master_list': 'None is not valid IPv4 address.',
             'ssh_key_path': 'File does not exist genconf/ssh_key',
             'superuser_username': 'None is not a valid string'}}
-    messages = backend.do_validate_config(config_path)
+    messages = backend.do_validate_config(temp_config_path)
     assert messages == expected_output
 
 
-def test_get_config():
+def test_get_config(tmpdir):
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
+
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
+
     expected_file = """
 {
   "superuser_username": null,
@@ -94,63 +120,41 @@ def test_get_config():
   "master_discovery": "static"
 }
     """
-    config = backend.get_config(config_path='/tmp/config.yaml')
+    config = backend.get_config(config_path=temp_config_path)
     expected_config = json.loads(expected_file)
     assert expected_config == config
-#    os.remove(config_path)
 
 
-def test_return_configure_status():
-    """
-    This entire method will change with the new validation lib, passing
-    until we have an implementation.
-    """
-#    msg = backend.return_configure_status(config_path=config_path)
-#    expected_msg = {
-#        'success': {
-#            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.',
-#            'ssh_user': 'centos is a valid string.',
-#            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
-#            'ip_detect_path': 'File exists /genconf/ip-detect',
-#            'ssh_port': '22 is a valid integer.'},
-#        'errors': {
-#            'ssh_key_path': 'File does not exist /genconf/ssh_key',
-#            'agent_list': '[None] is not valid IPv4 address.',
-#            'master_list': '[None] is not valid IPv4 address.',
-#            'exhibitor_zk_hosts': "None is not a valid string. Is of type <class 'NoneType'>."},
-#        'warning': {}}
-#    assert expected_msg == msg
-#    os.remove(config_path)
-    pass
+def test_determine_config_type(tmpdir):
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
+
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
+
+    got_output = backend.determine_config_type(config_path=temp_config_path)
+    expected_output = {
+       'message': '',
+       'type': 'minimal',
+    }
+    assert got_output == expected_output
 
 
-def test_determine_config_type():
-    pass
-# TODO(malnick) Figure out why this does not work
-#    got_output = backend.determine_config_type(config_path=config_path)
-#    expected_output = {
-#        'message': '',
-#        'type': 'minimal',
-#    }
-#    assert got_output == expected_output
-#    os.remove(config_path)
+def test_success(tmpdir):
+    # Create a temp config
+    workspace = tmpdir.strpath
+    temp_config_path = workspace + '/config.yaml'
 
+    temp_config = DCOSConfig()
+    temp_config.config_path = temp_config_path
+    temp_config.write()
 
-def test_success():
-    got_output = backend.success(config_path=config_path)
+    got_output = backend.success(config_path=temp_config_path)
     expected_output = {
         "success": "http://None",
         "master_count": 0,
         "agent_count": 0
     }
     assert got_output == expected_output
-#    os.remove(config_path)
-
-
-# There is salt, so this will never work:
-def test_hash_password():
-    pass
-#    key = 'test'
-#    expect = '$6$rounds=656000$7rjEbF.tcca5V5lY$FNKalkqiWsrTQWIwnaX7.D9JJpo4D0NxV7LUJQHufNce8qknElZ2cdwmUmjh4jY/H7VVZiSNJmP1PrEC95FfY/'
-#    got = backend.hash_password(key)
-#    assert got == expect

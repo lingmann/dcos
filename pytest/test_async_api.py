@@ -421,26 +421,41 @@ def test_action_deploy_xxx(monkeypatch, mocker):
 
     # Test retry
     def mocked_json_state(arg):
+        if arg == 'deploy':
+            return False
+
         if arg == 'deploy_master':
             return {
                 'hosts': {
-                    '127.0.0.1:22': {
+                    'master:22': {
                         'host_status': 'failed'
                     }
                 }
             }
-        else:
-            return False
+
+        if arg == 'deploy_agent':
+            return {
+                'hosts': {
+                    'agent:22': {
+                        'host_status': 'failed'
+                    }
+                }
+            }
+
+    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
+    mocked_install_dcos.side_effect = mock_coroutine
+
     mocked_read_json_state.side_effect = mocked_json_state
     res = client.post(route, params={'retry': 'true'}, content_type='application/x-www-form-urlencoded')
-    assert res.json == {'status': 'deploy_master retried'}
-    assert mocked_install_dcos.call_count == 3
+    assert res.json == {'status': 'retried', 'details': {'deploy_agent': ['agent:22'], 'deploy_master': ['master:22']}}
+
+    assert mocked_install_dcos.call_count == 2
 
     mocked_install_dcos.assert_any_call({'test': 'config'}, try_remove_stale_dcos=True, role='master', retry='true',
-                                        hosts=['127.0.0.1:22'], state_json_dir='/genconf/state')
+                                        hosts=['master:22'], state_json_dir='/genconf/state')
 
-    mocked_install_dcos.assert_any_call({'test': 'config'}, role='master', state_json_dir='/genconf/state')
-    mocked_install_dcos.assert_any_call({'test': 'config'}, role='agent', state_json_dir='/genconf/state')
+    mocked_install_dcos.assert_any_call({'test': 'config'}, try_remove_stale_dcos=True, role='agent', retry='true',
+                                        hosts=['agent:22'], state_json_dir='/genconf/state')
 
 
 # def test_logs(monkeypatch):

@@ -1,4 +1,5 @@
 import aiohttp
+import asyncio
 
 from dcos_installer.async_server import app
 from webtest_aiohttp import TestApp
@@ -401,11 +402,45 @@ def test_action_deploy_xxx(monkeypatch, mocker):
     mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
     mocked_get_config.return_value = {"test": "config"}
 
-    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
-    mocked_install_dcos.return_value = (i for i in range(10))
+    @asyncio.coroutine
+    def mock_coroutine(*args, **kwargs):
+        yield from asyncio.sleep(.1)
 
+    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
+    mocked_install_dcos.side_effect = mock_coroutine
+
+    # Deploy should be already executed for action 'deploy'
     mocked_read_json_state.side_effect = action_side_effect_return_config
-    res = client.request(route, method='GET')
+    res = client.request(route, method='POST')
+    assert res.json == {'status': 'deploy was already executed, skipping'}
+
+    # Test start deploy
+    mocked_read_json_state.side_effect = lambda arg: False
+    res = client.request(route, method='POST')
+    assert res.json == {'status': 'deploy started'}
+
+    # Test retry
+    def mocked_json_state(arg):
+        if arg == 'deploy_master':
+            return {
+                'hosts': {
+                    '127.0.0.1:22': {
+                        'host_status': 'failed'
+                    }
+                }
+            }
+        else:
+            return False
+    mocked_read_json_state.side_effect = mocked_json_state
+    res = client.post(route, params={'retry': 'true'}, content_type='application/x-www-form-urlencoded')
+    assert res.json == {'status': 'deploy_master retried'}
+    assert mocked_install_dcos.call_count == 3
+
+    mocked_install_dcos.assert_any_call({'test': 'config'}, try_remove_stale_dcos=True, role='master', retry='true',
+                                        hosts=['127.0.0.1:22'], state_json_dir='/genconf/state')
+
+    mocked_install_dcos.assert_any_call({'test': 'config'}, role='master', state_json_dir='/genconf/state')
+    mocked_install_dcos.assert_any_call({'test': 'config'}, role='agent', state_json_dir='/genconf/state')
 
 
 # def test_logs(monkeypatch):

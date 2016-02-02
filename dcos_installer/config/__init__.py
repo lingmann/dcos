@@ -20,7 +20,7 @@ class DCOSConfig(dict):
     """
     Return the site configuration object for dcosgen library
     """
-    def __init__(self, overrides={}, config_path=None):
+    def __init__(self, overrides={}, config_path=CONFIG_PATH):
         defaults = """
 ---
 # The name of your DCOS cluster. Visable in the DCOS user interface.
@@ -68,7 +68,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             log.debug("%s: %s", k, v)
 
     def _get_hidden_config(self):
-        self.hidden_config= {
+        self.hidden_config = {
             'ip_detect_path':  IP_DETECT_PATH,
             'ssh_key_path': SSH_KEY_PATH,
             'ssh_key': self._try_loading_from_disk(SSH_KEY_PATH),
@@ -87,15 +87,14 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         for key, value in self.defaults.items():
             self[key] = value
         # Get user config file configuration
-        if self.config_path:
-            user_config = self.get_config()
-            # Add user-land configuration
-            if user_config:
-                for k, v in user_config.items():
-                    self[k] = v
+        user_config = self.get_config()
+        # Add user-land configuration
+        if user_config:
+            for k, v in user_config.items():
+
+                self[k] = v
 
         self._add_overrides()
-        self._get_hidden_config()
 
     def _add_overrides(self):
         """
@@ -106,24 +105,24 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
                     self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
-                    continue
 
                 if key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
-                    continue
 
                 if key in arrays and value is None:
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = list(value)
+
                 elif key in self:
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = value
 
     def validate(self):
         config = self._unbind_configuration()
-        log.warning(self.hidden_config)
+        self._get_hidden_config()
         config.update(self.hidden_config)
-        log.warning('Configuration to be validated: {}'.format(config))
+        log.debug('Validating config: ')
+        log.debug(config)
         _, messages = DCOSValidateConfig(config).validate()
         return messages
 

@@ -47,7 +47,6 @@ class DCOSValidateConfig():
         """
         Entry point to on-prem configuration validation.
         """
-        log.info("Executing on-premise configuration validation...")
         errors, validate_out = onprem.check_dependencies(self.dcos_config)
         if errors:
             log.error("Errors found in on-prem dependencies...")

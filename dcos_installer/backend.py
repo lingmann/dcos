@@ -54,7 +54,6 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     # Add overrides from POST to config
     config_obj.overrides = post_data
     config_obj.build()
-    print(config_obj)
 
     # Get validation messages
     messages = config_obj.validate()

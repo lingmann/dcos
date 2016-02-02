@@ -87,23 +87,26 @@ def validate_string(key=None, config=None):
 def validate_int(key=None, config=None):
     if key in config and key is not None:
         key = config[key]
-        if isinstance(key, int):
-            return [True, '{} is a valid integer.'.format(key)]
+        if key is not None and key != '':
+            if isinstance(key, int):
+                return [True, '{} is a valid integer.'.format(key)]
 
-        elif isinstance(key, str):
-            try:
-                interger = int(key)
-                return [True, '{} is a valid interger.'.format(interger)]
-            except:
+            elif isinstance(key, str):
+                try:
+                    interger = int(key)
+                    return [True, '{} is a valid interger.'.format(interger)]
+                except:
+                    return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+            else:
                 return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
-        else:
-            return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+
+        return [False, 'Please enter a valid integer.']
 
     return [False, None]
 
 
 def validate_port(key=None, config=None):
-    if key in config:
+    if key in config and key is not None and key is not '':
         is_int, msg = validate_int(key, config)
         if not is_int:
             return is_int, msg
@@ -115,7 +118,7 @@ def validate_port(key=None, config=None):
         else:
             return [True, "Port is less than or equal to 65535"]
 
-    return [False, None]
+    return [False, 'Please enter valid port number (not great than :65535)']
 
 
 def validate_install_type(key=None, config=None):

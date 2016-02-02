@@ -1,11 +1,13 @@
 import argparse
 import asyncio
 import logging
+import os
 import sys
 
 from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header, PrettyPrint
 from dcos_installer import async_server
+from dcos_installer.util import GENCONF_DIR
 from ssh.utils import AbstractSSHLibDelegate
 
 import coloredlogs
@@ -51,6 +53,16 @@ def run_loop(action, options):
     pp.print_summary()
 
 
+def make_default_dir(dir=GENCONF_DIR):
+    """
+    So users do not have to set the directories in the config.yaml,
+    we build them using sane defaults here first.
+    """
+    if not os.path.exists(dir):
+        log.info('Creating {}'.format(dir))
+        os.makedirs(dir)
+
+
 class DcosInstaller:
     def __init__(self, args=None):
         """
@@ -69,10 +81,12 @@ class DcosInstaller:
                 sys.exit(0)
 
             if options.web:
+                make_default_dir()
                 print_header("Starting DCOS installer in web mode")
                 async_server.start(options.port)
 
             if options.genconf:
+                make_default_dir()
                 print_header("EXECUTING CONFIGURATION GENERATION")
                 backend.do_configure()
                 sys.exit(0)
@@ -100,6 +114,7 @@ class DcosInstaller:
                 sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
             if options.validate_config:
+                make_default_dir()
                 print_header('VALIDATING CONFIGURATION FILE: genconf/config.yaml')
                 backend.do_validate_config()
                 sys.exit(0)

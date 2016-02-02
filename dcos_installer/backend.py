@@ -87,6 +87,7 @@ def do_validate_config(config_path=CONFIG_PATH):
     config.config_path = config_path
     config.build()
     messages = config.validate()
+    print(messages)
     return messages
 
 

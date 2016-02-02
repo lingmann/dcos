@@ -63,7 +63,9 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         # to be included in validation for return. We never write them to disk.
         self.hidden_defaults = {
             'ip_detect_path':  IP_DETECT_PATH,
-            'ssh_key_path': SSH_KEY_PATH
+            'ssh_key_path': SSH_KEY_PATH,
+            'ssh_key': self._try_loading_from_disk(SSH_KEY_PATH),
+            'ip_detect_script': self._try_loading_from_disk(IP_DETECT_PATH)
         }
         self.overrides = overrides
         self.update()
@@ -72,6 +74,13 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)
+
+    def _try_loading_from_disk(self, path):
+        if os.path.isfile(path):
+            with open(path, 'r') as f:
+                return f.read()
+        else:
+            return None
 
     def update(self):
         # Create defaults

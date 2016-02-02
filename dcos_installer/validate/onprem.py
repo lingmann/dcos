@@ -60,10 +60,10 @@ def get_onprem_dependencies(config):
         "master_list": helpers.validate_ip_list('master_list', config),
         "ip_detect_path": helpers.validate_path('ip_detect_path', config),
         # Only validating path for script currently
-        "ip_detect_script": helpers.validate_path('ip_detect_script', config),
+        "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
         "ssh_port": helpers.validate_port('ssh_port', config),
         # Only validating path for key currently.
-        "ssh_key": helpers.validate_path('ssh_key', config),
+        "ssh_key": helpers.validate_ssh_key('ssh_key', config),
         "ssh_key_path": helpers.validate_path('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),
         "agent_list": helpers.validate_ip_list('agent_list', config),

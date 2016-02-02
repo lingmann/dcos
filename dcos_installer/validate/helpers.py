@@ -235,38 +235,43 @@ def validate_comma_list(key=None, config=None):
 
 
 def validate_ssh_key(key=None, config=None):
-    if key in config and key is not None:
+    fm = "Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----"
+    failed_validation = [False, fm]
+
+    if key in config:
         is_string, msg = validate_string(key, config)
         if not is_string:
-            return is_string, msg
+            return failed_validation
 
         key = config[key]
-        # Validate path exists
-        exists, msg = validate_path(key, config)
-        if not exists:
-            return exists, msg
-
-        else:
+        if key != '':
             # Validate the PEM encoded file
             if key.startswith('-----BEGIN RSA PRIVATE KEY-----'):
-                return [True, 'Is an RSA encoded SSH key']
+                return [True, 'This is a valid RSA encoded SSH key']
             else:
-                return [False, 'Is not an RSA encoded SSH key']
+                return failed_validation
+
+        return failed_validation
 
     return [False, None]
 
 
 def validate_ip_detect_script(key=None, config=None):
-    if key in config and key is not None:
+    fm = 'Please provide a valid executable script. Script must start with #!/'
+    failed_validation = [False, fm]
+    if key in config:
+        is_string, msg = validate_string(key, config)
+        if not is_string:
+            return failed_validation
+
         key = config[key]
-        exists, msg = validate_path(key, config)
-        if not exists:
-            return exists, msg
-        else:
+        if key != '':
             # Validate it's a script of some sort, i.e. #!/
             if key.startswith('#!/'):
                 return [True, 'Is an executable script']
             else:
-                return [False, 'Is not an executable script']
+                return failed_validation
+
+        return failed_validation
 
     return [False, None]

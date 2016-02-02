@@ -43,19 +43,19 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
         post_data['superuser_password'] = hashed
 
     # Get a blank config file object
-    val_config_obj = DCOSConfig()
+    config_obj = DCOSConfig()
     # If the config file does not exist, write it.
     if not os.path.exists(config_path):
         log.warning('{} not found, writing default configuration.'.format(config_path))
-        val_config_obj.config_path = config_path
-        val_config_obj.write()
+        config_obj.config_path = config_path
+        config_obj.write()
 
     # Add overrides from POST to config
-    val_config_obj.overrides = post_data
-    #val_config_obj.config_path = CONFIG_PATH
+    config_obj.overrides = post_data
+    config_obj.update()
 
-    val_config_obj.update()
-    messages = val_config_obj.validate()
+    # Get validation messages
+    messages = config_obj.validate()
 
     # Return only keys sent in POST, do not write if validation
     # of config fails.
@@ -75,8 +75,8 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     else:
         log.info("Success! POSTed configuration looks good, writing to disk.")
-        val_config_obj.config_path = config_path
-        val_config_obj.write()
+        config_obj.config_path = config_path
+        config_obj.write()
 
     return validation_err, post_data_validation
 

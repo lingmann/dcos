@@ -47,9 +47,9 @@ def test_bad_create_config_from_post(tmpdir):
         "resolvers": "",
     }
     expected_bad_messages = {
-        "agent_list": " is not of type list.",
-        "master_list": " is not of type list.",
-        "resolvers": " is not of type list."
+        "agent_list": 'IPv4 addresses must be a list',
+        "master_list": 'IPv4 addresses must be a list',
+        "resolvers": 'IPv4 addresses must be a list',
     }
     err, msg = backend.create_config_from_post(
         post_data=bad_post_data,
@@ -68,20 +68,22 @@ def test_do_validate_config(tmpdir):
     temp_config.write()
 
     expected_output = {
-        'success': {
-            'ssh_port': 'Port is less than or equal to 65535',
-            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
-            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.'},
-        'warning': {},
         'errors': {
-            'ssh_user': 'None is not a valid string',
-            'ip_detect_path': 'File does not exist genconf/ip-detect',
-            'superuser_password': 'None is not a valid string',
-            'agent_list': 'None is not valid IPv4 address.',
+            'ssh_key': 'Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----',
             'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
-            'master_list': 'None is not valid IPv4 address.',
+            'superuser_username': 'Please enter a valid string',
+            'master_list': 'Please enter a valid IPv4 address.',
+            'superuser_password': 'Please enter a valid string',
+            'ip_detect_path': 'File does not exist genconf/ip-detect',
+            'ssh_user': 'Please enter a valid string',
+            'agent_list': 'Please enter a valid IPv4 address.',
             'ssh_key_path': 'File does not exist genconf/ssh_key',
-            'superuser_username': 'None is not a valid string'}}
+            'ip_detect_script': 'Please provide a valid executable script. Script must start with #!/'},
+        'success': {
+            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.',
+            'ssh_port': 'Port is less than or equal to 65535',
+            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses."},
+        'warning': {}}
     messages = backend.do_validate_config(temp_config_path)
     assert messages == expected_output
 

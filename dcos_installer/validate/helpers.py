@@ -47,7 +47,7 @@ def is_valid_ipv6_address(address):
 
 
 def validate_ip_list(key=None, config=None):
-    if key in config:
+    if key in config and key is not None:
         key = config[key]
         if type(key) == list:
             failed_ips = []
@@ -59,78 +59,54 @@ def validate_ip_list(key=None, config=None):
                         failed_ips.append(ip)
 
                 else:
-                    return [False, '{} is not valid IPv4 address.'.format(ip)]
+                    return [False, 'Please enter a valid IPv4 address.']
 
             if len(failed_ips) > 0:
-                return [False, '{} is not valid IPv4 address.'.format(failed_ips)]
+                return [False, 'Please enter a valid IPv4 address. The following are not IPv4 addresses: {}'.format(failed_ips)]
 
         else:
-            return [False, '{} is not of type list.'.format(key)]
+            return [False, 'IPv4 addresses must be a list'.format(key)]
 
         return [True, '{} is a valid list of IPv4 addresses.'.format(key)]
 
     return [False, None]
 
 
-def validate_target_hosts(key=None, config=None):
-    if key in config:
-        key = config[key]
-        if type(key) == list:
-            for ip in key:
-                if is_valid_ipv4_address(ip):
-                    continue
-
-                else:
-                    return [False, '{} is not valid IPv4 address.'.format(key)]
-        else:
-            return [False, '{} is not of type list.'.format(key)]
-
-        # Ensure the master list IPs are in the target_hosts
-        if config['cluster_config']['master_list']:
-            for ip in config['cluster_config']['master_list']:
-                if ip in key:
-                    continue
-
-                else:
-                    return [False, '{} from master_list is not in target_hosts: {}'.format(ip, key)]
-
-        return [True, '{} is a valid list of IPv4 addresses and contains master_list IPs'.format(key)]
-
-    return [False, None]
-
-
 def validate_string(key=None, config=None):
-    if key in config:
+    if key in config and key is not None:
         key = config[key]
-        if type(key) == str:
+        if type(key) == str and key != '':
             return [True, '{} is a valid string.'.format(key)]
 
         else:
-            return [False, '{} is not a valid string'.format(key)]
+            return [False, 'Please enter a valid string'.format(key)]
 
     return [False, None]
 
 
 def validate_int(key=None, config=None):
-    if key in config:
+    if key in config and key is not None:
         key = config[key]
-        if isinstance(key, int):
-            return [True, '{} is a valid integer.'.format(key)]
+        if key is not None and key != '':
+            if isinstance(key, int):
+                return [True, '{} is a valid integer.'.format(key)]
 
-        elif isinstance(key, str):
-            try:
-                interger = int(key)
-                return [True, '{} is a valid interger.'.format(interger)]
-            except:
+            elif isinstance(key, str):
+                try:
+                    interger = int(key)
+                    return [True, '{} is a valid interger.'.format(interger)]
+                except:
+                    return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+            else:
                 return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
-        else:
-            return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+
+        return [False, 'Please enter a valid integer.']
 
     return [False, None]
 
 
 def validate_port(key=None, config=None):
-    if key in config:
+    if key in config and key is not None and key is not '':
         is_int, msg = validate_int(key, config)
         if not is_int:
             return is_int, msg
@@ -142,7 +118,7 @@ def validate_port(key=None, config=None):
         else:
             return [True, "Port is less than or equal to 65535"]
 
-    return [False, None]
+    return [False, 'Please enter valid port number (not great than :65535)']
 
 
 def validate_install_type(key=None, config=None):
@@ -259,38 +235,43 @@ def validate_comma_list(key=None, config=None):
 
 
 def validate_ssh_key(key=None, config=None):
-    if key in config and key is not None:
+    fm = "Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----"
+    failed_validation = [False, fm]
+
+    if key in config:
         is_string, msg = validate_string(key, config)
         if not is_string:
-            return is_string, msg
+            return failed_validation
 
         key = config[key]
-        # Validate path exists
-        exists, msg = validate_path(key, config)
-        if not exists:
-            return exists, msg
-
-        else:
+        if key != '':
             # Validate the PEM encoded file
             if key.startswith('-----BEGIN RSA PRIVATE KEY-----'):
-                return [True, 'Is an RSA encoded SSH key']
+                return [True, 'This is a valid RSA encoded SSH key']
             else:
-                return [False, 'Is not an RSA encoded SSH key']
+                return failed_validation
+
+        return failed_validation
 
     return [False, None]
 
 
 def validate_ip_detect_script(key=None, config=None):
-    if key in config and key is not None:
+    fm = 'Please provide a valid executable script. Script must start with #!/'
+    failed_validation = [False, fm]
+    if key in config:
+        is_string, msg = validate_string(key, config)
+        if not is_string:
+            return failed_validation
+
         key = config[key]
-        exists, msg = validate_path(key, config)
-        if not exists:
-            return exists, msg
-        else:
+        if key != '':
             # Validate it's a script of some sort, i.e. #!/
             if key.startswith('#!/'):
                 return [True, 'Is an executable script']
             else:
-                return [False, 'Is not an executable script']
+                return failed_validation
+
+        return failed_validation
 
     return [False, None]

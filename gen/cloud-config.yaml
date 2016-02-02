@@ -14,3 +14,9 @@ root:
     owner: root
     content: |
       {{ cluster_packages }}
+  - path: /etc/systemd/journald.conf.d/dcos.conf
+    permissions: "0644"
+    owner: root
+    content: |
+      [Journal]
+      MaxLevelConsole=warning

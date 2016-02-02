@@ -52,7 +52,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Add overrides from POST to config
     val_config_obj.overrides = post_data
-    #val_config_obj.config_path = CONFIG_PATH
+    val_config_obj.config_path = CONFIG_PATH
 
     val_config_obj.update()
     messages = val_config_obj.validate()

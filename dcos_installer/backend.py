@@ -4,6 +4,7 @@ libraries to support the dcos installer.
 """
 import logging
 import os
+# import time
 from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
@@ -16,7 +17,7 @@ log = logging.getLogger()
 def do_configure():
     config = DCOSConfig()
     config.config_path = CONFIG_PATH
-    config.update()
+    config.build()
     messages = config.validate()
     if len(messages['errors']) > 0:
         log.error('Please fix validation errors before generating configuration. Try --validate-config.')
@@ -52,7 +53,8 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Add overrides from POST to config
     config_obj.overrides = post_data
-    config_obj.update()
+    config_obj.build()
+    print(config_obj)
 
     # Get validation messages
     messages = config_obj.validate()
@@ -84,7 +86,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 def do_validate_config(config_path=CONFIG_PATH):
     config = DCOSConfig()
     config.config_path = config_path
-    config.update()
+    config.build()
     messages = config.validate()
     return messages
 

@@ -59,21 +59,21 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 """
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
-        # These are defaults we do not want to expose to the user, but still need
-        # to be included in validation for return. We never write them to disk.
-        self.hidden_defaults = {
-            'ip_detect_path':  IP_DETECT_PATH,
-            'ssh_key_path': SSH_KEY_PATH,
-            'ssh_key': self._try_loading_from_disk(SSH_KEY_PATH),
-            'ip_detect_script': self._try_loading_from_disk(IP_DETECT_PATH)
-        }
         self.overrides = overrides
-        self.update()
+        self.build()
         self.errors = []
 
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)
+
+    def _get_hidden_config(self):
+        self.hidden_config= {
+            'ip_detect_path':  IP_DETECT_PATH,
+            'ssh_key_path': SSH_KEY_PATH,
+            'ssh_key': self._try_loading_from_disk(SSH_KEY_PATH),
+            'ip_detect_script': self._try_loading_from_disk(IP_DETECT_PATH)
+        }
 
     def _try_loading_from_disk(self, path):
         if os.path.isfile(path):
@@ -82,7 +82,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         else:
             return None
 
-    def update(self):
+    def build(self):
         # Create defaults
         for key, value in self.defaults.items():
             self[key] = value
@@ -95,6 +95,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     self[k] = v
 
         self._add_overrides()
+        self._get_hidden_config()
 
     def _add_overrides(self):
         """
@@ -105,9 +106,11 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
                     self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
+                    continue
 
                 if key == 'ip_detect_script':
                     self.write_to_disk(value, IP_DETECT_PATH)
+                    continue
 
                 if key in arrays and value is None:
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
@@ -117,11 +120,9 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     self[key] = value
 
     def validate(self):
-        # TODO Leverage Gen library from here
-        # Convienience function to validate this object
         config = self._unbind_configuration()
-        config.update(self.hidden_defaults)
-        # validate_config = dict(file_config, **hidden_config)
+        log.warning(self.hidden_config)
+        config.update(self.hidden_config)
         log.warning('Configuration to be validated: {}'.format(config))
         _, messages = DCOSValidateConfig(config).validate()
         return messages

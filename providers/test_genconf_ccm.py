@@ -40,7 +40,7 @@ def run_cmd(mode, expect_errors=False):
         assert p.returncode != 0, "{} exited with error code {} (success), but expected an error.".format(
             mode, p.returncode)
     else:
-        assert p.returncode is 0, "{} exited with error code {}".format(mode, p.returncode)
+        assert p.returncode == 0, "{} exited with error code {}".format(mode, p.returncode)
         assert "Errors encountered" not in out, "Errors encountered in running {}".format(mode)
 
 

@@ -639,7 +639,7 @@ def generate(
     assert None not in mixins
 
     package_names = list(sorted(set(
-        ['dcos-config', 'dcos-detect-ip', 'dcos-metadata'])))
+        ['dcos-config', 'dcos-metadata'])))
     core_templates = ['cloud-config', 'dcos-services']
 
     # Add the empty mixin so we pick up top-level config.

@@ -4,6 +4,7 @@ def render_installer(name, c)
   return <<-"EOF"
     yum -y install docker unzip &&
     sed -i -e "s/OPTIONS='/OPTIONS='--insecure-registry 172.17.10.1:5000 /" /etc/sysconfig/docker &&
+    echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
     systemctl enable docker &&
     systemctl start docker &&
     groupadd -g 65500 nogroup &&

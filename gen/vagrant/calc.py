@@ -8,6 +8,7 @@ entry = {
         'master_discovery': 'static',
         'exhibitor_storage_backend': 'shared_filesystem',
         'exhibitor_fs_config_dir': '/var/run/exhibitor',
-        'master_list': '["127.0.0.1"]'
+        'master_list': '["127.0.0.1"]',
+        'cluster_id': 'TODO-VAGRANT-SINGLENODE'
     }
 }

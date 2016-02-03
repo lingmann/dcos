@@ -36,6 +36,7 @@ entry = {
         'master_discovery': 'master_http_loadbalancer',
         'master_cloud_config': '{{ master_cloud_config }}',
         'slave_cloud_config': '{{ slave_cloud_config }}',
-        'slave_public_cloud_config': '{{ slave_public_cloud_config }}'
+        'slave_public_cloud_config': '{{ slave_public_cloud_config }}',
+        'cluster_id': '{ "Ref" : "AWS::StackId" }'
     }
 }

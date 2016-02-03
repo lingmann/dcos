@@ -6,6 +6,7 @@ entry = {
         'exhibitor_storage_backend': 'azure',
         'master_cloud_config': '{{ master_cloud_config }}',
         'slave_cloud_config': '{{ slave_cloud_config }}',
-        'slave_public_cloud_config': '{{ slave_public_cloud_config }}'
+        'slave_public_cloud_config': '{{ slave_public_cloud_config }}',
+        'cluster_id': "[[[resourceid('Microsoft.Resources/deployments', deployment().name)]]]"
     }
 }

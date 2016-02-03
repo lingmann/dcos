@@ -1,7 +1,0 @@
-root:
-  - path: /etc/mesosphere/cluster-id
-    permissions: "0644"
-    # TODO(cmaloney): Guestimate this by generating a uuid and putting it into
-    # zookeeper.
-    content: |
-      ONPREM-TODO

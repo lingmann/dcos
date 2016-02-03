@@ -102,16 +102,11 @@ def do_validate_config(config_path=CONFIG_PATH):
     config.config_path = config_path
     config.build()
     messages = config.validate()
-<<<<<<< HEAD
-    return messages
-=======
-    print(messages)
     return_code = 0
     if len(messages['errors']) > 0:
         log.error('Validation errors detected!')
         return_code = 1
     return messages, return_code
->>>>>>> 9fa69044d4f2ca9722917354874c0bb34782df04
 
 
 def get_config(config_path=CONFIG_PATH):

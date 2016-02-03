@@ -89,8 +89,7 @@ class DcosInstaller:
             if options.genconf:
                 make_default_dir()
                 print_header("EXECUTING CONFIGURATION GENERATION")
-                backend.do_configure()
-                sys.exit(0)
+                sys.exit(backend.do_configure())
 
             if options.preflight:
                 print_header("EXECUTING PREFLIGHT")
@@ -98,13 +97,14 @@ class DcosInstaller:
 
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
+                deploy_returncode = 0
                 for role in ['master', 'agent']:
                     action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
                     action.__name__ = 'deploy_{}'.format(role)
-                    deploy_returncode = run_loop(action, options)
-                if deploy_returncode != 0:
-                    sys.exit(deploy_returncode)
-                sys.exit(0)
+                    stage_returncode = run_loop(action, options)
+                    if stage_returncode != 0:
+                        deploy_returncode = 1
+                sys.exit(deploy_returncode)
 
             if options.postflight:
                 print_header("EXECUTING POSTFLIGHT")
@@ -117,8 +117,8 @@ class DcosInstaller:
             if options.validate_config:
                 make_default_dir()
                 print_header('VALIDATING CONFIGURATION FILE: genconf/config.yaml')
-                backend.do_validate_config()
-                sys.exit(0)
+                messages, return_code = backend.do_validate_config()
+                sys.exit(return_code)
 
     def parse_args(self, args):
         def print_usage():

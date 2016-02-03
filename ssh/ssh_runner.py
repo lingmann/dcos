@@ -25,7 +25,17 @@ import ssh.validate
 from ssh.exceptions import CmdRunException
 from ssh.utils import CommandChain, JsonDelegate
 
+from contextlib import contextmanager
+
+
 log = logging.getLogger(__name__)
+
+
+@contextmanager
+def make_slave_pty():
+    _, slave_pty = pty.openpty()
+    yield slave_pty
+    os.close(slave_pty)
 
 
 def deprecated(func):
@@ -238,24 +248,22 @@ class MultiRunner():
 
     @asyncio.coroutine
     def run_cmd_return_dict_async(self, cmd, host, namespace, future):
-        _, slave_pty = pty.openpty()
-        process = yield from asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=slave_pty,
-            env={'TERM': 'linux'})
-        stdout = b''
-        stderr = b''
-        try:
-            stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
-        except asyncio.TimeoutError:
+        with make_slave_pty() as slave_pty:
+            process = yield from asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=slave_pty,
+                env={'TERM': 'linux'})
+            stdout = b''
+            stderr = b''
             try:
-                process.terminate()
-            except ProcessLookupError:
-                log.info('process with pid {} not found'.format(process.pid))
-            log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
-
-        os.close(slave_pty)
+                stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
+            except asyncio.TimeoutError:
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    log.info('process with pid {} not found'.format(process.pid))
+                log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
 
         # For each possible line in stderr, match from the beginning of the line for the
         # the confusing warning: "Warning: Permanently added ...". If the warning exists,

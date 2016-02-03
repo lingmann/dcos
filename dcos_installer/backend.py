@@ -26,18 +26,17 @@ def do_configure():
         for key in list(gen_config.keys()):
             if gen_config[key] is None or gen_config[key] == '[null]':
                     del gen_config[key]
-        # Do one last try and catch errors from Gen lib if any.
-        try:
-            configure.do_configure(gen_config)
-        except gen.ValidationError as ex:
-            print(gen_config)
-            messages.update(ex.errors)
-            for key, error in ex.errors.items():
-                if key == '':
-                    log.error('{}'.format(error))
-                else:
-                    log.error('{}: {}'.format(key, error))
-            return messages
+    # Do one last try and catch errors from Gen lib if any.
+#    try:
+        configure.do_configure(gen_config)
+#    except gen.ValidationError as ex:
+#        messages.update(ex.errors)
+#        for key, error in ex.errors.items():
+#            if key == '':
+#                log.error('{}'.format(error))
+#            else:
+#                log.error('{}: {}'.format(key, error))
+#        return messages
 
 def hash_password(string):
     new_hash = sha512_crypt.encrypt(string)

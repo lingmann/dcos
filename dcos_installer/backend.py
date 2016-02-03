@@ -19,24 +19,25 @@ def do_configure():
     config.config_path = CONFIG_PATH
     config.build()
     messages = config.validate()
-    #if len(messages['errors']) > 0:
-    #    log.error('Please fix validation errors before generating configuration. Try --validate-config.')
-    #else:
-    gen_config = config.make_gen_config()
-    for key in list(gen_config.keys()):
-        if gen_config[key] is None or gen_config[key] == '[null]':
-                del gen_config[key]
-    try:
-        configure.do_configure(gen_config)
-    except gen.ValidationError as ex:
-        print(gen_config)
-        messages.update(ex.errors)
-        for key, error in ex.errors.items():
-            if key == '':
-                log.error('{}'.format(error))
-            else:
-                log.error('{}: {}'.format(key, error))
-        return messages
+    if len(messages['errors']) > 0:
+        log.error('Please fix validation errors before generating configuration. Try --validate-config.')
+    else:
+        gen_config = config.make_gen_config()
+        for key in list(gen_config.keys()):
+            if gen_config[key] is None or gen_config[key] == '[null]':
+                    del gen_config[key]
+        # Do one last try and catch errors from Gen lib if any.
+        try:
+            configure.do_configure(gen_config)
+        except gen.ValidationError as ex:
+            print(gen_config)
+            messages.update(ex.errors)
+            for key, error in ex.errors.items():
+                if key == '':
+                    log.error('{}'.format(error))
+                else:
+                    log.error('{}: {}'.format(key, error))
+            return messages
 
 def hash_password(string):
     new_hash = sha512_crypt.encrypt(string)

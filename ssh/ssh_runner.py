@@ -18,15 +18,13 @@ import os
 import pty
 import subprocess
 import warnings
+from contextlib import contextmanager
 from multiprocessing import Pool
 
 import ssh.helpers
 import ssh.validate
 from ssh.exceptions import CmdRunException
 from ssh.utils import CommandChain, JsonDelegate
-
-from contextlib import contextmanager
-
 
 log = logging.getLogger(__name__)
 

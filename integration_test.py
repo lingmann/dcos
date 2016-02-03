@@ -319,7 +319,13 @@ def test_if_all_Mesos_slaves_have_registered(cluster):
     assert slaves_ips == cluster.slaves
 
 
+# Retry if returncode is False, do not retry on exceptions.
+@retrying.retry(wait_fixed=2000,
+                retry_on_result=lambda r: r is False,
+                retry_on_exception=lambda _: False)
 def test_if_srouter_slaves_endpoint_work(cluster):
+    # Get currently known agents. This request is served straight from
+    # Mesos (no AdminRouter-based caching is involved).
     r = cluster.get('mesos/master/slaves')
     assert r.status_code == 200
 
@@ -327,10 +333,16 @@ def test_if_srouter_slaves_endpoint_work(cluster):
     slaves_ids = sorted(x['id'] for x in data['slaves'])
 
     for slave_id in slaves_ids:
+        # AdminRouter's slave endpoint internally uses cached Mesos
+        # state data. That is, slave IDs of just recently joined
+        # slaves can be unknown here. For those, this endpoint
+        # returns a 404. Retry in this case, until this endpoint
+        # is confirmed to work for all known agents.
         uri = 'slave/{}/slave%281%29/state.json'.format(slave_id)
         r = cluster.get(uri)
+        if r.status_code == 404:
+            return False
         assert r.status_code == 200
-
         data = r.json()
         assert "id" in data
         assert data["id"] == slave_id

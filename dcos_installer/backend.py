@@ -4,7 +4,7 @@ libraries to support the dcos installer.
 """
 import logging
 import os
-# import time
+import gen
 from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
@@ -19,12 +19,21 @@ def do_configure():
     config.config_path = CONFIG_PATH
     config.build()
     messages = config.validate()
-    if len(messages['errors']) > 0:
-        log.error('Please fix validation errors before generating configuration. Try --validate-config.')
-    else:
-        gen_config = config.make_gen_config()
+    #if len(messages['errors']) > 0:
+    #    log.error('Please fix validation errors before generating configuration. Try --validate-config.')
+    #else:
+    gen_config = config.make_gen_config()
+    try:
         configure.do_configure(gen_config)
-
+    except gen.ValidationError as ex:
+        print(gen_config)
+        messages.update(ex.errors)
+        for key, error in ex.errors.items():
+            if key == '':
+                log.error('{}'.format(error))
+            else:
+                log.error('{}: {}'.format(key, error))
+        return messages
 
 def hash_password(string):
     new_hash = sha512_crypt.encrypt(string)

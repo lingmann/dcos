@@ -255,6 +255,8 @@ class MultiRunner():
                 log.info('process with pid {} not found'.format(process.pid))
             log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
 
+        os.close(slave_pty)
+
         # For each possible line in stderr, match from the beginning of the line for the
         # the confusing warning: "Warning: Permanently added ...". If the warning exists,
         # remove it from the string.

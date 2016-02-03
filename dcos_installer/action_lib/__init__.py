@@ -53,8 +53,14 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
     cleanup_chain = ssh.utils.CommandChain('preflight_cleanup')
     add_post_action(cleanup_chain)
 
+    master_agent_count = {
+        'total_masters': len(config['master_list']),
+        'total_agents': len(config['agent_list'])
+    }
+
     result = yield from pf.run_commands_chain_async([preflight_chain, cleanup_chain], block=block,
-                                                    state_json_dir=state_json_dir)
+                                                    state_json_dir=state_json_dir,
+                                                    delegate_extra_params=master_agent_count)
     return result
 
 
@@ -259,8 +265,14 @@ exit $RETCODE"""
     cleanup_chain = ssh.utils.CommandChain('postflight_cleanup')
     add_post_action(cleanup_chain)
 
+    master_agent_count = {
+        'total_masters': len(config['master_list']),
+        'total_agents': len(config['agent_list'])
+    }
+
     result = yield from pf.run_commands_chain_async([postflight_chain, cleanup_chain], block=block,
-                                                    state_json_dir=state_json_dir)
+                                                    state_json_dir=state_json_dir,
+                                                    delegate_extra_params=master_agent_count)
     return result
 
 

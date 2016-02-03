@@ -21,6 +21,7 @@ def do_configure():
     messages = config.validate()
     if len(messages['errors']) > 0:
         log.error('Please fix validation errors before generating configuration. Try --validate-config.')
+        return 1
     else:
         gen_config = config.make_gen_config()
         for key in list(gen_config.keys()):
@@ -37,6 +38,8 @@ def do_configure():
 #            else:
 #                log.error('{}: {}'.format(key, error))
 #        return messages
+        return 0
+
 
 def hash_password(string):
     new_hash = sha512_crypt.encrypt(string)
@@ -99,7 +102,16 @@ def do_validate_config(config_path=CONFIG_PATH):
     config.config_path = config_path
     config.build()
     messages = config.validate()
+<<<<<<< HEAD
     return messages
+=======
+    print(messages)
+    return_code = 0
+    if len(messages['errors']) > 0:
+        log.error('Validation errors detected!')
+        return_code = 1
+    return messages, return_code
+>>>>>>> 9fa69044d4f2ca9722917354874c0bb34782df04
 
 
 def get_config(config_path=CONFIG_PATH):

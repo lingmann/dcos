@@ -84,7 +84,7 @@ def test_do_validate_config(tmpdir):
             'ssh_port': 'Port is less than or equal to 65535',
             'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses."},
         'warning': {}}
-    messages = backend.do_validate_config(temp_config_path)
+    messages, return_code = backend.do_validate_config(temp_config_path)
     assert messages == expected_output
 
 

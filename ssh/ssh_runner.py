@@ -31,9 +31,10 @@ log = logging.getLogger(__name__)
 
 @contextmanager
 def make_slave_pty():
-    _, slave_pty = pty.openpty()
+    master_pty, slave_pty = pty.openpty()
     yield slave_pty
     os.close(slave_pty)
+    os.close(master_pty)
 
 
 def deprecated(func):

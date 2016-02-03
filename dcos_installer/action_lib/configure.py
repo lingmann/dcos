@@ -33,6 +33,7 @@ def do_onprem(provider_module, mixins, genconf_config):
         return
 
     arguments = {
+        'cluster_id': 'TODO',
         'ip_detect_filename': IP_DETECT_PATH,
         'bootstrap_id': bootstrap_id,
         'provider': 'onprem'}

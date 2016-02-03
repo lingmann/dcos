@@ -149,8 +149,7 @@ entry = {
         validate_zk_path,
         validate_cluster_packages],
     'default': {
-        'roles': 'slave_public',
-        'weights': 'slave_public=1',
+        'weights': '',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': ''

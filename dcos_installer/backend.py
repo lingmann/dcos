@@ -23,6 +23,9 @@ def do_configure():
     #    log.error('Please fix validation errors before generating configuration. Try --validate-config.')
     #else:
     gen_config = config.make_gen_config()
+    for key in list(gen_config.keys()):
+        if gen_config[key] is None or gen_config[key] == '[null]':
+                del gen_config[key]
     try:
         configure.do_configure(gen_config)
     except gen.ValidationError as ex:

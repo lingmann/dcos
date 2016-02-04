@@ -147,7 +147,6 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         log.error(
             "Configuration file not found, %s. Writing new one with all defaults.",
             self.config_path)
-        self.config_path = CONFIG_PATH
         self.write()
         return yaml.load(open(self.config_path))
 

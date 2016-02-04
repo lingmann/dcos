@@ -120,7 +120,7 @@
         "default": "{{ public_slave_instance_type }}"
       },
       "StackCreationTimeout": {
-          "default": "PT30M"
+          "default": "PT45M"
       }
     }
   },

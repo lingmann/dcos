@@ -1,0 +1,43 @@
+#!/bin/bash
+export PATH=/opt/mesosphere/bin:$PATH
+export LIB_INSTALL_DIR="$PKG_PATH/lib/python3.4/site-packages"
+
+mkdir -p "$LIB_INSTALL_DIR"
+
+# Install wheels.
+for package in jsonschema pyjwt passlib kazoo ldap3 pyasn1; do
+  pushd "/pkg/src/$package"
+  pip install --no-deps  --target="$LIB_INSTALL_DIR" *.whl
+  popd
+done
+
+# Install gunicorn (is an extracted archive).
+pushd "/pkg/src/gunicorn"
+python3 setup.py install --root=/ --prefix=$PKG_PATH
+popd
+
+# Install python-mimeparse (is an extracted archive).
+pushd "/pkg/src/python-mimeparse"
+python3 setup.py install --root=/ --prefix=$PKG_PATH
+popd
+
+# Install retrying (is an extracted archive).
+pushd "/pkg/src/retrying"
+python3 setup.py install --root=/ --prefix=$PKG_PATH
+popd
+
+# Install falcon (is an extracted archive)
+# TODO(jp): set up Cython before installing, for speed-up.
+pushd "/pkg/src/falcon"
+python3 setup.py install --root=/ --prefix=$PKG_PATH
+popd
+
+# Install bouncer (only cp directory tree).
+# TODO(jp): cherry-pick what is required.
+cp -r "/pkg/src/bouncer" "$PKG_PATH/bouncer"
+
+# Deploy service file.
+SERVICE_FILE_NAME="dcos-gunicorn-bouncer.service"
+SERVICE_FILE_PATH="$PKG_PATH/dcos.target.wants_master/${SERVICE_FILE_NAME}"
+mkdir -p "$(dirname "$SERVICE_FILE_PATH")"
+envsubst '$PKG_PATH' < "/pkg/extra/${SERVICE_FILE_NAME}" > "${SERVICE_FILE_PATH}"

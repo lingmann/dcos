@@ -4,5 +4,11 @@ cd "/pkg/src/dcos-ui"
 npm install
 echo "module.exports = {};" > ./src/js/config/Config.dev.js
 echo "module.exports = {};" > ./src/js/config/Config.test.js
-npm run build-ce
+
+if [ "$PKG_VARIANT" = "ee" ]; then
+  npm run build-ee
+else
+  npm run build-ce
+fi
+
 cp -r dist/ "$PKG_PATH"/usr

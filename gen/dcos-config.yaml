@@ -58,11 +58,45 @@ package:
   - path: /etc/mesos-master-provider
     content: |
       MESOS_CLUSTER={{ cluster_name }}
+  - path: /etc/mesos-slave-modules.json
+    content: |
+      {
+        "libraries" : [
+          {
+            "file": "/opt/mesosphere/lib/liblogrotate_container_logger.so",
+            "modules": [
+              {
+                "name": "org_apache_mesos_LogrotateContainerLogger",
+                "parameters": [
+                  {
+                    "key": "launcher_dir",
+                    "value": "/opt/mesosphere/active/mesos/libexec/mesos/"
+                  }, {
+                    "key": "max_stdout_size",
+                    "value": "2MB"
+                  }, {
+                    "key": "logrotate_stdout_options",
+                    "value": "rotate 9"
+                  }, {
+                    "key": "max_stderr_size",
+                    "value": "2MB"
+                  }, {
+                    "key": "logrotate_stderr_options",
+                    "value": "rotate 9"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
   - path: /etc/mesos-slave-common
     content: |
       MESOS_MASTER=zk://leader.mesos:2181/mesos
       MESOS_CONTAINERIZERS=docker,mesos
       MESOS_LOG_DIR=/var/log/mesos
+      MESOS_MODULES=file:///opt/mesosphere/etc/mesos-slave-modules.json
+      MESOS_CONTAINER_LOGGER=org_apache_mesos_LogrotateContainerLogger
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_ISOLATION=cgroups/cpu,cgroups/mem,posix/disk
       MESOS_WORK_DIR=/var/lib/mesos/slave

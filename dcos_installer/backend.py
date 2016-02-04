@@ -18,7 +18,7 @@ def do_configure():
     config = DCOSConfig()
     config.config_path = CONFIG_PATH
     config.build()
-    messages = config.validate()
+    messages = config.validate_config_file_only()
     if len(messages['errors']) > 0:
         log.error('Please fix validation errors before generating configuration. Try --validate-config.')
         return 1

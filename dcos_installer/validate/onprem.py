@@ -8,23 +8,23 @@ from dcos_installer.validate import helpers
 log = logging.getLogger(__name__)
 
 
-def check_dependencies(config):
+def check_dependencies(config, config_only=False):
     """
     Accept a dict of dependencies and return true or false and a
     dict of values (if any) of missing dependencies.
     """
-    errors, validate_messages = return_data(config)
+    errors, validate_messages = return_data(config, config_only)
 
     return errors, validate_messages
 
 
-def return_data(config):
+def return_data(config, config_only=False):
     """
     Compare the configuration with the dependencies, return error, msg.
     """
 
     # Verify values presented are valid
-    messages = get_onprem_dependencies(config)
+    messages = get_onprem_dependencies(config, config_only)
 
     # Check for errors
     if len(messages['errors']) > 0:
@@ -36,7 +36,7 @@ def return_data(config):
     return errors, messages
 
 
-def get_onprem_dependencies(config):
+def get_onprem_dependencies(config, config_only=False):
     """
     The on-prem dependency tree. Each key gets a type, provide and dependecies.
     For each type, we assert first, if it passes, we verify with provide.
@@ -57,16 +57,20 @@ def get_onprem_dependencies(config):
         "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config),
         "cluster_name": helpers.validate_string('cluster_name', config),
         "resolvers": helpers.validate_ip_list('resolvers', config),
-        "ip_detect_path": helpers.validate_path('ip_detect_path', config),
-        "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
         "ssh_port": helpers.validate_port('ssh_port', config),
-        "ssh_key": helpers.validate_ssh_key('ssh_key', config),
-        "ssh_key_path": helpers.validate_path('ssh_key_path', config),
         "ssh_user": helpers.validate_string('ssh_user', config),
         "agent_list": helpers.validate_ip_list('agent_list', config),
         "superuser_username": helpers.validate_string('superuser_username', config),
         "superuser_password_hash": helpers.validate_string('superuser_password_hash', config),
     }
+    if config_only is False:
+        none_genconf_validation = {
+            "ip_detect_path": helpers.validate_path('ip_detect_path', config),
+            "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
+            "ssh_key": helpers.validate_ssh_key('ssh_key', config),
+            "ssh_key_path": helpers.validate_path('ssh_key_path', config)}
+
+        dep_tree.update(none_genconf_validation)
 
     # For each dependency, read its validation helper func and return
     for tk, tv in dep_tree.items():

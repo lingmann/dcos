@@ -247,16 +247,11 @@ def main():
             "cluster_name": "SSH Installed DCOS",
             "bootstrap_url": "file:///opt/dcos_install_tmp",
             "dns_search": "mesos",
-            "docker_remove_delay": "1hrs",
             "exhibitor_storage_backend": "zookeeper",
             "exhibitor_zk_hosts": host_list[0]+":2181",
             "exhibitor_zk_path": "/exhibitor",
-            "gc_delay": "2days",
             "master_discovery": "static",
             "master_list": [host_list[1]],
-            "resolvers": ["8.8.8.8", "8.8.4.4"],
-            "roles": "slave_public",
-            "weights": "slave_public=1"
             },
         "ssh_config": {
             "ssh_user": "centos",

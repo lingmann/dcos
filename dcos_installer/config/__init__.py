@@ -200,6 +200,8 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         for key, value in self.items():
             # Remove config values that don't concern gen
             if key in [
+                    'superuser_username',
+                    'superuser_password_hash',
                     'log_directory',
                     'ssh_user',
                     'ssh_port',

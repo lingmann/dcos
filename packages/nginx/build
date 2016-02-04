@@ -35,6 +35,12 @@ cp snakeoil.crt $nginx_config_path/
 cp snakeoil.key $nginx_config_path/
 cp *.lua $nginx_config_path/
 
+# Copy OpenResty Lua modules.
+if [ -d resty ]; then
+    cp -r resty $nginx_config_path/
+fi
+
+
 popd
 
 # Copy  in needed libraries

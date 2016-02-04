@@ -18,6 +18,7 @@ import os
 import pty
 import subprocess
 import warnings
+from contextlib import contextmanager
 from multiprocessing import Pool
 
 import ssh.helpers
@@ -26,6 +27,14 @@ from ssh.exceptions import CmdRunException
 from ssh.utils import CommandChain, JsonDelegate
 
 log = logging.getLogger(__name__)
+
+
+@contextmanager
+def make_slave_pty():
+    master_pty, slave_pty = pty.openpty()
+    yield slave_pty
+    os.close(slave_pty)
+    os.close(master_pty)
 
 
 def deprecated(func):
@@ -238,22 +247,22 @@ class MultiRunner():
 
     @asyncio.coroutine
     def run_cmd_return_dict_async(self, cmd, host, namespace, future):
-        _, slave_pty = pty.openpty()
-        process = yield from asyncio.create_subprocess_exec(
-            *cmd, stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            stdin=slave_pty,
-            env={'TERM': 'linux'})
-        stdout = b''
-        stderr = b''
-        try:
-            stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
-        except asyncio.TimeoutError:
+        with make_slave_pty() as slave_pty:
+            process = yield from asyncio.create_subprocess_exec(
+                *cmd, stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+                stdin=slave_pty,
+                env={'TERM': 'linux'})
+            stdout = b''
+            stderr = b''
             try:
-                process.terminate()
-            except ProcessLookupError:
-                log.info('process with pid {} not found'.format(process.pid))
-            log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
+                stdout, stderr = yield from asyncio.wait_for(process.communicate(), self.process_timeout)
+            except asyncio.TimeoutError:
+                try:
+                    process.terminate()
+                except ProcessLookupError:
+                    log.info('process with pid {} not found'.format(process.pid))
+                log.error('timeout of {} sec reached. PID {} killed'.format(self.process_timeout, process.pid))
 
         # For each possible line in stderr, match from the beginning of the line for the
         # the confusing warning: "Warning: Permanently added ...". If the warning exists,
@@ -372,15 +381,16 @@ class MultiRunner():
         return chain_result
 
     @asyncio.coroutine
-    def run_commands_chain_async(self, chains, block=False, state_json_dir=None):
+    def run_commands_chain_async(self, chains, block=False, state_json_dir=None, delegate_extra_params={}):
         assert isinstance(chains, list)
         sem = asyncio.Semaphore(self.__parallelism)
+
         if self.async_delegate is not None and state_json_dir is True:
             log.error('Cannot use a delegate and update json at the same time')
             return None
         elif state_json_dir:
             log.debug('Using state_json_dir {}'.format(state_json_dir))
-            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets))
+            self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), **delegate_extra_params)
 
         if block:
             log.debug('Waiting for run_command_chain_async to execute')

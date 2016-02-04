@@ -4,7 +4,7 @@ libraries to support the dcos installer.
 """
 import logging
 import os
-import gen
+# import gen
 from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
@@ -28,8 +28,8 @@ def do_configure():
             if gen_config[key] is None or gen_config[key] == '[null]':
                     del gen_config[key]
     # Do one last try and catch errors from Gen lib if any.
-#    try:
         configure.do_configure(gen_config)
+        return 0
 #    except gen.ValidationError as ex:
 #        messages.update(ex.errors)
 #        for key, error in ex.errors.items():
@@ -38,7 +38,6 @@ def do_configure():
 #            else:
 #                log.error('{}: {}'.format(key, error))
 #        return messages
-        return 0
 
 
 def hash_password(string):

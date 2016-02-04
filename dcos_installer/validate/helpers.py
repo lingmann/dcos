@@ -251,27 +251,27 @@ def validate_comma_list(key=None, config=None):
     return [False, None]
 
 
-def validate_ssh_key(key=None, config=None):
-    fm = "Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----"
-    failed_validation = [False, fm]
-
-    if key in config:
-        is_string, msg = validate_string(key, config)
-        if not is_string:
-            return failed_validation
-
-        key = config[key]
-        if key != '':
-            # Validate the PEM encoded file
-            if key.startswith('-----BEGIN RSA PRIVATE KEY-----'):
-                return [True, 'This is a valid RSA encoded SSH key']
-            else:
-                return failed_validation
-
-        return failed_validation
-
-    return [False, None]
-
+#def validate_ssh_key(key=None, config=None):
+#    fm = "Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----"
+#    failed_validation = [False, fm]
+#
+#    if key in config:
+#        is_string, msg = validate_string(key, config)
+#        if not is_string:
+#            return failed_validation
+#
+#        key = config[key]
+#        if key != '':
+#            # Validate the PEM encoded file
+#            if key.startswith('-----BEGIN RSA PRIVATE KEY-----'):
+#                return [True, 'This is a valid RSA encoded SSH key']
+#            else:
+#                return failed_validation
+#
+#        return failed_validation
+#
+#    return [False, None]
+#
 
 def validate_ip_detect_script(key=None, config=None):
     fm = 'Please provide a valid executable script. Script must start with #!/'

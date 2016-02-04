@@ -57,17 +57,17 @@ def get_onprem_dependencies(config, config_only=False):
         "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config),
         "cluster_name": helpers.validate_string('cluster_name', config),
         "resolvers": helpers.validate_ip_list('resolvers', config),
-        "ssh_port": helpers.validate_port('ssh_port', config),
-        "ssh_user": helpers.validate_string('ssh_user', config),
-        "agent_list": helpers.validate_ip_list('agent_list', config),
         "superuser_username": helpers.validate_string('superuser_username', config),
         "superuser_password_hash": helpers.validate_string('superuser_password_hash', config),
     }
     if config_only is False:
         none_genconf_validation = {
+            "ssh_port": helpers.validate_port('ssh_port', config),
+            "ssh_user": helpers.validate_string('ssh_user', config),
+            "agent_list": helpers.validate_ip_list('agent_list', config),
             "ip_detect_path": helpers.validate_path('ip_detect_path', config),
             "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
-            "ssh_key": helpers.validate_ssh_key('ssh_key', config),
+            "ssh_key": helpers.validate_path('ssh_key_path', config),
             "ssh_key_path": helpers.validate_path('ssh_key_path', config)}
 
         dep_tree.update(none_genconf_validation)

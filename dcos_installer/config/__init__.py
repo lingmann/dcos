@@ -184,23 +184,22 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         return dictionary
 
     def make_gen_config(self):
-        bootstrap_id = os.getenv('BOOTSTRAP_ID', '')
-        # Minimum required parameters
-        gen_config = {
-            'bootstrap_url': None,
-            'cluster_name': None,
-            'exhibitor_storage_backend': None,
-            'exhibitor_zk_hosts': None,
-            'exhibitor_zk_path': None,
-            'master_discovery': None,
-            'master_list': None,
-            'resolvers': None}
+        # bootstrap_id = os.getenv('BOOTSTRAP_ID', '')
+        #  # Minimum required parameters
+        #  gen_config = {
+        #      'bootstrap_url': None,
+        #      'cluster_name': None,
+        #      'exhibitor_storage_backend': None,
+        #      'exhibitor_zk_hosts': None,
+        #      'exhibitor_zk_path': None,
+        #      'master_discovery': None,
+        #      'master_list': None,
+        #      'resolvers': None}
+        gen_config = {}
 
         for key, value in self.items():
             # Remove config values that don't concern gen
             if key in [
-                    'superuser_username',
-                    'superuser_password_hash',
                     'log_directory',
                     'ssh_user',
                     'ssh_port',
@@ -216,7 +215,6 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
             if isinstance(value, list):
                 log.debug("Caught list for genconf configuration, transforming to JSON string: %s", list)
                 value = json.dumps(value)
-            # Pass through all user-fined values
             gen_config[key] = value
 
         log.debug('Complete genconf configuration: \n{}'.format(gen_config))

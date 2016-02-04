@@ -40,7 +40,7 @@ def run_cmd(mode, expect_errors=False):
         assert p.returncode != 0, "{} exited with error code {} (success), but expected an error.".format(
             mode, p.returncode)
     else:
-        assert p.returncode is 0, "{} exited with error code {}".format(mode, p.returncode)
+        assert p.returncode == 0, "{} exited with error code {}".format(mode, p.returncode)
         assert "Errors encountered" not in out, "Errors encountered in running {}".format(mode)
 
 
@@ -247,16 +247,11 @@ def main():
             "cluster_name": "SSH Installed DCOS",
             "bootstrap_url": "file:///opt/dcos_install_tmp",
             "dns_search": "mesos",
-            "docker_remove_delay": "1hrs",
             "exhibitor_storage_backend": "zookeeper",
             "exhibitor_zk_hosts": host_list[0]+":2181",
             "exhibitor_zk_path": "/exhibitor",
-            "gc_delay": "2days",
             "master_discovery": "static",
             "master_list": [host_list[1]],
-            "resolvers": ["8.8.8.8", "8.8.4.4"],
-            "roles": "slave_public",
-            "weights": "slave_public=1"
             },
         "ssh_config": {
             "ssh_user": "centos",

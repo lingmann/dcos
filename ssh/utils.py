@@ -85,7 +85,7 @@ class AbstractSSHLibDelegate(metaclass=abc.ABCMeta):
 
 
 class JsonDelegate(AbstractSSHLibDelegate):
-    def __init__(self, state_dir, total_hosts, total_masters=None, total_agents=None):
+    def __init__(self, state_dir, total_hosts, total_masters=None, total_agents=None, **kwargs):
         self.state_dir = state_dir
         self.total_hosts = total_hosts
         self.total_masters = total_masters

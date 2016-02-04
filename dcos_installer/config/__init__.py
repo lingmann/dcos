@@ -127,6 +127,14 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         _, messages = DCOSValidateConfig(config).validate()
         return messages
 
+    def validate_config_file_only(self):
+        config = self._unbind_configuration()
+        log.debug('Validating config file only: ')
+        log.debug(config)
+        _, messages = DCOSValidateConfig(config).validate(config_only=True)
+        return messages
+
+
     def get_config(self):
         """
         Load user-land configuration and exit upon errors.

@@ -39,7 +39,8 @@ class DCOSValidateConfig():
     def __init__(self, dcos_config={}):
         self.dcos_config = dcos_config
 
-    def validate(self):
+    def validate(self, config_only=False):
+        self.config_only = config_only
         errors, messages = self.onprem_config()
         return errors, messages
 
@@ -47,7 +48,7 @@ class DCOSValidateConfig():
         """
         Entry point to on-prem configuration validation.
         """
-        errors, validate_out = onprem.check_dependencies(self.dcos_config)
+        errors, validate_out = onprem.check_dependencies(self.dcos_config, self.config_only)
         if errors:
             log.error("Errors found in on-prem dependencies...")
             return errors, validate_out

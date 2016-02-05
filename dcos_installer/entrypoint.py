@@ -6,7 +6,10 @@ from dcos_installer import DcosInstaller
 
 
 def main():
-    DcosInstaller(sys.argv[1:])
+    if len(sys.argv[1:]) == 0:
+        DcosInstaller(["--genconf"])
+    else:
+        DcosInstaller(sys.argv[1:])
 
 if __name__ == '__main__':
     main()

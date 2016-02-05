@@ -120,11 +120,6 @@ class DcosInstaller:
                 messages, return_code = backend.do_validate_config()
                 sys.exit(return_code)
 
-        # If no args given, fall through to legacy genconf behavior
-        make_default_dir()
-        print_header("EXECUTING CONFIGURATION GENERATION")
-        sys.exit(backend.do_configure())
-
     def parse_args(self, args):
         def print_usage():
             return """

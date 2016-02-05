@@ -22,6 +22,7 @@ MESOS_DNS_ENTRY_UPDATE_TIMEOUT = 60  # in seconds
 def cluster():
     assert 'DCOS_DNS_ADDRESS' in os.environ
     assert 'MASTER_HOSTS' in os.environ
+    assert 'PUBLIC_MASTER_HOSTS' in os.environ
     assert 'SLAVE_HOSTS' in os.environ
     assert 'DNS_SEARCH' in os.environ
 
@@ -32,6 +33,7 @@ def cluster():
 
     return Cluster(dcos_uri=os.environ['DCOS_DNS_ADDRESS'],
                    masters=os.environ['MASTER_HOSTS'].split(','),
+                   public_masters=os.environ['PUBLIC_MASTER_HOSTS'].split(','),
                    slaves=os.environ['SLAVE_HOSTS'].split(','),
                    registry=os.environ['REGISTRY_HOST'],
                    dns_search_set=os.environ['DNS_SEARCH'])
@@ -113,7 +115,7 @@ class Cluster:
                     retry_on_exception=lambda x: False)
     def _wait_for_leader_election(self):
         mesos_resolver = dns.resolver.Resolver()
-        mesos_resolver.nameservers = self.masters
+        mesos_resolver.nameservers = self.public_masters
         try:
             # Yeah, we can also put it in retry_on_exception, but
             # this way we will loose debug messages
@@ -161,12 +163,15 @@ class Cluster:
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
 
-    def __init__(self, dcos_uri, masters, slaves, registry, dns_search_set):
+    def __init__(self, dcos_uri, masters, public_masters, slaves, registry, dns_search_set):
         self.masters = sorted(masters)
+        self.public_masters = sorted(public_masters)
         self.slaves = sorted(slaves)
-        self.zk_hostports = ','.join(':'.join([host, '2181']) for host in self.masters)
+        self.zk_hostports = ','.join(':'.join([host, '2181']) for host in self.public_masters)
         self.registry = registry
         self.dns_search_set = dns_search_set == 'true'
+
+        assert len(self.masters) == len(self.public_masters)
 
         # URI must include scheme
         assert dcos_uri.startswith('http')
@@ -473,7 +478,7 @@ def test_if_all_exhibitors_are_in_sync(cluster):
 
     correct_data = sorted(r.json(), key=lambda k: k['hostname'])
 
-    for zk_ip in cluster.masters:
+    for zk_ip in cluster.public_masters:
         resp = requests.get('http://{}:8181/exhibitor/v1/cluster/status'.format(zk_ip))
         assert resp.status_code == 200
 

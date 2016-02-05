@@ -50,6 +50,7 @@ rm -rf PASSED
 
 export MASTER_IP=192.168.65.90
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
+export MASTER_HOSTS=192.168.65.90,192.168.65.95,192.168.65.101
 
 cp VagrantConfig.yaml.example VagrantConfig.yaml
 export DCOS_CONFIG_PATH="etc/3_master.yaml"
@@ -93,7 +94,8 @@ vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:50
 echo "Running integration test"
 docker run -v $PWD/../../integration_test.py:/integration_test.py \
     -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
-    -e MASTER_HOSTS="192.168.65.90,192.168.65.95,192.168.65.101" \
+    -e MASTER_HOSTS=$MASTER_HOSTS \
+    -e PUBLIC_MASTER_HOSTS=$MASTER_HOSTS \
     -e SLAVE_HOSTS="192.168.65.111,192.168.65.121" \
     -e REGISTRY_HOST="boot.dcos" \
     -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-}" \

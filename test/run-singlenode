@@ -40,6 +40,7 @@ CMD="cd dcos-image && \
         -v \$PWD/integration_test.py:/integration_test.py \
         -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
         -e MASTER_HOSTS=$MASTER_IP \
+        -e PUBLIC_MASTER_HOSTS=$MASTER_IP \
         -e SLAVE_HOSTS=$MASTER_IP \
         -e REGISTRY_HOST=$MASTER_IP \
         -e TEAMCITY_VERSION=\"${TEAMCITY_VERSION:-''}\" \

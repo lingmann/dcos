@@ -138,6 +138,7 @@ docker run \
 -v /home/centos/integration_test.py:/integration_test.py \
 -e "DCOS_DNS_ADDRESS=http://{dcos_dns}" \
 -e "MASTER_HOSTS={master_list}" \
+-e "PUBLIC_MASTER_HOSTS={master_list}" \
 -e "SLAVE_HOSTS={slave_list}" \
 -e "REGISTRY_HOST={registry_host}" \
 -e "DNS_SEARCH=true" \

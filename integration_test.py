@@ -164,6 +164,19 @@ class Cluster:
         self._wait_for_DCOS_history_up()
 
     def __init__(self, dcos_uri, masters, public_masters, slaves, registry, dns_search_set):
+        """Proxy class for DCOS clusters.
+
+        Args:
+            dcos_uri: address for the DCOS web UI.
+            masters: list of Mesos master advertised IP addresses.
+            public_masters: list of Mesos master IP addresses routable from
+                the local host.
+            slaves: list of Mesos slave/agent advertised IP addresses.
+            registry: hostname or IP address of a private Docker registry.
+            dns_search_set: string indicating that a DNS search domain is
+                configured if its value is "true".
+
+        """
         self.masters = sorted(masters)
         self.public_masters = sorted(public_masters)
         self.slaves = sorted(slaves)

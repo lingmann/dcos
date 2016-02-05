@@ -69,9 +69,19 @@
         "GroupDescription" : "Enable admin access to servers",
         "VpcId" : { "Ref" : "Vpc" },
         "SecurityGroupIngress" : [ {
-          "IpProtocol" : "-1",
+          "IpProtocol" : "tcp",
           "FromPort" : "22",
           "ToPort" : "22",
+          "CidrIp" : { "Ref" : "AdminLocation" }
+          }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "80",
+          "ToPort" : "80",
+          "CidrIp" : { "Ref" : "AdminLocation" }
+          }, {
+          "IpProtocol" : "tcp",
+          "FromPort" : "443",
+          "ToPort" : "443",
           "CidrIp" : { "Ref" : "AdminLocation" }
         } ]
       }

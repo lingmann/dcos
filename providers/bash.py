@@ -39,6 +39,7 @@ set -o errexit -o nounset -o pipefail
 declare -i OVERALL_RC=0
 declare -i PREFLIGHT_ONLY=0
 declare -i DISABLE_PREFLIGHT=0
+declare -i SYSTEMCTL_NO_BLOCK=0
 
 declare ROLES=""
 declare RED=""
@@ -57,7 +58,7 @@ if [ -t 1 ]; then
 fi
 
 # Setup getopt argument parser
-ARGS=$(getopt -o dph --long "disable-preflight,preflight-only,help" -n "$(basename "$0")" -- "$@")
+ARGS=$(getopt -o dph --long "disable-preflight,preflight-only,help,no-block-dcos-setup" -n "$(basename "$0")" -- "$@")
 
 if [[ $EUID -ne 0 ]]; then
     echo "This script must be run as root" 1>&2
@@ -87,6 +88,12 @@ echo -e 'Configuring DCOS'
 
 # Install the DCOS services, start DCOS
 function setup_and_start_services() {
+
+declare NO_BLOCK_FLAG=""
+if (( $SYSTEMCTL_NO_BLOCK == 1 )); then
+  NO_BLOCK_FLAG='--no-block'
+fi
+
 echo -e 'Setting and starting DCOS'
 {{ setup_services }}
 }
@@ -323,6 +330,7 @@ function main()
         case "$1" in
             -d|--disable-preflight) DISABLE_PREFLIGHT=1;  shift  ;;
             -p|--preflight-only) PREFLIGHT_ONLY=1 ; shift  ;;
+            --no-block-dcos-setup) SYSTEMCTL_NO_BLOCK=1;  shift ;;
             -h|--help) usage; exit 1 ;;
             --) shift ; break ;;
             *) usage ; exit 1 ;;
@@ -417,7 +425,8 @@ def make_bash(gen_out):
         if service.get('enable'):
             setup_services += "systemctl enable {}\n".format(name)
         if 'command' in service:
-            setup_services += "systemctl {} {}\n".format(service['command'], name)
+            noblock = ' "$NO_BLOCK_FLAG"' if service.get('no_block') else ''
+            setup_services += "systemctl {} {}{}\n".format(service['command'], name, noblock)
 
     # Populate in the bash script template
     bash_script = gen.template.parse_str(bash_template).render({

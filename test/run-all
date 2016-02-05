@@ -31,7 +31,7 @@ else
 fi
 
 # Pin to just the right dcos-vagrant commit
-git -C dcos-vagrant checkout -qf ff40e88dffd4dd0fb190b02e750fde64ca8f5bc7
+git -C dcos-vagrant checkout -qf 489feffa65a7125651d58e8e7fc67a1941e389b2
 
 cp ../dcos_generate_config.sh dcos-vagrant/dcos_generate_config.sh
 
@@ -54,7 +54,7 @@ export MASTER_HOSTS=192.168.65.90,192.168.65.95,192.168.65.101
 
 cp VagrantConfig.yaml.example VagrantConfig.yaml
 export DCOS_CONFIG_PATH="etc/3_master.yaml"
-export DCOS_BOOT_NODE_DOCKER_REGISTRY="true"
+export DCOS_PRIVATE_REGISTRY="true"
 cat <<EOF > "$DCOS_CONFIG_PATH"
 ---
 cluster_name: test_cluster
@@ -73,7 +73,7 @@ EOF
 cleanup_vagrant_leftovers
 
 echo "Starting Vagrant VMs"
-vagrant up boot m1 m2 m3 w1 w2
+vagrant up boot m1 m2 m3 a1 a2
 
 # TODO(cmaloney): Configure insecure registry inside the dcos-vagrant cluster
 

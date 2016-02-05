@@ -23,7 +23,7 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     # TODO(cmaloney): remove find_packages()
-    packages=['gen', 'providers', 'ssh', 'deploy'] + find_packages(),
+    packages=['gen', 'providers', 'ssh'] + find_packages(),
     install_requires=[
         'requests==2.8.1',
         'azure-storage==0.20.2',
@@ -39,7 +39,7 @@ setup(
         'console_scripts': [
             'release=providers.release:main',
             'genconf=providers.genconf:main',
-            'ccm-deploy-test=providers.test_genconf_ccm:main',
+            'ccm-deploy-test=providers.test_installer_ccm:main',
         ],
     },
     package_data={

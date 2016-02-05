@@ -1,0 +1,18 @@
+#!/bin/bash
+set -euo pipefail
+
+# If it already exists, fetch, otherwise clone
+if [ ! -d ext/dcos-installer ]; then
+  git clone git@github.com:mesosphere/dcos-installer.git ext/dcos-installer
+else
+  git -C ext/dcos-installer fetch origin -t +refs/heads/*:refs/remotes/origin/*
+fi
+
+dcos_installer_commit=1d543ed52cb7bb179f27fd45a9c21b249637eb52
+pushd ext/dcos-installer
+git checkout -qf $dcos_installer_commit
+popd
+
+# Compile the installer UI components
+docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 npm install
+docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 ./node_modules/.bin/gulp dist

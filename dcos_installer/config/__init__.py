@@ -200,8 +200,6 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         for key, value in self.items():
             # Remove config values that don't concern gen
             if key in [
-                    'superuser_username',
-                    'superuser_password_hash',
                     'log_directory',
                     'ssh_user',
                     'ssh_port',
@@ -209,7 +207,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     'ssh_key_path',
                     'agent_list',
                     'ip_detect_path',
-                    'ip_detect',
+                    'ip_detect_script',
                     'process_timeout']:
                 continue
             log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))

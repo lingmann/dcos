@@ -1,3 +1,4 @@
+import copy
 import logging
 import os
 import subprocess
@@ -49,18 +50,24 @@ def do_onprem(provider_module, mixins, genconf_config):
 
     # update arguments with the genconf_config
     arguments.update(genconf_config)
-    #try:
+
+    # run validate first as this is the only way we have for now to remove "optional" keys
+    validated = gen.validate(
+        arguments=arguments,
+        mixins=copy.copy(mixins),  # FIXME: do a copy because gen.validate appends a '' at the end
+        extra_templates=dict(),
+        cc_package_files=list()
+        )
+    if 'errors' in validated:
+        errors = validated['errors']
+        for optional_key in ('superuser_username', 'superuser_password_hash'):
+            if optional_key in errors:
+                del arguments[optional_key]
+
     gen_out = gen.generate(
         arguments=arguments,
         mixins=mixins
         )
-    #except gen.ValidationError as ex:
-    #    for key, error in ex.errors:
-    #        if key == '':
-    #            log.error("Error: %s", error)
-    #        else:
-    #            log.error("Error in configration key %s: %s", key, error)
-    #    return
 
     provider_module.generate(gen_out, '/genconf/serve')
     return gen_out

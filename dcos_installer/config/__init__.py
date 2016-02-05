@@ -184,19 +184,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         return dictionary
 
     def make_gen_config(self):
-        # bootstrap_id = os.getenv('BOOTSTRAP_ID', '')
-        #  # Minimum required parameters
-        #  gen_config = {
-        #      'bootstrap_url': None,
-        #      'cluster_name': None,
-        #      'exhibitor_storage_backend': None,
-        #      'exhibitor_zk_hosts': None,
-        #      'exhibitor_zk_path': None,
-        #      'master_discovery': None,
-        #      'master_list': None,
-        #      'resolvers': None}
         gen_config = {}
-
         for key, value in self.items():
             # Remove config values that don't concern gen
             if key in [

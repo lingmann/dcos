@@ -2,7 +2,7 @@
   "docker": "dcos-builder",
   "single_source": {
     "kind": "url_extract",
-    "url": "http://downloads.sourceforge.net/traceroute/traceroute-2.0.21.tar.gz",
+    "url": "http://downloads.mesosphere.com/traceroute/traceroute-2.0.21.tar.gz",
     "sha1": "3acd1f8c275bd8d511e94e3c6f11fc5a280f0abb"
   }
 }

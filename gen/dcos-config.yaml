@@ -163,6 +163,10 @@ package:
       RESOLVERS={{ resolvers_str }}
 {% endswitch %}
 {% switch exhibitor_storage_backend %}
+{% case "agent_only_group_no_exhibitor" %}
+  - path: /etc/exhibitor
+    content: |
+      # File intentionally has no settings - Exhibitor is not used on DCOS Agents
 {% case "aws_s3" %}
   - path: /etc/exhibitor
     content: |

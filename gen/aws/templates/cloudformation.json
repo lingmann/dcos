@@ -724,10 +724,10 @@
         "SecurityGroups" : [ { "Ref" : "SlaveSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "SlaveInstanceProfile" },
         "AssociatePublicIpAddress" : "false",
-        {{ aws_slave_spot_price }}
+        {{ aws_private_agent_spot_price }}
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "SlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          {{ slave_cloud_config }}
+          {{ agent_private_cloud_config }}
         ]]}}
       }
     },
@@ -768,10 +768,10 @@
         "SecurityGroups" : [ { "Ref" : "PublicSlaveSecurityGroup" } ],
         "IamInstanceProfile" : { "Ref" : "SlaveInstanceProfile" },
         "AssociatePublicIpAddress" : "true",
-        {{ aws_slave_public_spot_price }}
+        {{ aws_public_agent_spot_price }}
         "InstanceType" : { "Fn::FindInMap" : [ "Parameters", "PublicSlaveInstanceType", "default" ] },
         "UserData" : { "Fn::Base64" : { "Fn::Join" : ["", [
-          {{ slave_public_cloud_config }}
+          {{ agent_public_cloud_config }}
         ]]}}
       }
     },

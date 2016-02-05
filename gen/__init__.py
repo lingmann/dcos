@@ -219,7 +219,7 @@ class DFSArgumentCalculator():
                         return False
                 except CalculatorError as ex:
                     raise CalculatorError(
-                        ex.msg,
+                        ex.message,
                         ex.chain + ['trying to test condition {}={}'.format(condition_name, condition_value)]) from ex
             return True
 

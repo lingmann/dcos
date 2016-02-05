@@ -189,7 +189,7 @@ setup(
     packages=['dcos_installer'] + find_packages(),
     install_requires=[
         'asyncio',
-        'aiohttp',
+        'aiohttp==0.20.0',
         'aiohttp_jinja2',
         'coloredlogs',
         'docker_py',
@@ -197,9 +197,8 @@ setup(
         'pytest',
         'pytest-mock',
         'pyyaml',
-        'tox',
         'webtest',
-        'webtest_aiohttp'],
+        'webtest_aiohttp==1.0.0'],
     entry_points={
         'console_scripts': [
             'dcos_installer = dcos_installer.entrypoint:main']

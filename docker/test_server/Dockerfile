@@ -1,4 +1,4 @@
-FROM python:3.4.2
+FROM python:3.4.4-slim
 RUN pip install requests
 COPY test_server.py /opt/test_server.py
 RUN chmod a+x /opt/test_server.py

@@ -1,5 +1,13 @@
 from setuptools import setup, find_packages
 
+
+def get_advanced_templates():
+    template_base = 'aws/templates/advanced/'
+    template_names = ['advanced-master', 'advanced-priv-agent', 'advanced-pub-agent', 'infra', 'zen']
+
+    return [template_base + name + '.json' for name in template_names]
+
+
 setup(
     name='dcos_image',
     version='0.1',
@@ -49,7 +57,7 @@ setup(
             'azure/templates/azuredeploy.json',
             'vagrant/config.rb',
             'vagrant/make_dcos_vagrant.sh.in',
-            'vagrant/Vagrantfile'],
+            'vagrant/Vagrantfile'] + get_advanced_templates(),
         'providers': [
             '../docker/py.test/Dockerfile',
             '../docker/test_server/Dockerfile',

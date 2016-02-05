@@ -6,7 +6,7 @@ def get_spot(name, spot_price):
 
 entry = {
     'default': {
-        'resolvers': '["10.0.0.2"]',
+        'resolvers': '["169.254.169.253"]',
         'num_private_slaves': '5',
         'num_public_slaves': '1',
         'master_instance_type': 'm3.xlarge',
@@ -22,21 +22,19 @@ entry = {
     },
     'must': {
         'aws_master_spot_price': lambda master_spot_price: get_spot('master', master_spot_price),
-        'aws_slave_spot_price': lambda slave_spot_price: get_spot('slave', slave_spot_price),
-        'aws_slave_public_spot_price':
+        'aws_private_agent_spot_price': lambda slave_spot_price: get_spot('slave', slave_spot_price),
+        'aws_public_agent_spot_price':
             lambda slave_public_spot_price: get_spot('slave_public', slave_public_spot_price),
-        'exhibitor_address': '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }',
         'aws_region': '{ "Ref" : "AWS::Region" }',
-        's3_bucket': '{ "Ref" : "ExhibitorS3Bucket" }',
-        's3_prefix': '{ "Ref" : "AWS::StackName" }',
         'exhibitor_explicit_keys': 'false',
-        'exhibitor_storage_backend': 'aws_s3',
-        'exhibitor_address': '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }',
         'cluster_name': '{ "Ref" : "AWS::StackName" }',
         'master_discovery': 'master_http_loadbalancer',
+        # The cloud_config template variables pertaining to "cloudformation.json"
         'master_cloud_config': '{{ master_cloud_config }}',
-        'slave_cloud_config': '{{ slave_cloud_config }}',
-        'slave_public_cloud_config': '{{ slave_public_cloud_config }}',
-        'cluster_id': '{ "Ref" : "AWS::StackId" }'
+        'agent_private_cloud_config': '{{ slave_cloud_config }}',
+        'agent_public_cloud_config': '{{ slave_public_cloud_config }}',
+        # template variable for the generating advanced template cloud configs
+        'cloud_config': '{{ cloud_config }}',
+        'cluster_id': '{ "Ref" : "AWS::StackId" }',
     }
 }

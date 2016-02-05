@@ -113,6 +113,35 @@ cf_instance_groups = {
     }
 }
 
+groups = {
+    'master': (
+        'master', {
+            'report_name': 'MasterServerGroup',
+            's3_bucket': '{ "Ref" : "ExhibitorS3Bucket" }',
+            's3_prefix': '{ "Ref" : "AWS::StackName" }',
+            'exhibitor_storage_backend': 'aws_s3',
+            'master_role': '{ "Ref" : "MasterRole" }',
+            'agent_role': '',
+            'exhibitor_address': '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }',
+        }),
+    'pub-agent': (
+        'slave_public', {
+            'report_name': 'PublicAgentServerGroup',
+            'master_role': '',
+            'agent_role': '{ "Ref" : "PublicAgentRole" }',
+            'exhibitor_storage_backend': 'agent_only_group_no_exhibitor',
+            'exhibitor_address': '{ "Ref" : "InternalMasterLoadBalancerDnsName" }',
+        }),
+    'priv-agent': (
+        'slave', {
+            'report_name': 'PrivateAgentServerGroup',
+            'master_role': '',
+            'agent_role': '{ "Ref" : "PrivateAgentRole" }',
+            'exhibitor_storage_backend': 'agent_only_group_no_exhibitor',
+            'exhibitor_address': '{ "Ref" : "InternalMasterLoadBalancerDnsName" }',
+        })
+}
+
 AWS_REF_REGEX = re.compile(r"(?P<before>.*)(?P<ref>{ .* })(?P<after>.*)")
 
 
@@ -132,11 +161,7 @@ def transform(line):
     return "%s, %s, %s, %s,\n" % (transformed_before, transformed_ref, transformed_after, '"\\n"')
 
 
-def render_cloudformation(
-        cf_template,
-        master_cloudconfig,
-        slave_cloudconfig,
-        slave_public_cloudconfig):
+def render_cloudformation(cf_template, **kwds):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
@@ -144,11 +169,8 @@ def render_cloudformation(
         return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     template_str = gen.template.parse_str(cf_template).render(
-        {
-            'master_cloud_config': transform_lines(master_cloudconfig),
-            'slave_cloud_config': transform_lines(slave_cloudconfig),
-            'slave_public_cloud_config': transform_lines(slave_public_cloudconfig)
-        })
+        {k: transform_lines(v) for k, v in kwds.items()}
+    )
 
     template_json = json.loads(template_str)
 
@@ -156,6 +178,96 @@ def render_cloudformation(
     template_json['Metadata']['TemplateGenerationDate'] = util.template_generation_date
 
     return json.dumps(template_json)
+
+
+def gen_supporting_template():
+    for template_key in ['infra']:
+        cf_template = 'aws/templates/advanced/{}.json'.format(template_key)
+        cloudformation = render_cloudformation(resource_string("gen", cf_template).decode())
+
+        print("Validating CloudFormation: {}".format(cf_template))
+        client = session_dev.client('cloudformation')
+        client.validate_template(TemplateBody=cloudformation)
+
+        yield template_key, gen.Bunch({
+            'cloudformation': cloudformation,
+            'results': '',
+        })
+
+
+def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
+    results = gen.generate(
+        mixins=['aws', 'coreos', 'coreos-aws'],
+        extra_templates={template_key: [template_name]},
+        arguments=variant_args,
+        cc_package_files=[
+            '/etc/cfn_signal_metadata',
+            '/etc/dns_config',
+            '/etc/exhibitor',
+            '/etc/mesos-master-provider'])
+
+    cloud_config = results.templates['cloud-config']
+
+    # Add general services
+    cloud_config = results.utils.add_services(cloud_config)
+
+    cc_variant = deepcopy(cloud_config)
+    cc_variant = results.utils.add_units(
+        cc_variant,
+        yaml.load(gen.template.parse_str(late_services).render(cc_params)))
+
+    # Add roles
+    cc_variant = results.utils.add_roles(cc_variant, cc_params['roles'] + ['aws'])
+
+    # NOTE: If this gets printed in string stylerather than '|' the AWS
+    # parameters which need to be split out for the cloudformation to
+    # interpret end up all escaped and undoing it would be hard.
+    variant_cloudconfig = results.utils.render_cloudconfig(cc_variant)
+
+    # Render the cloudformation
+    cloudformation = render_cloudformation(
+        results.templates[template_key],
+        cloud_config=variant_cloudconfig,
+        )
+
+    print("Validating CloudFormation: {}".format(template_name))
+    client = session_dev.client('cloudformation')
+    client.validate_template(TemplateBody=cloudformation)
+
+    return gen.Bunch({
+        'cloudformation': cloudformation,
+        'results': results
+    })
+
+
+def gen_advanced_template(arguments):
+    for variant in ['master', 'priv-agent', 'pub-agent']:
+        print('Building advanced template for {}'.format(variant))
+        xlated_variant, variant_args = groups[variant]
+        variant_args = deepcopy(variant_args)
+        variant_args['num_masters'] = "1"
+        variant_args.update(arguments)
+        params = cf_instance_groups[xlated_variant]
+        params['report_name'] = variant_args.pop('report_name')
+        template_key = 'advanced-{}'.format(variant)
+        template_name = template_key + '.json'
+        template_path = 'aws/templates/advanced/' + template_name
+        if variant == 'master':
+            for num_masters in [1, 3, 5, 7]:
+                master_tk = '{}-{}'.format(template_key, num_masters)
+                print('Building {} for num_masters = {}'.format(variant, num_masters))
+                variant_args['num_masters'] = str(num_masters)
+                bunch = make_advanced_bunch(variant_args,
+                                            master_tk,
+                                            template_path,
+                                            params)
+                yield '{}.json'.format(master_tk), bunch
+        else:
+            bunch = make_advanced_bunch(variant_args,
+                                        template_key,
+                                        template_path,
+                                        params)
+            yield template_name, bunch
 
 
 def gen_templates(arguments):
@@ -195,9 +307,9 @@ def gen_templates(arguments):
     # Render the cloudformation
     cloudformation = render_cloudformation(
         results.templates['cloudformation'],
-        variant_cloudconfig['master'],
-        variant_cloudconfig['slave'],
-        variant_cloudconfig['slave_public']
+        master_cloud_config=variant_cloudconfig['master'],
+        slave_cloud_config=variant_cloudconfig['slave'],
+        slave_public_cloud_config=variant_cloudconfig['slave_public']
         )
 
     print("Validating CloudFormation")
@@ -232,8 +344,15 @@ def get_spot_args(base_args):
 
 def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
     # Generate the single-master and multi-master templates.
-    single_args = deepcopy(gen_arguments)
-    multi_args = deepcopy(gen_arguments)
+    args = deepcopy(gen_arguments)
+    args['exhibitor_address'] = '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }'
+    args['s3_bucket'] = '{ "Ref" : "ExhibitorS3Bucket" }'
+    args['s3_prefix'] = '{ "Ref" : "AWS::StackName" }'
+    args['exhibitor_storage_backend'] = 'aws_s3'
+    args['master_role'] = '{ "Ref" : "MasterRole" }'
+    args['agent_role'] = '{ "Ref" : "SlaveRole" }'
+    single_args = deepcopy(args)
+    multi_args = deepcopy(args)
     single_args['num_masters'] = "1"
     multi_args['num_masters'] = "3"
     single_master = gen_templates(single_args)
@@ -249,6 +368,22 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments
     extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
     extra_packages += util.cluster_to_extra_packages(multi_master_spot.results.cluster_packages)
     extra_packages += util.cluster_to_extra_packages(single_master_spot.results.cluster_packages)
+
+    advanced_artifacts = []
+    for template_name, advanced_template in gen_advanced_template(gen_arguments):
+        advanced_artifacts.append({
+            'channel_path': 'cloudformation/{}'.format(template_name),
+            'local_content': advanced_template.cloudformation,
+            'content_type': 'application/json; charset=utf-8',
+        })
+        extra_packages += util.cluster_to_extra_packages(advanced_template.results.cluster_packages)
+
+    for template_name, advanced_template in gen_supporting_template():
+        advanced_artifacts.append({
+            'channel_path': 'cloudformation/{}'.format(template_name),
+            'local_content': advanced_template.cloudformation,
+            'content_type': 'application/json; charset=utf-8',
+        })
 
     return {
         'packages': extra_packages,
@@ -278,7 +413,7 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments
                 'local_content': button_page,
                 'content_type': 'text/html; charset=utf-8'
             }
-        ]
+        ] + advanced_artifacts
     }
 
 

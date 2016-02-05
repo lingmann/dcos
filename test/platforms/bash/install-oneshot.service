@@ -1,5 +1,0 @@
-[Unit]
-Description=Install dcos via bash
-[Service]
-Type=oneshot
-ExecStart=/bin/bash -c '/bin/bash /vagrant/dcos_install.sh "$(cat /setup_roles)"'

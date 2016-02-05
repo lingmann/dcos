@@ -1,13 +1,12 @@
 asyncio
-aiohttp
+aiohttp==0.20.0
 aiohttp_jinja2
 coloredlogs
 docker_py
 passlib
 pytest
 pytest-mock
-tox
 webtest
-webtest-aiohttp
+webtest-aiohttp==1.0.0
 -e git+git@github.com:mesosphere/dcos-image.git@master#egg=dcos_image
 -e git+git@github.com:mesosphere/pkgpanda.git@master#egg=pkgpanda

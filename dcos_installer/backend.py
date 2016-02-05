@@ -51,7 +51,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
         post_data['superuser_password_hash'] = hashed
 
     # Get a blank config file object
-    config_obj = DCOSConfig()
+    config_obj = DCOSConfig(config_path=config_path)
     # If the config file does not exist, write it.
     if not os.path.exists(config_path):
         log.warning('{} not found, writing default configuration.'.format(config_path))
@@ -90,8 +90,7 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
 
 def do_validate_config(config_path=CONFIG_PATH):
-    config = DCOSConfig()
-    config.config_path = config_path
+    config = DCOSConfig(config_path=config_path)
     config.build()
     messages = config.validate()
     return_code = 0

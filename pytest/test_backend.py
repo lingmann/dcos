@@ -1,7 +1,6 @@
 import json
 
 from dcos_installer import backend
-from dcos_installer.config import DCOSConfig
 
 
 def test_good_create_config_from_post(tmpdir):
@@ -11,10 +10,6 @@ def test_good_create_config_from_post(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
-
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
 
     good_post_data = {
         "agent_list": ["10.0.0.2"],
@@ -36,10 +31,6 @@ def test_bad_create_config_from_post(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
-
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
 
     bad_post_data = {
         "agent_list": "",
@@ -63,13 +54,9 @@ def test_do_validate_config(tmpdir):
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
 
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
-
     expected_output = {
         'errors': {
-            'ssh_key': 'Please provide a valid RSA encoded SSH key. Key must start with -----BEGIN RSA PRIVATE KEY-----',
+            'ssh_key': 'File does not exist genconf/ssh_key',
             'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
             'superuser_username': 'Please enter a valid string',
             'master_list': 'Please enter a valid IPv4 address.',
@@ -92,10 +79,6 @@ def test_get_config(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
-
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
 
     expected_file = """
 {
@@ -132,10 +115,6 @@ def test_determine_config_type(tmpdir):
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
 
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
-
     got_output = backend.determine_config_type(config_path=temp_config_path)
     expected_output = {
        'message': '',
@@ -148,10 +127,6 @@ def test_success(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
     temp_config_path = workspace + '/config.yaml'
-
-    temp_config = DCOSConfig()
-    temp_config.config_path = temp_config_path
-    temp_config.write()
 
     got_output = backend.success(config_path=temp_config_path)
     expected_output = {

@@ -181,8 +181,8 @@ def render_cloudformation(cf_template, **kwds):
 
 
 def gen_supporting_template():
-    for template_key in ['infra']:
-        cf_template = 'aws/templates/advanced/{}.json'.format(template_key)
+    for template_key in ['infra.json']:
+        cf_template = 'aws/templates/advanced/{}'.format(template_key)
         cloudformation = render_cloudformation(resource_string("gen", cf_template).decode())
 
         print("Validating CloudFormation: {}".format(cf_template))

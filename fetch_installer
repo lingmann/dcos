@@ -8,7 +8,7 @@ else
   git -C ext/dcos-installer fetch origin -t +refs/heads/*:refs/remotes/origin/*
 fi
 
-dcos_installer_commit=1d543ed52cb7bb179f27fd45a9c21b249637eb52
+dcos_installer_commit=ea5083017fee7d4825764c99ec29d32263dbbcc6
 pushd ext/dcos-installer
 git checkout -qf $dcos_installer_commit
 popd

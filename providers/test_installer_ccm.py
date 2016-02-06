@@ -249,8 +249,8 @@ def main():
         # skip exhibitor_zk_host and master
         "agent_list": host_list[2:],
         "process_timeout": 1200,
-        "superuser_username": '',
-        "superuser_password_hash": ''
+        "superuser_username": 'foo',
+        "superuser_password_hash": 'bar123'
     }
     with open("genconf/config.yaml", "w") as config_fh:
         config_fh.write(yaml.dump(test_config))

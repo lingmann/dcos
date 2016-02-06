@@ -2,53 +2,45 @@
 set -euo pipefail
 set -x
 
-cleanup_nginx_docker() {
-  echo "Cleaning up Nginx container"
-  set +e
-  docker kill dcos_int_nginx
-  docker rm dcos_int_nginx
-  set -e
-}
-
-cleanup_zookeeper_docker() {
-  echo "Cleaning up Zookeeper container"
-  set +e
-  docker kill dcos_int_zk
-  docker rm dcos_int_zk
-  set -e
-}
-
 cleanup_vagrant_leftovers() {
   echo "Cleaning up Vagrant leftovers (if any)"
   set +e
-  for i in test_slave-01 test_slave-02 test_master-01 test_master-03 test_master-02
-  do
-    echo "Destroying Vagrant vm $i"
-    virsh destroy $i && virsh undefine --remove-all-storage $i;
+  # TODO(cmaloney): Move to killing in virtualbox dirrectly? (rm -rf "~/VirtualBox VMs")
+  vagrant destroy -f
+
+  set +e
+  for box in $( vboxmanage list vms | grep .dcos | cut -d '{' -f 2 | tr -d '}' ); do
+    vboxmanage controlvm "$box" poweroff
+    vboxmanage unregistervm "$box" --delete;
   done
+  set -e
+
   vagrant global-status --prune
   set -e
 }
 
-cleanup_registry_docker() {
-  echo "Cleaning up Registry container"
-  set +e
-  docker kill registry
-  docker rm registry
-  set -e
-}
+echo "Fetching dcos-vagrant"
 
-clean_all_dockers() {
-  echo "Cleaning up zookeeper and nginx Docker containers"
-  cleanup_nginx_docker
-  cleanup_zookeeper_docker
-  cleanup_registry_docker
-}
+# Get the dcos-vagrant
+# TODO(cmaloney): Have TeamCity do this for us.
+# If it already exists, fetch, otherwise clone
+if [ ! -d dcos-vagrant ]; then
+  git clone git@github.com:mesosphere/dcos-vagrant.git
+else
+  git -C dcos-vagrant fetch origin -t +refs/heads/*:refs/remotes/origin/*
+fi
+
+# Pin to just the right dcos-vagrant commit
+git -C dcos-vagrant checkout -qf ff40e88dffd4dd0fb190b02e750fde64ca8f5bc7
+
+cp ../dcos_generate_config.sh dcos-vagrant/dcos_generate_config.sh
+
+cd dcos-vagrant
 
 # Make sure we're running inside the test directory which contains the Vagrantfile
 if [ ! -f Vagrantfile ]
 then
-  echo "run-all must be run with it's current working directory as the test folder"
+  echo "Expected a Vagrantfile inside the dcos-vagrant repo"
   exit 1
 fi
 
@@ -56,75 +48,54 @@ fi
 # TeamCity will get logs from vagrant if possible then cleanup all artifacts.
 rm -rf PASSED
 
-export MASTER_IP=172.17.10.101
+export MASTER_IP=192.168.65.90
 export DCOS_DNS_ADDRESS=http://$MASTER_IP
-export HOST_IP=$(ip addr show dev ${BR_DEVICE-virbr0}|awk '/inet / { print $2 }' |cut -d/ -f1)
-export PLATFORM="$1"
 
-if [ -z "${HOST_IP// }" ]; then
-    echo "Host ip has not been identified, aborting."
-    exit 1
-fi
-
-clean_all_dockers
-cleanup_vagrant_leftovers
-trap clean_all_dockers EXIT
-
-# make genconf/state so that script doesnt make one owned by root
-mkdir -p genconf/state
-
-cp ip-detect genconf/ip-detect
-cat <<EOF > "genconf/config.yaml"
+cp VagrantConfig.yaml.example VagrantConfig.yaml
+export DCOS_CONFIG_PATH="etc/3_master.yaml"
+export DCOS_BOOT_NODE_DOCKER_REGISTRY="true"
+cat <<EOF > "$DCOS_CONFIG_PATH"
 ---
 cluster_name: test_cluster
-bootstrap_url: http://$HOST_IP:8080
+bootstrap_url: http://boot.dcos
 dns_search: mesos
-resolvers:
-  - 8.8.8.8
 exhibitor_storage_backend: zookeeper
-exhibitor_zk_hosts: $HOST_IP:2181
-exhibitor_zk_path: /test-cluster-discovery
+exhibitor_zk_hosts: 192.168.65.50:2181
+exhibitor_zk_path: /zk-shared
 master_discovery: static
 master_list:
-  - 172.17.10.101
-  - 172.17.10.102
-  - 172.17.10.103
+  - 192.168.65.90
+  - 192.168.65.95
+  - 192.168.65.101
 EOF
 
-echo "Starting Nginx"
-mkdir -p $PWD/genconf/serve
-docker run -d -v $PWD/genconf/serve:/usr/share/nginx/html:ro -p 8080:80 --name=dcos_int_nginx nginx
-
-echo "Starting Zookeeper"
-docker run -d -p 2181:2181 -p 2888:2888 -p 3888:3888 --name=dcos_int_zk jplock/zookeeper
-
-echo "Generating config packages"
-bash ../dcos_generate_config.sh
+cleanup_vagrant_leftovers
 
 echo "Starting Vagrant VMs"
-vagrant up --provider=libvirt --no-parallel --debug
+vagrant up boot m1 m2 m3 w1 w2
+
+# TODO(cmaloney): Configure insecure registry inside the dcos-vagrant cluster
 
 # Prep for the integration test after vagrant up so that it happens in parallel
 # with DCOS assembling itself to save some time.
 # Build a docker container for running py.test inside of.
 echo "Building py.test container"
-docker build -t py.test - < ../docker/py.test/Dockerfile
-
-# Provide a local docker registry for testing purposes:
-echo "Running registry container"
-docker run -d -p 5000:5000 --restart=always --name registry registry:2
+docker build -t py.test - < ../../docker/py.test/Dockerfile
 
 # Build and push test server to local registry:
 echo "Building&pushing test_server container"
-docker build -t 127.0.0.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
-docker push 127.0.0.1:5000/test_server
+docker build -t 127.0.0.1:5000/test_server -f ../../docker/test_server/Dockerfile ../../docker/test_server/
+
+# Make an ssh tunnel to the vagrant machine then push the container over it to get around
+# host insecure registry setting...
+vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:5000/test_server
 
 echo "Running integration test"
-docker run -v $PWD/../integration_test.py:/integration_test.py \
+docker run -v $PWD/../../integration_test.py:/integration_test.py \
     -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
-    -e MASTER_HOSTS="172.17.10.101,172.17.10.102,172.17.10.103" \
-    -e SLAVE_HOSTS="172.17.10.201,172.17.10.202" \
-    -e REGISTRY_HOST="172.17.10.1" \
+    -e MASTER_HOSTS="192.168.65.90,192.168.65.95,192.168.65.101" \
+    -e SLAVE_HOSTS="192.168.65.111,192.168.65.121" \
+    -e REGISTRY_HOST="boot.dcos" \
     -e "TEAMCITY_VERSION=${TEAMCITY_VERSION:-}" \
     -e "DNS_SEARCH=true" \
     --net=host py.test py.test -vv -s ${CI_FLAGS:-} /integration_test.py

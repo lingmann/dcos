@@ -14,5 +14,15 @@ git checkout -qf $dcos_installer_commit
 popd
 
 # Compile the installer UI components
-docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 npm install
-docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 ./node_modules/.bin/gulp dist
+# Read basic argument for whether or not we should build the ui
+SKIP_UI=false
+if [ $# -gt 0 ]; then
+  if [ "$1" == "--skip-ui-build" ]; then
+    SKIP_UI=true
+  fi
+fi
+
+if ! $SKIP_UI; then
+  docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 npm install
+  docker run --rm=true -v $(pwd)/ext/dcos-installer:/code -w /code/ui node:4.2.6 ./node_modules/.bin/gulp dist
+fi

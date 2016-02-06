@@ -28,9 +28,9 @@ def do_configure():
         for key in list(gen_config.keys()):
             if gen_config[key] is None or gen_config[key] == '[null]':
                     del gen_config[key]
-    # Do one last try and catch errors from Gen lib if any.
+
         configure.do_configure(gen_config)
-        return 0
+    return 0
 
 
 def hash_password(string):

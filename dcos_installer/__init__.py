@@ -64,6 +64,19 @@ def make_default_dir(dir=GENCONF_DIR):
         os.makedirs(dir)
 
 
+def check_config_validation():
+    _, con_code = backend.do_validate_config()
+    if con_code != 0:
+        sys.exit(1)
+
+
+def try_genconf():
+    gen_code = backend.do_configure()
+    if gen_code != 0:
+        log.error('Errors found in configuration. Try --validate-config.')
+        sys.exit(1)
+
+
 class DcosInstaller:
     def __init__(self, args=None):
         """
@@ -93,6 +106,8 @@ class DcosInstaller:
 
             if options.preflight:
                 print_header("EXECUTING PREFLIGHT")
+                check_config_validation()
+                try_genconf()
                 sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:

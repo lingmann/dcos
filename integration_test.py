@@ -710,3 +710,63 @@ def test_if_DCOSHistoryService_is_getting_data(cluster):
     assert 'frameworks' in json
     assert 'slaves' in json
     assert 'hostname' in json
+
+
+@pytest.mark.minuteman
+def test_if_minuteman_routes_to_vip(cluster):
+    """Test if we are able to connect to a task with a vip using minuteman.
+    """
+    # Launch the app and proxy
+    test_uuid = uuid.uuid4().hex
+
+    app_definition = {
+        'id': "/integration-test-app-with-minuteman-vip-%s" % test_uuid,
+        'cpus': 0.1,
+        'mem': 128,
+        'ports': [10000],
+        'cmd': 'chmod +x linux-amd64 && ./linux-amd64 -listener=:${PORT0} -say-string=imok',
+        'labels': {'vip_PORT0': 'tcp://1.2.3.4:5000'},
+        'uris': ['https://s3.amazonaws.com/sargun-mesosphere/linux-amd64'],
+        'instances': 1,
+        'healthChecks': [{
+            'protocol': 'HTTP',
+            'path': '/',
+            'portIndex': 0,
+            'gracePeriodSeconds': 5,
+            'intervalSeconds': 10,
+            'timeoutSeconds': 10,
+            'maxConsecutiveFailures': 3
+        }]
+    }
+
+    cluster.deploy_marathon_app(app_definition)
+
+    proxy_definition = {
+        'id': "/integration-test-proxy-to-minuteman-vip-%s" % test_uuid,
+        'cpus': 0.1,
+        'mem': 128,
+        'ports': [10000],
+        'cmd': 'chmod 755 ncat && ./ncat -v --sh-exec "./ncat 1.2.3.4 5000" -l $PORT0 --keep-open',
+        'uris': ['https://s3.amazonaws.com/sargun-mesosphere/ncat'],
+        'instances': 1,
+        'healthChecks': [{
+            'protocol': 'COMMAND',
+            'command': {
+                'value': 'test "$(curl -o /dev/null --max-time 5 -4 -w \'%{http_code}\' -s http://localhost:${PORT0}/|cut -f1 -d" ")" == 200'  # noqa
+            },
+            'gracePeriodSeconds': 0,
+            'intervalSeconds': 5,
+            'timeoutSeconds': 20,
+            'maxConsecutiveFailures': 3,
+            'ignoreHttp1xx': False
+        }],
+    }
+
+    service_points = cluster.deploy_marathon_app(proxy_definition)
+
+    # Get the status
+    r = requests.get('http://{}:{}'.format(service_points[0].host,
+                                           service_points[0].port))
+    assert(r.ok)
+    data = r.text
+    assert 'imok' in data

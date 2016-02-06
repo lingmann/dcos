@@ -37,6 +37,13 @@ def cluster():
                    dns_search_set=os.environ['DNS_SEARCH'])
 
 
+@pytest.fixture(scope='module')
+def enterprise_cluster(cluster):
+    if not cluster.is_enterprise:
+        pytest.skip("Skipped because not running against enterprise variant.")
+    return cluster
+
+
 def _setup_logging():
     """Setup logging for the script"""
     logger = logging.getLogger()
@@ -54,7 +61,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_Marathon_up(self):
-        r = self.get('marathon/ui/')
+        r = self.get('marathon/ui/', disable_suauth=True)
         # resp_code >= 500 -> backend is still down probably
         if r.status_code < 500:
             logging.info("Marathon is probably up")
@@ -68,7 +75,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_slaves_to_join(self):
-        r = self.get('mesos/master/slaves')
+        r = self.get('mesos/master/slaves', disable_suauth=True)
         if r.status_code != 200:
             msg = "Mesos master returned status code {} != 200 "
             msg += "continuing to wait..."
@@ -91,7 +98,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_DCOS_history_up(self):
-        r = self.get('dcos-history-service/ping')
+        r = self.get('dcos-history-service/ping', disable_suauth=True)
         # resp_code >= 500 -> backend is still down probably
         if r.status_code <= 500:
             logging.info("DCOS History is probably up")
@@ -126,7 +133,7 @@ class Cluster:
         try:
             # Yeah, we can also put it in retry_on_exception, but
             # this way we will loose debug messages
-            self.get()
+            self.get(disable_suauth=True)
         except requests.ConnectionError as e:
             msg = "Cannot connect to nginx, error string: '{}', continuing to wait"
             logging.info(msg.format(e))
@@ -134,6 +141,18 @@ class Cluster:
         else:
             logging.info("Nginx is UP!")
             return True
+
+    def _check_if_enterprise_via_buildinfo(self):
+        """Check if tests are run against enterprise edition and
+        populate `self.is_enterprise` correspondingly."""
+
+        # Get buildinfo JSON and make teh adminrouter branch check.
+        # TODO(jp): we really need a generic way to adjust integration
+        # tests to different build variants.
+        r = self.get('/pkgpanda/active.buildinfo.full.json', disable_suauth=True)
+        data = r.json()
+        ar_branch = data['nginx']['sources']['adminrouter']['ref_origin']
+        self.is_enterprise = ar_branch == 'enterprise'
 
     def _wait_for_DCOS(self):
         self._wait_for_leader_election()
@@ -152,26 +171,40 @@ class Cluster:
         # URI must include scheme
         assert dcos_uri.startswith('http')
 
+        # TODO(jp): it is better to enforce `url = url.rstrip('/')` and require
+        # the path to start with a slash, so that we have actual consistency
+        # (below, paths are not consistent as double-slash passes through).
         # Make URI always end with '/'
         if dcos_uri[-1] != '/':
             dcos_uri += '/'
         self.dcos_uri = dcos_uri
 
         self._wait_for_DCOS()
+        self._check_if_enterprise_via_buildinfo()
 
-    def get(self, path="", params=None):
-        return requests.get(self.dcos_uri + path, params=params)
+    def _suheader(self, disable_suauth):
+        if not disable_suauth and self.is_enterprise:
+            return self.superuser_auth_header
+        return {}
 
-    def post(self, path="", payload=None):
+    def get(self, path="", params=None, disable_suauth=False, **kwargs):
+        hdrs = self._suheader(disable_suauth)
+        return requests.get(
+            self.dcos_uri + path, params=params, headers=hdrs, **kwargs)
+
+    def post(self, path="", payload=None, disable_suauth=False):
+        hdrs = self._suheader(disable_suauth)
         if payload is None:
             payload = {}
-        return requests.post(self.dcos_uri + path, json=payload)
+        return requests.post(self.dcos_uri + path, json=payload, headers=hdrs)
 
-    def delete(self, path=""):
-        return requests.delete(self.dcos_uri + path)
+    def delete(self, path="", disable_suauth=False):
+        hdrs = self._suheader(disable_suauth)
+        return requests.delete(self.dcos_uri + path, headers=hdrs)
 
-    def head(self, path=""):
-        return requests.head(self.dcos_uri + path)
+    def head(self, path="", disable_suauth=False):
+        hdrs = self._suheader(disable_suauth)
+        return requests.head(self.dcos_uri + path, headers=hdrs)
 
     def get_base_testapp_definition(self):
         test_uuid = uuid.uuid4().hex
@@ -284,6 +317,22 @@ class Cluster:
         assert r.ok
 
 
+def test_if_authentication_works(enterprise_cluster):
+    # Perform superuser login. This verifies that the bouncer back-end is
+    # up'n'running and it has a side effect, as it stores auth token and auth
+    # cookie at the disposal of other tests.
+    r = requests.post(
+        enterprise_cluster.dcos_uri + 'acs/api/v1/auth/login',
+        json={'uid': 'bootstrapuser', 'password': 'deleteme'}
+        )
+    assert r.status_code == 200
+    enterprise_cluster.superuser_auth_header = {
+        'Authorization': 'token=%s' % r.json()['token']
+        }
+    enterprise_cluster.superuser_auth_cookie = r.cookies[
+        'dcos-acs-auth-cookie']
+
+
 def test_if_DCOS_UI_is_up(cluster):
     r = cluster.get('/')
 
@@ -299,6 +348,31 @@ def test_if_DCOS_UI_is_up(cluster):
             continue
         link_response = cluster.head(link.attrs['href'])
         assert link_response.status_code == 200
+
+
+def test_adminrouter_access_control_enforcement(enterprise_cluster):
+    r = enterprise_cluster.get('acs/api/v1', disable_suauth=True)
+    assert r.status_code == 401
+    assert r.headers['WWW-Authenticate'] == 'acsjwt'
+    # Make sure that this is UI's error page body,
+    # including some JavaScript.
+    assert '<html>' in r.text
+    assert '</html>' in r.text
+    assert 'window.location' in r.text
+    r = enterprise_cluster.get('service/unknown/', disable_suauth=True)
+    assert r.status_code == 401
+    r = enterprise_cluster.get('service/marathon/', disable_suauth=True)
+    assert r.status_code == 401
+    # Test authentication with auth cookie instead of Authorization header.
+    authcookie = {
+        'dcos-acs-auth-cookie': enterprise_cluster.superuser_auth_cookie
+        }
+    r = enterprise_cluster.get(
+        '/service/marathon/',
+        disable_suauth=True,
+        cookies=authcookie
+        )
+    assert r.status_code == 200
 
 
 def test_if_Mesos_is_up(cluster):

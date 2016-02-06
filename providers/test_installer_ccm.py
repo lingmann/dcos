@@ -22,12 +22,22 @@ from retrying import retry
 import providers.ccm
 from ssh.ssh_runner import SSHRunner
 
+variant_config_generators = {
+    'default': 'dcos_generate_config.sh',
+    'ee': 'dcos_generate_config.ee.sh'
+}
+
 
 def run_cmd(mode, expect_errors=False):
-    print("Running: dcos_generate_config with mode", mode)
+    if 'DCOS_VARIANT' in os.environ:
+        variant = os.environ['DCOS_VARIANT']
+    else:
+        variant = 'default'
+    print("Running: dcos_generate_config with mode: {} and variant: {}".format(mode, variant))
     # NOTE: We use `bash` as a wrapper here to make it so dcos_generate_config.sh
     # doesn't have to be executable.
-    cmd = ['bash', './dcos_generate_config.sh', mode]
+    cmd = ['bash', './{}'.format(variant_config_generators[variant]), mode]
+
     p = subprocess.Popen(
         cmd,
         stdin=subprocess.DEVNULL,
@@ -169,8 +179,13 @@ sudo sed -i '/ExecStart/ !b; s/$/ --insecure-registry {}:5000/' /usr/lib/systemd
 
 
 def main():
-    # Local dcos_generate_config.sh file must exist
-    assert os.path.exists('dcos_generate_config.sh')
+    if 'DCOS_VARIANT' in os.environ:
+        variant = os.environ['DCOS_VARIANT']
+    else:
+        variant = 'default'
+
+    # Local dcos_generate_config file for the variant must exist
+    assert os.path.exists(variant_config_generators[variant])
 
     # The genconf folder must be already cleaned up. Can't be cleaned here
     # because it will likely be owned by root.
@@ -234,8 +249,8 @@ def main():
         # skip exhibitor_zk_host and master
         "agent_list": host_list[2:],
         "process_timeout": 1200,
-        "superuser_username": 'sysadmin',
-        "superuser_password_hash": 'mycrazywierdhash'
+        "superuser_username": '',
+        "superuser_password_hash": ''
     }
     with open("genconf/config.yaml", "w") as config_fh:
         config_fh.write(yaml.dump(test_config))

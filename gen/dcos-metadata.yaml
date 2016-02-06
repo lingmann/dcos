@@ -20,9 +20,9 @@ package:
         "uiConfiguration": {
           "plugins": {
             "banner": {},
-            "tracking": {"enabled": true},
-            "authentication": {"enabled": false},
-            "settings": {"enabled": false}
+            "tracking": {"enabled": {{ ui_tracking }}},
+            "authentication": {"enabled": {{ ui_authentication }}},
+            "settings": {"enabled": {{ ui_settings }}}
           }
         }
       }

@@ -152,7 +152,12 @@ entry = {
         'weights': '',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
-        'dns_search': ''
+        'dns_search': '',
+        'superuser_username': '',
+        'superuser_password_hash': '',
+        'ui_tracking': 'true',
+        'ui_authentication': 'false',
+        'ui_settings': 'false'
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
@@ -178,6 +183,11 @@ entry = {
             'onprem': {
                 'default': {
                     'resolvers': '["8.8.8.8", "8.8.4.4"]'
+                },
+                'must': {
+                    'ui_tracking': 'false',
+                    'ui_authentication': 'true',
+                    'ui_settings': 'true'
                 }
             },
             'azure': {},

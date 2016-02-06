@@ -1,5 +1,6 @@
 {
   "variants": {
-    "nginx": "ee"
+    "nginx": "ee",
+    "dcos-ui": "ee"
   }
 }

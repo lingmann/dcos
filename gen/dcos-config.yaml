@@ -128,6 +128,20 @@ package:
   - path: /etc/dns_search_config
     content: |
       {{ dcos_gen_resolvconf_search_str }}
+  - path: /etc/bouncer-config.json
+    content: |
+      {
+        "SUPERUSER_PASSWORD_HASH": "{{ superuser_password_hash }}",
+        "SUPERUSER_USERNAME": "{{ superuser_username }}",
+        "EXPIRATION_AUTH_TOKEN_DAYS": 5,
+        "EXPIRATION_AUTH_COOKIE_DAYS": 4.5,
+        "EXPIRATION_INFO_COOKIE_DAYS": 4.5,
+        "DATASTORE_ZK_BACKEND_HOSTS": "127.0.0.1:2181",
+        "GUNICORN_WORKER_PROCESSES": 1,
+        "GUNICORN_THREADS_PER_WORKER": 10,
+        "GUNICORN_BIND_ADDRESS": "127.0.0.1:8101",
+        "GUNICORN_WORKER_TIMEOUT_SECONDS": 10
+      }
 {% switch master_discovery %}
 {% case "master_http_loadbalancer" %}
   - path: /etc/dns_config

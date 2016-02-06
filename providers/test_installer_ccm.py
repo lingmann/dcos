@@ -124,9 +124,14 @@ def test_setup(ssh_runner, registry):
     ssh_runner.log_postfix = postfix
 
 
-def integration_test(ssh_runner, dcos_dns, master_list, slave_list, registry_host):
+def integration_test(ssh_runner, dcos_dns, master_list, slave_list, registry_host, test_minuteman=False):
     postfix = copy(ssh_runner.log_postfix)
     ssh_runner.log_postfix = 'pytest'
+
+    marker_args = '-m "not minuteman"'
+    if test_minuteman:
+        marker_args = ''
+
     test_cmd = """
 docker run \
 -v /home/centos/integration_test.py:/integration_test.py \
@@ -135,12 +140,13 @@ docker run \
 -e "SLAVE_HOSTS={slave_list}" \
 -e "REGISTRY_HOST={registry_host}" \
 -e "DNS_SEARCH=true" \
---net=host py.test py.test -vv /integration_test.py \
+--net=host py.test py.test -vv {marker_args} /integration_test.py \
 """.format(
         dcos_dns=dcos_dns,
         master_list=master_list,
         slave_list=slave_list,
-        registry_host=registry_host)
+        registry_host=registry_host,
+        marker_args=marker_args)
     print("Running test in remote docker")
     ssh_runner.execute_cmd(test_cmd)
     host = ssh_runner.targets[0]
@@ -158,7 +164,7 @@ docker run \
         exit(1)
 
 
-def prep_hosts(ssh_runner, registry):
+def prep_hosts(ssh_runner, registry, minuteman_enabled=False):
     # TODO(mellenburg): replace setup with --preflightfix functionality
     print("Setting up Docker and other DCOS requirements...")
     ssh_runner.execute_cmd("sudo yum update -y ", True)
@@ -176,6 +182,10 @@ sudo sed -i '/ExecStart/ !b; s/$/ --insecure-registry {}:5000/' /usr/lib/systemd
     ssh_runner.execute_cmd("sudo systemctl start docker", True)
     ssh_runner.execute_cmd("sudo groupadd -g 65500 nogroup", True)
     ssh_runner.execute_cmd("sudo usermod -aG docker centos", True)
+
+    if minuteman_enabled:
+        ssh_runner.execute_cmd("sudo mkdir -p /etc/mesosphere/roles", True)
+        ssh_runner.execute_cmd("sudo touch /etc/mesosphere/roles/minuteman", True)
 
 
 def main():
@@ -201,6 +211,10 @@ def main():
     if 'CCM_HOST_SETUP' in os.environ:
         assert os.environ['CCM_HOST_SETUP'] in ['true', 'false']
     do_setup = os.getenv('CCM_HOST_SETUP', 'true') == 'true'
+
+    if 'MINUTEMAN_ENABLED' in os.environ:
+        assert os.environ['MINUTEMAN_ENABLED'] in ['true', 'false']
+    minuteman_enabled = os.getenv('MINUTEMAN_ENABLED', 'false') == 'true'
 
     vpc = None  # Set if the test owns the VPC
 
@@ -278,7 +292,7 @@ def main():
         run_cmd('--preflight', expect_errors=True)
 
         # Prep the hosts
-        prep_hosts(ssh_runner, registry=local_ip[host_list[0]])
+        prep_hosts(ssh_runner, registry=local_ip[host_list[0]], minuteman_enabled=minuteman_enabled)
 
     # Only touch the bootstap node from now on
     ssh_runner.targets = [host_list[0]]
@@ -316,7 +330,8 @@ def main():
             dcos_dns=local_ip[host_list[1]],
             master_list=local_ip[host_list[1]],
             slave_list=",".join([local_ip[_] for _ in host_list[2:]]),
-            registry_host=local_ip[host_list[0]])
+            registry_host=local_ip[host_list[0]],
+            test_minuteman=minuteman_enabled)
 
     test_deployment()
     # TODO(cmaloney): add a `--healthcheck` option which runs dcos-diagnostics

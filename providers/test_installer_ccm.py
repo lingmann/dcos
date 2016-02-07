@@ -184,6 +184,7 @@ sudo sed -i '/ExecStart/ !b; s/$/ --insecure-registry {}:5000/' /usr/lib/systemd
     ssh_runner.execute_cmd("sudo usermod -aG docker centos", True)
 
     if minuteman_enabled:
+        ssh_runner.execute_cmd("sudo yum install -y ipset", True)
         ssh_runner.execute_cmd("sudo mkdir -p /etc/mesosphere/roles", True)
         ssh_runner.execute_cmd("sudo touch /etc/mesosphere/roles/minuteman", True)
 

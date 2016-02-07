@@ -253,7 +253,8 @@ def main():
         # in integration_test.py
         "superuser_username": 'bootstrapuser',
         # 'deleteme' is cleartext value
-        "superuser_password_hash": '$6$rounds=656000$oZtCG2k7wQCxXmsU$SgdtyDthOdZzyekzRjVMINQ5pRofFEhlZTq15xhpArDglGdzw3rP9PW2JgSabnfMmY/d2Ciz215uxNgaiyPZG/'
+        "superuser_password_hash":
+            '$6$rounds=656000$oZtCG2k7wQCxXmsU$SgdtyDthOdZzyekzRjVMINQ5pRofFEhlZTq15xhpArDglGdzw3rP9PW2JgSabnfMmY/d2Ciz215uxNgaiyPZG/'  # noqa
     }
     with open("genconf/config.yaml", "w") as config_fh:
         config_fh.write(yaml.dump(test_config))

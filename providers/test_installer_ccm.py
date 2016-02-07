@@ -249,8 +249,11 @@ def main():
         # skip exhibitor_zk_host and master
         "agent_list": host_list[2:],
         "process_timeout": 1200,
-        "superuser_username": 'foo',
-        "superuser_password_hash": 'bar123'
+        # Must match what is inserted for test_if_authentication_works(), line 328,
+        # in integration_test.py
+        "superuser_username": 'bootstrapuser',
+        # 'deleteme' is cleartext value
+        "superuser_password_hash": '$6$rounds=656000$oZtCG2k7wQCxXmsU$SgdtyDthOdZzyekzRjVMINQ5pRofFEhlZTq15xhpArDglGdzw3rP9PW2JgSabnfMmY/d2Ciz215uxNgaiyPZG/'
     }
     with open("genconf/config.yaml", "w") as config_fh:
         config_fh.write(yaml.dump(test_config))

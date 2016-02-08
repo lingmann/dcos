@@ -1,6 +1,8 @@
 from shutil import copytree
 from subprocess import CalledProcessError, check_call, check_output
 
+from pkgpanda.util import expect_fs
+
 import pytest
 
 
@@ -21,8 +23,8 @@ def test_build(tmpdir):
     # TODO(cmaloney): Check the package exists with the right contents.
 
 
-def test_single_source(tmpdir):
-    package("resources/single_source", "single_source", tmpdir)
+def test_build_bad_sha1(tmpdir):
+    package("resources/base", "base", tmpdir)
 
 
 def test_url_extract_tar(tmpdir):
@@ -36,6 +38,8 @@ def test_url_extract_zip(tmpdir):
 def test_single_source_with_extra(tmpdir):
     package("resources/single_source_extra", "single_source_extra", tmpdir)
 
+    expect_fs(str(tmpdir.join("single_source_extra/cache")), ["latest", "foo"])
+
 
 def test_no_buildinfo(tmpdir):
     package("resources/no_buildinfo", "no_buildinfo", tmpdir)
@@ -44,6 +48,14 @@ def test_no_buildinfo(tmpdir):
 def test_restricted_services(tmpdir):
     with pytest.raises(CalledProcessError):
         package("resources-nonbootstrapable/restricted_services", "restricted_services", tmpdir)
+
+
+def test_single_source_corrupt(tmpdir):
+    with pytest.raises(CalledProcessError):
+        package("resources-nonbootstrapable/single_source_corrupt", "single_source", tmpdir)
+
+    # Check the corrupt file got moved to the right place
+    expect_fs(str(tmpdir.join("single_source/cache")), ["foo.corrupt"])
 
 
 def test_bootstrap(tmpdir):

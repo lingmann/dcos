@@ -63,7 +63,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_Marathon_up(self):
-        r = self.get('marathon/ui/', disable_suauth=True)
+        r = self.get('marathon/ui/')
         # resp_code >= 500 -> backend is still down probably
         if r.status_code < 500:
             logging.info("Marathon is probably up")
@@ -77,7 +77,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_slaves_to_join(self):
-        r = self.get('mesos/master/slaves', disable_suauth=True)
+        r = self.get('mesos/master/slaves')
         if r.status_code != 200:
             msg = "Mesos master returned status code {} != 200 "
             msg += "continuing to wait..."
@@ -100,7 +100,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_DCOS_history_up(self):
-        r = self.get('dcos-history-service/ping', disable_suauth=True)
+        r = self.get('dcos-history-service/ping')
         # resp_code >= 500 -> backend is still down probably
         if r.status_code <= 500:
             logging.info("DCOS History is probably up")
@@ -144,24 +144,27 @@ class Cluster:
             logging.info("Nginx is UP!")
             return True
 
-    def _check_if_enterprise_via_buildinfo(self):
-        """Check if tests are run against enterprise edition and
-        populate `self.is_enterprise` correspondingly."""
-
-        # Get buildinfo JSON and make teh adminrouter branch check.
-        # TODO(jp): we really need a generic way to adjust integration
-        # tests to different build variants.
-        r = self.get('/pkgpanda/active.buildinfo.full.json', disable_suauth=True)
-        data = r.json()
-        ar_branch = data['nginx']['sources']['adminrouter']['ref_origin']
-        self.is_enterprise = ar_branch == 'enterprise'
-
     def _wait_for_DCOS(self):
         self._wait_for_leader_election()
         self._wait_for_nginx_up()
+        # The following "tests" require authentication.
+        if self.is_enterprise:
+            self._authenticate()
         self._wait_for_Marathon_up()
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
+
+    def _authenticate(self):
+        r = requests.post(
+            self.dcos_uri + 'acs/api/v1/auth/login',
+            json={'uid': 'bootstrapuser', 'password': 'deleteme'}
+            )
+        assert r.status_code == 200
+        self.superuser_auth_header = {
+            'Authorization': 'token=%s' % r.json()['token']
+            }
+        self.superuser_auth_cookie = r.cookies[
+            'dcos-acs-auth-cookie']
 
     def __init__(self, dcos_uri, masters, public_masters, slaves, registry, dns_search_set):
         """Proxy class for DCOS clusters.
@@ -197,8 +200,8 @@ class Cluster:
             dcos_uri += '/'
         self.dcos_uri = dcos_uri
 
+        self.is_enterprise = os.environ.get('DCOS_VARIANT', None) == 'ee'
         self._wait_for_DCOS()
-        self._check_if_enterprise_via_buildinfo()
 
     def _suheader(self, disable_suauth):
         if not disable_suauth and self.is_enterprise:
@@ -333,22 +336,6 @@ class Cluster:
         """
         r = self.delete('marathon/v2/apps' + app_name)
         assert r.ok
-
-
-def test_if_authentication_works(enterprise_cluster):
-    # Perform superuser login. This verifies that the bouncer back-end is
-    # up'n'running and it has a side effect, as it stores auth token and auth
-    # cookie at the disposal of other tests.
-    r = requests.post(
-        enterprise_cluster.dcos_uri + 'acs/api/v1/auth/login',
-        json={'uid': 'bootstrapuser', 'password': 'deleteme'}
-        )
-    assert r.status_code == 200
-    enterprise_cluster.superuser_auth_header = {
-        'Authorization': 'token=%s' % r.json()['token']
-        }
-    enterprise_cluster.superuser_auth_cookie = r.cookies[
-        'dcos-acs-auth-cookie']
 
 
 def test_if_DCOS_UI_is_up(cluster):

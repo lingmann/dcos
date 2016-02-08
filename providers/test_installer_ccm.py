@@ -151,7 +151,7 @@ docker run \
         slave_list=slave_list,
         registry_host=registry_host,
         marker_args=marker_args,
-        ci_flags=os.getenv('CI_FLAGS', ''))
+        ci_flags=os.getenv('CI_FLAGS', ''),
         dcos_variant=os.environ.get('DCOS_VARIANT', ''))
     print("Running test in remote docker")
     ssh_runner.execute_cmd(test_cmd)

@@ -346,7 +346,9 @@ def test_if_DCOS_UI_is_up(cluster):
         if urllib.parse.urlparse(link.attrs['href']).netloc:
             # Relative URLs only, others are to complex to handle here
             continue
-        link_response = cluster.head(link.attrs['href'])
+        # Some links might start with a dot (e.g. ./img/...). Remove.
+        href = link.attrs['href'].lstrip('.')
+        link_response = cluster.head(href)
         assert link_response.status_code == 200
 
 

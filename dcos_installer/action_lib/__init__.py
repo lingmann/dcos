@@ -114,12 +114,17 @@ def _get_bootstrap_tarball(tarball_base_dir='/genconf/serve/bootstrap'):
     return tarball
 
 
-def _remove_host(state_file, host):
+def _read_state_file(state_file):
     if not os.path.isfile(state_file):
         return False
 
     with open(state_file) as fh:
-        json_state = json.load(fh)
+        return json.load(fh)
+
+
+def _remove_host(state_file, host):
+
+    json_state = _read_state_file(state_file)
 
     if 'hosts' not in json_state or host not in json_state['hosts']:
         return False
@@ -134,23 +139,6 @@ def _remove_host(state_file, host):
         json.dump(json_state, fh)
 
     return True
-
-
-def _null_failed_counters(state_file):
-    if not os.path.isfile(state_file):
-        return False
-
-    with open(state_file) as fh:
-        json_state = json.load(fh)
-
-    for failed_field in ['hosts_terminated', 'hosts_failed']:
-        if failed_field not in json_state:
-            continue
-        log.debug('set {} to null'.format(failed_field))
-        json_state[failed_field] = 0
-
-    with open(state_file, 'w') as fh:
-        json.dump(json_state, fh)
 
 
 @asyncio.coroutine
@@ -209,19 +197,24 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
     chain.add_execute(['sudo', 'bash', '{}/dcos_install.sh'.format(REMOTE_TEMP_DIR), default['script_parameter']],
                       comment=default['comment'])
 
+    delegate_extra_params = {}
     if kwargs.get('retry') and state_json_dir:
         state_file_path = os.path.join(state_json_dir, '{}.json'.format(default['chain_name']))
         log.debug('retry executed for a state file {}'.format(state_file_path))
         for _host in default['hosts']:
             _remove_host(state_file_path, _host)
 
+        # We also need to update total number of hosts
+        json_state = _read_state_file(state_file_path)
+        delegate_extra_params['total_hosts'] = json_state['total_hosts']
+
     # Setup the cleanup chain
     cleanup_chain = ssh.utils.CommandChain('{}_cleanup'.format(default['chain_name']))
     add_post_action(cleanup_chain)
     chains.append(cleanup_chain)
 
-    result = yield from runner.run_commands_chain_async(chains, block=block,
-                                                        state_json_dir=state_json_dir)
+    result = yield from runner.run_commands_chain_async(chains, block=block, state_json_dir=state_json_dir,
+                                                        delegate_extra_params=delegate_extra_params)
     return result
 
 

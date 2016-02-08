@@ -796,7 +796,8 @@ def make_installer_docker(variant, bootstrap_id):
         'bootstrap_filename': bootstrap_filename,
         'bootstrap_path': bootstrap_path,
         'docker_image_name': 'mesosphere/dcos-genconf:' + image_version,
-        'dcos_image_commit': util.dcos_image_commit
+        'dcos_image_commit': util.dcos_image_commit,
+        'variant': variant
     }
 
     with tempfile.TemporaryDirectory() as build_dir:

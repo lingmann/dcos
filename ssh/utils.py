@@ -1,8 +1,9 @@
 import abc
+import datetime
 import json
 import logging
 import os
-from datetime import datetime
+from threading import Timer
 
 from ssh.exceptions import ExecuteException
 
@@ -85,66 +86,142 @@ class AbstractSSHLibDelegate(metaclass=abc.ABCMeta):
 
 
 class JsonDelegate(AbstractSSHLibDelegate):
-    def __init__(self, state_dir, total_hosts, total_masters=None, total_agents=None, **kwargs):
+    def __init__(self, state_dir, targets_len, total_hosts=None, total_masters=None, total_agents=None, **kwargs):
         self.state_dir = state_dir
-        self.total_hosts = total_hosts
+        self.total_hosts = total_hosts if total_hosts else targets_len
         self.total_masters = total_masters
         self.total_agents = total_agents
+
+    def _update_chain_props(self, status_json, name):
+        # Update chain properties. We may update the properties
+        if 'hosts' not in status_json:
+            status_json['hosts'] = {}
+
+        # Use this hack to update number of total hosts/masters/agent on the fly. This is used on deploy 'retry'.
+        if status_json.get('total_hosts') != self.total_hosts:
+            status_json['total_hosts'] = self.total_hosts
+
+        if status_json.get('total_masters') != self.total_masters:
+            status_json['total_masters'] = self.total_masters
+
+        if status_json.get('total_agents') != self.total_agents:
+            status_json['total_agents'] = self.total_agents
+
+        status_json['chain_name'] = name
+
+    def _read_json_state(self, name):
+        status_file = os.path.join(self.state_dir, '{}.json'.format(name))
+        if os.path.isfile(status_file):
+            with open(status_file) as f:
+                return json.load(f)
+        return {}
+
+    def _dump_json_state(self, name, status_json):
+        status_file = os.path.join(self.state_dir, '{}.json'.format(name))
+
+        with open(status_file, 'w') as f:
+            try:
+                json.dump(status_json, f)
+            except IOError:
+                log.error('Could not update state file {}'.format(status_file))
 
     def on_update(self, future, callback_called):
         self._update_json_file(*future.result(), future_update=True, callback_called=callback_called)
 
-    def on_done(self, name, result, host_object, host_status=None):
-        self._update_json_file(name, result, host_object, host_status=host_status)
+    def on_done(self, name, result, host_status=None):
+        self._update_json_file(name, result, None, host_status=host_status)
 
     def _update_json_file(self, name, result, host_object, future_update=None, host_status=None, callback_called=None):
-        status_json = {}
-        status_file = os.path.join(self.state_dir, '{}.json'.format(name))
-        if os.path.isfile(status_file):
-            with open(status_file) as f:
-                status_json = json.load(f)
-
-        if 'hosts' not in status_json:
-            status_json['hosts'] = {}
+        status_json = self._read_json_state(name)
+        self._update_chain_props(status_json, name)
 
         for host, return_values in result.items():
+            # Block is executed for on_update callback
             if future_update:
                 return_values.update({
-                    'date': str(datetime.now())
+                    'date': str(datetime.datetime.now())
                 })
 
                 # Append to commands
                 if host in status_json['hosts']:
                     status_json['hosts'][host]['commands'].append(return_values)
                 else:
-                    # Create a new chain properties
-                    status_json['total_hosts'] = self.total_hosts
-                    if self.total_masters:
-                        status_json['total_masters'] = self.total_masters
-
-                    if self.total_agents:
-                        status_json['total_agents'] = self.total_agents
-
-                    status_json['chain_name'] = name
                     status_json['hosts'][host] = {
                         'commands': [return_values]
                     }
 
-                if host_object and host_object.tags and 'tags' not in status_json['hosts'][host]:
+                if host_object.tags and 'tags' not in status_json['hosts'][host]:
                     status_json['hosts'][host]['tags'] = {}
                     for tag in host_object.tags:
                         status_json['hosts'][host]['tags'].update(tag)
 
-                # Update chain status to running
+                # Update chain status to running if not other state found.
                 if 'host_status' not in status_json['hosts'][host]:
                     status_json['hosts'][host]['host_status'] = 'running'
 
-            # Update chain status: success or fail
-            if host_status:
-                status_json['hosts'][host]['host_status'] = host_status
+        # Update chain status: success or fail
+        if host_status:
+            status_json['hosts'][host]['host_status'] = host_status
 
-        with open(status_file, 'w') as f:
-            json.dump(status_json, f)
-
+        self._dump_json_state(name, status_json)
         if callback_called:
                 callback_called.set_result(True)
+
+
+def set_timer(state_dir, interval=10, invoke_func=None):
+    assert os.path.isdir(state_dir), 'state_dir should be a path to dump state files'
+    t = Timer(interval, invoke_func)
+    t.start()
+    return t
+
+
+class MemoryDelegate(JsonDelegate):
+    """
+    MemoryDelegate reuses JsonDelegate logic, overriding save/load logic
+    A state is stored self.state['chain_name']
+    """
+    def __init__(self, total_hosts=None, total_masters=None, total_agents=None, state_dir=None,
+                 trigger_states_func=set_timer):
+        self.total_hosts = total_hosts
+        self.total_agents = total_agents
+        self.total_masters = total_masters
+        self.state_dir = state_dir
+        self.state = {}
+        self.trigger_states_func = trigger_states_func
+        self.timer = None
+        self.set_up_trigger()
+
+    def set_up_trigger(self):
+        # If you want to change the default interval simply:
+        #
+        # from ssh.utils import set_timer
+        # md = MemoryDelegate(trigger_states_func=lambda *args, **kwargs: set_timer(*args, interval=1, **kwargs))
+        if not self.trigger_states_func:
+            log.warning('Json states will not be dumped to a disk.')
+            return None
+
+        def funcs():
+            self.dump_status_files()
+            self.set_up_trigger()
+
+        # Set timer only if user provided a directory to store states.
+        if self.state_dir and os.path.isdir(self.state_dir):
+            self.timer = self.trigger_states_func(self.state_dir, invoke_func=lambda: funcs())
+
+    def _read_json_state(self, name):
+        if name not in self.state:
+            self.state[name] = {}
+        return self.state.get(name)
+
+    def _dump_json_state(self, name, status_json):
+        # Hard copy status_json object
+        self.state[name] = status_json.copy()
+
+    def dump_status_files(self):
+        if not self.state_dir:
+            log.error('Cannot save state files, state_dir should be passed via constructor')
+            return False
+        for state, state_object in self.state.items():
+            with open(os.path.join(self.state_dir, '{}.json'.format(state)), 'w') as fh:
+                log.debug('Dumping {} to a dir {}'.format(state, self.state_dir))
+                json.dump(state_object, fh)

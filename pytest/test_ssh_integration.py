@@ -13,7 +13,8 @@ import pkgpanda.util
 import pytest
 
 from ssh.ssh_runner import MultiRunner, Node
-from ssh.utils import CommandChain
+from ssh.utils import (AbstractSSHLibDelegate, CommandChain, MemoryDelegate,
+                       set_timer)
 
 sshd_config = [
     'Protocol 1,2',
@@ -78,6 +79,13 @@ def loop():
 
 
 def test_ssh_async(tmpdir, loop):
+    class DummyAsyncDelegate(AbstractSSHLibDelegate):
+        def on_update(self, *args, **kwargs):
+            pass
+
+        def on_done(self, *args, **kwargs):
+            pass
+
     workspace = tmpdir.strpath
     generate_fixtures(workspace)
     sshd_ports = start_random_sshd_servers(20, workspace)
@@ -85,7 +93,7 @@ def test_ssh_async(tmpdir, loop):
     # wait a little bit for sshd server to start
     time.sleep(3)
     runner = MultiRunner(['127.0.0.1:{}'.format(port) for port in sshd_ports], ssh_user=getpass.getuser(),
-                         ssh_key_path=workspace + '/host_key')
+                         ssh_key_path=workspace + '/host_key', async_delegate=DummyAsyncDelegate())
     host_port = ['127.0.0.1:{}'.format(port) for port in sshd_ports]
 
     chain = CommandChain('test')
@@ -405,3 +413,64 @@ def test_scp_recursive(tmpdir):
         assert '/usr/bin/scp' in result['cmd']
         assert '-r' in result['cmd']
         assert workspace + '/recursive_pilot.txt' in result['cmd']
+
+
+def test_memory_delegate_async(tmpdir, loop):
+    workspace = tmpdir.strpath
+    generate_fixtures(workspace)
+    sshd_ports = start_random_sshd_servers(1, workspace)
+
+    # wait a little bit for sshd server to start
+    time.sleep(.1)
+
+    # if we set state_dir, we invoke a separate thread to dump a state file to a disk. We should call
+    # memory_delegate.timer.cancel() once we are done.
+    memory_delegate = MemoryDelegate(total_hosts=20, total_agents=10, total_masters=10, state_dir=workspace,
+                                     trigger_states_func=lambda *args, **kwargs: set_timer(*args, interval=0.1,
+                                                                                           **kwargs))
+    nodes = []
+    for port in sshd_ports:
+        node = Node('127.0.0.1:{}'.format(port))
+        node.add_tag({'custom_tag': 'my_tag'})
+        nodes.append(node)
+    runner = MultiRunner(nodes, ssh_user=getpass.getuser(), ssh_key_path=workspace + '/host_key',
+                         async_delegate=memory_delegate)
+
+    chain = CommandChain('in_memory_chain')
+    chain.add_execute(['echo', '123', workspace])
+
+    # Change total values passed via constructor
+    memory_delegate.total_hosts = 10
+    memory_delegate.total_masters = 5
+    memory_delegate.total_agents = 5
+    try:
+        loop.run_until_complete(runner.run_commands_chain_async([chain], block=True))
+    finally:
+        loop.close()
+        time.sleep(0.1)
+        memory_delegate.timer.cancel()
+
+    assert 'in_memory_chain' in memory_delegate.state
+    assert memory_delegate.state['in_memory_chain']['total_hosts'] == 10
+    assert memory_delegate.state['in_memory_chain']['total_masters'] == 5
+    assert memory_delegate.state['in_memory_chain']['total_agents'] == 5
+    for host, host_props in memory_delegate.state['in_memory_chain']['hosts'].items():
+        assert host in ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+        assert 'echo' in host_props['commands'][0]['cmd']
+        assert host_props['commands'][0]['returncode'] == 0, host_props['commands'][0]['stderr']
+        assert host_props['host_status'] == 'success'
+        assert host_props['tags']['custom_tag'] == 'my_tag'
+    assert os.path.isfile(workspace + '/in_memory_chain.json')
+
+    # Test json file
+    with open(workspace + '/in_memory_chain.json') as fh:
+        in_mem_json = json.load(fh)
+        assert in_mem_json['total_hosts'] == 10
+        assert in_mem_json['total_masters'] == 5
+        assert in_mem_json['total_agents'] == 5
+        for host, host_props in in_mem_json['hosts'].items():
+            assert host in ['127.0.0.1:{}'.format(port) for port in sshd_ports]
+            assert 'echo' in host_props['commands'][0]['cmd']
+            assert host_props['commands'][0]['returncode'] == 0, host_props['commands'][0]['stderr']
+            assert host_props['host_status'] == 'success'
+            assert host_props['tags']['custom_tag'] == 'my_tag'

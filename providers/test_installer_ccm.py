@@ -143,6 +143,7 @@ docker run \
 -e "SLAVE_HOSTS={slave_list}" \
 -e "REGISTRY_HOST={registry_host}" \
 -e "DNS_SEARCH=true" \
+-e "DCOS_VARIANT={dcos_variant}" \
 --net=host py.test py.test -vv {ci_flags} {marker_args} /integration_test.py \
 """.format(
         dcos_dns=dcos_dns,
@@ -151,6 +152,7 @@ docker run \
         registry_host=registry_host,
         marker_args=marker_args,
         ci_flags=os.getenv('CI_FLAGS', ''))
+        dcos_variant=os.environ.get('DCOS_VARIANT', ''))
     print("Running test in remote docker")
     ssh_runner.execute_cmd(test_cmd)
     host = ssh_runner.targets[0]

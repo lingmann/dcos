@@ -1,0 +1,17 @@
+{
+  "docker": "dcos-builder",
+  "requires": ["openssl", "ncurses"],
+  "sources": {
+    "erlang": {
+      "kind": "url_extract",
+      "url": "http://www.erlang.org/download/otp_src_18.1.tar.gz",
+      "sha1": "99361cb597548298cb14b104ebafa4e5a40ff442"
+    },
+    "minuteman": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/minuteman.git",
+      "ref": "c46e70269f8239845015be155c7e73dc48db2307",
+      "ref_origin": "cm6"
+    }
+  }
+}

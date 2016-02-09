@@ -167,7 +167,7 @@ entry = {
         'dcos_image_commit': calulate_dcos_image_commit,
         'ip_detect_contents': calculate_ip_detect_contents,
         'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-        'dcos_version': '1.6',
+        'dcos_version': '1.7-dev',
         'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,

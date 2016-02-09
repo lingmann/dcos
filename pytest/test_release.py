@@ -391,8 +391,6 @@ def exercise_make_commands(repository):
     # lists, make sure the output artifact list are what is expected given the
     # channel_prefix, channel_commit_path, channel_path, and repository_path
     # members.
-    copy_source = {'method': 'copy_from', 'repository': '/test_source_repo'}
-    upload_source = {'method': 'upload'}
 
     # TODO(cmaloney): Rather than one big make_commands test each different
     # artifact separately to make test failures more understandable, extending
@@ -401,19 +399,22 @@ def exercise_make_commands(repository):
     reproducible_artifacts = [
         {
             'reproducible_path': '1.html',
-            'local_content': '1'
+            'local_content': '1',
+            'local_copy_from': '/test_source_repo/1.html'
         },
         {
             'reproducible_path': '3.html',
             'channel_path': '3.html',
             'local_content': '3',
-            'content_type': 'text/html'
+            'content_type': 'text/html',
+            'local_copy_from': '/test_source_repo/3.html'
         },
         {
             'reproducible_path': '3.json',
             'channel_path': '3.json',
             'local_path': '/test/foo.json',
-            'content_type': 'application/json'
+            'content_type': 'application/json',
+            'local_copy_from': '/test_source_repo/3.json'
         },
     ]
 
@@ -439,7 +440,7 @@ def exercise_make_commands(repository):
         'channel_artifacts': channel_artifacts
     }
 
-    assert repository.make_commands(metadata, copy_source) == copy_make_commands_result
+    assert repository.make_commands(metadata) == copy_make_commands_result
 
     upload_could_copy_artifacts = [{
         'reproducible_path': 'foo',
@@ -447,7 +448,7 @@ def exercise_make_commands(repository):
 
     # Test a single simple artifact which should hit the upload logic rather than copy
     simple_artifacts = {'core_artifacts': upload_could_copy_artifacts, 'channel_artifacts': []}
-    assert repository.make_commands(simple_artifacts, upload_source) == upload_make_command_results
+    assert repository.make_commands(simple_artifacts) == upload_make_command_results
 
 
 def test_repository():
@@ -596,4 +597,4 @@ def test_do_variable_set_or_exists(monkeypatch, tmpdir):
 
 # TODO(cmaloney): Test build_genconfs
 
-# TODO(cmaloney): Test ReleaseManager
+# TODO(cmaloney): Test ReleaseManager.create() followed by ReleaseManager.promote() followed by a second promote.

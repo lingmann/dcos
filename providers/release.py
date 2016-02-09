@@ -135,6 +135,17 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
         """Upload to destinoation_path the given blob or local_path, attaching metadata for additional properties."""
         pass
 
+    # TODO(cmaloney): Add test for download, download_if_not_exist
+    @abc.abstractmethod
+    def download(self, path, local_path):
+        pass
+
+    def download_if_not_exist(self, path, local_path):
+        if os.path.exists(local_path):
+            return
+
+        self.download(path, local_path)
+
     @abc.abstractmethod
     def exists(self, path):
         """Return true iff the given file / path exists."""
@@ -250,6 +261,9 @@ class AzureStorageProvider(AbstractStorageProvider):
     def fetch(self, path):
         return self.blob_service.get_blob_to_bytes(self.container, path)
 
+    def download(self, path, local_path):
+        return self.blob_service.get_blob_to_path(self.container, path, local_path)
+
     def list_recursive(self, path):
         names = set()
         for blob in self.blob_service.list_blobs(self.container, path):
@@ -287,6 +301,9 @@ class S3StorageProvider(AbstractStorageProvider):
         for chunk in iter(lambda: body.read(4096), b''):
             data += chunk
         return data
+
+    def download(self, path, local_path):
+        self.get_object(path).download_file(local_path)
 
     @property
     def url(self):
@@ -366,6 +383,9 @@ class LocalStorageProvider(AbstractStorageProvider):
     def fetch(self, path):
         with open(self.__full_path(path), 'rb') as f:
             return f.read()
+
+    def download(self, path, local_path):
+        subprocess.check_call(['cp', self.__full_path(path), local_path])
 
     # Copy between fully qualified paths
     def __copy(self, full_source_path, full_destination_path):
@@ -461,9 +481,7 @@ class Repository():
 
     # TODO(cmaloney): This function is too big. Break it into testable chunks.
     # TODO(cmaloney): Assert the same path/destination_path is never used twice.
-    def make_commands(self, metadata, base_artifact_source):
-        assert base_artifact_source['method'] in {'copy_from', 'upload'}
-
+    def make_commands(self, metadata):
         stage1 = []
         stage2 = []
         local_cp = []
@@ -473,7 +491,7 @@ class Repository():
             # All other destinations are copies from first destination.
             upload_path = None
 
-            def add_dest(destinoation_path, is_reproducible):
+            def add_dest(destination_path, is_reproducible):
                 nonlocal upload_path
 
                 # First action -> upload
@@ -484,29 +502,26 @@ class Repository():
                         'if_not_exists': is_reproducible,
                         'args': {
                             'source_path': upload_path,
-                            'destination_path': destinoation_path}}
+                            'destination_path': destination_path}}
 
                 # Always set upload_path
-                upload_path = destinoation_path
+                upload_path = destination_path
 
-                # Copyfrom source method if a base artifact and we're supposed to get those by copying.
-                if base_artifact and base_artifact_source['method'] == 'copy_from':
-                    # Only reproducible artifacts / artifacts with a reproducible_path may be
-                    # copied / moved from old repo.
-                    assert is_reproducible
+                # Copy inside the repository if we have a copy_from source.
+                if 'local_copy_from' in artifact:
                     return {
                         'method': 'copy',
-                        'if_not_exists': True,
+                        'if_not_exists': is_reproducible,
                         'args': {
-                            'source_path': base_artifact_source['repository'] + '/' + artifact['reproducible_path'],
-                            'destination_path': destinoation_path}}
+                            'source_path': artifact['local_copy_from'],
+                            'destination_path': destination_path}}
                 else:
                     # Upload from local machine.
                     action = {
                         'method': 'upload',
                         'if_not_exists': is_reproducible,
                         'args': {
-                            'destination_path': destinoation_path,
+                            'destination_path': destination_path,
                             'no_cache': not is_reproducible}}
                     if 'local_path' in artifact:
                         # local_path and local_content are mutually exclusive / can only use one at a time.
@@ -515,14 +530,15 @@ class Repository():
                     elif 'local_content' in artifact:
                         action['args']['blob'] = artifact['local_content'].encode('utf-8')
                     else:
-                        raise ValueError("local_path or local_content must be used as original source.")
+                        raise ValueError("local_path or local_content must be used as original "
+                                         "source for {}".format(destination_path))
 
                     if 'content_type' in artifact:
                         action['args']['content_type'] = artifact['content_type']
                     return action
 
             assert artifact.keys() <= {'reproducible_path', 'channel_path', 'content_type',
-                                       'local_path', 'local_content'}
+                                       'local_path', 'local_content', 'local_copy_from'}
 
             action_count = 0
             if 'reproducible_path' in artifact:
@@ -872,19 +888,47 @@ class ReleaseManager():
         self.__noop = noop
         self.__preferred_provider = storage_providers[preferred_provider]
 
-    def get_metadata(src_channel):
-        return from_json(self.__preferred_provider.fetch(src_channel + '/metadata.json'))
+    def get_metadata(self, src_channel):
+        return from_json(self.__preferred_provider.fetch(src_channel + '/metadata.json').decode())
+
+    def fetch_key_artifacts(self, metadata):
+        assert metadata['channel_commit_path'][-1] != '/'
+        assert metadata['repository_path'][-1] != '/'
+
+        def fetch_artifact(artifact):
+            print("Fetching core artifact if it doesn't exist: ", artifact)
+            if 'channel_path' in artifact:
+                assert artifact['channel_path'][0] != '/'
+                src_path = metadata['channel_commit_path'] + '/' + artifact['channel_path']
+                self.__preferred_provider.download(src_path, artifact['channel_path'])
+                artifact['local_copy_from'] = src_path
+                artifact['local_path'] = artifact['channel_path']
+            if 'reproducible_path' in artifact:
+                assert artifact['reproducible_path'][0] != '/'
+
+                local_path = artifact['reproducible_path']
+
+                # `bootstrap/` artifacts should get placed in `packages/`
+                if artifact['reproducible_path'].startswith('bootstrap/'):
+                    local_path = 'packages/' + artifact['reproducible_path'][9:]
+
+                src_path = metadata['repository_path'] + '/' + artifact['reproducible_path']
+
+                self.__preferred_provider.download_if_not_exist(src_path, local_path)
+                artifact['local_copy_from'] = src_path
+                artifact['local_path'] = local_path
+
+        for artifact in metadata['core_artifacts']:
+            fetch_artifact(artifact)
 
     def promote(self, src_channel, destination_channel):
         metadata = self.get_metadata(src_channel)
-        src_repository_path = metadata['repository']
 
         # Can't run a release promotion with a different version of the scripts than the one that
         # created the release.
-        assert metadata['commit'] == util.dcos_image_commit
+        assert metadata['commit'] == util.dcos_image_commit, "You must promote from a checkout of " \
+            "the same commit when `release create` aws run. {}".format(util.dcos_image_commit)
 
-        # TODO(cmaloney): Make key stable artifacts local (bootstrap) so they
-        # can be used / referenced inside the per-channel artifacts.
         self.fetch_key_artifacts(metadata)
 
         repository = Repository(destination_channel, None, metadata['commit'])
@@ -904,9 +948,7 @@ class ReleaseManager():
 
         metadata['channel_artifacts'] = make_channel_artifacts(metadata)
 
-        storage_commands = repository.make_commands(
-            metadata,
-            base_artifacts={'method': 'copy_from', 'repository': src_repository_path})
+        storage_commands = repository.make_commands(metadata)
         self.apply_storage_commands(storage_commands)
 
         return metadata
@@ -942,7 +984,7 @@ class ReleaseManager():
 
         metadata['channel_artifacts'] = make_channel_artifacts(metadata)
 
-        storage_commands = repository.make_commands(metadata, {'method': 'upload'})
+        storage_commands = repository.make_commands(metadata)
         self.apply_storage_commands(storage_commands)
 
         return metadata

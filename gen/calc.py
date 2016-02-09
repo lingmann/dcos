@@ -11,6 +11,11 @@ from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 
 
+def calculate_is_ee():
+    variant = os.getenv('BOOTSTRAP_VARIANT')
+    return 'true' if variant == 'ee' else 'false'
+
+
 def calulate_dcos_image_commit():
     dcos_image_commit = os.getenv('DCOS_IMAGE_COMMIT', None)
 
@@ -154,10 +159,7 @@ entry = {
         'gc_delay': '2days',
         'dns_search': '',
         'superuser_username': '',
-        'superuser_password_hash': '',
-        'ui_tracking': 'true',
-        'ui_authentication': 'false',
-        'ui_settings': 'false'
+        'superuser_password_hash': ''
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
@@ -169,7 +171,8 @@ entry = {
         'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,
-        'config_id': calculate_config_id
+        'config_id': calculate_config_id,
+        'is_ee': calculate_is_ee
     },
     'conditional': {
         'master_discovery': {
@@ -184,16 +187,31 @@ entry = {
                 'default': {
                     'resolvers': '["8.8.8.8", "8.8.4.4"]'
                 },
-                'must': {
-                    'ui_tracking': 'false',
-                    'ui_authentication': 'true',
-                    'ui_settings': 'true'
-                }
             },
             'azure': {},
             'aws': {},
             'vagrant': {},
             'other': {}
+        },
+        'is_ee': {
+            'true': {
+                'must': {
+                    'ui_authentication': 'true',
+                    'ui_settings': 'true'
+                },
+                'default': {
+                    'ui_tracking': 'false'
+                }
+            },
+            'false': {
+                'must': {
+                    'ui_authentication': 'false',
+                    'ui_settings': 'false'
+                },
+                'default': {
+                    'ui_tracking': 'true'
+                }
+            }
         }
     }
 }

@@ -77,6 +77,20 @@ def try_genconf():
         sys.exit(1)
 
 
+def tall_enough_to_ride():
+    choices_true = ['Yes', 'yes', 'y']
+    choices_false = ['No', 'no', 'n']
+    while True:
+        do_uninstall = input(
+'This will completely wipe out all DCOS data, including /var/lib/zookeeper on your master hosts. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')  # noqa
+        if do_uninstall in choices_true:
+            return True
+        elif do_uninstall in choices_false:
+            return False
+        else:
+            log.error('Choices are [y]es or [n]o. "{}" is not a choice'.format(do_uninstall))
+
+
 class DcosInstaller:
     def __init__(self, args=None):
         """
@@ -128,8 +142,11 @@ class DcosInstaller:
                 sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
-                print_header("EXECUTING UNINSTALL")
-                sys.exit(run_loop(action_lib.uninstall_dcos, options))
+                if tall_enough_to_ride():
+                    print_header("EXECUTING UNINSTALL")
+                    sys.exit(run_loop(action_lib.uninstall_dcos, options))
+                # Not sure if we need to exit 1 or 0 here TODO
+                sys.exit(0)
 
             if options.validate_config:
                 make_default_dir()
@@ -158,15 +175,6 @@ Environment Settings:
         """
         parser = argparse.ArgumentParser(usage=print_usage())
         mutual_exc = parser.add_mutually_exclusive_group()
-
-        # Log level
-#        parser.add_argument(
-#            '-f',
-#            '--log-file',
-#            default='/genconf/logs/installer.log',
-#            type=str,
-#            help='Set log file location, default: /genconf/logs/installer.log'
-#        )
 
         parser.add_argument(
             '--hash-password',

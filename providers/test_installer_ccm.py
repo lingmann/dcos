@@ -64,7 +64,8 @@ def make_vpc():
         time=60,
         instance_count=3,
         instance_type="m3.xlarge",
-        instance_os="cent-os-7",
+        instance_os="cent-os-7-dcos-prereqs",
+        region="us-west-2",
         key_pair_name=unique_cluster_id
         )
     vpc.wait_for_up()
@@ -167,19 +168,11 @@ docker run \
 def prep_hosts(ssh_runner, registry, minuteman_enabled=False):
     # TODO(mellenburg): replace setup with --preflightfix functionality
     print("Setting up Docker and other DCOS requirements...")
-    ssh_runner.execute_cmd("sudo yum update -y ", True)
-    ssh_runner.execute_cmd("curl -sSL https://get.docker.com/ | sh", True)
-    ssh_runner.execute_cmd("sudo yum install -y tar xz unzip curl", True)
-    # registry_add = """sudo sed -i -e "s/OPTIONS='/OPTIONS='--insecure-registry {}:5000 /" /etc/sysconfig/docker"""
-    registry_add = """
-sudo sed -i '/ExecStart/ !b; s/$/ --insecure-registry {}:5000/' /usr/lib/systemd/system/docker.service"""
+    registry_add = ("sudo sed -i '/ExecStart=\/usr\/bin\/docker/ !b; s/$/ --insecure-registry={}:5000/' "
+                    "/etc/systemd/system/docker.service.d/execstart.conf")
     ssh_runner.execute_cmd(registry_add.format(registry), True)
-    # dm_fix = "echo STORAGE_DRIVER=overlay | sudo tee --append /etc/sysconfig/docker-storage-setup"
-    # ssh_runner.execute_cmd(dm_fix, True)
-    # dm_fix = "echo DOCKER_STORAGE_OPTIONS= -s overlay | sudo tee --append /etc/sysconfig/docker-storage"
-    # ssh_runner.execute_cmd(dm_fix, True)
-    ssh_runner.execute_cmd("sudo systemctl enable docker", True)
-    ssh_runner.execute_cmd("sudo systemctl start docker", True)
+    ssh_runner.execute_cmd("sudo systemctl daemon-reload", True)
+    ssh_runner.execute_cmd("sudo systemctl restart docker", True)
     ssh_runner.execute_cmd("sudo groupadd -g 65500 nogroup", True)
     ssh_runner.execute_cmd("sudo usermod -aG docker centos", True)
 
@@ -289,6 +282,8 @@ def main():
     # Run Configuratator
     run_cmd('--genconf')
     if do_setup:
+        # Remove 'nogroup' so that our first preflight test will fail
+        ssh_runner.execute_cmd("sudo groupdel nogroup", True)
         # Check that --preflight gives an error
         run_cmd('--preflight', expect_errors=True)
 

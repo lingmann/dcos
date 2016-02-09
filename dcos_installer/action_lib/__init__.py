@@ -276,16 +276,50 @@ exit $RETCODE"""
     return result
 
 
+def prompt_user():
+    choices_true = ['Yes', 'yes', 'y']
+    choices_false = ['No', 'no', 'n']
+    do_uninstall = input('This will completely wipe out all DCOS data, including /var/lib/zookeeper on your master hosts.Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: '
+    if do_uninstall in choices_true:
+        return True
+    elif do_uninstall in choices_false:
+        return False
+    else:
+        log.error('Choices are yes or no. {} is not a choice'.format(do_uninstall))
+
+
+
 @asyncio.coroutine
 def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None):
-    all_targets = config['master_list'] + config['agent_list']
+    if prompt_user():
+        all_targets = config['master_list'] + config['agent_list']
 
-    # clean the file to all targets
-    runner = get_async_runner(config, all_targets, async_delegate=async_delegate)
-    uninstall_chain = ssh.utils.CommandChain('uninstall')
+        # clean the file to all targets
+        runner = get_async_runner(config, all_targets, async_delegate=async_delegate)
+        uninstall_chain = ssh.utils.CommandChain('uninstall')
 
-    uninstall_chain.add_execute(['sudo', '-i', '/opt/mesosphere/bin/pkgpanda', 'uninstall', '&&', 'sudo', 'rm', '-rf',
-                                 '/opt/mesosphere/'], comment='Uninstalling DCOS')
-    result = yield from runner.run_commands_chain_async([uninstall_chain], block=block, state_json_dir=state_json_dir)
+        uninstall_chain.add_execute([
+            'sudo',
+            '-i',
+            '/opt/mesosphere/bin/pkgpanda',
+            'uninstall',
+            '&&',
+            'sudo',
+            'rm',
+            '-rf',
+            '/opt/mesosphere/',
+            '&&',
+            'test',
+            '!',
+            '-d',
+            '/var/lib/zookeeper',
+            '||',
+            'rm'
+            '-rf',
+            '/var/lib/zookeeper'], comment='Uninstalling DCOS')
+        result = yield from runner.run_commands_chain_async([uninstall_chain], block=block, state_json_dir=state_json_dir)
 
-    return result
+        return result
+    else:
+        return 1
+

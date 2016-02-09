@@ -76,17 +76,60 @@
       }
     },
     "agentVMSize": {
-      "type": "string",
-      "defaultValue": "Standard_A1",
       "allowedValues": [
+        "Standard_A0",
         "Standard_A1",
         "Standard_A2",
         "Standard_A3",
-        "Standard_A4"
+        "Standard_A4",
+        "Standard_A5",
+        "Standard_A6",
+        "Standard_A7",
+        "Standard_A8",
+        "Standard_A9",
+        "Standard_A10",
+        "Standard_A11",
+        "Standard_D1",
+        "Standard_D2",
+        "Standard_D3",
+        "Standard_D4",
+        "Standard_D11",
+        "Standard_D12",
+        "Standard_D13",
+        "Standard_D14",
+        "Standard_D1_v2",
+        "Standard_D2_v2",
+        "Standard_D3_v2",
+        "Standard_D4_v2",
+        "Standard_D5_v2",
+        "Standard_D11_v2",
+        "Standard_D12_v2",
+        "Standard_D13_v2",
+        "Standard_D14_v2",
+        "Standard_G1",
+        "Standard_G2",
+        "Standard_G3",
+        "Standard_G4",
+        "Standard_G5",
+        "Standard_DS1",
+        "Standard_DS2",
+        "Standard_DS3",
+        "Standard_DS4",
+        "Standard_DS11",
+        "Standard_DS12",
+        "Standard_DS13",
+        "Standard_DS14",
+        "Standard_GS1",
+        "Standard_GS2",
+        "Standard_GS3",
+        "Standard_GS4",
+        "Standard_GS5"
       ],
+      "defaultValue": "Standard_D2",
       "metadata": {
-        "description": "The size of the Virtual Machine. Allowable machine values are 1 core (A1), 2 core (A2), 4 core (A3), 8 core (A4)."
-      }
+        "description": "The size of the Virtual Machine."
+      },
+      "type": "string"
     },
     "linuxPublisher": {
       "type": "string",
@@ -251,6 +294,149 @@
     "osImageSKU": "[variables('linuxSku')]",
     "osImageVersion": "[variables('linuxVersion')]",
     "virtualNetworkName": "[concat(variables('orchestratorName'), '-vnet-', variables('nameSuffix'))]",
+    "vmSizesMap": {
+      "Standard_A0": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A1": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A10": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A11": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A3": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A4": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A5": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A6": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A7": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A8": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_A9": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D1": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D11": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D11_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D12": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D12_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D13": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D13_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D14": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D14_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D1_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D2_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D3": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D3_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D4": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D4_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_D5_v2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_DS1": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS11": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS12": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS13": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS14": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS2": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS3": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_DS4": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_G1": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_G2": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_G3": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_G4": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_G5": {
+        "storageAccountType": "Standard_GRS"
+      },
+      "Standard_GS1": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS2": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS3": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS4": {
+        "storageAccountType": "Premium_LRS"
+      },
+      "Standard_GS5": {
+        "storageAccountType": "Premium_LRS"
+      }
+    },
     "vnetID": "[resourceId('Microsoft.Network/virtualNetworks',variables('virtualNetworkName'))]",
     "masterSubnetName": "[concat(variables('orchestratorName'), '-masterSubnet')]",
     "masterSubnetRef": "[concat(variables('vnetID'),'/subnets/',variables('masterSubnetName'))]",
@@ -291,7 +477,7 @@
     "masterFirstAddr": 5,
     "masterAvailabilitySet": "[concat(variables('orchestratorName'), '-master-availabilitySet-', variables('nameSuffix'))]",
     "masterLbName": "[concat(variables('orchestratorName'), '-master-lb-', variables('nameSuffix'))]",
-    "masterVMSize": "Standard_A1",
+    "masterVMSize": "Standard_A2",
     "masterLbID": "[resourceId('Microsoft.Network/loadBalancers',variables('masterLbName'))]",
     "masterLbIPConfigName": "[concat(variables('orchestratorName'), '-master-lbFrontEnd-', variables('nameSuffix'))]",
     "masterLbIPConfigID": "[concat(variables('masterLbID'),'/frontendIPConfigurations/', variables('masterLbIPConfigName'))]",
@@ -322,7 +508,7 @@
       "apiVersion": "2015-06-15",
       "location": "[variables('storageLocation')]",
       "properties": {
-        "accountType": "[variables('storageAccountType')]"
+        "accountType": "[variables('vmSizesMap')[variables('masterVMSize')].storageAccountType]"
       }
     },
     {
@@ -624,7 +810,7 @@
         "count": "[variables('agentStorageAccountsCount')]"
       },
       "properties": {
-        "accountType": "[variables('storageAccountType')]"
+        "accountType": "[variables('vmSizesMap')[variables('agentVMSize')].storageAccountType]"
       }
     },
     {
@@ -776,7 +962,7 @@
         "[concat('Microsoft.Network/loadBalancers/', variables('agentsPublicLbName'))]"
       ],
       "sku": {
-        "name": "Standard_A1",
+        "name": "[variables('agentVMSize')]",
         "tier": "Standard",
         "capacity": "[variables('agentPublicCount')]"
       },
@@ -859,7 +1045,7 @@
         "count": "[variables('agentStorageAccountsCount')]"
       },
       "properties": {
-        "accountType": "[variables('storageAccountType')]"
+        "accountType": "[variables('vmSizesMap')[variables('agentVMSize')].storageAccountType]"
       }
     },
     {
@@ -880,7 +1066,7 @@
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
       ],
       "sku": {
-        "name": "Standard_A1",
+        "name": "[variables('agentVMSize')]",
         "tier": "Standard",
         "capacity": "[variables('agentPrivateCount')]"
       },
@@ -950,13 +1136,17 @@
     }
   ],
   "outputs": {
-    "masterFQDN": {
-      "type": "string",
-      "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))).dnsSettings.fqdn]"
-    },
     "agentFQDN": {
       "type": "string",
       "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('agentPublicIPAddressName'))).dnsSettings.fqdn]"
+    },
+    "jumpboxFQDN": {
+      "type": "string",
+      "value": ""
+    },
+    "masterFQDN": {
+      "type": "string",
+      "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))).dnsSettings.fqdn]"
     }
   }
 }

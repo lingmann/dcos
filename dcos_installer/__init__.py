@@ -97,7 +97,7 @@ class DcosInstaller:
             if options.web:
                 make_default_dir()
                 print_header("Starting DCOS installer in web mode")
-                async_server.start(options.port)
+                async_server.start(options)
 
             if options.genconf:
                 make_default_dir()

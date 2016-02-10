@@ -77,7 +77,7 @@ def configure(request):
         """
         Return the written configuration on disk.
         """
-        config = backend.get_config()
+        config = backend.get_ui_config()
         resp = web.json_response(config)
 
     resp.headers['Content-Type'] = 'application/json'

@@ -14,9 +14,9 @@ from dcos_installer.util import CONFIG_PATH
 log = logging.getLogger()
 
 
-def do_configure():
+def do_configure(config_path=CONFIG_PATH):
     config = DCOSConfig()
-    config.config_path = CONFIG_PATH
+    config.config_path = config_path
     config.build()
     # Get gen specific configuration (stringified, only gen keys)
     gen_config = config.make_gen_config()
@@ -104,7 +104,14 @@ def do_validate_config(config_path=CONFIG_PATH):
 
 
 def get_config(config_path=CONFIG_PATH):
-    return DCOSConfig(config_path=config_path).get_config()
+    return DCOSConfig(config_path=config_path)
+
+
+def get_ui_config(config_path=CONFIG_PATH):
+    config = DCOSConfig(config_path=config_path)
+    config._get_hidden_config()
+    config.update(config.hidden_config)
+    return config
 
 
 def return_configure_status(config_path=CONFIG_PATH):

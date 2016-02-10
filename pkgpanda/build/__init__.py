@@ -331,9 +331,12 @@ def fetch_sources(sources):
                     "found for file " + info['url'] + " which when downloaded has the sha1 " + file_sha)
 
             if info['sha1'] != file_sha:
+                corrupt_filename = cache_filename + '.corrupt'
+                check_call(['mv', cache_filename, corrupt_filename])
                 raise ValidationError(
-                    "Provided sha1 didn't match sha1 of downloaded file. " +
-                    "Provided: {}, Download file's sha1: {}, Url: {}".format(info['sha1'], file_sha, info['url']))
+                    "Provided sha1 didn't match sha1 of downloaded file, corrupt download saved as {}. "
+                    "Provided: {}, Download file's sha1: {}, Url: {}".format(
+                        corrupt_filename, info['sha1'], file_sha, info['url']))
             ids[src] = {
                 "downloaded_sha1": file_sha
             }

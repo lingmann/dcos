@@ -18,19 +18,18 @@ def do_configure():
     config = DCOSConfig()
     config.config_path = CONFIG_PATH
     config.build()
+    # Get gen specific configuration (stringified, only gen keys)
     gen_config = config.make_gen_config()
     # Remove things Gen doesn't like
     for key in list(gen_config.keys()):
         if gen_config[key] is None or gen_config[key] == '[null]':
                 del gen_config[key]
+    # Do one final validation from gen itself, just to be sure
     messages = configure.do_validate_gen_config(gen_config)
     if 'errors' in messages:
-        for key, err in messages['errors'].items():
-            log.error('{}: {}'.format(key, err))
-        return 1
-
+        return messages
     configure.do_configure(gen_config)
-    return 0
+    return messages
 
 
 def hash_password(string):
@@ -95,8 +94,9 @@ def do_validate_config(config_path=CONFIG_PATH):
     messages = config.validate()
     return_code = 0
     if len(messages['errors']) > 0:
-        log.error('Validation errors detected!')
         return_code = 1
+    elif len(messages['warning']) > 0:
+        return_code = 2
     return messages, return_code
 
 

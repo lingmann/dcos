@@ -49,8 +49,6 @@ class DCOSValidateConfig():
         """
         errors, validate_out = onprem.check_dependencies(self.dcos_config)
         if errors:
-            log.error("Errors found in on-prem dependencies...")
             return errors, validate_out
         else:
-            log.info("Configuration looks good!")
             return errors, validate_out

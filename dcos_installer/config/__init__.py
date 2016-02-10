@@ -122,7 +122,6 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         config = self._unbind_configuration()
         self._get_hidden_config()
         config.update(self.hidden_config)
-        log.debug('Validating config: ')
         log.debug(config)
         _, messages = DCOSValidateConfig(config).validate()
         return messages

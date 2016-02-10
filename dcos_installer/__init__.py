@@ -64,17 +64,41 @@ def make_default_dir(dir=GENCONF_DIR):
         os.makedirs(dir)
 
 
-def check_config_validation():
-    _, con_code = backend.do_validate_config()
-    if con_code != 0:
+def check_config_validation(gen_val=False):
+    '''Gen validation needs to ignore all warnings (optional) validation which
+    includes SSH stuff. However, if we do have warnings, we need to ensure this
+    validation passes even if superuser_username and superuser_password_hash
+    exist since they're optional between CE and EE'''
+    messages, code = backend.do_validate_config()
+    if code == 1:
+        if gen_val:
+            log.error("Configuration generation (--genconf) requires the following errors to be fixed:")
+            keys = messages['errors'].keys()
+            for key in keys:
+                log.error(key)
+
         sys.exit(1)
+
+    elif code == 2 and not gen_val:
+        dual_distro = ['superuser_username', 'superuser_password_hash']
+        warn = messages.get('warning')
+        for k in dual_distro:
+            if k in warn:
+                del warn[k]
+        if len(warn) > 0:
+            log.error("Please fix all warnings and errors before proceeding.")
+            sys.exit(1)
 
 
 def try_genconf():
-    gen_code = backend.do_configure()
-    if gen_code != 0:
-        log.error('Errors found in configuration. Try --validate-config.')
+    check_config_validation(gen_val=True)
+    messages = backend.do_configure()
+    if 'errors' in messages:
+        for k, v in messages['errors'].items():
+            log.error('{}: {}'.format(k, v))
+        log.error('Errors found in configuration.')
         sys.exit(1)
+    sys.exit(0)
 
 
 class DcosInstaller:
@@ -102,14 +126,16 @@ class DcosInstaller:
             if options.genconf:
                 make_default_dir()
                 print_header("EXECUTING CONFIGURATION GENERATION")
-                sys.exit(backend.do_configure())
+                try_genconf()
 
             if options.preflight:
                 print_header("EXECUTING PREFLIGHT")
+                check_config_validation()
                 sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
+                check_config_validation()
                 deploy_returncode = 0
                 for role in ['master', 'agent']:
                     action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
@@ -120,18 +146,19 @@ class DcosInstaller:
                 sys.exit(deploy_returncode)
 
             if options.postflight:
+                check_config_validation()
                 print_header("EXECUTING POSTFLIGHT")
                 sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
+                check_config_validation()
                 print_header("EXECUTING UNINSTALL")
                 sys.exit(run_loop(action_lib.uninstall_dcos, options))
 
             if options.validate_config:
                 make_default_dir()
                 print_header('VALIDATING CONFIGURATION')
-                messages, return_code = backend.do_validate_config()
-                sys.exit(return_code)
+                check_config_validation()
 
     def parse_args(self, args):
         def print_usage():

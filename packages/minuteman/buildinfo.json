@@ -10,7 +10,7 @@
     "minuteman": {
       "kind": "git",
       "git": "git@github.com:mesosphere/minuteman.git",
-      "ref": "c46e70269f8239845015be155c7e73dc48db2307",
+      "ref": "4e2c3c6d1a6e309d09a974b04941d019f5b67d0a",
       "ref_origin": "cm6"
     }
   }

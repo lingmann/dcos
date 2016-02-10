@@ -63,6 +63,9 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Get validation messages
     messages = config_obj.validate()
+    errors = messages.get('errors')
+    warnings = messages.get('warning')
+    errors.update(warnings)
 
     # Return only keys sent in POST, do not write if validation
     # of config fails.

@@ -36,7 +36,7 @@ def run_loop(action, options):
     try:
         config = backend.get_config()
         cli_delegate = CliDelegate()
-        result = loop.run_until_complete(action(config, block=True, async_delegate=cli_delegate))
+        result = loop.run_until_complete(action(config, block=True, async_delegate=cli_delegate, options=options))
         pp = PrettyPrint(result)
         pp.stage_name = action.__name__
         pp.beautify('print_data')
@@ -137,6 +137,11 @@ class DcosInstaller:
                 messages, return_code = backend.do_validate_config()
                 sys.exit(return_code)
 
+            if options.install_prereqs:
+                print_header("EXECUTING INSTALL PREREQUISITES")
+                check_config_validation()
+                sys.exit(run_loop(action_lib.install_prereqs, options))
+
     def parse_args(self, args):
         def print_usage():
             return """
@@ -159,15 +164,6 @@ Environment Settings:
         parser = argparse.ArgumentParser(usage=print_usage())
         mutual_exc = parser.add_mutually_exclusive_group()
 
-        # Log level
-#        parser.add_argument(
-#            '-f',
-#            '--log-file',
-#            default='/genconf/logs/installer.log',
-#            type=str,
-#            help='Set log file location, default: /genconf/logs/installer.log'
-#        )
-
         parser.add_argument(
             '--hash-password',
             default='',
@@ -189,6 +185,13 @@ Environment Settings:
             default=9000,
             help=argparse.SUPPRESS)
 
+        parser.add_argument(
+            '--offline',
+            action='store_true',
+            default=False,
+            help='Do not install preflight prerequisites on CentOS7, RHEL7 in web mode'
+        )
+
         mutual_exc.add_argument(
             '--web',
             action='store_true',
@@ -206,6 +209,12 @@ Environment Settings:
             action='store_true',
             default=False,
             help='Execute the preflight checks on a series of nodes.')
+
+        mutual_exc.add_argument(
+            '--install-prereqs',
+            action='store_true',
+            default=False,
+            help='Install preflight prerequisites. Works only on CentOS7 and RHEL7.')
 
         mutual_exc.add_argument(
             '--deploy',

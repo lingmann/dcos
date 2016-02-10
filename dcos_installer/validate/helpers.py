@@ -46,7 +46,7 @@ def is_valid_ipv6_address(address):
     return True
 
 
-def validate_ip_list(key=None, config=None):
+def validate_ip_list(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]
         if type(key) == list:
@@ -59,110 +59,111 @@ def validate_ip_list(key=None, config=None):
                         failed_ips.append(ip)
 
                 else:
-                    return [False, 'Please enter a valid IPv4 address.']
+                    return [False, 'Please enter a valid IPv4 address.', optional]
 
             if len(failed_ips) > 0:
-                return [False, 'Please enter a valid IPv4 address. The following are not IPv4 addresses: {}'.format(failed_ips)]
+                return [False, 'Please enter a valid IPv4 address. The following are not IPv4 addresses: {}'.format(
+                    failed_ips),
+                    optional]
 
         else:
-            return [False, 'IPv4 addresses must be a list'.format(key)]
+            return [False, 'IPv4 addresses must be a list'.format(key), optional]
 
-        return [True, '{} is a valid list of IPv4 addresses.'.format(key)]
+        return [True, '{} is a valid list of IPv4 addresses.'.format(key), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_master_list(key=None, config=None):
+def validate_master_list(key=None, config=None, optional=False):
     if key in config and key is not None:
-        is_ip_list, msg = validate_ip_list(key, config)
-        if not is_ip_list:
-            return [is_ip_list, msg]
+        is_ip_list = validate_ip_list(key, config, optional)
+        if not is_ip_list[0]:
+            return is_ip_list
 
         key = config[key]
         num_mstrs = len(key)
         if int(num_mstrs) in [1, 3, 5, 7, 9]:
-            return [True, 'Master list is 1, 3, 5, 7, or 9 hosts. Found {}'.format(num_mstrs)]
+            return [True, 'Master list is 1, 3, 5, 7, or 9 hosts. Found {}'.format(num_mstrs), optional]
 
-        return [False, 'Master list must have 1, 3, 5, 7, or 9 hosts. Found {}.'.format(num_mstrs)]
+        return [False, 'Master list must have 1, 3, 5, 7, or 9 hosts. Found {}.'.format(num_mstrs), optional]
+
+    return [False, None, optional]
 
 
-    return [False, None]
-
-
-def validate_string(key=None, config=None):
+def validate_string(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]
         if type(key) == str and key != '':
-            return [True, '{} is a valid string.'.format(key)]
+            return [True, '{} is a valid string.'.format(key), optional]
 
         else:
-            return [False, 'Please enter a valid string'.format(key)]
+            return [False, 'Please enter a valid string'.format(key), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_int(key=None, config=None):
+def validate_int(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]
         if key is not None and key != '':
             if isinstance(key, int):
-                return [True, '{} is a valid integer.'.format(key)]
+                return [True, '{} is a valid integer.'.format(key), optional]
 
             elif isinstance(key, str):
                 try:
                     interger = int(key)
-                    return [True, '{} is a valid interger.'.format(interger)]
+                    return [True, '{} is a valid interger.'.format(interger), optional]
                 except:
-                    return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+                    return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key))), optional]
             else:
-                return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key)))]
+                return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key))), optional]
 
-        return [False, 'Please enter a valid integer.']
+        return [False, 'Please enter a valid integer.', optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_port(key=None, config=None):
+def validate_port(key=None, config=None, optional=False):
     if key in config and key is not None and key is not '':
-        is_int, msg = validate_int(key, config)
-        if not is_int:
-            return is_int, msg
+        is_int = validate_int(key, config, optional)
+        if not is_int[0]:
+            return is_int
 
         key = config[key]
         if int(key) > 65535:
-            return [False, "Ports must be less than or equal to 65535"]
+            return [False, "Ports must be less than or equal to 65535", optional]
 
         else:
-            return [True, "Port is less than or equal to 65535"]
+            return [True, "Port is less than or equal to 65535", optional]
 
-    return [False, 'Please enter valid port number (not great than :65535)']
+    return [False, 'Please enter valid port number (not great than :65535)', optional]
 
 
-def validate_install_type(key=None, config=None):
+def validate_install_type(key=None, config=None, optional=False):
     if key in config:
         key = config[key]
         if key in ['onprem']:
-            return [True, '{} is a valid install_type.'.format(key)]
+            return [True, '{} is a valid install_type.'.format(key), optional]
 
         else:
-            return [False, '{} is not a valid install_type.'.format(key)]
+            return [False, '{} is not a valid install_type.'.format(key), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_list(key=None, config=None):
+def validate_list(key=None, config=None, optional=False):
     if key in config:
         key = config[key]
         if type(key) == list:
-            return [True, '{} is a valid list.'.format(key)]
+            return [True, '{} is a valid list.'.format(key), optional]
 
         else:
-            return [False, '{} is not a valid list.'.format(key)]
+            return [False, '{} is not a valid list.'.format(key), optiona]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_exhibitor_zk_hosts(key=None, config=None):
+def validate_exhibitor_zk_hosts(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]
         try:
@@ -170,21 +171,21 @@ def validate_exhibitor_zk_hosts(key=None, config=None):
                 if is_valid_ipv4_address(address.split(':')[0].strip()):
                     continue
                 else:
-                    return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0].strip())]
+                    return [False, '{} is not a valid IPv4 address'.format(address.split(':')[0].strip()), optional]
 
         except:
             if key is not None and is_valid_ipv4_address(key.split(':')[0]):
                 pass
             elif key is not None:
-                return [False, '{} is not a valid IPv4 address'.format(key.split(':')[0].strip())]
+                return [False, '{} is not a valid IPv4 address'.format(key.split(':')[0].strip()), optional]
 
         else:
-            return [True, '{} is valid exhibitor ZK hosts format.'.format(key)]
+            return [True, '{} is valid exhibitor ZK hosts format.'.format(key), optional]
 
-    return [False, 'None is not a valid Exhibitor Zookeeper host']
+    return [False, 'None is not a valid Exhibitor Zookeeper host', optional]
 
 
-def validate_path(key=None, config=None):
+def validate_path(key=None, config=None, optional=False):
     """
     Validate a path exists.
     """
@@ -194,18 +195,18 @@ def validate_path(key=None, config=None):
     if key in config:
         key = config[key]
         if os.path.exists(key):
-            return [True, 'File exists {}'.format(key)]
+            return [True, 'File exists {}'.format(key), optional]
 
         else:
             if key in truncate_paths.keys():
-                return [False, 'File does not exist {}'.format(truncate_paths[key])]
+                return [False, 'File does not exist {}'.format(truncate_paths[key]), optional]
             else:
-                return [False, 'File does not exist {}'.format(key)]
+                return [False, 'File does not exist {}'.format(key), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_master_discovery(key=None, config=None):
+def validate_master_discovery(key=None, config=None, optional=False):
     """
     Validate master discovery method.
     """
@@ -213,28 +214,28 @@ def validate_master_discovery(key=None, config=None):
         key = config[key]
         options = ['static']
         if key in options:
-            return [True, 'master_discovery method is valid.']
+            return [True, 'master_discovery method is valid.', optional]
 
         else:
-            return [False, 'master_discovery method is not valid. Valid options are {}'.format(options)]
+            return [False, 'master_discovery method is not valid. Valid options are {}'.format(options), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_exhibitor_storage_backend(key=None, config=None):
+def validate_exhibitor_storage_backend(key=None, config=None, optional=False):
     """
     Validate master discovery method.
     """
     if key in config:
         key = config[key]
-        options = ['zookeeper']
+        options = ['zookeeper', 'aws_s3', 'shared_fs']
         if key in options:
-            return [True, 'exhibitor_storage_backend is valid.']
+            return [True, 'exhibitor_storage_backend is valid.', optional]
 
         else:
-            return [False, 'exhibitor_storage_backend is not valid. Valid options are {}'.format(options)]
+            return [False, 'exhibitor_storage_backend is not valid. Valid options are {}'.format(options), optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
 def validate_comma_list(key=None, config=None):
@@ -251,12 +252,11 @@ def validate_comma_list(key=None, config=None):
     return [False, None]
 
 
-def validate_ssh_key(key=None, config=None):
-
+def validate_ssh_key(key=None, config=None, optional=False):
     if key in config:
-        is_string, msg = validate_string(key, config)
-        if not is_string:
-            return [False, "SSH key must be an unencrypted (no passphrase) SSH key which is not empty."]
+        is_string = validate_string(key, config)
+        if not is_string[0]:
+            return [False, "SSH key must be an unencrypted (no passphrase) SSH key which is not empty.", optional]
 
         key = config[key]
         if key != '':
@@ -264,20 +264,25 @@ def validate_ssh_key(key=None, config=None):
             if 'ENCRYPTED' in key:
                 return [
                     False,
-                    "Encrypted SSH keys (which contain passphrases) are not allowed. Please use a key without a passphrase."]  # noqa
+                    "Encrypted SSH keys (which contain passphrases) are not allowed. Please use a key without a passphrase.",  # noqa
+                    optional]
+
             else:
-                return [True, 'This is a valid SSH key']
+                return [True, 'This is a valid SSH key', optional]
 
-        return [False, "Empty keys are not allowed. Please enter a non-empty unencrypted (no passphrase) SSH key."]
+        return [
+            False,
+            "Empty keys are not allowed. Please enter a non-empty unencrypted (no passphrase) SSH key.",
+            optional]
 
-    return [False, None]
+    return [False, None, optional]
 
 
-def validate_ip_detect_script(key=None, config=None):
+def validate_ip_detect_script(key=None, config=None, optional=False):
     fm = 'Please provide a valid executable script. Script must start with #!/'
-    failed_validation = [False, fm]
+    failed_validation = [False, fm, False]
     if key in config:
-        is_string, msg = validate_string(key, config)
+        is_string, msg, optional = validate_string(key, config, optional)
         if not is_string:
             return failed_validation
 
@@ -291,4 +296,4 @@ def validate_ip_detect_script(key=None, config=None):
 
         return failed_validation
 
-    return [False, None]
+    return [False, None, False]

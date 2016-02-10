@@ -41,16 +41,14 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
     pf = get_async_runner(config, targets, async_delegate=async_delegate)
     chains = []
 
+    preflight_chain = ssh.utils.CommandChain('preflight')
     # In web mode run if no --offline flag used.
     if options.web:
         if options.offline:
             log.debug('Offline mode used. Do not install prerequisites on CentOS7, RHEL7 in web mode')
         else:
-            prereqs_chain = ssh.utils.CommandChain('install_prerequisites')
-            _add_prereqs_script(prereqs_chain)
-            chains.append(prereqs_chain)
+            _add_prereqs_script(preflight_chain)
 
-    preflight_chain = ssh.utils.CommandChain('preflight')
     add_pre_action(preflight_chain, pf.ssh_user)
     preflight_chain.add_copy(pf_script_path, REMOTE_TEMP_DIR, comment='COPYING PREFLIGHT SCRIPT TO TARGETS')
 
@@ -328,13 +326,13 @@ dist=$(cat /etc/*-release | sed -n 's@^ID="\(.*\)"$@\\1@p')
 
 if ([ x$dist != 'xrhel' ] && [ x$dist != 'xcentos' ]); then
   echo "$dist is not supported. Only RHEL and CentOS are supported" >&2
-  exit 1
+  exit 0
 fi
 
 version=$(cat /etc/*-release | sed -n 's@^VERSION_ID="\(.*\)"$@\\1@p')
 if [ $version -lt 7 ]; then
   echo "$version is not supported. Only >= 7 version is supported" >&2
-  exit 1
+  exit 0
 fi
 
 sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
@@ -360,6 +358,8 @@ sudo yum install -y xz
 
 sudo getent group nogroup || sudo groupadd nogroup
 """
+    # Run a first command to get json file generated.
+    chain.add_execute(['echo', 'INSTALL', 'PREREQUISITES'])
     chain.add_execute([inline_script], comment='INSTALLING PREFLIGHT PREREQUISITES')
 
 

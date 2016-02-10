@@ -12,13 +12,15 @@ from dcos_installer.util import IP_DETECT_PATH, SERVE_DIR
 log = logging.getLogger(__name__)
 
 
-def do_configure(real_config):
+def do_configure(gen_config):
+    gen_config.update(get_gen_extra_args())
+
     subprocess.check_output(['mkdir', '-p', SERVE_DIR])
 
     gen_out = do_onprem(
         bash,
         ['bash', 'centos', 'onprem'],
-        real_config)
+        gen_config)
 
     # Get bootstrap from artifacts
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
@@ -26,38 +28,35 @@ def do_configure(real_config):
     pkgpanda.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
-def do_onprem(provider_module, mixins, genconf_config):
+def get_gen_extra_args():
     if 'BOOTSTRAP_ID' in os.environ:
         bootstrap_id = os.environ['BOOTSTRAP_ID']
     else:
         log.error("BOOTSTRAP_ID must be set in environment to run.")
-        return
+        raise KeyError
 
     arguments = {
         'cluster_id': 'TODO',
         'ip_detect_filename': IP_DETECT_PATH,
         'bootstrap_id': bootstrap_id,
         'provider': 'onprem'}
+    return arguments
 
-    # Make sure there are no overlaps between arguments and genconf_config.
-    # TODO(cmaloney): Switch to a better dictionary diff here which will
-    # show all the errors at once.
-    for k in genconf_config.keys():
-        if k in arguments.keys():
-            log.error("User config contains option `{}` already ".format(k) +
-                      "provided by caller of gen.generate()")
-            return
 
-    # update arguments with the genconf_config
-    arguments.update(genconf_config)
-
+def do_validate_gen_config(gen_config, mixins=['bash', 'centos', 'onprem']):
     # run validate first as this is the only way we have for now to remove "optional" keys
+    gen_config.update(get_gen_extra_args())
     validated = gen.validate(
-        arguments=arguments,
+        arguments=gen_config,
         mixins=copy.copy(mixins),  # FIXME: do a copy because gen.validate appends a '' at the end
         extra_templates=dict(),
         cc_package_files=list()
-        )
+    )
+    return validated
+
+
+def do_onprem(provider_module, mixins, arguments):
+    validated = do_validate_gen_config(arguments)
     if 'errors' in validated:
         errors = validated['errors']
         for optional_key in ('superuser_username', 'superuser_password_hash'):

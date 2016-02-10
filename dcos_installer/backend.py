@@ -19,17 +19,17 @@ def do_configure():
     config.config_path = CONFIG_PATH
     config.build()
     gen_config = config.make_gen_config()
-    messages = config.validate_config_file_only()
-    if len(messages['errors']) > 0:
-        log.error('Please fix validation errors before generating configuration. Try --validate-config.')
+    # Remove things Gen doesn't like
+    for key in list(gen_config.keys()):
+        if gen_config[key] is None or gen_config[key] == '[null]':
+                del gen_config[key]
+    messages = configure.do_validate_gen_config(gen_config)
+    if 'errors' in messages:
+        for key, err in messages['errors'].items():
+            log.error('{}: {}'.format(key, err))
         return 1
-    else:
-        gen_config = config.make_gen_config()
-        for key in list(gen_config.keys()):
-            if gen_config[key] is None or gen_config[key] == '[null]':
-                    del gen_config[key]
 
-        configure.do_configure(gen_config)
+    configure.do_configure(gen_config)
     return 0
 
 

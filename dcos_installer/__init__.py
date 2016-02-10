@@ -106,13 +106,10 @@ class DcosInstaller:
 
             if options.preflight:
                 print_header("EXECUTING PREFLIGHT")
-                check_config_validation()
-                try_genconf()
                 sys.exit(run_loop(action_lib.run_preflight, options))
 
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
-                check_config_validation()
                 deploy_returncode = 0
                 for role in ['master', 'agent']:
                     action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
@@ -124,7 +121,6 @@ class DcosInstaller:
 
             if options.postflight:
                 print_header("EXECUTING POSTFLIGHT")
-                check_config_validation()
                 sys.exit(run_loop(action_lib.run_postflight, options))
 
             if options.uninstall:
@@ -133,7 +129,7 @@ class DcosInstaller:
 
             if options.validate_config:
                 make_default_dir()
-                print_header('VALIDATING CONFIGURATION FILE: genconf/config.yaml')
+                print_header('VALIDATING CONFIGURATION')
                 messages, return_code = backend.do_validate_config()
                 sys.exit(return_code)
 

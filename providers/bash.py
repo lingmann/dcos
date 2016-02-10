@@ -251,7 +251,10 @@ function check_all() {
         }
     ')
     # CoreOS stable as of Aug 2015 has 1.6.2
-    check docker 1.6 "$docker_version"
+    check_command_exists docker
+    if $(which docker > /dev/null 2>&1); then
+        check docker 1.6 "$docker_version"
+    fi
 
     check curl
     check bash

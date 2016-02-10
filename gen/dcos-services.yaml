@@ -32,6 +32,7 @@
     ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz
 - name: dcos-setup.service
   command: start
+  no_block: true
   enable: true
   content: |
     [Unit]

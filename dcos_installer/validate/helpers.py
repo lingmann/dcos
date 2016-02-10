@@ -252,6 +252,32 @@ def validate_comma_list(key=None, config=None):
     return [False, None]
 
 
+def validate_ssh_key(key=None, config=None, optional=False):
+    if key in config:
+        is_string = validate_string(key, config)
+        if not is_string[0]:
+            return [False, "SSH key must be an unencrypted (no passphrase) SSH key which is not empty.", optional]
+
+        key = config[key]
+        if key != '':
+            # Validate the PEM encoded file
+            if 'ENCRYPTED' in key:
+                return [
+                    False,
+                    "Encrypted SSH keys (which contain passphrases) are not allowed. Please use a key without a passphrase.",  # noqa
+                    optional]
+
+            else:
+                return [True, 'This is a valid SSH key', optional]
+
+        return [
+            False,
+            "Empty keys are not allowed. Please enter a non-empty unencrypted (no passphrase) SSH key.",
+            optional]
+
+    return [False, None, optional]
+
+
 def validate_ip_detect_script(key=None, config=None, optional=False):
     fm = 'Please provide a valid executable script. Script must start with #!/'
     failed_validation = [False, fm, False]

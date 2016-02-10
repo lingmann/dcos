@@ -67,7 +67,7 @@ def get_onprem_dependencies(config, config_only=False):
             "agent_list": helpers.validate_ip_list('agent_list', config),
             "ip_detect_path": helpers.validate_path('ip_detect_path', config),
             "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
-            "ssh_key": helpers.validate_path('ssh_key_path', config),
+            "ssh_key": helpers.validate_ssh_key('ssh_key', config),
             "ssh_key_path": helpers.validate_path('ssh_key_path', config)}
 
         dep_tree.update(none_genconf_validation)

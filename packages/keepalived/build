@@ -9,15 +9,14 @@ export CXXFLAGS=-I/opt/mesosphere/include
 pushd "/pkg/src/keepalived"
 ./configure \
   "--prefix=$PKG_PATH" \
-  "--enable-sha1"
+  "--enable-sha1" \
+  "--sbindir=$PKG_PATH/bin"
 make -j8
 make install
 popd
 
 # move binary
-mv -f "$PKG_PATH/sbin/keepalived" "$PKG_PATH/bin/keepalived"
 chmod go+r "$PKG_PATH/bin/keepalived"
-rmdir "$PKG_PATH/sbin/"
 
 # copy libs
 mkdir -p "$PKG_PATH/lib"

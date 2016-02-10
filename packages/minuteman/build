@@ -59,11 +59,10 @@ ssh-add /tmp/ssh_key
 
 
 pushd /pkg/src/minuteman
-./rebar get-deps
-./rebar compile generate
+make rel
 popd
 
-cp -r /pkg/src/minuteman/rel/minuteman ${PKG_PATH}
+cp -r /pkg/src/minuteman/_build/default/rel/minuteman ${PKG_PATH}
 
 service=${PKG_PATH}/dcos.target.wants_minuteman/dcos-minuteman.service
 mkdir -p $(dirname $service)
@@ -77,6 +76,6 @@ StartLimitInterval=0
 RestartSec=5
 WorkingDirectory=${PKG_PATH}/minuteman
 EnvironmentFile=/opt/mesosphere/environment
-ExecStart=${PKG_PATH}/minuteman/bin/minuteman foreground
+ExecStart=${PKG_PATH}/minuteman/bin/env foreground
 Environment=HOME=/opt/mesosphere
 EOF

@@ -112,6 +112,8 @@ def return_configure_status(config_path=CONFIG_PATH):
     Read configuration from disk and return validation messages.
     """
     messages = DCOSConfig(config_path=config_path).validate()
+    warning = messages.get('warning')
+    messages['errors'].update(warning)
     return messages
 
 

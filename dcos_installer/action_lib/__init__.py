@@ -306,9 +306,44 @@ def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None
 def _add_prereqs_script(chain):
     inline_script = """
 #/bin/sh
-echo "Hello World" > /tmp/myscript
+
+dist=$(cat /etc/*-release | sed -n 's@^ID="\(.*\)"$@\\1@p')
+
+if ([ x$dist != 'xrhel' ] && [ x$dist != 'xcentos' ]); then
+  echo "$dist is not supported. Only RHEL and CentOS are supported" >&2
+  exit 1
+fi
+
+version=$(cat /etc/*-release | sed -n 's@^VERSION_ID="\(.*\)"$@\\1@p')
+if [ $version -lt 7 ]; then
+  echo "$version is not supported. Only >= 7 version is supported" >&2
+  exit 1
+fi
+
+sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
+[dockerrepo]
+name=Docker Repository
+baseurl=https://yum.dockerproject.org/repo/main/centos/$releasever/
+enabled=1
+gpgcheck=1
+gpgkey=https://yum.dockerproject.org/gpg
+EOF
+
+sudo yum -y update
+
+sudo yum install -y docker-engine
+sudo systemctl start docker
+sudo systemctl enable docker
+
+sudo yum install -y wget
+sudo yum install -y git
+sudo yum install -y unzip
+sudo yum install -y curl
+sudo yum install -y xz
+
+sudo getent group nogroup || sudo groupadd nogroup
 """
-    chain.add_execute([inline_script], comment='Installing preflight prerequisites')
+    chain.add_execute([inline_script], comment='INSTALLING PREFLIGHT PREREQUISITES')
 
 
 @asyncio.coroutine

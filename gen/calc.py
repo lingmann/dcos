@@ -172,7 +172,6 @@ entry = {
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,
         'config_id': calculate_config_id,
-        'is_ee': calculate_is_ee
     },
     'conditional': {
         'master_discovery': {
@@ -187,6 +186,9 @@ entry = {
                 'default': {
                     'resolvers': '["8.8.8.8", "8.8.4.4"]'
                 },
+                'must': {
+                    'is_ee': calculate_is_ee
+                }
             },
             'azure': {},
             'aws': {},

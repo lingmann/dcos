@@ -31,10 +31,10 @@ def make_vagrant(gen_out):
     return vagrant_script
 
 
-def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_arguments):
     gen_out = gen.generate(
         mixins=['vagrant', 'coreos'],
-        arguments=gen_arguments)
+        arguments=variant_arguments[None])
 
     vagrant_script = make_vagrant(gen_out)
 

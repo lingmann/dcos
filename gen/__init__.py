@@ -590,6 +590,8 @@ def validate_all_arguments_match_parameters(parameters, setters, arguments):
     for setter_list in setters.values():
         for setter in setter_list:
             all_parameters |= setter.parameters
+            all_parameters.add(setter.name)
+            all_parameters |= {name for name, value in setter.conditions}
 
     # Check every argument is in the set of parameters.
     for argument in arguments:

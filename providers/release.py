@@ -85,27 +85,6 @@ def from_json(json_str):
     return null_to_none(json.loads(json_str))
 
 
-def variant_str(variant):
-    """Return a string representation of variant."""
-    if variant is None:
-        return ''
-    return variant
-
-
-def variant_name(variant):
-    """Return a human-readable string representation of variant."""
-    if variant is None:
-        return '<default>'
-    return variant
-
-
-def variant_prefix(variant):
-    """Return a filename prefix for variant."""
-    if variant is None:
-        return ''
-    return variant + '.'
-
-
 def get_bootstrap_packages(bootstrap_id):
     return set(pkgpanda.util.load_json('packages/{}.active.json'.format(bootstrap_id)))
 
@@ -623,7 +602,7 @@ def make_stable_artifacts(cache_repository_url, skip_build):
             'reproducible_path': 'bootstrap/' + active_filename,
             'local_path': 'packages/' + active_filename
             })
-        latest_filename = "{}bootstrap.latest".format(variant_prefix(name))
+        latest_filename = "{}bootstrap.latest".format(util.variant_prefix(name))
         add_file({
             'channel_path': latest_filename,
             'local_path': 'packages/' + latest_filename
@@ -663,7 +642,7 @@ def make_channel_artifacts(metadata):
     # Add installer scripts for all bootstraps.
     for variant, (installer_version, installer_filename) in installers.items():
         artifacts.append({
-            'channel_path': 'dcos_generate_config.{}sh'.format(variant_prefix(variant)),
+            'channel_path': 'dcos_generate_config.{}sh'.format(util.variant_prefix(variant)),
             'local_path': installer_filename
             })
 
@@ -677,6 +656,16 @@ def make_channel_artifacts(metadata):
         if name in metadata['storage_urls']:
             bootstrap_url = metadata['storage_urls'][name] + metadata['repository_path']
 
+        variant_arguments = dict()
+
+        for bootstrap_name, bootstrap_id in metadata['bootstrap_dict'].items():
+            variant_arguments[bootstrap_name] = copy.deepcopy({
+                'bootstrap_url': bootstrap_url,
+                'provider': name,
+                'bootstrap_id': bootstrap_id,
+                'is_ee': 'true' if bootstrap_name == 'ee' else 'false'
+                })
+
         # Add templates for the default variant.
         # Use keyword args to make not matching ordering a loud error around changes.
         provider_data = module.do_create(
@@ -684,11 +673,7 @@ def make_channel_artifacts(metadata):
             repo_channel_path=metadata['repo_channel_path'],
             channel_commit_path=metadata['channel_commit_path'],
             commit=metadata['commit'],
-            gen_arguments=copy.deepcopy({
-                'bootstrap_id': metadata['bootstrap_dict'][None],
-                'bootstrap_url': bootstrap_url,
-                'provider': name
-            }))
+            variant_arguments=variant_arguments)
 
         # Translate provider data to artifacts
         assert provider_data.keys() <= {'packages', 'artifacts'}
@@ -800,12 +785,12 @@ def make_installer_docker(variant, bootstrap_id):
 
     image_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
     genconf_tar = "dcos-genconf." + image_version + ".tar"
-    installer_filename = "dcos_generate_config." + variant_prefix(variant) + "sh"
+    installer_filename = "dcos_generate_config." + util.variant_prefix(variant) + "sh"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
     bootstrap_path = os.getcwd() + "/packages/" + bootstrap_filename
 
     metadata = {
-        'variant': variant_name(variant),
+        'variant': util.variant_name(variant),
         'bootstrap_id': bootstrap_id,
         'docker_tag': image_version,
         'genconf_tar': genconf_tar,
@@ -860,8 +845,8 @@ def build_installers(bootstrap_dict):
 
     # TODO(cmaloney): Build installers in parallel.
     # Variants are sorted for stable ordering.
-    for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: variant_str(kv[0])):
-        print("Building installer for variant:", variant_name(variant))
+    for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: util.variant_str(kv[0])):
+        print("Building installer for variant:", util.variant_name(variant))
         installers[variant] = make_installer_docker(variant, bootstrap_id)
     return installers
 

@@ -5,6 +5,7 @@ by shelling out to installed genconf python app
 REQUIREMENTS:
     dcos_generate_config.sh artifact is in current working dir
 """
+import logging
 import os
 import random
 import stat
@@ -142,13 +143,14 @@ docker run \
 -e "SLAVE_HOSTS={slave_list}" \
 -e "REGISTRY_HOST={registry_host}" \
 -e "DNS_SEARCH=true" \
---net=host py.test py.test -vv {marker_args} /integration_test.py \
+--net=host py.test py.test -vv {ci_flags} {marker_args} /integration_test.py \
 """.format(
         dcos_dns=dcos_dns,
         master_list=master_list,
         slave_list=slave_list,
         registry_host=registry_host,
-        marker_args=marker_args)
+        marker_args=marker_args,
+        ci_flags=os.getenv('CI_FLAGS', ''))
     print("Running test in remote docker")
     ssh_runner.execute_cmd(test_cmd)
     host = ssh_runner.targets[0]
@@ -184,6 +186,7 @@ def prep_hosts(ssh_runner, registry, minuteman_enabled=False):
 
 
 def main():
+    logging.basicConfig(level=logging.DEBUG)
     if 'DCOS_VARIANT' in os.environ:
         variant = os.environ['DCOS_VARIANT']
     else:
@@ -320,17 +323,14 @@ def main():
     postflight()
 
     # Runs dcos-image/integration_test.py inside the cluster
-    @retry(wait_fixed=1000, stop_max_attempt_number=10)
-    def test_deployment():
-        integration_test(
-            ssh_runner,
-            dcos_dns=local_ip[host_list[1]],
-            master_list=local_ip[host_list[1]],
-            slave_list=",".join([local_ip[_] for _ in host_list[2:]]),
-            registry_host=local_ip[host_list[0]],
-            test_minuteman=minuteman_enabled)
+    integration_test(
+        ssh_runner,
+        dcos_dns=local_ip[host_list[1]],
+        master_list=local_ip[host_list[1]],
+        slave_list=",".join([local_ip[_] for _ in host_list[2:]]),
+        registry_host=local_ip[host_list[0]],
+        test_minuteman=minuteman_enabled)
 
-    test_deployment()
     # TODO(cmaloney): add a `--healthcheck` option which runs dcos-diagnostics
     # on every host to see if they are working.
 

@@ -158,7 +158,7 @@ function check() {
     fi
     check_command_exists $1 $DISPLAY_NAME
     # check_version takes {3,4} arguments
-    if [[ "$#" -ge 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
+    if [[ "$?" -eq 0 && "$#" -ge 3 && $DISABLE_VERSION_CHECK -eq 0 ]]; then
         check_version $*
     fi
 }
@@ -204,7 +204,7 @@ function check_all() {
 
     check_sort_capability
 
-    local docker_version=$(docker version 2>/dev/null | awk '
+    local docker_version=$(command -v docker >/dev/null 2>&1 && docker version 2>/dev/null | awk '
         BEGIN {
             version = 0
             client_version = 0
@@ -251,10 +251,7 @@ function check_all() {
         }
     ')
     # CoreOS stable as of Aug 2015 has 1.6.2
-    check_command_exists docker
-    if $(which docker > /dev/null 2>&1); then
-        check docker 1.6 "$docker_version"
-    fi
+    check docker 1.6 "$docker_version"
 
     check curl
     check bash

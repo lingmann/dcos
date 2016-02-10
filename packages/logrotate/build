@@ -5,7 +5,7 @@ pushd build
 
 cd /pkg/src/logrotate
 ./autogen.sh
-./configure --prefix="$PKG_PATH"
+./configure --prefix="$PKG_PATH" --sbindir="$PKG_PATH/bin"
 make
 make install
 

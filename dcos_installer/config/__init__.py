@@ -128,18 +128,21 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 
     def get_config(self):
         """
-        Load user-land configuration and exit upon errors.
+        Get config from disk.
         """
         if os.path.isfile(self.config_path):
             log.debug("Loading YAML configuration: %s", self.config_path)
             with open(self.config_path, 'r') as data:
-                return yaml.load(data)
+                configuration = yaml.load(data)
 
-        log.error(
-            "Configuration file not found, %s. Writing new one with all defaults.",
-            self.config_path)
-        self.write()
-        return yaml.load(open(self.config_path))
+        else:
+            log.error(
+                "Configuration file not found, %s. Writing new one with all defaults.",
+                self.config_path)
+            self.write()
+            configuration = yaml.load(open(self.config_path))
+
+        return configuration
 
     def write(self):
         if self.config_path:

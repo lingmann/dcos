@@ -76,7 +76,7 @@ def test_configure(monkeypatch, mocker):
         'TRACE': [405, 'text/plain'],
         'CONNECT': [405, 'text/plain'],
     }
-    mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
+    mocked_get_config = mocker.patch('dcos_installer.backend.get_ui_config')
     mocked_create_config_from_post = mocker.patch('dcos_installer.backend.create_config_from_post')
     mocked_get_config.return_value = {"test": "config"}
     mocked_create_config_from_post.return_value = (True, None)
@@ -236,7 +236,7 @@ def test_action_preflight(monkeypatch, mocker):
 
     mocked_read_json_state = mocker.patch('dcos_installer.async_server.read_json_state')
 
-    mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
+    mocked_get_config = mocker.patch('dcos_installer.backend.get_ui_config')
     mocked_get_config.return_value = {"test": "config"}
 
     mocked_run_preflight = mocker.patch('dcos_installer.action_lib.run_preflight')

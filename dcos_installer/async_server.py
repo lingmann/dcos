@@ -13,6 +13,8 @@ from dcos_installer.util import STATE_DIR
 
 log = logging.getLogger()
 
+options = None
+
 VERSION = '1'
 
 
@@ -75,7 +77,7 @@ def configure(request):
         """
         Return the written configuration on disk.
         """
-        config = backend.get_config()
+        config = backend.get_ui_config()
         resp = web.json_response(config)
 
     resp.headers['Content-Type'] = 'application/json'
@@ -240,7 +242,7 @@ def action_action_name(request):
                     new_action = action_map.get(new_action_str)
                     yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR, **params))
         else:
-            yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, **params))
+            yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, options=options, **params))
         return web.json_response({'status': '{} started'.format(action_name)})
 
 
@@ -287,13 +289,16 @@ app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_cu
 app.router.add_route('GET', '/api/v{}/logs'.format(VERSION), logs_handler)
 
 
-def start(port=9000):
+def start(cli_options):
+    global options
+    options = cli_options
+
     log.debug('DCOS Installer v{}'.format(VERSION))
     handler = app.make_handler()
     f = loop.create_server(
         handler,
         '0.0.0.0',
-        port)
+        cli_options.port)
     srv = loop.run_until_complete(f)
     log.info('Starting server {}'.format(srv.sockets[0].getsockname()))
     if os.path.isdir(STATE_DIR):

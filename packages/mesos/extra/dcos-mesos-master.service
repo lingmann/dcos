@@ -10,4 +10,4 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
 EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py $ZOOKEEPER_CLUSTER_SIZE
-ExecStart=${PKG_PATH}/sbin/mesos-master
+ExecStart=${PKG_PATH}/bin/mesos-master

@@ -18,16 +18,13 @@ pushd build
   --with-protobuf=/opt/mesosphere/active/mesos-buildenv \
   --with-boost=/opt/mesosphere/active/mesos-buildenv \
   --with-curl=/opt/mesosphere/active/curl \
+  --sbindir="$PKG_PATH/bin"
 # TODO(cmaloney): -j8 is almost certainly wrong.
 make -j8
 
 make install
 cp src/java/target/mesos-*.jar "$libdir"
 popd
-
-mkdir -p "$PKG_PATH/bin"
-ln -s "$PKG_PATH/sbin/mesos-master" "$PKG_PATH/bin/mesos-master"
-ln -s "$PKG_PATH/sbin/mesos-slave" "$PKG_PATH/bin/mesos-slave"
 
 # TODO(cmaloney): Make these a seperate mesos library package.
 # Copy the shared libraries from the system which mesos requires

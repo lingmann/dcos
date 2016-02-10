@@ -18,19 +18,18 @@ def do_configure():
     config = DCOSConfig()
     config.config_path = CONFIG_PATH
     config.build()
+    # Get gen specific configuration (stringified, only gen keys)
     gen_config = config.make_gen_config()
-    messages = config.validate_config_file_only()
-    if len(messages['errors']) > 0:
-        log.error('Please fix validation errors before generating configuration. Try --validate-config.')
-        return 1
-    else:
-        gen_config = config.make_gen_config()
-        for key in list(gen_config.keys()):
-            if gen_config[key] is None or gen_config[key] == '[null]':
-                    del gen_config[key]
-
-        configure.do_configure(gen_config)
-    return 0
+    # Remove things Gen doesn't like
+    for key in list(gen_config.keys()):
+        if gen_config[key] is None or gen_config[key] == '[null]':
+                del gen_config[key]
+    # Do one final validation from gen itself, just to be sure
+    messages = configure.do_validate_gen_config(gen_config)
+    if 'errors' in messages:
+        return messages
+    configure.do_configure(gen_config)
+    return messages
 
 
 def hash_password(string):
@@ -64,6 +63,9 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Get validation messages
     messages = config_obj.validate()
+    errors = messages.get('errors')
+    warnings = messages.get('warning')
+    errors.update(warnings)
 
     # Return only keys sent in POST, do not write if validation
     # of config fails.
@@ -95,8 +97,9 @@ def do_validate_config(config_path=CONFIG_PATH):
     messages = config.validate()
     return_code = 0
     if len(messages['errors']) > 0:
-        log.error('Validation errors detected!')
         return_code = 1
+    elif len(messages['warning']) > 0:
+        return_code = 2
     return messages, return_code
 
 
@@ -109,6 +112,8 @@ def return_configure_status(config_path=CONFIG_PATH):
     Read configuration from disk and return validation messages.
     """
     messages = DCOSConfig(config_path=config_path).validate()
+    warning = messages.get('warning')
+    messages['errors'].update(warning)
     return messages
 
 

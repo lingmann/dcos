@@ -201,7 +201,7 @@ def master_list_arm_json(num_masters, varietal):
     return json.dumps([arm_expression.format(x) for x in range(num_masters)])
 
 
-def make_template(num_masters, gen_arguments, varietal):
+def make_template(num_masters, gen_arguments, varietal, bootstrap_variant_prefix):
     '''
     Return a tuple: the generated template for num_masters and the artifact dict.
 
@@ -232,7 +232,7 @@ def make_template(num_masters, gen_arguments, varietal):
         raise ValueError("Unknown Azure varietal specified")
 
     artifact = {
-        'channel_path': 'azure/{}-{}master.azuredeploy.json'.format(varietal, num_masters),
+        'channel_path': 'azure/{}{}-{}master.azuredeploy.json'.format(bootstrap_variant_prefix, varietal, num_masters),
         'local_content': dcos_template.arm,
         'content_type': 'application/json; charset=utf-8'
     }
@@ -240,14 +240,18 @@ def make_template(num_masters, gen_arguments, varietal):
     return dcos_template, artifact
 
 
-def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_arguments):
     extra_packages = list()
     artifacts = list()
     for arm_t in ['dcos', 'acs']:
         for num_masters in [1, 3, 5]:
-            dcos_template, artifact = make_template(num_masters, gen_arguments, arm_t)
-            extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
-            artifacts.append(artifact)
+            for bootstrap_name, gen_arguments in variant_arguments.items():
+                dcos_template, artifact = make_template(num_masters,
+                                                        deepcopy(gen_arguments),
+                                                        arm_t,
+                                                        util.variant_prefix(bootstrap_name))
+                extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)
+                artifacts.append(artifact)
 
     artifacts.append({
         'channel_path': 'azure.html',

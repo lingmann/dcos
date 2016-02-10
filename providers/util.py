@@ -44,3 +44,24 @@ def do_bundle_onprem(extra_files, gen_out, output_dir):
     # Copy the cluster packages
     for name, info in gen_out.cluster_packages.items():
         copy_makedirs(info['filename'], output_dir + info['filename'])
+
+
+def variant_str(variant):
+    """Return a string representation of variant."""
+    if variant is None:
+        return ''
+    return variant
+
+
+def variant_name(variant):
+    """Return a human-readable string representation of variant."""
+    if variant is None:
+        return '<default>'
+    return variant
+
+
+def variant_prefix(variant):
+    """Return a filename prefix for variant."""
+    if variant is None:
+        return ''
+    return variant + '.'

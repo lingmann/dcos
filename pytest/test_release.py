@@ -8,6 +8,7 @@ from pkgpanda.util import write_json, write_string
 
 import providers.aws_config
 import providers.release as release
+import providers.util as util
 
 
 def roundtrip_to_json(data, mid_state, new_end_state=None):
@@ -75,14 +76,14 @@ def test_strip_locals():
 
 
 def test_variant_variations():
-    assert release.variant_str(None) == ''
-    assert release.variant_str('test') == 'test'
+    assert util.variant_str(None) == ''
+    assert util.variant_str('test') == 'test'
 
-    assert release.variant_name(None) == '<default>'
-    assert release.variant_name('test') == 'test'
+    assert util.variant_name(None) == '<default>'
+    assert util.variant_name('test') == 'test'
 
-    assert release.variant_prefix(None) == ''
-    assert release.variant_prefix('test') == 'test.'
+    assert util.variant_prefix(None) == ''
+    assert util.variant_prefix('test') == 'test.'
 
 
 def exercise_storage_provider(tmpdir, storage_provider):

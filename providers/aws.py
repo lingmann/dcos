@@ -342,36 +342,55 @@ def get_spot_args(base_args):
     return spot_args
 
 
-def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments):
+def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_arguments):
     # Generate the single-master and multi-master templates.
-    args = deepcopy(gen_arguments)
-    args['exhibitor_address'] = '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }'
-    args['s3_bucket'] = '{ "Ref" : "ExhibitorS3Bucket" }'
-    args['s3_prefix'] = '{ "Ref" : "AWS::StackName" }'
-    args['exhibitor_storage_backend'] = 'aws_s3'
-    args['master_role'] = '{ "Ref" : "MasterRole" }'
-    args['agent_role'] = '{ "Ref" : "SlaveRole" }'
-    single_args = deepcopy(args)
-    multi_args = deepcopy(args)
-    single_args['num_masters'] = "1"
-    multi_args['num_masters'] = "3"
-    single_master = gen_templates(single_args)
-    multi_master = gen_templates(multi_args)
-    single_master_spot = gen_templates(get_spot_args(single_args))
-    multi_master_spot = gen_templates(get_spot_args(single_args))
-    button_page = gen_buttons(repo_channel_path, channel_commit_path, tag, commit)
 
-    # Make sure we upload the packages for both the multi-master templates as well
-    # as the single-master templates.
     extra_packages = list()
-    extra_packages += util.cluster_to_extra_packages(multi_master.results.cluster_packages)
-    extra_packages += util.cluster_to_extra_packages(single_master.results.cluster_packages)
-    extra_packages += util.cluster_to_extra_packages(multi_master_spot.results.cluster_packages)
-    extra_packages += util.cluster_to_extra_packages(single_master_spot.results.cluster_packages)
+    artifacts = list()
 
-    advanced_artifacts = []
-    for template_name, advanced_template in gen_advanced_template(gen_arguments):
-        advanced_artifacts.append({
+    for bootstrap_variant, args in variant_arguments.items():
+        # Setup base arguments
+        args = deepcopy(args)
+        args['exhibitor_address'] = '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }'
+        args['s3_bucket'] = '{ "Ref" : "ExhibitorS3Bucket" }'
+        args['s3_prefix'] = '{ "Ref" : "AWS::StackName" }'
+        args['exhibitor_storage_backend'] = 'aws_s3'
+        args['master_role'] = '{ "Ref" : "MasterRole" }'
+        args['agent_role'] = '{ "Ref" : "SlaveRole" }'
+
+        variant_prefix = util.variant_prefix(bootstrap_variant)
+
+        def add(gen_args, filename):
+            nonlocal extra_packages
+            gen_out = gen_templates(gen_args)
+            artifacts.append({
+                'channel_path': 'cloudformation/{}{}'.format(variant_prefix, filename),
+                'local_content': gen_out.cloudformation,
+                'content_type': 'application/json; charset=utf-8'
+                })
+            extra_packages += util.cluster_to_extra_packages(gen_out.results.cluster_packages)
+
+        # Single master templates
+        single_args = deepcopy(args)
+        single_args['num_masters'] = "1"
+        add(single_args, 'single-master.cloudformation.json')
+        add(get_spot_args(single_args), 'single-master-spot.cloudformation.json')
+
+        # Multi master templates
+        multi_args = deepcopy(args)
+        multi_args['num_masters'] = "3"
+        add(multi_args, 'multi-master.cloudformation.json')
+        add(get_spot_args(multi_args), 'multi-master-spot.cloudformation.json')
+
+    # Button page linking to the basic templates.
+    button_page = gen_buttons(repo_channel_path, channel_commit_path, tag, commit)
+    artifacts.append({
+        'channel_path': 'aws.html',
+        'local_content': button_page,
+        'content_type': 'text/html; charset=utf-8'})
+
+    for template_name, advanced_template in gen_advanced_template(variant_arguments[None]):
+        artifacts.append({
             'channel_path': 'cloudformation/{}'.format(template_name),
             'local_content': advanced_template.cloudformation,
             'content_type': 'application/json; charset=utf-8',
@@ -379,7 +398,7 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments
         extra_packages += util.cluster_to_extra_packages(advanced_template.results.cluster_packages)
 
     for template_name, advanced_template in gen_supporting_template():
-        advanced_artifacts.append({
+        artifacts.append({
             'channel_path': 'cloudformation/{}'.format(template_name),
             'local_content': advanced_template.cloudformation,
             'content_type': 'application/json; charset=utf-8',
@@ -387,33 +406,7 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, gen_arguments
 
     return {
         'packages': extra_packages,
-        'artifacts': [
-            {
-                'channel_path': 'cloudformation/single-master.cloudformation.json',
-                'local_content': single_master.cloudformation,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'cloudformation/multi-master.cloudformation.json',
-                'local_content': multi_master.cloudformation,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'cloudformation/single-master-spot.cloudformation.json',
-                'local_content': single_master_spot.cloudformation,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'cloudformation/multi-master-spot.cloudformation.json',
-                'local_content': multi_master_spot.cloudformation,
-                'content_type': 'application/json; charset=utf-8'
-            },
-            {
-                'channel_path': 'aws.html',
-                'local_content': button_page,
-                'content_type': 'text/html; charset=utf-8'
-            }
-        ] + advanced_artifacts
+        'artifacts': artifacts
     }
 
 

@@ -337,6 +337,7 @@ EOF
 
 sudo yum -y update
 
+sudo mkdir -p /etc/systemd/system/docker.service.d
 sudo tee /etc/systemd/system/docker.service.d/override.conf <<- EOF
 ExecStart=
 ExecStart=/usr/bin/docker daemon --storage-driver=overlay -H fd://

@@ -89,11 +89,6 @@ echo -e 'Configuring DCOS'
 # Install the DCOS services, start DCOS
 function setup_and_start_services() {
 
-declare NO_BLOCK_FLAG=""
-if (( $SYSTEMCTL_NO_BLOCK == 1 )); then
-  NO_BLOCK_FLAG='--no-block'
-fi
-
 echo -e 'Setting and starting DCOS'
 {{ setup_services }}
 }
@@ -410,6 +405,14 @@ main
 
 """
 
+systemctl_no_block_service = """
+if (( $SYSTEMCTL_NO_BLOCK == 1 )); then
+    systemctl {command} {name} --no-block
+else
+    systemctl {command} {name}
+fi
+"""
+
 
 def generate(gen_out, output_dir):
     print("Generating Bash configuration files for DCOS")
@@ -461,8 +464,12 @@ def make_bash(gen_out):
         if service.get('enable'):
             setup_services += "systemctl enable {}\n".format(name)
         if 'command' in service:
-            noblock = ' "$NO_BLOCK_FLAG"' if service.get('no_block') else ''
-            setup_services += "systemctl {} {}{}\n".format(service['command'], name, noblock)
+            if service.get('no_block'):
+                setup_services += systemctl_no_block_service.format(
+                    command=service['command'],
+                    name=name)
+            else:
+                setup_services += "systemctl {} {}\n".format(service['command'], name)
 
     # Populate in the bash script template
     bash_script = gen.template.parse_str(bash_template).render({

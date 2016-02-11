@@ -106,7 +106,7 @@ def tall_enough_to_ride():
     choices_false = ['No', 'no', 'n']
     while True:
         do_uninstall = input(
-'This will completely wipe out all DCOS data, including /var/lib/zookeeper on your master hosts. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')  # noqa
+'This will uninstall DCOS on your cluster. You may need to manually remove /var/lib/zookeeper in some cases after this completes, please see our documentation for details. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')  # noqa
         if do_uninstall in choices_true:
             return True
         elif do_uninstall in choices_false:

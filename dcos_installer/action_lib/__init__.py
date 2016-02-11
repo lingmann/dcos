@@ -303,16 +303,7 @@ def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None
         'sudo',
         'rm',
         '-rf',
-        '/opt/mesosphere/',
-        '&&',
-        'test',
-        '!',
-        '-d',
-        '/var/lib/zookeeper',
-        '||',
-        'rm'
-        '-rf',
-        '/var/lib/zookeeper'], comment='Uninstalling DCOS')
+        '/opt/mesosphere/'], comment='Uninstalling DCOS')
     result = yield from runner.run_commands_chain_async([uninstall_chain], block=block, state_json_dir=state_json_dir)
 
     return result
@@ -347,6 +338,7 @@ EOF
 sudo yum -y update
 
 sudo yum install -y docker-engine
+echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
 sudo systemctl start docker
 sudo systemctl enable docker
 

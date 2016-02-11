@@ -200,6 +200,39 @@ EOM
     fi
 }
 
+
+function check_docker_device_mapper_loopback() {
+    echo -e -n 'Checking Docker is configured with a production storage driver: '
+
+  storage_driver="$(docker info | grep 'Storage Driver' | cut -d ':' -f 2  | tr -d '[[:space:]]')"
+
+  if [ "$storage_driver" != "devicemapper" ]; then
+      print_status 0 "${NORMAL}(${storage_driver})"
+      return
+  fi
+
+  data_file="$(docker info | grep 'Data file' | cut -d ':' -f 2  | tr -d '[[:space:]]')"
+
+  if [[ "${data_file}" == /dev/loop* ]]; then
+    print_status 1 "${NORMAL}(${storage_driver}, ${data_file})"
+    echo
+    cat <<EOM
+Docker is configured to use the devicemapper storage driver with a loopback
+device behind it. This is highly recommended against by Docker and the
+community at large for production use[0][1]. See the docker documentation on
+selecting an alternate storage driver, or use alternate storage than loopback
+for the devicemapper driver.
+
+[0] https://docs.docker.com/engine/userguide/storagedriver/device-mapper-driver/
+[1] http://www.projectatomic.io/blog/2015/06/notes-on-fedora-centos-and-docker-storage-drivers/
+EOM
+        echo
+        exit 1
+    else
+        print_status 0 "${NORMAL}(${storage_driver} ${data_file})"
+    fi
+}
+
 function check_all() {
     # Disable errexit because we want the preflight checks to run all the way
     # through and not bail in the middle, which will happen as it relies on
@@ -292,6 +325,9 @@ function check_all() {
     do
       check_service $service
     done
+
+    # Check we're not in docker on devicemapper loopback as storage driver.
+    check_docker_device_mapper_loopback
 
     for role in "$ROLES"
     do

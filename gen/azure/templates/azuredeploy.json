@@ -532,7 +532,8 @@
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
         "[concat('Microsoft.Network/publicIPAddresses/', 'masterPublicIP', copyindex())]",
         "[concat('Microsoft.Network/networkSecurityGroups/', variables('masterSecurityGroupName'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('masterLoadBalancerName'))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('masterLoadBalancerName'))]",
+        "[concat(variables('masterLoadBalancerID'),'/inboundNatRules/SSH-master',copyIndex())]"
       ],
       "properties": {
         "ipConfigurations": [
@@ -549,6 +550,11 @@
               "loadBalancerBackendAddressPools": [
                 {
                   "id": "[concat(variables('masterLoadBalancerID'), '/backendAddressPools/',variables('mastersLBBackEndPoolName'))]"
+                }
+              ],
+              "loadBalancerInboundNatRules": [
+                {
+                  "id": "[concat(variables('masterLoadBalancerID'),'/inboundNatRules/SSH-master',copyIndex())]"
                 }
               ]
             }
@@ -789,26 +795,30 @@
                 "id": "[variables('masterBackEndIPConfigID')]"
               }
             }
-          },
-          {
-            "name": "ssh",
-            "properties": {
-              "frontendPort": 22,
-              "protocol": "Tcp",
-              "backendPort": 22,
-              "idleTimeoutInMinutes": 15,
-              "probe": {
-                "id": "[concat(resourceId('Microsoft.Network/loadBalancers', variables('masterLoadBalancerName')), '/probes/http_probe')]"
-              },
-              "frontendIPConfiguration": {
-                "id": "[variables('masterFrontEndIPConfigID')]"
-              },
-              "backendAddressPool": {
-                "id": "[variables('masterBackEndIPConfigID')]"
-              }
-            }
           }
         ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/loadBalancers/inboundNatRules",
+      "name": "[concat(variables('masterLoadBalancerName'), '/', 'SSH-master', copyIndex())]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "masterVmLoop",
+        "count": "[variables('numberOfMasters')]"
+      },
+      "dependsOn": [
+        "[variables('masterLoadBalancerID')]"
+      ],
+      "properties": {
+        "frontendIPConfiguration": {
+          "id": "[variables('masterFrontEndIPConfigID')]"
+        },
+        "protocol": "tcp",
+        "frontendPort": "[copyIndex(2200)]",
+        "backendPort": 22,
+        "enableFloatingIP": false
       }
     },
     {

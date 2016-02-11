@@ -337,8 +337,12 @@ EOF
 
 sudo yum -y update
 
+sudo tee /etc/systemd/system/docker.service.d/override.conf <<- EOF
+ExecStart=
+ExecStart=/usr/bin/docker daemon --storage-driver=overlay -H fd://
+EOF
+
 sudo yum install -y docker-engine
-echo "STORAGE_DRIVER=overlay" | sudo tee --append /etc/sysconfig/docker-storage-setup
 sudo systemctl start docker
 sudo systemctl enable docker
 

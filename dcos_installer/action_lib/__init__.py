@@ -310,7 +310,7 @@ def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None
         '-d',
         '/var/lib/zookeeper',
         '||',
-        'rm'
+        'rm',
         '-rf',
         '/var/lib/zookeeper'], comment='Uninstalling DCOS')
     result = yield from runner.run_commands_chain_async([uninstall_chain], block=block, state_json_dir=state_json_dir)

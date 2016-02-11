@@ -161,15 +161,13 @@ def transform(line):
     return "%s, %s, %s, %s,\n" % (transformed_before, transformed_ref, transformed_after, '"\\n"')
 
 
-def render_cloudformation(cf_template, **kwds):
+def render_cloudformation_transform(cf_template, transform_func=lambda x: x, **kwds):
     # TODO(cmaloney): There has to be a cleaner way to do this transformation.
     # For now just moved from cloud_config_cf.py
     # TODO(cmaloney): Move with the logic that does this same thing in Azure
-    def transform_lines(text):
-        return ''.join(map(transform, text.splitlines())).rstrip(',\n')
 
     template_str = gen.template.parse_str(cf_template).render(
-        {k: transform_lines(v) for k, v in kwds.items()}
+        {k: transform_func(v) for k, v in kwds.items()}
     )
 
     template_json = json.loads(template_str)
@@ -178,6 +176,13 @@ def render_cloudformation(cf_template, **kwds):
     template_json['Metadata']['TemplateGenerationDate'] = util.template_generation_date
 
     return json.dumps(template_json)
+
+
+def render_cloudformation(cf_template, **kwds):
+    def transform_lines(text):
+        return ''.join(map(transform, text.splitlines())).rstrip(',\n')
+
+    return render_cloudformation_transform(cf_template, transform_func=transform_lines, **kwds)
 
 
 def gen_supporting_template():
@@ -240,30 +245,42 @@ def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
     })
 
 
-def gen_advanced_template(arguments):
-    for variant in ['master', 'priv-agent', 'pub-agent']:
-        print('Building advanced template for {}'.format(variant))
-        xlated_variant, variant_args = groups[variant]
-        variant_args = deepcopy(variant_args)
-        variant_args['num_masters'] = "1"
-        variant_args.update(arguments)
-        params = cf_instance_groups[xlated_variant]
-        params['report_name'] = variant_args.pop('report_name')
-        template_key = 'advanced-{}'.format(variant)
+def gen_advanced_template(arguments, variant_prefix, channel_commit_path):
+    for node_type in ['master', 'priv-agent', 'pub-agent']:
+        print('Building advanced template for {}'.format(node_type))
+        node_template_id, node_args = groups[node_type]
+        node_args = deepcopy(node_args)
+        node_args.update(arguments)
+        params = cf_instance_groups[node_template_id]
+        params['report_name'] = node_args.pop('report_name')
+        template_key = 'advanced-{}'.format(node_type)
         template_name = template_key + '.json'
         template_path = 'aws/templates/advanced/' + template_name
-        if variant == 'master':
+        if node_type == 'master':
             for num_masters in [1, 3, 5, 7]:
                 master_tk = '{}-{}'.format(template_key, num_masters)
-                print('Building {} for num_masters = {}'.format(variant, num_masters))
-                variant_args['num_masters'] = str(num_masters)
-                bunch = make_advanced_bunch(variant_args,
+                print('Building {} for num_masters = {}'.format(node_type, num_masters))
+                node_args['num_masters'] = str(num_masters)
+                bunch = make_advanced_bunch(node_args,
                                             master_tk,
                                             template_path,
                                             params)
                 yield '{}.json'.format(master_tk), bunch
+
+                # Zen template corresponding to this number of masters
+                yield 'zen-{}.json'.format(num_masters), gen.Bunch({
+                    'cloudformation': render_cloudformation_transform(
+                        resource_string("gen", "aws/templates/advanced/zen.json").decode(),
+                        variant_prefix=variant_prefix,
+                        channel_commit_path=channel_commit_path,
+                        num_masters=num_masters
+                        ),
+                    # TODO(cmaloney): This is hacky but quickest for now. Should not have to add
+                    # extra info that there are no cluster_packages
+                    'results': gen.Bunch({'cluster_packages': {}})})
         else:
-            bunch = make_advanced_bunch(variant_args,
+            node_args['num_masters'] = "1"
+            bunch = make_advanced_bunch(node_args,
                                         template_key,
                                         template_path,
                                         params)
@@ -348,9 +365,9 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
     extra_packages = list()
     artifacts = list()
 
-    for bootstrap_variant, args in variant_arguments.items():
+    for bootstrap_variant, variant_base_args in variant_arguments.items():
         # Setup base arguments
-        args = deepcopy(args)
+        args = deepcopy(variant_base_args)
         args['exhibitor_address'] = '{ "Fn::GetAtt" : [ "InternalMasterLoadBalancer", "DNSName" ] }'
         args['s3_bucket'] = '{ "Ref" : "ExhibitorS3Bucket" }'
         args['s3_prefix'] = '{ "Ref" : "AWS::StackName" }'
@@ -360,15 +377,18 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
 
         variant_prefix = util.variant_prefix(bootstrap_variant)
 
-        def add(gen_args, filename):
+        def add_pre_genned(filename, gen_out):
             nonlocal extra_packages
-            gen_out = gen_templates(gen_args)
             artifacts.append({
                 'channel_path': 'cloudformation/{}{}'.format(variant_prefix, filename),
                 'local_content': gen_out.cloudformation,
                 'content_type': 'application/json; charset=utf-8'
                 })
             extra_packages += util.cluster_to_extra_packages(gen_out.results.cluster_packages)
+
+        def add(gen_args, filename):
+            gen_out = gen_templates(gen_args)
+            add_pre_genned(filename, gen_out)
 
         # Single master templates
         single_args = deepcopy(args)
@@ -382,6 +402,11 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
         add(multi_args, 'multi-master.cloudformation.json')
         add(get_spot_args(multi_args), 'multi-master-spot.cloudformation.json')
 
+        for template_name, advanced_template in gen_advanced_template(variant_base_args,
+                                                                      variant_prefix,
+                                                                      channel_commit_path):
+            add_pre_genned(template_name, advanced_template)
+
     # Button page linking to the basic templates.
     button_page = gen_buttons(repo_channel_path, channel_commit_path, tag, commit)
     artifacts.append({
@@ -389,14 +414,7 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
         'local_content': button_page,
         'content_type': 'text/html; charset=utf-8'})
 
-    for template_name, advanced_template in gen_advanced_template(variant_arguments[None]):
-        artifacts.append({
-            'channel_path': 'cloudformation/{}'.format(template_name),
-            'local_content': advanced_template.cloudformation,
-            'content_type': 'application/json; charset=utf-8',
-        })
-        extra_packages += util.cluster_to_extra_packages(advanced_template.results.cluster_packages)
-
+    # This renders the infra template only, which has no difference between CE and EE
     for template_name, advanced_template in gen_supporting_template():
         artifacts.append({
             'channel_path': 'cloudformation/{}'.format(template_name),

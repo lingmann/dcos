@@ -82,7 +82,7 @@
            "DependsOn": ["Infrastructure"],
            "Type": "AWS::CloudFormation::Stack",
            "Properties": {
-               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/advanced-master-1.json",
+               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/{{ variant_prefix }}advanced-master-{{ num_masters }}.json",
                "Parameters": {
                     "KeyName": {
                         "Ref": "KeyName"
@@ -125,7 +125,7 @@
            "DependsOn": ["Infrastructure", "MasterStack"],
            "Type": "AWS::CloudFormation::Stack",
            "Properties": {
-               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/advanced-pub-agent.json",
+               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/{{ variant_prefix }}advanced-pub-agent.json",
                "Parameters": {
                     "KeyName": {
                         "Ref": "KeyName"
@@ -153,7 +153,7 @@
            "DependsOn": ["Infrastructure", "MasterStack"],
            "Type": "AWS::CloudFormation::Stack",
            "Properties": {
-               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/advanced-priv-agent.json",
+               "TemplateURL": "https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{{ channel_commit_path }}/cloudformation/{{ variant_prefix }}advanced-priv-agent.json",
                "Parameters": {
                     "KeyName": {
                         "Ref": "KeyName"

@@ -7,6 +7,7 @@ import sys
 import traceback
 
 from gen.azure.azure_client import (AzureClient,
+                                    AzureClientException,
                                     TemplateProvisioningState,
                                     AzureClientTemplateException)
 from retrying import retry
@@ -27,11 +28,16 @@ def json_pretty_print(json_str, file=sys.stdout):
     print(json.dumps(json_str, sort_keys=True, indent=4, separators=(',', ':')), file=file)
 
 
-def get_template_master_url(client):
+def get_template_output_value(client, output_key):
+    '''
+    Returns the ARM deployment output value for the given output_key.
+    Raises an AzureClientException if the key is not found.
+    '''
     r = client.get_template_deployment()
     outputs = r.get('properties', {}).get('outputs', {})
-    master_url = "http://{}".format(outputs.get('dnsAddress', {}).get('value'))
-    return master_url
+    if output_key not in outputs:
+        raise AzureClientException("output_key: {} does not exist in deployment".format(output_key))
+    return outputs.get(output_key).get('value')
 
 
 def get_dcos_ui(master_url):
@@ -101,18 +107,23 @@ def run():
         print("Waiting for template to deploy ...")
         poll_on_template_deploy_status(client)
 
+        master_lb = get_template_output_value(client, 'dnsAddress')
+        master_url = "http://{}".format(master_lb)
+
+        print("Template deployed using SSH private key: https://mesosphere.onelogin.com/notes/18444")
+        print("For troubleshooting, master0 can be reached using: ssh -p 2200 core@{}".format(master_lb))
+
         @retry(wait_fixed=(5*1000), stop_max_delay=(15*60*1000))
         def poll_on_dcos_ui_up(master_url):
             r = get_dcos_ui(master_url)
             assert r is not None and r.status_code == requests.codes.ok, \
                 "Unable to reach DCOS UI: {}".format(master_url)
 
-        master_url = get_template_master_url(client)
         print("Waiting for DCOS UI at: {} ...".format(master_url))
         poll_on_dcos_ui_up(master_url)
         test_successful = True
 
-    except AssertionError as ex:
+    except (AssertionError, AzureClientException) as ex:
         print("ERROR: {}".format(ex), file=sys.stderr)
         traceback.print_tb(ex.__traceback__)
 

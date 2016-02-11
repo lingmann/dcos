@@ -361,10 +361,14 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
     assert '<html>' in r.text
     assert '</html>' in r.text
     assert 'window.location' in r.text
-    r = enterprise_cluster.get('/service/unknown/', disable_suauth=True)
-    assert r.status_code == 401
-    r = enterprise_cluster.get('/service/marathon/', disable_suauth=True)
-    assert r.status_code == 401
+    # Verify that certain locations are forbidden to access
+    # when not authed, but are reachable as superuser.
+    for path in ('/mesos_dns/v1/config', '/service/marathon/', '/mesos/'):
+        r = enterprise_cluster.get(path, disable_suauth=True)
+        assert r.status_code == 401
+        r = enterprise_cluster.get(path)
+        assert r.status_code == 200
+
     # Test authentication with auth cookie instead of Authorization header.
     authcookie = {
         'dcos-acs-auth-cookie': enterprise_cluster.superuser_auth_cookie
@@ -375,6 +379,17 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
         cookies=authcookie
         )
     assert r.status_code == 200
+
+
+def test_bouncer_logout(enterprise_cluster):
+    """Test bouncer's logout endpoint. It's a soft logout, instructing
+    the user agent to delete the authentication cookie, i.e. this test
+    does not have side effects on other tests.
+    """
+    r = enterprise_cluster.get('/acs/api/v1/auth/logout')
+    cookieheader = r.headers['set-cookie']
+    assert 'dcos-acs-auth-cookie=;' in cookieheader
+    assert 'expires' in cookieheader
 
 
 def test_if_Mesos_is_up(cluster):

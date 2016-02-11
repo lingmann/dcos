@@ -63,7 +63,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_Marathon_up(self):
-        r = self.get('marathon/ui/', disable_suauth=True)
+        r = self.get('/marathon/ui/')
         # resp_code >= 500 -> backend is still down probably
         if r.status_code < 500:
             logging.info("Marathon is probably up")
@@ -77,7 +77,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_slaves_to_join(self):
-        r = self.get('mesos/master/slaves', disable_suauth=True)
+        r = self.get('/mesos/master/slaves')
         if r.status_code != 200:
             msg = "Mesos master returned status code {} != 200 "
             msg += "continuing to wait..."
@@ -100,7 +100,7 @@ class Cluster:
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_DCOS_history_up(self):
-        r = self.get('dcos-history-service/ping', disable_suauth=True)
+        r = self.get('/dcos-history-service/ping')
         # resp_code >= 500 -> backend is still down probably
         if r.status_code <= 500:
             logging.info("DCOS History is probably up")
@@ -144,24 +144,27 @@ class Cluster:
             logging.info("Nginx is UP!")
             return True
 
-    def _check_if_enterprise_via_buildinfo(self):
-        """Check if tests are run against enterprise edition and
-        populate `self.is_enterprise` correspondingly."""
-
-        # Get buildinfo JSON and make teh adminrouter branch check.
-        # TODO(jp): we really need a generic way to adjust integration
-        # tests to different build variants.
-        r = self.get('/pkgpanda/active.buildinfo.full.json', disable_suauth=True)
-        data = r.json()
-        ar_branch = data['nginx']['sources']['adminrouter']['ref_origin']
-        self.is_enterprise = ar_branch == 'enterprise'
-
     def _wait_for_DCOS(self):
         self._wait_for_leader_election()
         self._wait_for_nginx_up()
+        # The following "tests" require authentication.
+        if self.is_enterprise:
+            self._authenticate()
         self._wait_for_Marathon_up()
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
+
+    def _authenticate(self):
+        r = requests.post(
+            self.dcos_uri + '/acs/api/v1/auth/login',
+            json={'uid': 'bootstrapuser', 'password': 'deleteme'}
+            )
+        assert r.status_code == 200
+        self.superuser_auth_header = {
+            'Authorization': 'token=%s' % r.json()['token']
+            }
+        self.superuser_auth_cookie = r.cookies[
+            'dcos-acs-auth-cookie']
 
     def __init__(self, dcos_uri, masters, public_masters, slaves, registry, dns_search_set):
         """Proxy class for DCOS clusters.
@@ -189,16 +192,11 @@ class Cluster:
         # URI must include scheme
         assert dcos_uri.startswith('http')
 
-        # TODO(jp): it is better to enforce `url = url.rstrip('/')` and require
-        # the path to start with a slash, so that we have actual consistency
-        # (below, paths are not consistent as double-slash passes through).
-        # Make URI always end with '/'
-        if dcos_uri[-1] != '/':
-            dcos_uri += '/'
-        self.dcos_uri = dcos_uri
+        # Make URI never end with /
+        self.dcos_uri = dcos_uri.rstrip('/')
 
+        self.is_enterprise = os.environ.get('DCOS_VARIANT', None) == 'ee'
         self._wait_for_DCOS()
-        self._check_if_enterprise_via_buildinfo()
 
     def _suheader(self, disable_suauth):
         if not disable_suauth and self.is_enterprise:
@@ -283,7 +281,7 @@ class Cluster:
             applications. I.E:
                 [Endpoint(host='172.17.10.202', port=10464), Endpoint(host='172.17.10.201', port=1630)]
         """
-        r = self.post('marathon/v2/apps', app_definition)
+        r = self.post('/marathon/v2/apps', app_definition)
         assert r.ok
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
@@ -295,7 +293,7 @@ class Cluster:
             # future versions of Marathon:
             req_params = (('embed', 'apps.lastTaskFailure'),
                           ('embed', 'apps.counts'))
-            req_uri = 'marathon/v2/apps' + app_id
+            req_uri = '/marathon/v2/apps' + app_id
 
             r = self.get(req_uri, req_params)
             assert r.ok
@@ -331,24 +329,8 @@ class Cluster:
         Args:
             app_name: name of the applicatoin to remove
         """
-        r = self.delete('marathon/v2/apps' + app_name)
+        r = self.delete('/marathon/v2/apps' + app_name)
         assert r.ok
-
-
-def test_if_authentication_works(enterprise_cluster):
-    # Perform superuser login. This verifies that the bouncer back-end is
-    # up'n'running and it has a side effect, as it stores auth token and auth
-    # cookie at the disposal of other tests.
-    r = requests.post(
-        enterprise_cluster.dcos_uri + 'acs/api/v1/auth/login',
-        json={'uid': 'bootstrapuser', 'password': 'deleteme'}
-        )
-    assert r.status_code == 200
-    enterprise_cluster.superuser_auth_header = {
-        'Authorization': 'token=%s' % r.json()['token']
-        }
-    enterprise_cluster.superuser_auth_cookie = r.cookies[
-        'dcos-acs-auth-cookie']
 
 
 def test_if_DCOS_UI_is_up(cluster):
@@ -364,12 +346,14 @@ def test_if_DCOS_UI_is_up(cluster):
         if urllib.parse.urlparse(link.attrs['href']).netloc:
             # Relative URLs only, others are to complex to handle here
             continue
-        link_response = cluster.head(link.attrs['href'])
+        # Some links might start with a dot (e.g. ./img/...). Remove.
+        href = link.attrs['href'].lstrip('.')
+        link_response = cluster.head(href)
         assert link_response.status_code == 200
 
 
 def test_adminrouter_access_control_enforcement(enterprise_cluster):
-    r = enterprise_cluster.get('acs/api/v1', disable_suauth=True)
+    r = enterprise_cluster.get('/acs/api/v1', disable_suauth=True)
     assert r.status_code == 401
     assert r.headers['WWW-Authenticate'] == 'acsjwt'
     # Make sure that this is UI's error page body,
@@ -377,10 +361,14 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
     assert '<html>' in r.text
     assert '</html>' in r.text
     assert 'window.location' in r.text
-    r = enterprise_cluster.get('service/unknown/', disable_suauth=True)
-    assert r.status_code == 401
-    r = enterprise_cluster.get('service/marathon/', disable_suauth=True)
-    assert r.status_code == 401
+    # Verify that certain locations are forbidden to access
+    # when not authed, but are reachable as superuser.
+    for path in ('/mesos_dns/v1/config', '/service/marathon/', '/mesos/'):
+        r = enterprise_cluster.get(path, disable_suauth=True)
+        assert r.status_code == 401
+        r = enterprise_cluster.get(path)
+        assert r.status_code == 200
+
     # Test authentication with auth cookie instead of Authorization header.
     authcookie = {
         'dcos-acs-auth-cookie': enterprise_cluster.superuser_auth_cookie
@@ -393,8 +381,19 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
     assert r.status_code == 200
 
 
+def test_bouncer_logout(enterprise_cluster):
+    """Test bouncer's logout endpoint. It's a soft logout, instructing
+    the user agent to delete the authentication cookie, i.e. this test
+    does not have side effects on other tests.
+    """
+    r = enterprise_cluster.get('/acs/api/v1/auth/logout')
+    cookieheader = r.headers['set-cookie']
+    assert 'dcos-acs-auth-cookie=;' in cookieheader
+    assert 'expires' in cookieheader
+
+
 def test_if_Mesos_is_up(cluster):
-    r = cluster.get('mesos')
+    r = cluster.get('/mesos')
 
     assert r.status_code == 200
     assert len(r.text) > 100
@@ -402,7 +401,7 @@ def test_if_Mesos_is_up(cluster):
 
 
 def test_if_all_Mesos_slaves_have_registered(cluster):
-    r = cluster.get('mesos/master/slaves')
+    r = cluster.get('/mesos/master/slaves')
     assert r.status_code == 200
 
     data = r.json()
@@ -418,7 +417,7 @@ def test_if_all_Mesos_slaves_have_registered(cluster):
 def test_if_srouter_slaves_endpoint_work(cluster):
     # Get currently known agents. This request is served straight from
     # Mesos (no AdminRouter-based caching is involved).
-    r = cluster.get('mesos/master/slaves')
+    r = cluster.get('/mesos/master/slaves')
     assert r.status_code == 200
 
     data = r.json()
@@ -430,7 +429,7 @@ def test_if_srouter_slaves_endpoint_work(cluster):
         # slaves can be unknown here. For those, this endpoint
         # returns a 404. Retry in this case, until this endpoint
         # is confirmed to work for all known agents.
-        uri = 'slave/{}/slave%281%29/state.json'.format(slave_id)
+        uri = '/slave/{}/slave%281%29/state.json'.format(slave_id)
         r = cluster.get(uri)
         if r.status_code == 404:
             return False
@@ -458,7 +457,7 @@ def test_if_all_Mesos_masters_have_registered(cluster):
 
 
 def test_if_Exhibitor_API_is_up(cluster):
-    r = cluster.get('exhibitor/exhibitor/v1/cluster/list')
+    r = cluster.get('/exhibitor/exhibitor/v1/cluster/list')
     assert r.status_code == 200
 
     data = r.json()
@@ -466,13 +465,13 @@ def test_if_Exhibitor_API_is_up(cluster):
 
 
 def test_if_Exhibitor_UI_is_up(cluster):
-    r = cluster.get('exhibitor')
+    r = cluster.get('/exhibitor')
     assert r.status_code == 200
     assert 'Exhibitor for ZooKeeper' in r.text
 
 
 def test_if_ZooKeeper_cluster_is_up(cluster):
-    r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
+    r = cluster.get('/exhibitor/exhibitor/v1/cluster/status')
     assert r.status_code == 200
 
     data = r.json()
@@ -486,7 +485,7 @@ def test_if_ZooKeeper_cluster_is_up(cluster):
 
 
 def test_if_all_exhibitors_are_in_sync(cluster):
-    r = cluster.get('exhibitor/exhibitor/v1/cluster/status')
+    r = cluster.get('/exhibitor/exhibitor/v1/cluster/status')
     assert r.status_code == 200
 
     correct_data = sorted(r.json(), key=lambda k: k['hostname'])
@@ -500,14 +499,14 @@ def test_if_all_exhibitors_are_in_sync(cluster):
 
 
 def test_if_DCOSHistoryService_is_up(cluster):
-    r = cluster.get('dcos-history-service/ping')
+    r = cluster.get('/dcos-history-service/ping')
 
     assert r.status_code == 200
     assert 'pong' == r.text
 
 
 def test_if_Marathon_UI_is_up(cluster):
-    r = cluster.get('marathon/ui/')
+    r = cluster.get('/marathon/ui/')
 
     assert r.status_code == 200
     assert len(r.text) > 100
@@ -515,7 +514,7 @@ def test_if_Marathon_UI_is_up(cluster):
 
 
 def test_if_srouter_service_endpoint_works(cluster):
-    r = cluster.get('service/marathon/ui/')
+    r = cluster.get('/service/marathon/ui/')
 
     assert r.status_code == 200
     assert len(r.text) > 100
@@ -523,7 +522,7 @@ def test_if_srouter_service_endpoint_works(cluster):
 
 
 def test_if_Mesos_API_is_up(cluster):
-    r = cluster.get('mesos_dns/v1/version')
+    r = cluster.get('/mesos_dns/v1/version')
     assert r.status_code == 200
 
     data = r.json()
@@ -531,7 +530,7 @@ def test_if_Mesos_API_is_up(cluster):
 
 
 def test_if_PkgPanda_metadata_is_available(cluster):
-    r = cluster.get('pkgpanda/active.buildinfo.full.json')
+    r = cluster.get('/pkgpanda/active.buildinfo.full.json')
     assert r.status_code == 200
 
     data = r.json()
@@ -628,7 +627,7 @@ def test_if_service_discovery_works(cluster):
                     retry_on_result=lambda ret: ret is None,
                     retry_on_exception=lambda x: False)
     def _pool_for_mesos_dns():
-        r = cluster.get('mesos_dns/v1/services/_{}._tcp.marathon.mesos'.format(
+        r = cluster.get('/mesos_dns/v1/services/_{}._tcp.marathon.mesos'.format(
                         app_definition['id'].lstrip('/')))
         assert r.status_code == 200
 
@@ -719,7 +718,7 @@ def test_if_search_is_working(cluster):
 
 
 def test_if_DCOSHistoryService_is_getting_data(cluster):
-    r = cluster.get('dcos-history-service/history/last')
+    r = cluster.get('/dcos-history-service/history/last')
     assert r.status_code == 200
     # Make sure some basic fields are present from state-summary which the DCOS
     # UI relies upon. Their exact content could vary so don't test the value.

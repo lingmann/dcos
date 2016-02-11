@@ -338,7 +338,7 @@ EOF
 sudo yum -y update
 
 sudo yum install -y docker-engine
-sudo echo "STORAGE_DRIVER=overlay" >> /etc/sysconfig/docker-storage-setup
+echo "STORAGE_DRIVER=overlay" | sudo tee --append /etc/sysconfig/docker-storage-setup
 sudo systemctl start docker
 sudo systemctl enable docker
 

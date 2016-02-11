@@ -10,6 +10,9 @@ import yaml
 from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 
+import gen.aws.calc
+import gen.azure.calc
+
 
 def calculate_is_ee():
     variant = os.getenv('BOOTSTRAP_VARIANT')
@@ -190,8 +193,8 @@ entry = {
                     'is_ee': calculate_is_ee
                 }
             },
-            'azure': {},
-            'aws': {},
+            'azure': gen.azure.calc.entry,
+            'aws': gen.aws.calc.entry,
             'other': {}
         },
         'is_ee': {

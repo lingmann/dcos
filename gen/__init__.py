@@ -14,7 +14,6 @@ NOTE:
       have people on.
 """
 
-import importlib
 import inspect
 import json
 import logging as log
@@ -31,6 +30,7 @@ from pkg_resources import resource_string
 from pkgpanda import PackageId
 from pkgpanda.util import make_tar
 
+import gen.calc
 import gen.template
 
 # List of all roles all templates should have.
@@ -462,16 +462,6 @@ def get_templates(mixin_name, cluster_packages, core_templates):
     return templates
 
 
-def get_mixin_functions(name):
-    modulename = 'gen.' + get_name(name, 'calc', sep='.')
-    try:
-        return importlib.import_module(modulename).entry
-    except ImportError as ex:
-        # TODO(cmaloney): Make the module not existing a hard error.
-        log.debug("Module not found: %s", ex)
-        return {}
-
-
 def validate_arguments_strings(arguments):
     errors = dict()
     # Validate that all keys and vlaues of arguments are strings
@@ -659,31 +649,30 @@ def generate(
 
     for mixin in mixins:
         mixin_templates = get_templates(mixin, package_names, core_templates)
-        templates = merge_dictionaries(templates, mixin_templates)
-
         # TODO(cmaloney): merge_dictionaries, hard error on duplicate leaf keys.
         # Right now we arbitrarily get one of them in conflicts.
+        templates = merge_dictionaries(templates, mixin_templates)
 
-        def add_conditional_scope(scope, conditions):
-            nonlocal validate
+    def add_conditional_scope(scope, conditions):
+        nonlocal validate
 
-            # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
-            # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
-            assert scope.keys() <= {'validate', 'default', 'must', 'conditional'}
+        # TODO(cmaloney): 'defaults' are the same as 'can' and 'must' is identical to 'arguments' except
+        # that one takes functions and one takes strings. Simplify to just 'can', 'must'.
+        assert scope.keys() <= {'validate', 'default', 'must', 'conditional'}
 
-            validate += scope.get('validate', list())
+        validate += scope.get('validate', list())
 
-            for name, fn in scope.get('must', dict()).items():
-                add_setter(name, fn, False, conditions, False)
+        for name, fn in scope.get('must', dict()).items():
+            add_setter(name, fn, False, conditions, False)
 
-            for name, fn in scope.get('default', dict()).items():
-                add_setter(name, fn, True, conditions, False)
+        for name, fn in scope.get('default', dict()).items():
+            add_setter(name, fn, True, conditions, False)
 
-            for name, cond_options in scope.get('conditional', dict()).items():
-                for value, sub_scope in cond_options.items():
-                    add_conditional_scope(sub_scope, conditions + [(name, value)])
+        for name, cond_options in scope.get('conditional', dict()).items():
+            for value, sub_scope in cond_options.items():
+                add_conditional_scope(sub_scope, conditions + [(name, value)])
 
-        add_conditional_scope(get_mixin_functions(mixin), [])
+    add_conditional_scope(gen.calc.entry, [])
 
     # Make sure only yaml templates have more than one mixin providing them / are provided more than once.
     for name, template_list in templates.items():

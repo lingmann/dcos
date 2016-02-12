@@ -1037,7 +1037,6 @@ def main():
     promote = subparsers.add_parser('promote')
     promote.set_defaults(action='promote')
     promote.add_argument('source_channel')
-    promote.add_argument('destination_repoistory')
     promote.add_argument('destination_channel')
 
     # Creates, uploads, and marks as latest.

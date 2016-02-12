@@ -192,7 +192,6 @@ entry = {
             },
             'azure': {},
             'aws': {},
-            'vagrant': {},
             'other': {}
         },
         'is_ee': {

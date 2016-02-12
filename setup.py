@@ -54,10 +54,7 @@ setup(
             'azure/azuredeploy-parameters.json',
             'azure/templates/acs.json',
             'azure/templates/azure.html',
-            'azure/templates/azuredeploy.json',
-            'vagrant/config.rb',
-            'vagrant/make_dcos_vagrant.sh.in',
-            'vagrant/Vagrantfile'] + get_advanced_templates(),
+            'azure/templates/azuredeploy.json'] + get_advanced_templates(),
         'providers': [
             '../docker/py.test/Dockerfile',
             '../docker/test_server/Dockerfile',

@@ -906,7 +906,7 @@ class ReleaseManager():
         for artifact in metadata['core_artifacts']:
             fetch_artifact(artifact)
 
-    def promote(self, src_channel, destination_channel):
+    def promote(self, src_channel, destination_repository, destination_channel):
         metadata = self.get_metadata(src_channel)
 
         # Can't run a release promotion with a different version of the scripts than the one that
@@ -916,7 +916,7 @@ class ReleaseManager():
 
         self.fetch_key_artifacts(metadata)
 
-        repository = Repository(destination_channel, None, metadata['commit'])
+        repository = Repository(destination_repository, destination_channel, metadata['commit'])
 
         metadata['repository_path'] = destination_channel
         metadata['repository_url'] = self.__preferred_provider.url + destination_channel
@@ -1037,13 +1037,21 @@ def main():
     promote = subparsers.add_parser('promote')
     promote.set_defaults(action='promote')
     promote.add_argument('source_channel')
-    promote.add_argument('destination_channel')
+    promote.add_argument('destination_repository')
+
+    # Use to create a different 'channel' which shares a reproducible artifact store, but has
+    # independent non-reproducible artifacts (ex: dcos_generate_config.sh). Makes it so we don't
+    # have as much redundant copying when there are a ton of branches (ex: testing/, dev/).
+    # Always appends to the given repository ({repository}/{channel}).
+    promote.add_argument('--destination-channel', action='store', default=None)
 
     # Creates, uploads, and marks as latest.
     # The marking as latest is ideally atomic (At least all artifacts when they
     # are uploaded should never result in a state where things don't work).
     create = subparsers.add_parser('create')
     create.set_defaults(action='create')
+    # Channel is always implicitly prefixed with `testing`, so artifacts appear at
+    # `testing/{channel}`
     create.add_argument('channel')
     create.add_argument('tag')
     create.add_argument('--skip-build', action='store_true')
@@ -1058,7 +1066,7 @@ def main():
     validate_options(options)
     release_manager = ReleaseManager(get_prod_storage_providers(), 'aws', options.noop)
     if options.action == 'promote':
-        release_manager.promote(options.source_channel, options.destination_channel)
+        release_manager.promote(options.source_channel, options.destination_repository, options.destination_channel)
     elif options.action == 'create':
         release_manager.create('testing', options.channel, options.tag, options.skip_build)
     else:

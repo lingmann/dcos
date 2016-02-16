@@ -1,16 +1,7 @@
 #!/bin/bash
 set -x
 
-export CFLAGS="-I/opt/mesosphere/include -I/opt/mesosphere/active/ncurses/include -I/opt/mesosphere/active/openssl/include"
-export LDFLAGS="-L/opt/mesosphere/lib -L/opt/mesosphere/active/ncurses/lib -L/opt/mesosphere/active/openssl/lib -Wl,-rpath=/opt/mesosphere/active/ncurses/lib -Wl,-rpath=/opt/mesosphere/active/openssl/lib -Wl,-rpath=/opt/mesosphere/lib"
-export CXXFLAGS=CFLAGS
-
-pushd /pkg/src/erlang
-./configure --prefix=/tmp/erlang --with-ssl=/opt/mesosphere/active/openssl --with-termcap=/opt/mesosphere/active/ncurses
-make -j16
-make install
-popd
-export PATH=/tmp/erlang/bin:${PATH}
+source /opt/mesosphere/environment
 
 cat <<EOF > /tmp/ssh_key
 -----BEGIN RSA PRIVATE KEY-----
@@ -62,9 +53,9 @@ pushd /pkg/src/minuteman
 make rel
 popd
 
-cp -r /pkg/src/minuteman/_build/default/rel/minuteman ${PKG_PATH}
+cp -r /pkg/src/minuteman/_build/prod/rel/minuteman ${PKG_PATH}
 
-service=${PKG_PATH}/dcos.target.wants_minuteman/dcos-minuteman.service
+service=${PKG_PATH}/dcos.target.wants/dcos-minuteman.service
 mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
@@ -76,6 +67,8 @@ StartLimitInterval=0
 RestartSec=5
 WorkingDirectory=${PKG_PATH}/minuteman
 EnvironmentFile=/opt/mesosphere/environment
+ExecStartPre=mkdir -p /var/lib/dcos/minuteman/mnesia
+ExecStartPre=mkdir -p /var/lib/dcos/minuteman/lashup
 ExecStart=${PKG_PATH}/minuteman/bin/env foreground
 Environment=HOME=/opt/mesosphere
 EOF

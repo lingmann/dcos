@@ -368,8 +368,8 @@ class MultiRunner():
                 break
 
         if self.async_delegate is not None:
-            # Update chain status
-            self.async_delegate.on_done(chain.namespace, result, host_object, host_status=host_status)
+            # Update chain status.
+            self.async_delegate.on_done(chain.namespace, result, host_status=host_status)
 
     @asyncio.coroutine
     def dispatch_chain(self, host, chains, sem):
@@ -385,12 +385,11 @@ class MultiRunner():
         assert isinstance(chains, list)
         sem = asyncio.Semaphore(self.__parallelism)
 
-        if self.async_delegate is not None and state_json_dir is True:
-            log.error('Cannot use a delegate and update json at the same time')
-            return None
-        elif state_json_dir:
-            log.debug('Using state_json_dir {}'.format(state_json_dir))
+        if state_json_dir:
+            log.debug('Using default JsonDelegate method, state_json_dir {}'.format(state_json_dir))
             self.async_delegate = JsonDelegate(state_json_dir, len(self.__targets), **delegate_extra_params)
+        else:
+            assert self.async_delegate, 'async delegate must be set'
 
         if block:
             log.debug('Waiting for run_command_chain_async to execute')

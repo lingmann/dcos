@@ -4,6 +4,7 @@ import unittest
 import unittest.mock
 
 import ssh.ssh_runner
+import ssh.utils
 import ssh.validate
 
 
@@ -291,6 +292,184 @@ class TestValidate(unittest.TestCase):
         assert ssh.validate.is_valid_ipv4_address('127.0.0.1') is True
         assert ssh.validate.is_valid_ipv4_address('255.255.255.256') is False
         assert ssh.validate.is_valid_ipv4_address('foo') is False
+
+
+class TestJsonDelegate(unittest.TestCase):
+    @unittest.mock.patch('datetime.datetime')
+    @unittest.mock.patch('builtins.open')
+    @unittest.mock.patch('json.load')
+    @unittest.mock.patch('os.path.isfile')
+    def test_on_update(self, mocked_isfile, mocked_json_load, mocked_open, mocked_datetime):
+        mocked_isfile.return_value = True
+        mocked_datetime.now.return_value = 123
+        mocked_open.return_value = unittest.mock.MagicMock()
+        obj = {
+            "total_hosts": 20,
+            "chain_name": "preflight_cleanup",
+            "hosts": {
+                "52.35.118.1:22": {
+                    "tags": {
+                        "role": "agent"
+                    },
+                    "host_status": "failed",
+                    "commands": [
+                        {
+                            "cmd": ["ls", "-la"],
+                            "stdout": "abc123",
+                            "stderr": "abc123",
+                            "returncode": 0,
+                            "pid": 111
+                        }
+                    ]
+                }
+            }
+        }
+        mocked_json_load.return_value = obj
+
+        jd = ssh.utils.JsonDelegate('/tmp', 21, total_agents=17, total_masters=3)
+        assert isinstance(jd, ssh.utils.AbstractSSHLibDelegate)
+
+        mocked_future = unittest.mock.MagicMock()
+
+        result = {
+            '127.0.0.1:22': {
+                'cmd': ['ls', '-la'],
+                'stdout': 'stdout',
+                'stderr': 'stderr'
+            }
+        }
+        host_object = ssh.ssh_runner.Node('127.0.0.1:22')
+        mocked_future.result.return_value = ('test', result, host_object)
+        mocked_callback_called = unittest.mock.MagicMock()
+        jd.on_update(mocked_future, mocked_callback_called)
+        assert obj == {
+            "total_agents": 17,
+            "total_hosts": 21,
+            "total_masters": 3,
+            "chain_name": "test",
+            "hosts": {
+                "52.35.118.1:22": {
+                    "tags": {
+                        "role": "agent"
+                    },
+                    "host_status": "failed",
+                    "commands": [
+                        {
+                            "cmd": ["ls", "-la"],
+                            "stdout": "abc123",
+                            "stderr": "abc123",
+                            "returncode": 0,
+                            "pid": 111
+                        }
+                    ]
+                },
+                "127.0.0.1:22": {
+                    "host_status": "running",
+                    "commands": [
+                        {
+                            "date": "123",
+                            'cmd': ['ls', '-la'],
+                            'stdout': 'stdout',
+                            'stderr': 'stderr'
+                        }
+                    ]
+                }
+            }
+        }
+
+        # Test append to a command
+        another_result = {
+            '127.0.0.1:22': {
+                'cmd': ['pwd'],
+                'stdout': 'stdout123',
+                'stderr': 'stderr123'
+            }
+        }
+        mocked_future.result.return_value = ('test', another_result, host_object)
+        jd.on_update(mocked_future, mocked_callback_called)
+        assert obj == {
+            "total_agents": 17,
+            "total_hosts": 21,
+            "total_masters": 3,
+            "chain_name": "test",
+            "hosts": {
+                "52.35.118.1:22": {
+                    "tags": {
+                        "role": "agent"
+                    },
+                    "host_status": "failed",
+                    "commands": [
+                        {
+                            "cmd": ["ls", "-la"],
+                            "stdout": "abc123",
+                            "stderr": "abc123",
+                            "returncode": 0,
+                            "pid": 111
+                        }
+                    ]
+                },
+                "127.0.0.1:22": {
+                    "host_status": "running",
+                    "commands": [
+                        {
+                            "date": "123",
+                            'cmd': ['ls', '-la'],
+                            'stdout': 'stdout',
+                            'stderr': 'stderr'
+                        },
+                        {
+                            "date": "123",
+                            "cmd": ["pwd"],
+                            "stdout": "stdout123",
+                            "stderr": "stderr123"
+                        }
+                    ]
+                }
+            }
+        }
+
+    @unittest.mock.patch('datetime.datetime')
+    @unittest.mock.patch('builtins.open')
+    @unittest.mock.patch('json.load')
+    @unittest.mock.patch('os.path.isfile')
+    def test_on_done(self, mocked_isfile, mocked_json_load, mocked_open, mocked_datetime):
+        mocked_isfile.return_value = True
+        mocked_datetime.now.return_value = 123
+        mocked_open.return_value = unittest.mock.MagicMock()
+        obj = {
+            "chain_name": "test",
+            "hosts": {
+                "52.35.118.1:22": {
+                    "tags": {
+                        "role": "agent"
+                    },
+                    "host_status": "failed",
+                    "commands": [
+                        {
+                            "cmd": ["ls", "-la"],
+                            "stdout": "abc123",
+                            "stderr": "abc123",
+                            "returncode": 0,
+                            "pid": 111
+                        }
+                    ]
+                }
+            }
+        }
+        mocked_json_load.return_value = obj
+
+        jd = ssh.utils.JsonDelegate('/tmp', 20, total_masters=10, total_agents=5)
+
+        result = {
+            '52.35.118.1:22': {
+                'cmd': ['command'],
+                'stdout': 'stdout123',
+                'stderr': 'stderr123'
+            }
+        }
+
+        jd.on_done('test_chain', result, host_status='success')
+        assert obj['hosts']['52.35.118.1:22']['host_status'] == 'success'
 
 
 if __name__ == '__main__':

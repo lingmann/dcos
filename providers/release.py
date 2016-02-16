@@ -27,7 +27,7 @@ import pkgpanda.util
 import providers.aws_config as aws_config
 import providers.util as util
 
-provider_names = ['aws', 'azure', 'vagrant']
+provider_names = ['aws', 'azure']
 
 
 def strip_locals(data):

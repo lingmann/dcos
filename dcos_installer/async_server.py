@@ -11,6 +11,7 @@ from dcos_installer import action_lib, backend
 from dcos_installer.action_lib.prettyprint import print_header
 from dcos_installer.util import STATE_DIR
 
+
 log = logging.getLogger()
 
 options = None
@@ -166,12 +167,9 @@ def action_action_name(request):
                 if not json_state:
                     return web.json_response({})
                 _merge_json(result, json_state, action)
-            return web.Response(body=json.dumps(result, sort_keys=True, indent=4).encode('utf-8'),
-                                content_type='application/json')
+            return web.json_response(result)
         if json_state:
-            return web.Response(body=json.dumps(json_state, sort_keys=True, indent=4).encode('utf-8'),
-                                content_type='application/json')
-
+            return web.json_response(json_state)
         return web.json_response({})
 
     elif request.method == 'POST':

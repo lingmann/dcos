@@ -3,8 +3,8 @@
 
 import os
 import random
-import time
 import uuid
+from urllib.parse import quote
 
 import requests
 
@@ -215,7 +215,18 @@ class AzureClient(object):
         endpoint = self._get_resource_endpoint(self.subscription_endpoint, resource_group_name)
         r = self._session.delete(endpoint)
 
-        return r.json()
+        return r
+
+    def status_delete_resource_group(self, poll_location):
+        '''
+        Return a Requests object indicating the status of a Resource Group
+        delete operation when given a poll_location. The status will transition
+        from 202 to 200 when the delete is complete.  See:
+        https://msdn.microsoft.com/en-us/library/azure/dn790539.aspx
+        '''
+        r = self._session.get(poll_location)
+
+        return r
 
     def get_random_resource_group_name(self):
         '''
@@ -235,9 +246,12 @@ class AzureClient(object):
     def get_random_deployment_name(self):
         return 'deployment{}'.format(uuid.uuid4().hex)
 
-    def list_template_deployment_operations(self):
+    def list_template_deployment_operations(self, provisioning_state_filter=None):
         # TODO(mj): add skiptoken parameter https://msdn.microsoft.com/en-us/library/azure/dn790518.aspx
-        r = self._session.get(self._url_space['operations'])
+        url = self._url_space['operations']
+        if provisioning_state_filter:
+            url += '?$filter=provisioningState eq \'' + quote(provisioning_state_filter) + '\''
+        r = self._session.get(url)
 
         return r.json()
 
@@ -251,31 +265,3 @@ class TemplateProvisioningState(object):
     SUCCEEDED = 'Succeeded'
     RUNNING = 'Running'
     DELETING = 'Deleting'
-
-
-class OutOfRetries(Exception):
-    pass
-
-
-class PollingFailureCondition(Exception):
-    pass
-
-
-def poll_until(tries, initial_delay, delay, backoff, success_lambda_list, failure_lambda_list, fn):
-    print('Sleeping for initial delay: {}'.format(initial_delay))
-    time.sleep(initial_delay)
-
-    result = fn()
-    for _ in range(tries):
-        if any([l(result) for l in failure_lambda_list]):
-            raise PollingFailureCondition('Reached failure condition while polling')
-
-        if not any([l(result) for l in success_lambda_list]):
-            print('Sleeping for delay: {}'.format(delay))
-            time.sleep(delay)
-            delay = delay * backoff
-            result = fn()
-        else:
-            return result
-
-    raise OutOfRetries("Ran out of retries.")

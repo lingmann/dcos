@@ -1,17 +1,16 @@
 #!/usr/bin/env python3
 
-from functools import partial
 import json
 import os
 import requests
 import sys
+import traceback
 
 from gen.azure.azure_client import (AzureClient,
-                                    OutOfRetries,
-                                    PollingFailureCondition,
+                                    AzureClientException,
                                     TemplateProvisioningState,
-                                    AzureClientTemplateException,
-                                    poll_until)
+                                    AzureClientTemplateException)
+from retrying import retry
 
 
 def verify_template_syntax(client, template_body_json, template_parameters):
@@ -25,44 +24,20 @@ def verify_template_syntax(client, template_body_json, template_parameters):
     print("Template OK!")
 
 
-def check_state(expected_state, response_json):
-    provisioning_state = response_json.get('properties', {}).get('provisioningState')
-    if provisioning_state == expected_state:
-        return True
-    print("Provisioning state: {}, Watching for: {}".format(
-        provisioning_state, expected_state))
-    return False
-
-
-def poll_on_template_deploy_status(client):
-    print("Polling on template deploy status ...")
-    try:
-        poll_until(tries=50,
-                   initial_delay=30,
-                   delay=15,
-                   backoff=1,
-                   success_lambda_list=[partial(check_state, TemplateProvisioningState.SUCCEEDED)],
-                   failure_lambda_list=[partial(check_state, TemplateProvisioningState.FAILED)],
-                   fn=client.get_template_deployment)
-        print("Template deploy status OK")
-    except (OutOfRetries, PollingFailureCondition) as e:
-        print("Failed! {}".format(e), file=sys.stderr)
-        print("Dumping template deployment ...", file=sys.stderr)
-        json_pretty_print(client.get_template_deployment(), file=sys.stderr)
-        print("Dumping template deployment operations ...", file=sys.stderr)
-        json_pretty_print(client.list_template_deployment_operations(), file=sys.stderr)
-        sys.exit(1)
-
-
 def json_pretty_print(json_str, file=sys.stdout):
     print(json.dumps(json_str, sort_keys=True, indent=4, separators=(',', ':')), file=file)
 
 
-def get_template_master_url(client):
+def get_template_output_value(client, output_key):
+    '''
+    Returns the ARM deployment output value for the given output_key.
+    Raises an AzureClientException if the key is not found.
+    '''
     r = client.get_template_deployment()
     outputs = r.get('properties', {}).get('outputs', {})
-    master_url = "http://{}".format(outputs.get('dnsAddress', {}).get('value'))
-    return master_url
+    if output_key not in outputs:
+        raise AzureClientException("output_key: {} does not exist in deployment".format(output_key))
+    return outputs.get(output_key).get('value')
 
 
 def get_dcos_ui(master_url):
@@ -70,59 +45,6 @@ def get_dcos_ui(master_url):
         return requests.get(master_url)
     except requests.exceptions.ConnectionError:
         pass
-
-
-def poll_on_dcos_ui_up(client):
-    master_url = get_template_master_url(client)
-    print("Master url: {}".format(master_url))
-
-    try:
-        poll_until(tries=90,
-                   initial_delay=0,
-                   delay=10,
-                   backoff=1,
-                   success_lambda_list=[
-                       lambda r: r is not None and r.status_code == requests.codes.ok],
-                   failure_lambda_list=[],
-                   fn=lambda: get_dcos_ui(master_url))
-        print("DCOS UI status OK")
-    except (OutOfRetries, PollingFailureCondition) as e:
-        # TODO(mj): dump information about the deployment here
-        print(e, file=sys.stderr)
-
-        sys.exit(1)
-
-
-def clean_up_deploy(client):
-    print("Canceling deployment ...")
-    r = client.cancel_template_deployment()
-    print(r)
-
-    print("Deleting deployment ...")
-    r = client.delete_template_deployment()
-    print(r)
-
-    print("Deleting resource group.")
-    try:
-        r = client.delete_resource_group()
-        print(r)
-    except ValueError:
-        pass
-
-    print("Polling on resource group status ...")
-    try:
-        poll_until(tries=180,
-                   initial_delay=0,
-                   delay=15,
-                   backoff=1,
-                   success_lambda_list=[partial(check_state, None)],
-                   failure_lambda_list=[],
-                   fn=client.get_resource_group)
-    except OutOfRetries:
-        print("Delete failed.", file=sys.stderr)
-        sys.exit(1)
-
-    print("Clean up successful.")
 
 
 def run():
@@ -161,27 +83,81 @@ def run():
     print("Creating new resource group")
     print(client.create_resource_group())
 
-    # Use RPC against azure to validate the ARM template is well-formed
-    verify_template_syntax(client,
-                           template_body_json=json.loads(arm),
-                           template_parameters=dummy_template_parameters)
+    test_successful = False
 
-    # Actually create a template deployment
-    print("Creating template deployment ...")
-    deployment_response = client.create_template_deployment(
-        template_body_json=json.loads(arm),
-        template_parameters=dummy_template_parameters)
-    json_pretty_print(deployment_response)
+    try:
+        # Use RPC against azure to validate the ARM template is well-formed
+        verify_template_syntax(client,
+                               template_body_json=json.loads(arm),
+                               template_parameters=dummy_template_parameters)
 
-    # Poll on the template deploy status
-    poll_on_template_deploy_status(client)
+        # Actually create a template deployment
+        print("Creating template deployment ...")
+        deployment_response = client.create_template_deployment(
+            template_body_json=json.loads(arm),
+            template_parameters=dummy_template_parameters)
+        json_pretty_print(deployment_response)
 
-    # Poll on dcos ui
-    poll_on_dcos_ui_up(client)
+        @retry(wait_fixed=(5*1000),
+               stop_max_delay=(15*60*1000),
+               retry_on_exception=lambda x: isinstance(x, AssertionError))
+        def poll_on_template_deploy_status(client):
+            provisioning_state = client.get_template_deployment()['properties']['provisioningState']
+            if provisioning_state == TemplateProvisioningState.FAILED:
+                failed_ops = client.list_template_deployment_operations(provisioning_state)
+                raise AzureClientException("Template failed to deploy: {}".format(failed_ops))
+            assert provisioning_state == TemplateProvisioningState.SUCCEEDED, \
+                "Template did not finish deploying in time, provisioning state: {}".format(provisioning_state)
 
-    # Clean up
-    clean_up_deploy(client)
+        print("Waiting for template to deploy ...")
+        poll_on_template_deploy_status(client)
 
+        master_lb = get_template_output_value(client, 'dnsAddress')
+        master_url = "http://{}".format(master_lb)
+
+        print("Template deployed using SSH private key: https://mesosphere.onelogin.com/notes/18444")
+        print("For troubleshooting, master0 can be reached using: ssh -p 2200 core@{}".format(master_lb))
+
+        @retry(wait_fixed=(5*1000), stop_max_delay=(15*60*1000))
+        def poll_on_dcos_ui_up(master_url):
+            r = get_dcos_ui(master_url)
+            assert r is not None and r.status_code == requests.codes.ok, \
+                "Unable to reach DCOS UI: {}".format(master_url)
+
+        print("Waiting for DCOS UI at: {} ...".format(master_url))
+        poll_on_dcos_ui_up(master_url)
+        test_successful = True
+
+    except (AssertionError, AzureClientException) as ex:
+        print("ERROR: {}".format(ex), file=sys.stderr)
+        traceback.print_tb(ex.__traceback__)
+
+    finally:
+        @retry(wait_exponential_multiplier=1000, wait_exponential_max=60*1000, stop_max_delay=(30*60*1000))
+        def delete_resource_group(client):
+            print("Deleting resource group: {} ...".format(client._resource_group_name))
+            del_response = client.delete_resource_group()
+            assert del_response.status_code == requests.codes.accepted, \
+                "Delete request failed: {}".format(del_response.status_code)
+            return del_response.headers['Location']
+
+        poll_location = delete_resource_group(client)
+
+        @retry(wait_fixed=(5*1000), stop_max_delay=(15*60*1000))
+        def wait_for_delete(poll_location):
+            r = client.status_delete_resource_group(poll_location)
+            assert r.status_code == requests.codes.ok, "Timed out waiting for delete: {}".format(r.status_code)
+
+        print("Waiting for delete ...")
+        wait_for_delete(poll_location)
+
+        print("Clean up successful")
+
+    if test_successful:
+        print("Azure test deployment succeeded")
+    else:
+        print("ERROR: Azure test deployment failed", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == '__main__':
     run()

@@ -98,9 +98,14 @@ def run():
             template_parameters=dummy_template_parameters)
         json_pretty_print(deployment_response)
 
-        @retry(wait_fixed=(5*1000), stop_max_delay=(15*60*1000))
+        @retry(wait_fixed=(5*1000),
+               stop_max_delay=(15*60*1000),
+               retry_on_exception=lambda x: isinstance(x, AssertionError))
         def poll_on_template_deploy_status(client):
-            provisioning_state = client.get_template_deployment().get('properties', {}).get('provisioningState')
+            provisioning_state = client.get_template_deployment()['properties']['provisioningState']
+            if provisioning_state == TemplateProvisioningState.FAILED:
+                failed_ops = client.list_template_deployment_operations(provisioning_state)
+                raise AzureClientException("Template failed to deploy: {}".format(failed_ops))
             assert provisioning_state == TemplateProvisioningState.SUCCEEDED, \
                 "Template did not finish deploying in time, provisioning state: {}".format(provisioning_state)
 

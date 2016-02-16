@@ -4,6 +4,7 @@
 import os
 import random
 import uuid
+from urllib.parse import quote
 
 import requests
 
@@ -245,9 +246,12 @@ class AzureClient(object):
     def get_random_deployment_name(self):
         return 'deployment{}'.format(uuid.uuid4().hex)
 
-    def list_template_deployment_operations(self):
+    def list_template_deployment_operations(self, provisioning_state_filter=None):
         # TODO(mj): add skiptoken parameter https://msdn.microsoft.com/en-us/library/azure/dn790518.aspx
-        r = self._session.get(self._url_space['operations'])
+        url = self._url_space['operations']
+        if provisioning_state_filter:
+            url += '?$filter=provisioningState eq \'' + quote(provisioning_state_filter) + '\''
+        r = self._session.get(url)
 
         return r.json()
 

@@ -80,6 +80,15 @@ def validate_master_list(key=None, config=None, optional=False):
         if not is_ip_list[0]:
             return is_ip_list
 
+        # Check for IP dups
+        if len(config['agent_list']) > 0:
+            agent_dups = [a for a in config[key] if a in config['agent_list']]
+            if len(agent_dups) > 0:
+                return [
+                    False,
+                    'Master list must not contain IPs from agent list. Found duplicates: {}'.format(agent_dups),
+                    optional]
+
         key = config[key]
         num_mstrs = len(key)
         if int(num_mstrs) in [1, 3, 5, 7, 9]:
@@ -88,6 +97,25 @@ def validate_master_list(key=None, config=None, optional=False):
         return [False, 'Master list must have 1, 3, 5, 7, or 9 hosts. Found {}.'.format(num_mstrs), optional]
 
     return [False, None, optional]
+
+
+def validate_agent_list(key=None, config=None, optional=False):
+    if key in config and key is not None:
+        is_ip_list = validate_ip_list(key, config, optional)
+        if not is_ip_list[0]:
+            return is_ip_list
+
+        # Check for IP dups
+        if len(config['master_list']) > 0:
+            mstr_dups = [a for a in config[key] if a in config['master_list']]
+            if len(mstr_dups) > 0:
+                return [
+                    False,
+                    'Agent list must not contain IPs from master list. Found duplicates: {}'.format(mstr_dups),
+                    optional]
+        return [True, 'Agent list is valid.', optional]
+    return [True, None, optional]
+
 
 
 def validate_string(key=None, config=None, optional=False):

@@ -439,24 +439,23 @@ class Repository():
         self.__commit = commit
 
     @property
+    def path_prefix(self):
+        return self.__repository_path + '/'
+
+    @property
+    def path_channel_prefix(self):
+        return self.path_prefix + self.channel_prefix
+
+    @property
+    def path_channel_commit_prefix(self):
+        return self.path_channel_prefix + 'commit/' + self.__commit + '/'
+
+    @property
     def channel_prefix(self):
         if self.__channel_name:
             return self.__channel_name + '/'
         else:
             return ''
-
-    def channel_commit_path(self, artifact_path):
-        assert artifact_path[0] != '/'
-        return self.channel_path('commit/' + self.__commit + '/' + artifact_path)
-
-    def channel_path(self, artifact_path):
-        assert artifact_path[0] != '/'
-        return self.repository_path(self.channel_prefix + artifact_path)
-
-    def repository_path(self, artifact_path):
-        assert artifact_path[0] != '/'
-
-        return self.__repository_path + '/' + artifact_path
 
     # TODO(cmaloney): This function is too big. Break it into testable chunks.
     # TODO(cmaloney): Assert the same path/destination_path is never used twice.
@@ -522,13 +521,13 @@ class Repository():
             action_count = 0
             if 'reproducible_path' in artifact:
                 action_count += 1
-                stage1.append(add_dest(self.repository_path(artifact['reproducible_path']), True))
+                stage1.append(add_dest(self.path_prefix + artifact['reproducible_path'], True))
 
             if 'channel_path' in artifact:
                 channel_path = artifact['channel_path']
                 action_count += 2
-                stage1.append(add_dest(self.channel_commit_path(channel_path), False))
-                stage2.append(add_dest(self.channel_path(channel_path), False))
+                stage1.append(add_dest(self.path_channel_commit_prefix + channel_path, False))
+                stage2.append(add_dest(self.path_channel_prefix + channel_path, False))
                 if 'local_path' in artifact:
                     local_cp.append({
                         'source_path': artifact['local_path'],
@@ -860,6 +859,19 @@ def validate_options(options):
     get_src_dirs()
 
 
+def set_repository_metadata(repository, metadata, storage_providers, preferred_provider):
+    metadata['repository_path'] = repository.path_prefix[:-1]
+    metadata['repository_url'] = preferred_provider.url + repository.path_prefix[:-1]
+    metadata['repo_channel_path'] = repository.path_channel_prefix[:-1]
+    metadata['channel_commit_path'] = repository.path_channel_commit_prefix[:-1]
+    metadata['storage_urls'] = {}
+    for name, store in storage_providers.items():
+        metadata['storage_urls'][name] = store.url
+
+    # Explicitly returning none since we modify in place
+    return None
+
+
 # Two stages of uploading artifacts. First puts all the artifacts into their places / uploads
 # all the artifacts to all providers. The second makes the end user known / used urls have the
 # correct artifacts.
@@ -917,18 +929,8 @@ class ReleaseManager():
         self.fetch_key_artifacts(metadata)
 
         repository = Repository(destination_repository, destination_channel, metadata['commit'])
-
-        metadata['repository_path'] = destination_channel
-        metadata['repository_url'] = self.__preferred_provider.url + destination_channel
-        metadata['repo_channel_path'] = destination_channel
-        # Check that the channel_commit_path ends in a '/'. We want the metadata we add to not end
-        # in a slash, so we remove that. We aren't allowed to call the channel_commit_path with a
-        # non-empty artifact path, so use 'a' as a placeholder.
-        assert repository.channel_commit_path('a')[-2:] == '/a'
-        metadata['channel_commit_path'] = repository.channel_commit_path('a')[:-2]
-        metadata['storage_urls'] = {}
-        for name, store in self.__storage_providers.items():
-            metadata['storage_urls'][name] = store.url
+        set_repository_metadata(repository, metadata, self.__storage_providers, self.__preferred_provider)
+        assert 'tag' in metadata
         del metadata['channel_artifacts']
 
         metadata['channel_artifacts'] = make_channel_artifacts(metadata)
@@ -943,7 +945,6 @@ class ReleaseManager():
 
         # TOOD(cmaloney): Figure out why the cached version hasn't been working right
         # here from the TeamCity agents. For now hardcoding the non-cached s3 download locatoin.
-        repository_url = self.__preferred_provider.url + repository_path
         metadata = make_stable_artifacts(
             'https://s3.amazonaws.com/downloads.mesosphere.io/dcos/' + repository_path, skip_build)
 
@@ -952,18 +953,7 @@ class ReleaseManager():
         assert 'commit' in metadata
 
         repository = Repository(repository_path, channel, metadata['commit'])
-        metadata['repo_channel_path'] = repository_path + '/' + channel
-        # Check that the channel_commit_path ends in a '/'. We want the metadata we add to not end
-        # in a slash, so we remove that. We aren't allowed to call the channel_commit_path with a
-        # non-empty artifact path, so use 'a' as a placeholder.
-        assert repository.channel_commit_path('a')[-2:] == '/a'
-        metadata['channel_commit_path'] = repository.channel_commit_path('a')[:-2]
-        metadata['storage_urls'] = {}
-        for name, store in self.__storage_providers.items():
-            metadata['storage_urls'][name] = store.url
-
-        metadata['repository_path'] = repository_path
-        metadata['repository_url'] = repository_url
+        set_repository_metadata(repository, metadata, self.__storage_providers, self.__preferred_provider)
         metadata['tag'] = tag
         assert 'channel_artifacts' not in metadata
 

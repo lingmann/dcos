@@ -246,8 +246,11 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
     for arm_t in ['dcos', 'acs']:
         for num_masters in [1, 3, 5]:
             for bootstrap_name, gen_arguments in variant_arguments.items():
+                gen_args = deepcopy(gen_arguments)
+                if arm_t == 'acs':
+                    gen_args['ui_tracking'] = 'false'
                 dcos_template, artifact = make_template(num_masters,
-                                                        deepcopy(gen_arguments),
+                                                        gen_args,
                                                         arm_t,
                                                         util.variant_prefix(bootstrap_name))
                 extra_packages += util.cluster_to_extra_packages(dcos_template.results.cluster_packages)

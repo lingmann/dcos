@@ -533,14 +533,7 @@ def build(variant, name, repository_url):
     # Add the "extra" folder inside the package as an additional source if it
     # exists
     if os.path.exists('extra'):
-        extra_id = check_output([
-            "/bin/bash",
-            "-o", "nounset",
-            "-o", "pipefail",
-            "-o", "errexit",
-            "-c",
-            "find extra -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | cut -d ' ' -f 1"
-            ]).decode('ascii').strip()
+        extra_id = pkgpanda.build.hash_folder('extra')
         build_ids['extra_source'] = extra_id
         buildinfo['extra_source'] = extra_id
 

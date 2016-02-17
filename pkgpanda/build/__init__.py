@@ -49,6 +49,19 @@ def hash_checkout(item):
         raise NotImplementedError("{} of type {}".format(item, type(item)))
 
 
+def hash_folder(directory):
+    return check_output([
+        "/bin/bash",
+        "-o", "nounset",
+        "-o", "pipefail",
+        "-o", "errexit",
+        "-c",
+        "find {} -type f -print0 | sort -z | xargs -0 sha1sum | sha1sum | cut -d ' ' -f 1".format(
+            directory)
+        ]).decode('ascii').strip()
+    raise
+
+
 def get_filename(out_dir, url_str):
     url = urlparse(url_str)
     if url.scheme == 'file':

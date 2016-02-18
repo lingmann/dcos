@@ -2,7 +2,7 @@
   "requires": ["java", "exhibitor"],
   "single_source": {
     "kind": "url_extract",
-    "url": "http://downloads.mesosphere.io/marathon/v0.15.1/marathon-0.15.1.tgz",
-    "sha1": "c4fa8377d16e05790d90b5828e12e71c797cf000"
+    "url": "http://downloads.mesosphere.io/marathon/v0.15.2/marathon-0.15.2.tgz",
+    "sha1": "7414b59b1a2bfe243185e1ab93fbf8170c11db12"
   }
 }

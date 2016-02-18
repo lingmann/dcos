@@ -59,7 +59,7 @@ def get_onprem_dependencies(config):
         "resolvers": helpers.validate_ip_list('resolvers', config, optional=True),
         "ssh_port": helpers.validate_port('ssh_port', config, optional=True),
         "ssh_user": helpers.validate_string('ssh_user', config, optional=True),
-        "agent_list": helpers.validate_ip_list('agent_list', config, optional=True),
+        "agent_list": helpers.validate_agent_list('agent_list', config, optional=True),
         "ip_detect_path": helpers.validate_path('ip_detect_path', config),
         "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
         "ssh_key": helpers.validate_ssh_key('ssh_key', config, optional=True),

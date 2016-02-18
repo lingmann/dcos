@@ -464,17 +464,17 @@ def test_repository():
     # Repository path with no channel (Like we'd do for a stable or EA release).
     no_channel = release.Repository("stable", None, "testing_commit_2")
     assert no_channel.channel_prefix == ''
-    assert no_channel.channel_commit_path("foo") == 'stable/commit/testing_commit_2/foo'
-    assert no_channel.channel_path("bar") == 'stable/bar'
-    assert no_channel.repository_path("a/baz--foo.tar.xz") == 'stable/a/baz--foo.tar.xz'
+    assert no_channel.path_channel_commit_prefix + 'foo' == 'stable/commit/testing_commit_2/foo'
+    assert no_channel.path_channel_prefix + 'bar' == 'stable/bar'
+    assert no_channel.path_prefix + "a/baz--foo.tar.xz" == 'stable/a/baz--foo.tar.xz'
     exercise_make_commands(no_channel)
 
     # Repository path with a channel (Like we do for PRs)
     with_channel = release.Repository("testing", "pull/283", "testing_commit_3")
     assert with_channel.channel_prefix == 'pull/283/'
-    assert with_channel.channel_commit_path("foo") == 'testing/pull/283/commit/testing_commit_3/foo'
-    assert with_channel.channel_path("bar") == 'testing/pull/283/bar'
-    assert with_channel.repository_path("a/baz--foo.tar.xz") == 'testing/a/baz--foo.tar.xz'
+    assert with_channel.path_channel_commit_prefix + "foo" == 'testing/pull/283/commit/testing_commit_3/foo'
+    assert with_channel.path_channel_prefix + "bar" == 'testing/pull/283/bar'
+    assert with_channel.path_prefix + "a/baz--foo.tar.xz" == 'testing/a/baz--foo.tar.xz'
     # TODO(cmaloney): Exercise make_commands with a channel.
 
 

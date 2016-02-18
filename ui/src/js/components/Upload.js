@@ -31,8 +31,21 @@ class Upload extends React.Component {
   }
 
   handleUploadFinish(e) {
-    this.props.onUploadFinish(e.target.result);
+    var result = e.target.result;
+    if (this.props.extensions === '.csv') {
+      result = this.processCSVResult(result);
+    }
+
+    this.props.onUploadFinish(result);
     this.setState({uploading: false});
+  }
+
+  processCSVResult(result) {
+    return result.replace(/[\n\r]+/mg, '')
+      .split(',')
+      .map(function (csvValue) { return csvValue.trim(); })
+      .filter(function (csvValue) { return csvValue.length > 0; })
+      .join(', ');
   }
 
   uploadFile(file) {

@@ -109,6 +109,8 @@ if [ $RET -ne 0 ]; then
 fi
 
 echo "Cleaning up vagrant"
+set +e
 vagrant destroy -f
+set -e
 
 touch PASSED

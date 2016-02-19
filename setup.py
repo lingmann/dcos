@@ -1,4 +1,4 @@
-from setuptools import setup, find_packages
+from setuptools import setup
 
 
 def get_advanced_templates():
@@ -22,8 +22,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    # TODO(cmaloney): remove find_packages()
-    packages=['gen', 'providers', 'ssh'] + find_packages(),
+    packages=['gen', 'gen.aws', 'gen.azure', 'providers', 'ssh'],
     install_requires=[
         'requests==2.8.1',
         'azure-storage==0.20.2',
@@ -38,23 +37,26 @@ setup(
     entry_points={
         'console_scripts': [
             'release=providers.release:main',
-            'genconf=providers.genconf:main',
             'ccm-deploy-test=providers.test_installer_ccm:main',
         ],
     },
     package_data={
-        '': [
-            '*.yaml',
-            '*/*.yaml',
-            'install_requirements'],
         'gen': [
-            '*/*.yaml',
+            'cloud-config.yaml',
+            'dcos-config.yaml',
+            'dcos-metadata.yaml',
+            'dcos-services.yaml',
+            'aws/dcos-config.yaml',
             'aws/templates/aws.html',
             'aws/templates/cloudformation.json',
+            'azure/cloud-config.yaml',
             'azure/azuredeploy-parameters.json',
             'azure/templates/acs.json',
             'azure/templates/azure.html',
-            'azure/templates/azuredeploy.json'] + get_advanced_templates(),
+            'azure/templates/azuredeploy.json',
+            'coreos-aws/cloud-config.yaml',
+            'coreos/cloud-config.yaml'
+            ] + get_advanced_templates(),
         'providers': [
             '../docker/py.test/Dockerfile',
             '../docker/test_server/Dockerfile',

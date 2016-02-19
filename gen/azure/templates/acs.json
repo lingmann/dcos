@@ -801,6 +801,27 @@
       }
     },
     {
+      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('masterVMNamePrefix'), copyIndex(), '/waitforleader')]",
+      "location": "[resourceGroup().location]",
+      "copy": {
+        "name": "masterExtLoop",
+        "count": "[variables('masterCount')]"
+      },
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', variables('masterVMNamePrefix'), copyIndex())]"
+      ],
+      "properties": {
+        "publisher": "Microsoft.OSTCExtensions",
+        "type": "CustomScriptForLinux",
+        "typeHandlerVersion": "1.4",
+        "settings": {
+          "commandToExecute": "sh -c 'until ping -c1 leader.mesos >/dev/null;do echo waiting for leader.mesos;sleep 15;done;echo leader.mesos up'"
+        }
+      }
+    },
+    {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[concat(variables('storageAccountPrefixes')[mod(copyIndex(),variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(copyIndex(),variables('storageAccountPrefixesCount'))],variables('agentStoragePublicAccountName'),copyIndex())]",
       "apiVersion": "2015-06-15",

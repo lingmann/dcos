@@ -283,7 +283,7 @@
       }
     ],
     "linuxConfiguration": "[variables('linuxConfigurations')[variables('setLinuxConfigurationForVMCreate')]]",
-    "orchestratorName": "mesos",
+    "orchestratorName": "dcos",
     "masterPublicIPAddressName": "[concat(variables('orchestratorName'), '-master-ip-', variables('masterEndpointDNSNamePrefix'), '-', variables('nameSuffix'))]",
     "agentPublicIPAddressName": "[concat(variables('orchestratorName'), '-agent-ip-', variables('agentEndpointDNSNamePrefix'), '-', variables('nameSuffix'))]",
     "marathonEnabled": true,
@@ -488,8 +488,8 @@
     "agentPrivateNSGName": "[concat(variables('orchestratorName'), '-agent-private-nsg-', variables('nameSuffix'))]",
     "agentPrivateNSGID": "[resourceId('Microsoft.Network/networkSecurityGroups',variables('agentPrivateNSGName'))]",
     "agentFirstAddr": 20,
-    "agentPublicVMNamePrefix": "[concat(variables('orchestratorName'), '-agent-public-', variables('nameSuffix'), '-')]",
-    "agentPrivateVMNamePrefix": "[concat(variables('orchestratorName'), '-agent-private-', variables('nameSuffix'), '-')]",
+    "agentPublicVMNamePrefix": "[concat(variables('orchestratorName'), '-agent-public-', variables('nameSuffix'))]",
+    "agentPrivateVMNamePrefix": "[concat(variables('orchestratorName'), '-agent-private-', variables('nameSuffix'))]",
     "agentAvailabilitySet": "[concat(variables('orchestratorName'), '-agent-availabilitySet-', variables('nameSuffix'))]",
     "agentsPublicLbName": "[concat(variables('orchestratorName'), '-agent-lb-', variables('nameSuffix'))]",
     "agentsPublicLbID": "[resourceId('Microsoft.Network/loadBalancers',variables('agentsPublicLbName'))]",
@@ -946,7 +946,7 @@
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
       "apiVersion": "2015-06-15",
-      "name": "[concat(variables('agentPublicVMNamePrefix'), 'vmss', copyIndex())]",
+      "name": "[concat(variables('agentPublicVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterLbLoopNode",
@@ -1051,7 +1051,7 @@
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
       "apiVersion": "2015-06-15",
-      "name": "[concat(variables('agentPrivateVMNamePrefix'), 'vmss', copyIndex())]",
+      "name": "[concat(variables('agentPrivateVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {
         "name": "masterLbLoopNode",

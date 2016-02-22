@@ -251,7 +251,7 @@ def gen_advanced_template(arguments, variant_prefix, channel_commit_path):
         node_template_id, node_args = groups[node_type]
         node_args = deepcopy(node_args)
         node_args.update(arguments)
-        params = cf_instance_groups[node_template_id]
+        params = deepcopy(cf_instance_groups[node_template_id])
         params['report_name'] = node_args.pop('report_name')
         template_key = 'advanced-{}'.format(node_type)
         template_name = template_key + '.json'

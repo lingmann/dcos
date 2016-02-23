@@ -713,14 +713,6 @@ def do_variable_set_or_exists(env_var, path):
     sys.exit(1)
 
 
-def get_src_dirs():
-    pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
-    dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
-    dcos_installer_src = make_abs(do_variable_set_or_exists('DCOS_INSTALLER_SRC', 'ext/dcos-installer'))
-
-    return pkgpanda_src, dcos_image_src, dcos_installer_src
-
-
 def do_build_packages(cache_repository_url, skip_build):
     dockerfile = 'docker/builder/Dockerfile'
     container_name = 'mesosphere/dcos-builder:dockerfile-' + pkgpanda.build.sha1(dockerfile)
@@ -772,15 +764,9 @@ def make_installer_docker(variant, bootstrap_id):
 
     # TODO(cmaloney): If a pre-existing wheelhouse exists assert that the wheels
     # inside of it match the current versions / working commits of pkganda, dcos-image.
-    pkgpanda_src, dcos_image_src, dcos_installer_src = get_src_dirs()
     wheel_dir = os.getcwd() + '/wheelhouse'
-    if not os.path.exists(wheel_dir):
-        print("Building wheels for dcos-image, pkgpanda, and all dependencies")
-
-        # Make the wheels
-        subprocess.check_call(['pip', 'wheel', pkgpanda_src])
-        subprocess.check_call(['pip', 'wheel', dcos_image_src])
-        subprocess.check_call(['pip', 'wheel', dcos_installer_src])
+    assert os.path.exists(wheel_dir), "Wheels for pkgpanda, dcos-image, dcos-installer should be " \
+        "pre-built and put in {}".format(wheel_dir)
 
     image_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
     genconf_tar = "dcos-genconf." + image_version + ".tar"
@@ -848,15 +834,6 @@ def build_installers(bootstrap_dict):
         print("Building installer for variant:", util.variant_name(variant))
         installers[variant] = make_installer_docker(variant, bootstrap_id)
     return installers
-
-
-def validate_options(options):
-    assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
-    assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
-
-    # Validate src_dirs are set properly up front. Building per channel
-    # artifacts will fail without it.
-    get_src_dirs()
 
 
 def set_repository_metadata(repository, metadata, storage_providers, preferred_provider):
@@ -996,6 +973,9 @@ class ReleaseManager():
 
 
 def get_prod_storage_providers():
+    assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
+    assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
+
     azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
     azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
 
@@ -1053,7 +1033,6 @@ def main():
         print("ERROR: Must use a subcommand")
         sys.exit(1)
 
-    validate_options(options)
     release_manager = ReleaseManager(get_prod_storage_providers(), 'aws', options.noop)
     if options.action == 'promote':
         release_manager.promote(options.source_channel, options.destination_repository, options.destination_channel)

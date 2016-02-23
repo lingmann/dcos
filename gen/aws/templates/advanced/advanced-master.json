@@ -16,27 +16,35 @@
       "AllowedValues": ["Yes"]
     },
     "ExhibitorS3Bucket": {
+      "Description" : "\nRequired: S3 Bucket resource name, for use by Zookeeper",
       "Type": "String"
     },
     "LbSecurityGroup": {
+      "Description" : "\nLoadbalancer Security Group",
       "Type": "String"
     },
     "AdminSecurityGroup": {
+      "Description" : "\nAdmin URL Security Group. Controls Access to the Admin page",
       "Type": "String"
     },
     "PrivateAgentSecurityGroup": {
+      "Description" : "\nSecurity group used by Private Agents, typically with limited access to the outside",
       "Type": "String"
     },
     "PublicAgentSecurityGroup": {
+      "Description" : "\nPermissive Security group used by Public Agents",
       "Type": "String"
     },
     "MasterSecurityGroup": {
+      "Description" : "\nSecurity group used by Master nodes",
       "Type": "String"
     },
     "PublicSubnet": {
+      "Description" : "\nSubnet ID for use by all public agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "PrivateSubnet": {
+      "Description" : "\nSubnet ID for use by all private agent nodes",
       "Type": "String"
     },
     "MasterInstanceType": {

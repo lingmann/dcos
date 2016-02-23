@@ -137,12 +137,15 @@
       "Description": "Required: Specify your AWS EC2 Key Pair."
     },
     "InternalMasterLoadBalancerDnsName": {
+      "Description" : "\nRequired: DNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
       "Type": "String"
     },
     "PrivateAgentSecurityGroup": {
+      "Description" : "\nSecurity group used by Private Agents, typically with limited access to the outside",
       "Type": "String"
     },
     "PrivateSubnet": {
+      "Description" : "\nSubnet ID for use by all private agent nodes",
       "Type": "String"
     },
     "PrivateAgentInstanceType": {

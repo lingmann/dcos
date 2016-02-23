@@ -6,7 +6,7 @@ the necessary dependencies.
 
 Usage:
   mkpanda [--repository-url=<repository_url>]
-  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
+  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>] [<variant>]
   mkpanda clean
 """
 
@@ -81,7 +81,7 @@ def main():
 
     # Make a local repository for build dependencies
     if arguments['tree']:
-        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'])
+        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -357,7 +357,7 @@ def get_tree_packages(tree_variant, built_packages, package_requires):
     return package_paths
 
 
-def build_tree(mkbootstrap, repository_url):
+def build_tree(mkbootstrap, repository_url, variant=None):
     packages = find_packages_fs()
 
     # Check the requires and figure out a feasible build order
@@ -368,6 +368,8 @@ def build_tree(mkbootstrap, repository_url):
     # TODO(cmaloney): Add support for circular dependencies. They are doable
     # long as there is a pre-built version of enough of the packages.
 
+    # TODO(cmaloney): Make it so when we're building a treeinfo which has a
+    # explicit package list we don't build all the other packages.
     build_order = list()
     visited = set()
     built = set()
@@ -438,7 +440,13 @@ def build_tree(mkbootstrap, repository_url):
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.
-    return for_each_variant(make_bootstrap, "treeinfo.json", [])
+    # TODO(cmaloney): Allow distinguishing between "build all" and "build the default one".
+    if variant is None:
+        return for_each_variant(make_bootstrap, "treeinfo.json", [])
+    else:
+        return {
+            variant: make_bootstrap(variant)
+        }
 
 
 def expand_single_source_alias(pkg_name, buildinfo):

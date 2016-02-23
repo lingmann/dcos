@@ -287,8 +287,15 @@ def make_bootstrap_tarball(packages, variant, repository_url):
     return mark_latest()
 
 
+ALLOWED_TREEINFO_KEYS = {'exclude', 'variants'}
+
+
 def get_tree_packages(tree_variant, built_packages, package_requires):
     treeinfo = load_config_variant(os.getcwd(), tree_variant, 'treeinfo.json')
+
+    if treeinfo.keys() > ALLOWED_TREEINFO_KEYS:
+        print("treeinfo can only include the keys {}. Found {}".format(ALLOWED_TREEINFO_KEYS, treeinfo.keys()))
+        sys.exit(1)
 
     excludes = treeinfo.get('exclude', list())
     if not isinstance(excludes, list):

@@ -978,20 +978,20 @@ class ReleaseManager():
                 pkgpanda.util.write_string(destination_path, artifact['source_content'])
 
 
-def get_prod_storage_providers():
-    assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
-    assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
-
-    azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
-    azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
-
+def get_prod_storage_providers(use_azure_storage):
     s3_bucket = aws_config.session_prod.resource('s3').Bucket('downloads.mesosphere.io')
 
     storage_providers = {
-        'azure': AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
-                                      'http://az837203.vo.msecnd.net/dcos/'),
         'aws': S3StorageProvider(s3_bucket, 'dcos', 'https://downloads.mesosphere.com/dcos/')
     }
+
+    if use_azure_storage:
+        assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
+        assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
+        azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
+        azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
+        storage_providers['azure'] = AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
+                                                          'http://az837203.vo.msecnd.net/dcos/')
 
     for name, provider in storage_providers.items():
         assert provider.name == name
@@ -1008,6 +1008,11 @@ def main():
         action='store_true',
         help="Do not take any actions on the storage providers, just run the "
              "whole build, produce the list of actions than no-op.")
+
+    parser.add_argument(
+        '--no-azure-storage',
+        action='store_false',
+        help="Do not initialize or utilize the azure storage provider.")
 
     # Moves the latest of a given release name to the given release name.
     promote = subparsers.add_parser('promote')
@@ -1039,7 +1044,7 @@ def main():
         print("ERROR: Must use a subcommand")
         sys.exit(1)
 
-    release_manager = ReleaseManager(get_prod_storage_providers(), 'aws', options.noop)
+    release_manager = ReleaseManager(get_prod_storage_providers(options.no_azure_storage), 'aws', options.noop)
     if options.action == 'promote':
         release_manager.promote(options.source_channel, options.destination_repository, options.destination_channel)
     elif options.action == 'create':

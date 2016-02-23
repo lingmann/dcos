@@ -11,7 +11,6 @@ import random
 import stat
 import string
 import subprocess
-import sys
 import time
 from copy import copy
 from multiprocessing import Process
@@ -69,12 +68,6 @@ def make_vpc():
         region="us-west-2",
         key_pair_name=unique_cluster_id
         )
-    vpc.wait_for_up()
-    host_list = vpc.hosts()
-    if len(host_list) == 0:
-        print("VPC failed to spin up!")
-        vpc.delete()
-        sys.exit(1)
 
     # Write out the ssh key to the local filesystem for the ssh lib to pick up.
     with open("ssh_key", "w") as ssh_key_fh:

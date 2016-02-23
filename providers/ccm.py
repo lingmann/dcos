@@ -17,9 +17,9 @@ Options:
 """
 import json
 import sys
-import time
 
 import requests
+from retrying import retry
 
 import docopt
 
@@ -29,26 +29,18 @@ MAGIC_TOKEN = 'Token ji4weySp4ix5bueRb0Uj2loM9Jan3juD7Wan3yin9leeT9gEm5'
 
 
 class VpcCluster():
-    def __init__(self, ccm, pk):
+    def __init__(self, ccm, pk, node_count):
         self.ccm = ccm
         self.pk = pk
+        self.node_count = node_count
 
+    @retry(wait_fixed=5*1000, stop_max_delay=1000*900)
     def hosts(self):
-        self.wait_for_up()
-        return json.loads(self.ccm.get_cluster_info(self.pk)["cluster_info"])["NodesIpAddresses"]
-
-    def wait_for_up(self, timeout=300, wait=10):
-        def status_cb():
-            return self.ccm.get_cluster_info(self.pk)['status_text']
-        tick = 0
-        while status_cb() == 'Creating':
-            if wait*tick > timeout:
-                print("Waited over {} seconds and still no VPC!")
-                return False
-            time.sleep(wait)
-            tick += 1
-            print("Waiting for VPC to spin up ({} seconds...)".format(int(wait*tick)))
-        return True
+        host_list = json.loads(self.ccm.get_cluster_info(self.pk)["cluster_info"])["NodesIpAddresses"]
+        returned_node_count = len(host_list)
+        err_msg = "Expected {} nodes and got {}"
+        assert returned_node_count == self.node_count, err_msg.format(self.node_count, returned_node_count)
+        return host_list
 
     def delete(self):
         return self.ccm.delete_cluster(self.pk)
@@ -109,7 +101,7 @@ class Ccm():
             print("Could not extract ID; VPC creation failed!")
             print("Response data: {}".format(response))
             exit(1)
-        return self.VpcCluster(cluster_id)
+        return self.VpcCluster(cluster_id, instance_count)
 
     def get_cluster_info(self, pk):
         response = self.get("/api/cluster/{}/".format(pk))
@@ -128,8 +120,8 @@ class Ccm():
     def delete_cluster(self, pk):
         return self.delete("/api/cluster/{}/".format(pk)).text
 
-    def VpcCluster(self, pk):
-        return VpcCluster(self, pk)
+    def VpcCluster(self, pk, instance_count):
+        return VpcCluster(self, pk, instance_count)
 
 
 def main():

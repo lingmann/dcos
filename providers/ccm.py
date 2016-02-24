@@ -29,17 +29,19 @@ MAGIC_TOKEN = 'Token ji4weySp4ix5bueRb0Uj2loM9Jan3juD7Wan3yin9leeT9gEm5'
 
 
 class VpcCluster():
-    def __init__(self, ccm, pk, node_count):
+    def __init__(self, ccm, pk, node_count=None):
         self.ccm = ccm
         self.pk = pk
+        # If we know the node count, we will assert against it when we call hosts()
         self.node_count = node_count
 
     @retry(wait_fixed=5*1000, stop_max_delay=1000*900)
     def hosts(self):
         host_list = json.loads(self.ccm.get_cluster_info(self.pk)["cluster_info"])["NodesIpAddresses"]
-        returned_node_count = len(host_list)
-        err_msg = "Expected {} nodes and got {}"
-        assert returned_node_count == self.node_count, err_msg.format(self.node_count, returned_node_count)
+        if self.node_count:
+            returned_node_count = len(host_list)
+            err_msg = "Expected {} nodes and got {}"
+            assert returned_node_count == self.node_count, err_msg.format(self.node_count, returned_node_count)
         return host_list
 
     def delete(self):
@@ -121,7 +123,7 @@ class Ccm():
         return self.delete("/api/cluster/{}/".format(pk)).text
 
     def VpcCluster(self, pk, instance_count):
-        return VpcCluster(self, pk, instance_count)
+        return VpcCluster(self, pk, node_count=instance_count)
 
 
 def main():
@@ -143,7 +145,7 @@ def main():
         cluster_id = arguments['<id>']
         cluster = VpcCluster(Ccm(), cluster_id)
         if arguments['wait_for_up']:
-            cluster.wait_for_up()
+            cluster.hosts()
         if arguments['info']:
             print(cluster.get_vpc_info())
         if arguments['delete']:

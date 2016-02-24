@@ -12,10 +12,9 @@ RestartSec=20
 
 Environment=BOUNCER_PACKAGE_PATH=${PKG_PATH}
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/num_masters.env
 
 # Wait for ZK cluster to be up and running.
-ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py $ZOOKEEPER_CLUSTER_SIZE
+ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 
 WorkingDirectory=${PKG_PATH}
 ExecStart=${PKG_PATH}/bouncer/bin/bouncer-gunicorn.sh

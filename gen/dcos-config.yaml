@@ -24,9 +24,9 @@ package:
         echo "Not a valid ip: $ip" >&2
         exit 1;
       fi
-  - path: /etc_master/num_masters.env
+  - path: /etc_master/master_count
     content: |
-      ZOOKEEPER_CLUSTER_SIZE={{ num_masters }}
+      {{ num_masters }}
   - path: /etc/mesos-dns.json
     content: |
       {

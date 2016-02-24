@@ -10,7 +10,6 @@ RestartSec=5
 MountFlags=private
 RuntimeDirectory=dcos_exhibitor
 EnvironmentFile=/opt/mesosphere/environment
-EnvironmentFile=/opt/mesosphere/etc/num_masters.env
 EnvironmentFile=/opt/mesosphere/etc/dns_config
 EnvironmentFile=/opt/mesosphere/etc/exhibitor
 # run in new mount namespace to create custom resolv.conf

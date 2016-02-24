@@ -142,11 +142,11 @@ def calc_num_masters(master_list):
     return str(len(json.loads(master_list)))
 
 
-def calculate_config_id(dcos_image_commit, user_arguments, mixins):
+def calculate_config_id(dcos_image_commit, user_arguments, template_filenames):
     return hash_checkout({
         "commit": dcos_image_commit,
         "user_arguments": json.loads(user_arguments),
-        "mixins": json.loads(mixins)})
+        "template_filenames": json.loads(template_filenames)})
 
 
 def calculate_cluster_packages(package_names, config_id):

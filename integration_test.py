@@ -205,6 +205,7 @@ class Cluster:
 
     def get(self, path="", params=None, disable_suauth=False, **kwargs):
         hdrs = self._suheader(disable_suauth)
+        hdrs.update(kwargs.pop('headers', {}))
         return requests.get(
             self.dcos_uri + path, params=params, headers=hdrs, **kwargs)
 
@@ -727,6 +728,20 @@ def test_if_DCOSHistoryService_is_getting_data(cluster):
     assert 'frameworks' in json
     assert 'slaves' in json
     assert 'hostname' in json
+
+
+def test_if_we_have_capabilities(cluster):
+    """Indirectly test that Cosmos is up since this call is handled by Cosmos.
+    """
+
+    r = cluster.get(
+        '/capabilities',
+        headers={
+            'Accept': 'application/vnd.dcos.capabilities+json;charset=utf-8;version=v1'
+        }
+    )
+    assert r.status_code == 200
+    assert {'name': 'PACKAGE_MANAGEMENT'} in r.json()['capabilities']
 
 
 @pytest.mark.minuteman

@@ -203,13 +203,8 @@ def checkout_sources(sources):
             # Clone into `src/`.
             check_call(["git", "clone", "-q", bare_folder, root])
 
-            # Checkout from the bare repo in the cache folder the specific branch
-            # sha1 or tag requested.
-            # info["branch"] can be a branch, tag, or commit sha
-            ref = info.get('ref', None)
-            if ref is None:
-                ref = info['branch']
-
+            # Checkout from the bare repo in the cache folder at the specific sha1
+            ref = info['ref']
             check_call([
                 "git",
                 "--git-dir",

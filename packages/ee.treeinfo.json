@@ -2,5 +2,8 @@
   "variants": {
     "nginx": "ee",
     "dcos-ui": "ee"
-  }
+  },
+  "exclude": [
+    "dcos-signal"
+  ]
 }

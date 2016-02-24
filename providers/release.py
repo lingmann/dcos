@@ -116,8 +116,14 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
 
     # TODO(cmaloney): Add test for download, download_if_not_exist
     @abc.abstractmethod
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         pass
+
+    def download(self, path, local_path):
+        dirname = os.path.dirname(local_path)
+        if dirname:
+            subprocess.check_call(['mkdir', '-p', os.path.dirname(local_path)])
+        self.download_inner(path, local_path)
 
     def download_if_not_exist(self, path, local_path):
         if os.path.exists(local_path):
@@ -240,7 +246,7 @@ class AzureStorageProvider(AbstractStorageProvider):
     def fetch(self, path):
         return self.blob_service.get_blob_to_bytes(self.container, path)
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         return self.blob_service.get_blob_to_path(self.container, path, local_path)
 
     def list_recursive(self, path):
@@ -281,7 +287,7 @@ class S3StorageProvider(AbstractStorageProvider):
             data += chunk
         return data
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         self.get_object(path).download_file(local_path)
 
     @property
@@ -363,7 +369,7 @@ class LocalStorageProvider(AbstractStorageProvider):
         with open(self.__full_path(path), 'rb') as f:
             return f.read()
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         subprocess.check_call(['cp', self.__full_path(path), local_path])
 
     # Copy between fully qualified paths

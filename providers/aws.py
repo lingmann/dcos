@@ -11,6 +11,7 @@ import jinja2
 import requests
 import yaml
 from pkg_resources import resource_string
+from retrying import retry
 
 import gen
 import providers.util as util
@@ -185,14 +186,19 @@ def render_cloudformation(cf_template, **kwds):
     return render_cloudformation_transform(cf_template, transform_func=transform_lines, **kwds)
 
 
+@retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
+def validate_cf(template_body):
+    client = session_dev.client('cloudformation')
+    client.validate_template(TemplateBody=template_body)
+
+
 def gen_supporting_template():
     for template_key in ['infra.json']:
         cf_template = 'aws/templates/advanced/{}'.format(template_key)
         cloudformation = render_cloudformation(resource_string("gen", cf_template).decode())
 
         print("Validating CloudFormation: {}".format(cf_template))
-        client = session_dev.client('cloudformation')
-        client.validate_template(TemplateBody=cloudformation)
+        validate_cf(cloudformation)
 
         yield template_key, gen.Bunch({
             'cloudformation': cloudformation,
@@ -236,8 +242,7 @@ def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
         )
 
     print("Validating CloudFormation: {}".format(template_name))
-    client = session_dev.client('cloudformation')
-    client.validate_template(TemplateBody=cloudformation)
+    validate_cf(cloudformation)
 
     return gen.Bunch({
         'cloudformation': cloudformation,
@@ -330,8 +335,7 @@ def gen_templates(arguments):
         )
 
     print("Validating CloudFormation")
-    client = session_dev.client('cloudformation')
-    client.validate_template(TemplateBody=cloudformation)
+    validate_cf(cloudformation)
 
     return gen.Bunch({
         'cloudformation': cloudformation,

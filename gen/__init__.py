@@ -691,11 +691,11 @@ def generate(
     validate_all_arguments_match_parameters(mandatory_parameters, setters, user_arguments)
 
     def add_builtin(name, value):
-        add_setter(name, value, False, [], False)
+        add_setter(name, json.dumps(value, **json_prettyprint_args), False, [], False)
 
-    add_builtin('mixins', json.dumps(mixins, **json_prettyprint_args))
-    add_builtin('package_names', json.dumps(list(package_names), **json_prettyprint_args))
-    add_builtin('user_arguments', json.dumps(user_arguments, **json_prettyprint_args))
+    add_builtin('mixins', mixins)
+    add_builtin('package_names', list(package_names))
+    add_builtin('user_arguments', user_arguments)
 
     # Calculate the remaining arguments.
     arguments = DFSArgumentCalculator(setters).calculate(mandatory_parameters)

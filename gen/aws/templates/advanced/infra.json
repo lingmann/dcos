@@ -16,7 +16,7 @@
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Required: Specify your AWS EC2 Key Pair."
+      "Description": "Specify your AWS EC2 Key Pair."
     },
     "Vpc": {
       "Description" : "\nExisting VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",

@@ -7,16 +7,16 @@
   },
   "Parameters" : {
     "KeyName" : {
-      "Description" : "Required: Specify your AWS EC2 Key Pair.",
+      "Description" : "Specify your AWS EC2 Key Pair.",
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "AcceptEULA": {
-      "Description" : "\nRequired: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
+      "Description" : "\nRead the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
       "Type" : "String",
       "AllowedValues": ["Yes"]
     },
     "ExhibitorS3Bucket": {
-      "Description" : "\nRequired: S3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. \nSee Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
+      "Description" : "\nS3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. \nSee Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
       "Type": "String"
     },
     "LbSecurityGroup": {

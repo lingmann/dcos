@@ -121,14 +121,14 @@
     "PublicAgentInstanceCount": {
       "Type": "Number",
       "Default": "5",
-      "Description": "Required: Specify the number of public agent nodes or accept the default."
+      "Description": "Specify the number of public agent nodes or accept the default."
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Required: Specify your AWS EC2 Key Pair."
+      "Description": "Specify your AWS EC2 Key Pair."
     },
     "InternalMasterLoadBalancerDnsName": {
-      "Description" : "\nRequired: DNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
+      "Description" : "\nDNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
       "Type": "String"
     },
     "PublicAgentSecurityGroup": {

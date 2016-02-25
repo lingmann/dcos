@@ -7,14 +7,14 @@
     "Parameters": {
         "KeyName": {
           "Type": "AWS::EC2::KeyPair::KeyName",
-          "Description": "Required: Specify your AWS EC2 Key Pair."
+          "Description": "Specify your AWS EC2 Key Pair."
         },
         "AcceptEULA": {
           "Type": "String",
           "AllowedValues": [
             "Yes"
           ],
-          "Description": "\nRequired: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/."
+          "Description": "\nRead the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/."
         },
         "Vpc": {
           "Description" : "\nExisting VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",
@@ -35,12 +35,12 @@
         "PublicAgentInstanceCount": {
           "Type": "Number",
           "Default": "5",
-          "Description": "Required: Specify the number of public agent nodes or accept the default."
+          "Description": "Specify the number of public agent nodes or accept the default."
         },
         "PrivateAgentInstanceCount": {
           "Type": "Number",
           "Default": "5",
-          "Description": "Required: Specify the number of private agent nodes or accept the default."
+          "Description": "Specify the number of private agent nodes or accept the default."
         },
         "MasterInstanceType": {
           "Type": "String",

@@ -19,19 +19,19 @@
       "Description": "Specify your AWS EC2 Key Pair."
     },
     "Vpc": {
-      "Description" : "\nExisting VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",
+      "Description" : Existing VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",
       "Type": "AWS::EC2::VPC::Id"
     },
     "PublicSubnet": {
-      "Description" : "\nSubnet ID for use by all public agent nodes",
+      "Description" : Subnet ID for use by all public agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "PrivateSubnet": {
-      "Description" : "\nSubnet ID for use by all private agent nodes",
+      "Description" : Subnet ID for use by all private agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "InternetGateway": {
-      "Description" : "\nInternet Gateway ID, must be attached to the 'Vpc'. Used by all nodes for outgoing Internet access.",
+      "Description" : Internet Gateway ID, must be attached to the 'Vpc'. Used by all nodes for outgoing Internet access.",
       "Type": "String"
     }
   },

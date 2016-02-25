@@ -31,7 +31,7 @@
       "Type": "AWS::EC2::Subnet::Id"
     },
     "InternetGateway": {
-      "Description" : "\nInternet Gateway ID, attached to 'Vpc'. Valid resource needed for external Internet access",
+      "Description" : "\nInternet Gateway ID, must be attached to the 'Vpc'. Used by all nodes for outgoing Internet access.",
       "Type": "String"
     }
   },

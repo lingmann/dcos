@@ -16,11 +16,11 @@
       "AllowedValues": ["Yes"]
     },
     "ExhibitorS3Bucket": {
-      "Description" : "\nRequired: S3 Bucket resource name, for use by Zookeeper",
+      "Description" : "\nRequired: S3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. \nSee Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
       "Type": "String"
     },
     "LbSecurityGroup": {
-      "Description" : "\nLoadbalancer Security Group",
+      "Description" : "\nLoadbalancer Security Group. Rules allow masters and private agent nodes to communicate.",
       "Type": "String"
     },
     "AdminSecurityGroup": {

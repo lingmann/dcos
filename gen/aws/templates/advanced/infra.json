@@ -6,7 +6,7 @@
   },
   "Parameters": {
     "AdminLocation": {
-      "Description" : "Optional: Specify the IP range to whitelist for access to the admin zone. Must be a valid CIDR.",
+      "Description" : "\nOptional: Specify the IP range to whitelist for access to the admin zone. Must be a valid CIDR.",
       "Type" : "String",
       "MinLength" : "9",
       "MaxLength" : "18",
@@ -16,22 +16,22 @@
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Specify your AWS EC2 Key Pair."
+      "Description": "\nSpecify your AWS EC2 Key Pair."
     },
     "Vpc": {
-      "Description" : Existing VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",
+      "Description" : "\nExisting VPC to use. Nodes will be launched using subnets and Internet Gateway under this VPC",
       "Type": "AWS::EC2::VPC::Id"
     },
     "PublicSubnet": {
-      "Description" : Subnet ID for use by all public agent nodes",
+      "Description" : "\nSubnet ID for use by all public agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "PrivateSubnet": {
-      "Description" : Subnet ID for use by all private agent nodes",
+      "Description" : "\nSubnet ID for use by all private agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "InternetGateway": {
-      "Description" : Internet Gateway ID, must be attached to the 'Vpc'. Used by all nodes for outgoing Internet access.",
+      "Description" : "\nInternet Gateway ID, must be attached to the 'Vpc'. Used by all nodes for outgoing Internet access.",
       "Type": "String"
     }
   },

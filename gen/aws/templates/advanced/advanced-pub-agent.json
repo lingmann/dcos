@@ -121,28 +121,28 @@
     "PublicAgentInstanceCount": {
       "Type": "Number",
       "Default": "5",
-      "Description": "Specify the number of public agent nodes or accept the default."
+      "Description": "\nSpecify the number of public agent nodes or accept the default."
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Specify your AWS EC2 Key Pair."
+      "Description": "\nSpecify your AWS EC2 Key Pair."
     },
     "InternalMasterLoadBalancerDnsName": {
-      "Description" : DNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
+      "Description" : "\nDNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
       "Type": "String"
     },
     "PublicAgentSecurityGroup": {
-      "Description" : Permissive Security group used by Public Agents",
+      "Description" : "\nPermissive Security group used by Public Agents",
       "Type": "String"
     },
     "PublicSubnet": {
-      "Description" : Subnet ID for use by all public agent nodes",
+      "Description" : "\nSubnet ID for use by all public agent nodes",
       "Type": "String"
     },
     "PublicAgentInstanceType": {
       "Type": "String",
       "Default": "m3.xlarge",
-      "Description" : "Region-specific instance type. E.g. m3.xlarge"
+      "Description" : "\nRegion-specific instance type. E.g. m3.xlarge"
     }
   },
   "AWSTemplateFormatVersion": "2010-09-09",

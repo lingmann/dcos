@@ -70,7 +70,7 @@ def test_do_validate_config(tmpdir):
         'success': {
             'exhibitor_storage_backend':
             'exhibitor_storage_backend is valid.',
-            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.',
+            'cluster_name': 'DCOS',
             'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
             'ssh_port': 'Port is less than or equal to 65535'}}
 

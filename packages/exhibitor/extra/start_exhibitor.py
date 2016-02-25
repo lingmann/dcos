@@ -75,7 +75,7 @@ auto-manage-instances-settling-period-ms=0
 auto-manage-instances=1
 auto-manage-instances-fixed-ensemble-size={zookeeper_cluster_size}
 """.format(
-    zookeeper_cluster_size=get_var_assert_set('ZOOKEEPER_CLUSTER_SIZE')
+    zookeeper_cluster_size=int(open('/opt/mesosphere/etc/master_count').read().strip())
 ))
 
 # Make a custom /etc/resolv.conf and mount it for exhibitor

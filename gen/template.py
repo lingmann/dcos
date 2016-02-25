@@ -192,6 +192,20 @@ class Tokenizer():
                 self.__to_lex = self.__to_lex[9:]
                 read_end_control_group()
                 return "endswitch", None
+            elif self.__to_lex.startswith("for"):
+                self.__to_lex = self.__to_lex[3:]
+                new_var = read_identifier()
+                read_whitespace()
+                if not self.__to_lex.startswith("in"):
+                    raise SyntaxError("Expected {% for foo in bar %}, didn't find the ' in'.")
+                self.__to_lex = self.__to_lex[2:]
+                iterable = read_identifier()
+                read_end_control_group()
+                return "for", (new_var, iterable)
+            elif self.__to_lex.startswith("endfor"):
+                self.__to_lex = self.__to_lex[6:]
+                read_end_control_group()
+                return "endfor", None
             else:
                 raise SyntaxError(
                     "Unknown control group directive. Expected switch, case, or endswitch.")
@@ -257,6 +271,22 @@ class Switch():
         return isinstance(other, Switch) and self.identifier == other.identifier and self.cases == other.cases
 
 
+class For():
+    def __init__(self, new_var, iterable, body):
+        assert isinstance(new_var, str)
+        self.new_var = new_var
+        assert isinstance(iterable, str)
+        self.iterable = iterable
+        assert isinstance(body, list)
+        self.body = body
+
+    def __repr__(self):
+        return "<for {} in {}>".format(self.new_var, self.iterable)
+
+    def __eq__(self, other):
+        return isinstance(other, For) and self.new_var == other.new_var and self.iterable == other.iterable
+
+
 class Replacement():
 
     def __init__(self, identifier_and_filter):
@@ -279,6 +309,10 @@ class UnsetParameter(KeyError):
     def __init__(self, message, identifier):
         super(KeyError, self).__init__(message)
         self.identifier = identifier
+
+
+class UnsetMarker():
+    pass
 
 
 class Template():
@@ -314,6 +348,27 @@ class Template():
                         except KeyError:
                             raise UnsetParameter("Unset filter parameter {}".format(chunk.filter), chunk.filter)
                         rendered += str(filter_func(value))
+                elif isinstance(chunk, For):
+                    # If the argument is a string, it should be a json list.
+                    iterable = get_argument(chunk.iterable)
+                    # TODO(cmaloney): for should only be used (for now) in code which doesn't contain
+                    # arbitrary user parameters.
+                    # STash the original state of the argument.
+                    original_value = UnsetMarker()
+                    if chunk.new_var in arguments:
+                        original_value = arguments[chunk.new_var]
+
+                    assert isinstance(iterable, list)
+                    for value in iterable:
+                        arguments[chunk.new_var] = value
+                        rendered += render_ast(chunk.body)
+
+                    # Reset the argument to the original state.
+                    if isinstance(original_value, UnsetMarker):
+                        del arguments[chunk.new_var]
+                    else:
+                        arguments[chunk.new_var] = original_value
+
                 elif isinstance(chunk, str):
                     rendered += chunk
                 else:
@@ -325,16 +380,22 @@ class Template():
         return render_ast(self.ast)
 
     def get_scoped_arguments(self):
-        def variables_from_ast(ast):
+        def variables_from_ast(ast, blacklist):
             variables = set()
             sub_scopes = dict()
             for chunk in ast:
                 if isinstance(chunk, Switch):
                     sub_scopes[chunk.identifier] = dict()
                     for value, sub_ast in chunk.cases.items():
-                        sub_scopes[chunk.identifier][value] = variables_from_ast(sub_ast)
+                        sub_scopes[chunk.identifier][value] = variables_from_ast(sub_ast, blacklist)
                 elif isinstance(chunk, Replacement):
-                    variables.add(chunk.identifier)
+                    if chunk.identifier not in blacklist:
+                        variables.add(chunk.identifier)
+                elif isinstance(chunk, For):
+                    additions = variables_from_ast(chunk.body, blacklist | {chunk.new_var})
+                    variables |= additions['variables']
+                    # TODO(cmaloney): Recursively merge sub_scope dictionaries.
+                    sub_scopes.update(sub_scopes)
                 elif isinstance(chunk, str):
                     continue
                 else:
@@ -344,7 +405,7 @@ class Template():
                 'variables': variables,
                 'sub_scopes': sub_scopes
             }
-        return variables_from_ast(self.ast)
+        return variables_from_ast(self.ast, set())
 
     def get_filters(self):
         def filters_from_ast(ast):
@@ -355,6 +416,8 @@ class Template():
                         filters |= filters_from_ast(case)
                 elif isinstance(chunk, Replacement):
                     filters.add(chunk.filter)
+                elif isinstance(chunk, For):
+                    filters |= filters_from_ast(chunk.body)
                 elif isinstance(chunk, str):
                     continue
                 else:
@@ -371,6 +434,26 @@ class Template():
 
     def __eq__(self, other):
         return isinstance(other, Template) and self.ast == other.ast
+
+
+def _parse_for(tokenizer):
+    token_type, value = tokenizer.Peek()
+    assert token_type == 'for'
+
+    new_var, iterable = value
+
+    tokenizer.Advance()
+
+    # Read out the body
+    body = _parse_chunks(tokenizer)
+
+    # Should stop reading the body at the endfor
+    token_type, value = tokenizer.Peek()
+    if token_type != 'endfor':
+        raise ValueError("Expecting end of for, but found {}.".format(token_type))
+
+    tokenizer.Advance()
+    return For(new_var, iterable, body)
 
 
 def _parse_switch(tokenizer):
@@ -416,6 +499,8 @@ def _parse_chunks(tokenizer):
             tokenizer.Advance()
         elif token_type == 'switch':
             chunks.append(_parse_switch(tokenizer))
+        elif token_type == 'for':
+            chunks.append(_parse_for(tokenizer))
         else:
             return chunks
 

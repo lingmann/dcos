@@ -571,27 +571,6 @@ def test_make_abs():
     assert release.make_abs("foo") == os.getcwd() + '/foo'
 
 
-def test_do_variable_set_or_exists(monkeypatch, tmpdir):
-    with pytest.raises(SystemExit):
-        release.do_variable_set_or_exists("NOT_SET_ENV_VARIABLE", "/non/existent/filename")
-
-    # Unset environment variable
-    assert release.do_variable_set_or_exists("NOT_SET_ENV_VARIABLE", str(tmpdir)) == str(tmpdir)
-
-    # Set env var to directory that exists, directory passed which doesn't exist
-    monkeypatch.setenv("magic_test_environment_variable", str(tmpdir))
-    assert release.do_variable_set_or_exists("magic_test_environment_variable", "/non/existent/filename") == str(tmpdir)
-
-    # Set env var to directory that exists, directory passed which exists
-    subdir = tmpdir.mkdir("tmp_2")
-    assert release.do_variable_set_or_exists("magic_test_environment_variable", str(subdir)) == str(tmpdir)
-
-    # Set env var to directory that doesn't exist, directory passed which exists
-    monkeypatch.setenv("magic_test_environment_variable", "/non/existent/filename")
-    with pytest.raises(SystemExit):
-        release.do_variable_set_or_exists("magic_test_environment_variable", str(tmpdir))
-
-
 # TODO(cmaloney): Test do_build_packages?
 
 # TODO(cmaloney): Test make_genconf_docker

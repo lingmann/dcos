@@ -698,27 +698,6 @@ def make_abs(path):
     return os.getcwd() + '/' + path
 
 
-def do_variable_set_or_exists(env_var, path):
-    # Get out the environment variable if needed
-    path = os.environ.get(env_var, default=path)
-
-    # If we're all set exit
-    if os.path.exists(path):
-        return path
-
-    # Error appropriately
-    if path in os.environ:
-        print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
-    else:
-        print(
-            ("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
-             "or ensure there is a checkout at the default path {path}.").format(
-                var=env_var,
-                path=path
-                ))
-    sys.exit(1)
-
-
 def do_build_packages(cache_repository_url, skip_build):
     dockerfile = 'docker/builder/Dockerfile'
     container_name = 'mesosphere/dcos-builder:dockerfile-' + pkgpanda.build.sha1(dockerfile)

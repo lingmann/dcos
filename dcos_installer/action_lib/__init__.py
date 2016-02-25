@@ -319,6 +319,11 @@ if [ $version -lt 7 ]; then
   exit 0
 fi
 
+if $(which setenforce); then
+    Setenforce 0
+    sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/sysconfig/selinux
+fi
+
 sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
 [dockerrepo]
 name=Docker Repository

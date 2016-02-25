@@ -16,7 +16,7 @@
       "AllowedValues": ["Yes"]
     },
     "ExhibitorS3Bucket": {
-      "Description" : S3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. \nSee Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
+      "Description" : S3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. See Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
       "Type": "String"
     },
     "LbSecurityGroup": {

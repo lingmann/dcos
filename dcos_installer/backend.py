@@ -95,7 +95,7 @@ def do_validate_config(config_path=CONFIG_PATH, write_default_config=True):
     config = DCOSConfig(
         config_path=config_path,
         write_default_config=write_default_config)
-    if os.path.isfile(CONFIG_PATH):
+    if os.path.isfile(config_path):
         config.build()
         messages = config.validate()
         return_code = 0

@@ -130,25 +130,28 @@
     "PrivateAgentInstanceCount": {
       "Type": "Number",
       "Default": "5",
-      "Description": "Required: Specify the number of private agent nodes or accept the default."
+      "Description": "\nSpecify the number of private agent nodes or accept the default."
     },
     "KeyName": {
       "Type": "AWS::EC2::KeyPair::KeyName",
-      "Description": "Required: Specify your AWS EC2 Key Pair."
+      "Description": "\nSpecify your AWS EC2 Key Pair."
     },
     "InternalMasterLoadBalancerDnsName": {
+      "Description" : "\nDNS Name of Internal Load Balancer. Has to be valid for agents to join a running cluster",
       "Type": "String"
     },
     "PrivateAgentSecurityGroup": {
+      "Description" : "\nSecurity group used by Private Agents, typically with limited access to the outside",
       "Type": "String"
     },
     "PrivateSubnet": {
+      "Description" : "\nSubnet ID for use by all private agent nodes",
       "Type": "String"
     },
     "PrivateAgentInstanceType": {
       "Type": "String",
       "Default": "m3.xlarge",
-      "Description" : "Region-specific instance type. E.g. m3.xlarge"
+      "Description" : "\nRegion-specific instance type. E.g. m3.xlarge"
     }
   },
   "AWSTemplateFormatVersion": "2010-09-09",

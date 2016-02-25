@@ -7,42 +7,50 @@
   },
   "Parameters" : {
     "KeyName" : {
-      "Description" : "Required: Specify your AWS EC2 Key Pair.",
+      "Description" : "Specify your AWS EC2 Key Pair.",
       "Type" : "AWS::EC2::KeyPair::KeyName"
     },
     "AcceptEULA": {
-      "Description" : "\nRequired: Read the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
+      "Description" : "\nRead the Mesosphere EULA and indicate agreement: https://docs.mesosphere.com/community-edition-eula/.",
       "Type" : "String",
       "AllowedValues": ["Yes"]
     },
     "ExhibitorS3Bucket": {
+      "Description" : "\nS3 Bucket resource name. Used by Exhibitor for Zookeeper discovery and coordination. \nSee Exhibitor documentation on 'shared configuration': https://github.com/Netflix/exhibitor/wiki/Shared-Configuration for more information",
       "Type": "String"
     },
     "LbSecurityGroup": {
+      "Description" : "\nLoadbalancer Security Group. Rules allow masters and private agent nodes to communicate.",
       "Type": "String"
     },
     "AdminSecurityGroup": {
+      "Description" : "\nAdmin URL Security Group. Controls Access to the Admin page",
       "Type": "String"
     },
     "PrivateAgentSecurityGroup": {
+      "Description" : "\nSecurity group used by Private Agents, typically with limited access to the outside",
       "Type": "String"
     },
     "PublicAgentSecurityGroup": {
+      "Description" : "\nPermissive Security group used by Public Agents",
       "Type": "String"
     },
     "MasterSecurityGroup": {
+      "Description" : "\nSecurity group used by Master nodes",
       "Type": "String"
     },
     "PublicSubnet": {
+      "Description" : "\nSubnet ID for use by all public agent nodes",
       "Type": "AWS::EC2::Subnet::Id"
     },
     "PrivateSubnet": {
+      "Description" : "\nSubnet ID for use by all private agent nodes",
       "Type": "String"
     },
     "MasterInstanceType": {
       "Type": "String",
       "Default": "m3.xlarge",
-      "Description" : "Region-specific instance type. E.g. m3.xlarge"
+      "Description" : "\nRegion-specific instance type. E.g. m3.xlarge"
     }
   },
   "Mappings": {

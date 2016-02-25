@@ -1,0 +1,9 @@
+{
+  "docker": "golang:1.6",
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/3dt.git",
+    "ref": "96e58cbc6c0f172d83e85159bb6010fb4331439d",
+    "ref_origin": "master"
+  }
+}

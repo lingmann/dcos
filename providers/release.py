@@ -923,6 +923,15 @@ class ReleaseManager():
 
         return metadata
 
+    def create_installer(self, src_channel):
+        assert not src_channel.startswith('/')
+        metadata = self.get_metadata(src_channel)
+        self.fetch_key_artifacts(metadata)
+        del metadata['channel_artifacts']
+        make_channel_artifacts(metadata)
+
+        return metadata
+
     def create(self, repository_path, channel, tag, skip_build):
         assert len(channel) > 0  # channel must be a non-empty string.
 
@@ -1037,6 +1046,13 @@ def main():
     create.add_argument('tag')
     create.add_argument('--skip-build', action='store_true')
 
+    # Utility for building just the installers, useful for installer dev work where you don't want
+    # to build all of dcos-image locally, and don't care about uploading. Defaults noop to true.
+    create_installer = subparsers.add_parser("create-installer")
+    create_installer.set_defaults(action='create-installer')
+    create_installer.set_defaults(noop=True)
+    create_installer.add_argument('src_channel')
+
     # Parse the arguments and dispatch.
     options = parser.parse_args()
     if not hasattr(options, 'action'):
@@ -1049,6 +1065,8 @@ def main():
         release_manager.promote(options.source_channel, options.destination_repository, options.destination_channel)
     elif options.action == 'create':
         release_manager.create('testing', options.channel, options.tag, options.skip_build)
+    elif options.action == 'create-installer':
+        release_manager.create_installer(options.src_channel)
     else:
         raise ValueError("Unexpection options.action {}".format(options.action))
 

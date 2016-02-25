@@ -305,6 +305,8 @@ def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None
 def _add_prereqs_script(chain):
     inline_script = """
 #/bin/sh
+# setenforce is in this path
+PATH=$PATH:/sbin
 
 dist=$(cat /etc/*-release | sed -n 's@^ID="\(.*\)"$@\\1@p')
 
@@ -319,10 +321,8 @@ if [ $version -lt 7 ]; then
   exit 0
 fi
 
-if $(which setenforce); then
-    Setenforce 0
-    sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/sysconfig/selinux
-fi
+sudo setenforce 0 && \
+sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/g' /etc/sysconfig/selinux
 
 sudo tee /etc/yum.repos.d/docker.repo <<-'EOF'
 [dockerrepo]

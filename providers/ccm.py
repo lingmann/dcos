@@ -100,9 +100,9 @@ class Ccm():
         try:
             cluster_id = response["id"]
         except:
-            print("Could not extract ID; VPC creation failed!")
+            print("Error: Could not extract ID; VPC creation failed!")
             print("Response data: {}".format(response))
-            exit(1)
+            sys.exit(1)
         return self.VpcCluster(cluster_id, instance_count)
 
     def get_cluster_info(self, pk):
@@ -111,7 +111,16 @@ class Ccm():
             print("Error: Info for cluster ID: {} not found!".format(pk))
             return None
         elif response.status_code == 200:
-            return response.json()
+            try:
+                return response.json()
+            except:
+                print("Error: Could not parse the response from CCM as JSON!")
+                print("Response data: {}".format(response))
+                sys.exit(1)
+        else:
+            print("Error: Received unexpected HTTP status code {}."
+                  .format(response.status_code))
+            sys.exit(1)
 
     def get_all_clusters(self):
         return self.get("/api/cluster/").json()

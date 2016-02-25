@@ -91,8 +91,11 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     return validation_err, post_data_validation
 
 
-def do_validate_config(config_path=CONFIG_PATH):
+def do_validate_config(config_path=CONFIG_PATH, write_default_config=True):
+    print("Write file is ", write_default_config)
     config = DCOSConfig(config_path=config_path)
+    config.write_default_config = write_default_config
+    print(config.write_default_config)
     config.build()
     messages = config.validate()
     return_code = 0

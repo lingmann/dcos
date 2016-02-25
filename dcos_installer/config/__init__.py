@@ -64,6 +64,8 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         self.build()
         self.errors = []
 
+        self.write_default_config = True
+
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)
@@ -136,11 +138,15 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                 configuration = yaml.load(data)
 
         else:
-            log.error(
-                "Configuration file not found, %s. Writing new one with all defaults.",
-                self.config_path)
-            self.write()
-            configuration = yaml.load(open(self.config_path))
+            if self.write_default_config:
+                log.error(
+                    "Configuration file not found, %s. Writing new one with all defaults.",
+                    self.config_path)
+                self.write()
+                configuration = yaml.load(open(self.config_path))
+            else:
+                log.error("Configuration file not found: %s", self.config_path)
+                return {}
 
         return configuration
 

@@ -7,10 +7,7 @@ import urllib.request
 
 EXIHIBITOR_STATUS_URL = 'http://127.0.0.1:8181/exhibitor/v1/cluster/status'
 
-if len(sys.argv) != 2:
-    print('Usage: exhibitor_wait.py ZOOKEEPER_CLUSTER_SIZE', file=sys.stderr)
-    sys.exit(-1)
-cluster_size = int(sys.argv[1])
+cluster_size = int(open('/opt/mesosphere/etc/master_count').read().strip())
 
 try:
     response = urllib.request.urlopen(EXIHIBITOR_STATUS_URL)

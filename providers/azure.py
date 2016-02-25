@@ -7,37 +7,11 @@ import sys
 import urllib
 from copy import deepcopy
 
-import jinja2
 import yaml
-from pkg_resources import resource_string
 
 import gen
 import gen.template
 import providers.util as util
-
-
-# TODO(cmaloney): Remove this last use of jinja2. It contains a for loop which
-# is beyond what we compute currently.
-# Function to allow jinja to load our templates folder layout. This uses
-# resource_string from pkg_resources which is the recommended way of getting
-# files out of a package however it is distributed
-# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
-# For the jinja function loader documentation, see:
-# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
-def load_template(name):
-    contents = resource_string("gen", name).decode()
-
-    # The templates from our perspective are always invalidated / never cacheable.
-    def false_func():
-        return False
-
-    return (contents, name, false_func)
-
-# NOTE: Strict undefined behavior since we're doing generation / validation here.
-env = jinja2.Environment(
-    loader=jinja2.FunctionLoader(load_template),
-    undefined=jinja2.StrictUndefined,
-    keep_trailing_newline=True)
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
 late_services = ""
@@ -287,7 +261,7 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
             arm_template_name='acs-{}master.azuredeploy.json'.format(x)))
         for x in [1, 3, 5]]
 
-    return env.get_template('azure/templates/azure.html').render({
+    return gen.template.parse_resources('azure/templates/azure.html').render({
         'repo_channel_path': repo_channel_path,
         'tag': tag,
         'commit': commit,

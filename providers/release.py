@@ -116,8 +116,14 @@ class AbstractStorageProvider(metaclass=abc.ABCMeta):
 
     # TODO(cmaloney): Add test for download, download_if_not_exist
     @abc.abstractmethod
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         pass
+
+    def download(self, path, local_path):
+        dirname = os.path.dirname(local_path)
+        if dirname:
+            subprocess.check_call(['mkdir', '-p', os.path.dirname(local_path)])
+        self.download_inner(path, local_path)
 
     def download_if_not_exist(self, path, local_path):
         if os.path.exists(local_path):
@@ -240,7 +246,7 @@ class AzureStorageProvider(AbstractStorageProvider):
     def fetch(self, path):
         return self.blob_service.get_blob_to_bytes(self.container, path)
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         return self.blob_service.get_blob_to_path(self.container, path, local_path)
 
     def list_recursive(self, path):
@@ -281,7 +287,7 @@ class S3StorageProvider(AbstractStorageProvider):
             data += chunk
         return data
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         self.get_object(path).download_file(local_path)
 
     @property
@@ -363,7 +369,7 @@ class LocalStorageProvider(AbstractStorageProvider):
         with open(self.__full_path(path), 'rb') as f:
             return f.read()
 
-    def download(self, path, local_path):
+    def download_inner(self, path, local_path):
         subprocess.check_call(['cp', self.__full_path(path), local_path])
 
     # Copy between fully qualified paths
@@ -692,35 +698,6 @@ def make_abs(path):
     return os.getcwd() + '/' + path
 
 
-def do_variable_set_or_exists(env_var, path):
-    # Get out the environment variable if needed
-    path = os.environ.get(env_var, default=path)
-
-    # If we're all set exit
-    if os.path.exists(path):
-        return path
-
-    # Error appropriately
-    if path in os.environ:
-        print("ERROR: {} set in environment doesn't point to a directory that exists '{}'".format(env_var, path))
-    else:
-        print(
-            ("ERROR: Default directory for {var} doens't exist. Set {var} in the environment " +
-             "or ensure there is a checkout at the default path {path}.").format(
-                var=env_var,
-                path=path
-                ))
-    sys.exit(1)
-
-
-def get_src_dirs():
-    pkgpanda_src = make_abs(do_variable_set_or_exists('PKGPANDA_SRC', 'ext/pkgpanda'))
-    dcos_image_src = make_abs(do_variable_set_or_exists('DCOS_IMAGE_SRC', os.getcwd()))
-    dcos_installer_src = make_abs(do_variable_set_or_exists('DCOS_INSTALLER_SRC', 'ext/dcos-installer'))
-
-    return pkgpanda_src, dcos_image_src, dcos_installer_src
-
-
 def do_build_packages(cache_repository_url, skip_build):
     dockerfile = 'docker/builder/Dockerfile'
     container_name = 'mesosphere/dcos-builder:dockerfile-' + pkgpanda.build.sha1(dockerfile)
@@ -772,15 +749,9 @@ def make_installer_docker(variant, bootstrap_id):
 
     # TODO(cmaloney): If a pre-existing wheelhouse exists assert that the wheels
     # inside of it match the current versions / working commits of pkganda, dcos-image.
-    pkgpanda_src, dcos_image_src, dcos_installer_src = get_src_dirs()
     wheel_dir = os.getcwd() + '/wheelhouse'
-    if not os.path.exists(wheel_dir):
-        print("Building wheels for dcos-image, pkgpanda, and all dependencies")
-
-        # Make the wheels
-        subprocess.check_call(['pip', 'wheel', pkgpanda_src])
-        subprocess.check_call(['pip', 'wheel', dcos_image_src])
-        subprocess.check_call(['pip', 'wheel', dcos_installer_src])
+    assert os.path.exists(wheel_dir), "Wheels for pkgpanda, dcos-image, dcos-installer should be " \
+        "pre-built and put in {}".format(wheel_dir)
 
     image_version = util.dcos_image_commit[:18] + '-' + bootstrap_id[:18]
     genconf_tar = "dcos-genconf." + image_version + ".tar"
@@ -848,15 +819,6 @@ def build_installers(bootstrap_dict):
         print("Building installer for variant:", util.variant_name(variant))
         installers[variant] = make_installer_docker(variant, bootstrap_id)
     return installers
-
-
-def validate_options(options):
-    assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
-    assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
-
-    # Validate src_dirs are set properly up front. Building per channel
-    # artifacts will fail without it.
-    get_src_dirs()
 
 
 def set_repository_metadata(repository, metadata, storage_providers, preferred_provider):
@@ -940,6 +902,15 @@ class ReleaseManager():
 
         return metadata
 
+    def create_installer(self, src_channel):
+        assert not src_channel.startswith('/')
+        metadata = self.get_metadata(src_channel)
+        self.fetch_key_artifacts(metadata)
+        del metadata['channel_artifacts']
+        make_channel_artifacts(metadata)
+
+        return metadata
+
     def create(self, repository_path, channel, tag, skip_build):
         assert len(channel) > 0  # channel must be a non-empty string.
 
@@ -995,17 +966,20 @@ class ReleaseManager():
                 pkgpanda.util.write_string(destination_path, artifact['source_content'])
 
 
-def get_prod_storage_providers():
-    azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
-    azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
-
+def get_prod_storage_providers(use_azure_storage):
     s3_bucket = aws_config.session_prod.resource('s3').Bucket('downloads.mesosphere.io')
 
     storage_providers = {
-        'azure': AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
-                                      'http://az837203.vo.msecnd.net/dcos/'),
         'aws': S3StorageProvider(s3_bucket, 'dcos', 'https://downloads.mesosphere.com/dcos/')
     }
+
+    if use_azure_storage:
+        assert os.environ.get('AZURE_STORAGE_ACCOUNT'), 'Environment variable AZURE_STORAGE_ACCOUNT should be set'
+        assert os.environ.get('AZURE_STORAGE_ACCESS_KEY'), 'Environment variable AZURE_STORAGE_ACCESS_KEY should be set'
+        azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
+        azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
+        storage_providers['azure'] = AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
+                                                          'http://az837203.vo.msecnd.net/dcos/')
 
     for name, provider in storage_providers.items():
         assert provider.name == name
@@ -1022,6 +996,11 @@ def main():
         action='store_true',
         help="Do not take any actions on the storage providers, just run the "
              "whole build, produce the list of actions than no-op.")
+
+    parser.add_argument(
+        '--no-azure-storage',
+        action='store_false',
+        help="Do not initialize or utilize the azure storage provider.")
 
     # Moves the latest of a given release name to the given release name.
     promote = subparsers.add_parser('promote')
@@ -1046,6 +1025,13 @@ def main():
     create.add_argument('tag')
     create.add_argument('--skip-build', action='store_true')
 
+    # Utility for building just the installers, useful for installer dev work where you don't want
+    # to build all of dcos-image locally, and don't care about uploading. Defaults noop to true.
+    create_installer = subparsers.add_parser("create-installer")
+    create_installer.set_defaults(action='create-installer')
+    create_installer.set_defaults(noop=True)
+    create_installer.add_argument('src_channel')
+
     # Parse the arguments and dispatch.
     options = parser.parse_args()
     if not hasattr(options, 'action'):
@@ -1053,12 +1039,13 @@ def main():
         print("ERROR: Must use a subcommand")
         sys.exit(1)
 
-    validate_options(options)
-    release_manager = ReleaseManager(get_prod_storage_providers(), 'aws', options.noop)
+    release_manager = ReleaseManager(get_prod_storage_providers(options.no_azure_storage), 'aws', options.noop)
     if options.action == 'promote':
         release_manager.promote(options.source_channel, options.destination_repository, options.destination_channel)
     elif options.action == 'create':
         release_manager.create('testing', options.channel, options.tag, options.skip_build)
+    elif options.action == 'create-installer':
+        release_manager.create_installer(options.src_channel)
     else:
         raise ValueError("Unexpection options.action {}".format(options.action))
 

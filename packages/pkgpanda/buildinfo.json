@@ -3,7 +3,7 @@
   "single_source": {
     "kind": "git",
     "git": "git@github.com:mesosphere/pkgpanda.git",
-    "ref": "ac53be491af82af4e91e81316846818dc4ed2575",
+    "ref": "e082ec1e5c46b0232becb86cf8ec04da49c13778",
     "ref_origin": "master"
   }
 }

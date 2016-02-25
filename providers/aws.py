@@ -7,38 +7,14 @@ import re
 import sys
 from copy import deepcopy
 
-import jinja2
 import requests
 import yaml
 from pkg_resources import resource_string
+from retrying import retry
 
 import gen
 import providers.util as util
 from providers.aws_config import session_dev
-
-
-# TODO(cmaloney): Remove this last use of jinja2. It contains a for loop which
-# is beyond what we compute currently.
-# Function to allow jinja to load our templates folder layout. This uses
-# resource_string from pkg_resources which is the recommended way of getting
-# files out of a package however it is distributed
-# (See: https://pythonhosted.org/setuptools/pkg_resources.html)
-# For the jinja function loader documentation, see:
-# http://jinja.pocoo.org/docs/dev/api/#jinja2.FunctionLoader
-def load_template(name):
-    contents = resource_string("gen", name).decode()
-
-    # The templates from our perspective are always invalidated / never cacheable.
-    def false_func():
-        return False
-
-    return (contents, name, false_func)
-
-# NOTE: Strict undefined behavior since we're doing generation / validation here.
-env = jinja2.Environment(
-    loader=jinja2.FunctionLoader(load_template),
-    undefined=jinja2.StrictUndefined,
-    keep_trailing_newline=True)
 
 aws_region_names = [
     {
@@ -185,14 +161,19 @@ def render_cloudformation(cf_template, **kwds):
     return render_cloudformation_transform(cf_template, transform_func=transform_lines, **kwds)
 
 
+@retry(stop_max_attempt_number=5, wait_exponential_multiplier=1000)
+def validate_cf(template_body):
+    client = session_dev.client('cloudformation')
+    client.validate_template(TemplateBody=template_body)
+
+
 def gen_supporting_template():
     for template_key in ['infra.json']:
         cf_template = 'aws/templates/advanced/{}'.format(template_key)
         cloudformation = render_cloudformation(resource_string("gen", cf_template).decode())
 
         print("Validating CloudFormation: {}".format(cf_template))
-        client = session_dev.client('cloudformation')
-        client.validate_template(TemplateBody=cloudformation)
+        validate_cf(cloudformation)
 
         yield template_key, gen.Bunch({
             'cloudformation': cloudformation,
@@ -236,8 +217,7 @@ def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
         )
 
     print("Validating CloudFormation: {}".format(template_name))
-    client = session_dev.client('cloudformation')
-    client.validate_template(TemplateBody=cloudformation)
+    validate_cf(cloudformation)
 
     return gen.Bunch({
         'cloudformation': cloudformation,
@@ -330,8 +310,7 @@ def gen_templates(arguments):
         )
 
     print("Validating CloudFormation")
-    client = session_dev.client('cloudformation')
-    client.validate_template(TemplateBody=cloudformation)
+    validate_cf(cloudformation)
 
     return gen.Bunch({
         'cloudformation': cloudformation,
@@ -339,16 +318,41 @@ def gen_templates(arguments):
     })
 
 
+button_template = "<a href='https://console.aws.amazon.com/cloudformation/home?region={region_id}#/stacks/new?templateURL=https://s3.amazonaws.com/downloads.mesosphere.io/dcos/{channel_commit_path}/cloudformation/{template_name}.cloudformation.json'><img src='https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png' alt='Launch stack button'></a>"  # noqa
+region_line_template = "<tr><td>{region_name}</td><td>{region_id}</td><td>{single_master_button}</td><td>{multi_master_button}</td></tr>"  # noqa
+
+
 def gen_buttons(repo_channel_path, channel_commit_path, tag, commit):
     # Generate the button page.
     # TODO(cmaloney): Switch to package_resources
-    return env.get_template('aws/templates/aws.html').render(
+    regular_buttons = list()
+    spot_buttons = list()
+    for region in aws_region_names:
+
+        def get_button(template_name):
+            return button_template.format(
+                region_id=region['id'],
+                channel_commit_path=channel_commit_path,
+                template_name=template_name)
+
+        def get_button_line(spot_postfix):
+            return region_line_template.format(
+                region_name=region['name'],
+                region_id=region['id'],
+                single_master_button=get_button('single-master' + spot_postfix),
+                multi_master_button=get_button('multi-master' + spot_postfix))
+
+        regular_buttons.append(get_button_line(''))
+        spot_buttons.append(get_button_line('-spot'))
+
+    return gen.template.parse_resources('aws/templates/aws.html').render(
         {
             'channel_commit_path': channel_commit_path,
             'repo_channel_path': repo_channel_path,
             'tag': tag,
             'commit': commit,
-            'regions': aws_region_names
+            'regular_buttons': regular_buttons,
+            'spot_buttons': spot_buttons
         })
 
 

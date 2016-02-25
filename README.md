@@ -30,6 +30,7 @@ Doesn't work on OSX, requires Linux. In general it is HIGHLY recommended to just
 
 The instructions below are infrequently updated and likely out of date whereas TeamCity is kept always building.
 
+
 ## Getting Started
 
 General requirements: Python3, pkgpanda, everything in requirements.txt, docker relatively new (1.5+ probably)
@@ -62,22 +63,17 @@ mkpanda tree
 ./aws.py build --upload
 ```
 
-## Deploying / Working across all providers
 
-TODO(cmaloney): Document how to do meta-work for all providers/platforms (Make a release for all providers)
+# Testing building new installers
 
-## Info for various providers
+Workflow for testing changes to the installer, dcos-image code without having to rebuild all of the packages inside DCOS.
 
-### AWS
-
-The AWS tooling makes heavy use of boto3. It requires that you setup two [profiles](http://boto3.readthedocs.org/en/latest/guide/configuration.html#configuration-files), "development" and "production" which have credentials for the respective AWS Account buttons in OneLogin.
-
-- `aws.py build`: Make a new build of dcos_image and the current templates. Optionally upload the build so that a test cluster can be launched with it.
-- `aws.py make_candidate`: Make a new candidate for a release. Performs a build, then generates the single-master, multi-master, and button page templates. Uploads them all to a testing bucket for internal testing.
-
-TODO(cmaloney): More AWS commands
-
-### Vagrant multi node cluster
-`test/run-all name platform [platform...]` build the necessary artifacts and spins up a multi node cluster (3 dedicated masters, 2 slaves) for the given platform (bash, chef etc).
-
-You can also test local changes by running `PLATFORM=platform vagrant up` in `test`/ after creating the build artifacts manually.
+```
+# Create a python environment
+pyvenv ../env
+source env/bin/activate
+# A DCOS Installer UI build and all the wheel builds are currently necessary, which
+# prep_teamcity does. Eventually this should be able to move to prep_local
+./prep_teamcity
+release --no-azure-storage create-installer testing/continuous
+```

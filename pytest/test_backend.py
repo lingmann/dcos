@@ -52,7 +52,7 @@ def test_bad_create_config_from_post(tmpdir):
 def test_do_validate_config(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
-    temp_config_path = workspace + '/config.yaml'
+    temp_config_path = '/tmp/config.yaml'
 
     expected_output = {
         'errors': {

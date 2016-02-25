@@ -104,6 +104,10 @@ if exhibitor_backend == 'AWS_S3':
         '--s3region', get_var_assert_set("AWS_REGION"),
         '--s3backup', 'false',
     ]
+
+    # If there are explicit s3 credentials, add an --s3credentials flag
+    if os.path.exists('/opt/mesosphere/etc/exhibitor.properties'):
+        exhibitor_cmdline += ['--s3credentials', '/opt/mesosphere/etc/exhibitor.properties']
 elif exhibitor_backend == 'AZURE':
     print("Exhibitor configured for Azure")
     exhibitor_cmdline += [

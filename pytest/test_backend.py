@@ -57,16 +57,16 @@ def test_do_validate_config(tmpdir):
     expected_output = {
         'errors': {
             'ip_detect_path': 'File does not exist genconf/ip-detect',
-            'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
-            'ip_detect_script': 'Please provide a valid executable script. Script must start with #!/',
-            'master_list': 'Please enter a valid IPv4 address.'},
+            'ip_detect_script': 'Provide a valid executable script. Script must start with #!/',
+            'master_list': 'Enter a valid IPv4 address.'},
         'warning': {
+            'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
             'ssh_key_path': 'File does not exist genconf/ssh_key',
-            'ssh_key': 'SSH key must be an unencrypted (no passphrase) SSH key which is not empty.',
-            'superuser_password_hash': 'Please enter a valid string',
-            'agent_list': 'Please enter a valid IPv4 address.',
-            'ssh_user': 'Please enter a valid string',
-            'superuser_username': 'Please enter a valid string'},
+            'ssh_key': 'SSH key must be an unencrypted (no passphrase) SSH key that is not empty.',
+            'superuser_password_hash': 'Enter a valid string',
+            'agent_list': 'Enter a valid IPv4 address.',
+            'ssh_user': 'Enter a valid string',
+            'superuser_username': 'Enter a valid string'},
         'success': {
             'exhibitor_storage_backend':
             'exhibitor_storage_backend is valid.',

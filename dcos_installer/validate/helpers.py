@@ -59,10 +59,10 @@ def validate_ip_list(key=None, config=None, optional=False):
                         failed_ips.append(ip)
 
                 else:
-                    return [False, 'Please enter a valid IPv4 address.', optional]
+                    return [False, 'Enter a valid IPv4 address.', optional]
 
             if len(failed_ips) > 0:
-                return [False, 'Please enter a valid IPv4 address. The following are not IPv4 addresses: {}'.format(
+                return [False, 'Enter a valid IPv4 address. The following are not IPv4 addresses: {}'.format(
                     failed_ips),
                     optional]
 
@@ -80,6 +80,15 @@ def validate_master_list(key=None, config=None, optional=False):
         if not is_ip_list[0]:
             return is_ip_list
 
+        # Check for IP dups
+        if len(config['agent_list']) > 0:
+            agent_dups = [a for a in config[key] if a in config['agent_list']]
+            if len(agent_dups) > 0:
+                return [
+                    False,
+                    'Master list must not contain IPs from agent list. Duplicates found: {}'.format(agent_dups),
+                    optional]
+
         key = config[key]
         num_mstrs = len(key)
         if int(num_mstrs) in [1, 3, 5, 7, 9]:
@@ -90,6 +99,25 @@ def validate_master_list(key=None, config=None, optional=False):
     return [False, None, optional]
 
 
+def validate_agent_list(key=None, config=None, optional=False):
+    if key in config and key is not None:
+        is_ip_list = validate_ip_list(key, config, optional)
+        if not is_ip_list[0]:
+            return is_ip_list
+
+        # Check for IP dups
+        if len(config['master_list']) > 0:
+            mstr_dups = [a for a in config[key] if a in config['master_list']]
+            if len(mstr_dups) > 0:
+                return [
+                    False,
+                    'Agent list must not contain IPs from master list. Duplicates found: {}'.format(mstr_dups),
+                    optional]
+        return [True, 'Agent list is valid.', optional]
+    return [True, None, optional]
+
+
+
 def validate_string(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]
@@ -97,7 +125,7 @@ def validate_string(key=None, config=None, optional=False):
             return [True, '{} is a valid string.'.format(key), optional]
 
         else:
-            return [False, 'Please enter a valid string'.format(key), optional]
+            return [False, 'Enter a valid string'.format(key), optional]
 
     return [False, None, optional]
 
@@ -114,11 +142,11 @@ def validate_int(key=None, config=None, optional=False):
                     interger = int(key)
                     return [True, '{} is a valid interger.'.format(interger), optional]
                 except:
-                    return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key))), optional]
+                    return [False, '{} is not a valid integer. It is of type {}.'.format(key, str(type(key))), optional]
             else:
-                return [False, '{} is not a valid integer. Is of type {}.'.format(key, str(type(key))), optional]
+                return [False, '{} is not a valid integer. It is of type {}.'.format(key, str(type(key))), optional]
 
-        return [False, 'Please enter a valid integer.', optional]
+        return [False, 'Enter a valid integer.', optional]
 
     return [False, None, optional]
 
@@ -136,7 +164,7 @@ def validate_port(key=None, config=None, optional=False):
         else:
             return [True, "Port is less than or equal to 65535", optional]
 
-    return [False, 'Please enter valid port number (not great than :65535)', optional]
+    return [False, 'Enter a valid port number (not greater than :65535)', optional]
 
 
 def validate_install_type(key=None, config=None, optional=False):
@@ -228,7 +256,7 @@ def validate_exhibitor_storage_backend(key=None, config=None, optional=False):
     """
     if key in config:
         key = config[key]
-        options = ['zookeeper', 'aws_s3', 'shared_fs']
+        options = ['zookeeper', 'aws_s3', 'shared_filesystem']
         if key in options:
             return [True, 'exhibitor_storage_backend is valid.', optional]
 
@@ -256,7 +284,7 @@ def validate_ssh_key(key=None, config=None, optional=False):
     if key in config:
         is_string = validate_string(key, config)
         if not is_string[0]:
-            return [False, "SSH key must be an unencrypted (no passphrase) SSH key which is not empty.", optional]
+            return [False, "SSH key must be an unencrypted (no passphrase) SSH key that is not empty.", optional]
 
         key = config[key]
         if key != '':
@@ -264,7 +292,7 @@ def validate_ssh_key(key=None, config=None, optional=False):
             if 'ENCRYPTED' in key:
                 return [
                     False,
-                    "Encrypted SSH keys (which contain passphrases) are not allowed. Please use a key without a passphrase.",  # noqa
+                    "Encrypted SSH keys (which contain passphrases) are not allowed. Use a key without a passphrase.",  # noqa
                     optional]
 
             else:
@@ -272,14 +300,14 @@ def validate_ssh_key(key=None, config=None, optional=False):
 
         return [
             False,
-            "Empty keys are not allowed. Please enter a non-empty unencrypted (no passphrase) SSH key.",
+            "Empty keys are not allowed. Enter a non-empty unencrypted (no passphrase) SSH key.",
             optional]
 
     return [False, None, optional]
 
 
 def validate_ip_detect_script(key=None, config=None, optional=False):
-    fm = 'Please provide a valid executable script. Script must start with #!/'
+    fm = 'Provide a valid executable script. Script must start with #!/'
     failed_validation = [False, fm, False]
     if key in config:
         is_string, msg, optional = validate_string(key, config, optional)

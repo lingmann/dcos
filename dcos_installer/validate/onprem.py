@@ -54,19 +54,22 @@ def get_onprem_dependencies(config):
 
     dep_tree = {
         "master_list": helpers.validate_master_list('master_list', config),
-        "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config),
+        "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config, optional=True),
         "cluster_name": helpers.validate_string('cluster_name', config),
         "resolvers": helpers.validate_ip_list('resolvers', config, optional=True),
         "ssh_port": helpers.validate_port('ssh_port', config, optional=True),
         "ssh_user": helpers.validate_string('ssh_user', config, optional=True),
-        "agent_list": helpers.validate_ip_list('agent_list', config, optional=True),
+        "agent_list": helpers.validate_agent_list('agent_list', config, optional=True),
         "ip_detect_path": helpers.validate_path('ip_detect_path', config),
         "ip_detect_script": helpers.validate_ip_detect_script('ip_detect_script', config),
         "ssh_key": helpers.validate_ssh_key('ssh_key', config, optional=True),
         "ssh_key_path": helpers.validate_path('ssh_key_path', config, optional=True),
         "superuser_username": helpers.validate_string('superuser_username', config, optional=True),
         "superuser_password_hash": helpers.validate_string('superuser_password_hash', config, optional=True),
-        "exhibitor_storage_backend": helpers.validate_exhibitor_storage_backend('exhibitor_storage_backend', config)}
+        "exhibitor_storage_backend": helpers.validate_exhibitor_storage_backend(
+            'exhibitor_storage_backend',
+            config,
+            optional=True)}
 
     # For each dependency, read its validation helper func and return
     for tk, tv in dep_tree.items():
@@ -78,7 +81,8 @@ def get_onprem_dependencies(config):
                 messages['success'][tk] = '{}'.format(tv[1])
 
             else:
-                log.warning("%s: %s", tk, tv[1])
+                log.info("UI / SSH Specific Config Warning - Ignore if you're not using SSH or web UI functionality")
+                log.info("%s: %s", tk, tv[1])
                 messages['warning'][tk] = '{}'.format(tv[1])
 
         elif tv[0]:

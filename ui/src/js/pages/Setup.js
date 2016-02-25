@@ -44,7 +44,8 @@ const METHODS_TO_BIND = [
   'handleSubmitClick',
   'isFormReady',
   'isLastFormField',
-  'submitFormData'
+  'submitFormData',
+  'savePublicURL'
 ];
 
 class Setup extends mixin(StoreMixin) {
@@ -65,7 +66,7 @@ class Setup extends mixin(StoreMixin) {
         superuser_username: null,
         superuser_password_hash: '',
         zk_exhibitor_hosts: null,
-        zk_exhibitor_port: null
+        zk_exhibitor_port: 2181
       },
       initialFormData: {
         master_list: null,
@@ -249,16 +250,15 @@ class Setup extends mixin(StoreMixin) {
         {
           fieldType: 'textarea',
           name: 'master_list',
-          placeholder: 'Please provide a comma-separated list of 1, 3, or 5 ' +
-            'IPv4 addresses.',
+          placeholder: 'Specify a comma-separated list of 1, 3, or 5 ' +
+            'private IPv4 addresses.',
           showLabel: (
             <FormLabel>
               <FormLabelContent position="left">
-                Master IP Address List
-                <Tooltip content={'You can choose any target hosts as ' +
-                  'masters and agents. We recommend 3 masters for production ' +
-                  'environments, though 1 master is suitable for POC ' +
-                  'applications.'} width={200} wrapText={true} />
+                Master Private IP List
+                <Tooltip content={'The private IP addresses of the masters. ' +
+                  'We recommend a minimum of 3 masters.'} width={200}
+                  wrapText={true} />
               </FormLabelContent>
               <FormLabelContent position="right">
                 <Upload displayText="Upload .csv" extensions=".csv"
@@ -274,13 +274,13 @@ class Setup extends mixin(StoreMixin) {
         {
           fieldType: 'textarea',
           name: 'agent_list',
-          placeholder: 'Please provide a comma-separated list of 1 to n ' +
-            'IPv4 addresses.',
+          placeholder: 'Specify a comma-separated list of 1 to n ' +
+            'private IPv4 addresses.',
           showLabel: (
             <FormLabel>
               <FormLabelContent>
-                Agent IP Address List
-                <Tooltip content={'You can choose any target hosts as agents.'}
+                Agent Private IP List
+                <Tooltip content={'The private IP addresses of the agents.'}
                   width={200} wrapText={true} />
               </FormLabelContent>
               <FormLabelContent position="right">
@@ -299,14 +299,13 @@ class Setup extends mixin(StoreMixin) {
         {
           fieldType: 'text',
           name: 'public_ip_address',
-          placeholder: 'Specify one IPv4 address that you have access to.',
+          placeholder: 'Specify one IPv4 address.',
           showLabel: (
             <FormLabel>
               <FormLabelContent>
-                Public IP Address
-                <Tooltip content={'A single master IP address that you can ' +
-                  'access. It can be the same as one of the master IP ' +
-                  'you have listed.'}
+                Master Public IP
+                <Tooltip content={'The public IP address of a master that is ' +
+                  'accessible to the bootstrap node without a firewall.'}
                   width={200} wrapText={true} />
               </FormLabelContent>
             </FormLabel>
@@ -325,7 +324,7 @@ class Setup extends mixin(StoreMixin) {
               <FormLabelContent>
                 SSH Username
                 <Tooltip content={'The SSH username must be the same for all ' +
-                  'target hosts. The only unacceptable username is None.'}
+                  'target hosts. The only unacceptable username is "None".'}
                   width={200} wrapText={true} />
               </FormLabelContent>
             </FormLabel>
@@ -436,8 +435,8 @@ class Setup extends mixin(StoreMixin) {
         {
           fieldType: 'textarea',
           name: 'zk_exhibitor_hosts',
-          placeholder: 'Please provide an IPv4 address or a comma-separated ' +
-            'list of 3 addresses.',
+          placeholder: 'Specify a comma-separated list of 1 to 3 ' +
+            'private IPv4 addresses.',
           showLabel: (
             <FormLabel>
               <FormLabelContent>
@@ -485,7 +484,7 @@ class Setup extends mixin(StoreMixin) {
         {
           fieldType: 'textarea',
           name: 'resolvers',
-          placeholder: 'Please provide a single address or a comma-separated ' +
+          placeholder: 'Provide a single address or a comma-separated ' +
             'list, e.g., 192.168.10.10, 10.0.0.1',
           showLabel: (
             <FormLabel>
@@ -609,7 +608,7 @@ class Setup extends mixin(StoreMixin) {
       if (type === 'port' && fieldValue != null && fieldValue !== '') {
         if (parseInt(fieldValue) > 65535) {
           let localValidationErrors = this.state.localValidationErrors;
-          localValidationErrors[key] = 'Ports must be less than or equal to 65535';
+          localValidationErrors[key] = 'Ports must be less than or equal to 65535.';
           this.setState({localValidationErrors});
 
           return false;
@@ -622,10 +621,13 @@ class Setup extends mixin(StoreMixin) {
         }
 
         let localValidationErrors = this.state.localValidationErrors;
-        localValidationErrors[key] = 'Invalid IP address.';
+        localValidationErrors[key] = 'Enter a valid IP address.';
         this.setState({localValidationErrors});
 
         return false;
+      } else if (key === 'public_ip_address' && (fieldValue == null || fieldValue === '')) {
+        let newFormData = this.getNewFormData({public_ip_address: null});
+        this.setState({formData: newFormData});
       }
 
       if (this.getErrors(key)) {
@@ -638,6 +640,10 @@ class Setup extends mixin(StoreMixin) {
 
   handleFormChange(formData, eventDetails) {
     let {eventType, fieldName, fieldValue} = eventDetails;
+
+    if (eventType === 'blur' && fieldName === 'public_ip_address') {
+      this.savePublicURL(fieldValue);
+    }
 
     if (eventType === 'focus' || fieldValue === '' || fieldValue == null) {
       return;
@@ -696,13 +702,7 @@ class Setup extends mixin(StoreMixin) {
   }
 
   handleSubmitClick() {
-    let url = this.state.formData.public_ip_address;
-
-    if (!/^https?:\/\//.test(url)) {
-      url = `http://${url}`;
-    }
-
-    global.localStorage.setItem('publicHostname', url);
+    this.savePublicURL(this.state.formData.public_ip_address);
     this.setState({buttonText: 'Verifying Configuration...'});
     this.beginPreFlight();
   }
@@ -740,6 +740,14 @@ class Setup extends mixin(StoreMixin) {
     });
 
     return lastRemainingField;
+  }
+
+  savePublicURL(url) {
+    if (url != null && url !== '' && !/^https?:\/\//.test(url)) {
+      url = `http://${url}`;
+    }
+
+    global.localStorage.setItem('publicHostname', url);
   }
 
   submitFormData(formData) {

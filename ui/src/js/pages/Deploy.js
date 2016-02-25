@@ -97,11 +97,11 @@ class Deploy extends mixin(StoreMixin) {
     return `Deploying ${hostCount} of ${total}`;
   }
 
-  getProgressBarLabel(type, completed, errors) {
+  getProgressBarLabel(type, completed, errors, totalOfType) {
     if (errors > 0 && completed) {
       let errorsText = StringUtil.pluralize('Error', errors);
-      let typeText = StringUtil.pluralize(type, errors);
-      return `${errorsText} with ${errors} ${typeText}`;
+      let typeText = StringUtil.pluralize(type, totalOfType);
+      return `${errorsText} with ${errors} of ${totalOfType} ${typeText}`;
     }
 
     if (completed) {
@@ -135,7 +135,7 @@ class Deploy extends mixin(StoreMixin) {
     return (
       <ProgressBar
         detail={this.getProgressBarDetail(status, completed, totalOfType)}
-        label={this.getProgressBarLabel(type, completed, status.errors)}
+        label={this.getProgressBarLabel(type, completed, status.errors, totalOfType)}
         progress={progress} state={state} />
     );
   }
@@ -192,6 +192,7 @@ class Deploy extends mixin(StoreMixin) {
                 nextText="Run Post-Flight"
                 onNextClick={PostFlightStore.beginStage.bind(PostFlightStore)}
                 onRetryClick={this.handleRetryClick.bind(this)}
+                showDisabled={true}
                 totalErrors={totalErrors} />
             </SectionFooter>
             <SectionFooter>

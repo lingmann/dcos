@@ -5,8 +5,31 @@ import {StoreMixin} from 'mesosphere-shared-reactjs';
 import AdvancedConfigurationWarning from './AdvancedConfigurationWarning';
 import AlertPanel from './AlertPanel';
 import IconLoadingIndicator from './icons/IconLoadingIndicator';
+import IconLostPlanet from './icons/IconLostPlanet';
 import InstallerStore from '../stores/InstallerStore';
+import PreFlightStore from '../stores/PreFlightStore';
 import SetupStore from '../stores/SetupStore';
+
+const METHODS_TO_BIND = ['handleServerError', 'handleServerSuccess'];
+const MONITORED_STAGE_STORES = ['deploy', 'preFlight', 'postFlight'];
+const MONITORED_STAGE_ERROR_EVENTS = ['stateError'];
+const MONITORED_STAGE_SUCCESS_EVENTS = ['beginSuccess', 'stateChange'];
+
+function getEventsFromStoreListeners() {
+  let errorEventHandlers = [];
+  let successEventHandlers = [];
+
+  MONITORED_STAGE_STORES.forEach((store) => {
+    MONITORED_STAGE_ERROR_EVENTS.forEach((storeEvent) => {
+      errorEventHandlers.push(this.store_getChangeFunctionName(store, storeEvent));
+    });
+    MONITORED_STAGE_SUCCESS_EVENTS.forEach((storeEvent) => {
+      successEventHandlers.push(this.store_getChangeFunctionName(store, storeEvent));
+    });
+  });
+
+  return {errorEventHandlers, successEventHandlers};
+}
 
 class EnforceStage extends mixin(StoreMixin) {
   constructor() {
@@ -20,8 +43,7 @@ class EnforceStage extends mixin(StoreMixin) {
       currentStage: null,
       receivedConfigType: false,
       receivedCurrentConfig: false,
-      receivedCurrentConfigStatus: false,
-      serverError: false
+      receivedCurrentConfigStatus: false
     };
 
     this.store_listeners = [
@@ -47,6 +69,21 @@ class EnforceStage extends mixin(StoreMixin) {
 
     this.firstMount = true;
     this.currentStageChanges = 0;
+
+    METHODS_TO_BIND.forEach((method) => {
+      this[method] = this[method].bind(this);
+    });
+
+    let {errorEventHandlers, successEventHandlers} =
+      getEventsFromStoreListeners.call(this);
+
+    errorEventHandlers.forEach((event) => {
+      this[event] = this.handleServerError;
+    });
+
+    successEventHandlers.forEach((event) => {
+      this[event] = this.handleServerSuccess;
+    });
   }
 
   componentDidMount() {
@@ -62,15 +99,31 @@ class EnforceStage extends mixin(StoreMixin) {
     }
 
     if (this.currentStageChanges >= 2) {
-      let nextStage = nextProps.routes[nextProps.routes.length - 1].path;
-      let currentStage = InstallerStore.get('currentStage') || null;
-      if (nextStage !== currentStage && currentStage !== null) {
-        this.context.router.push(`/${currentStage}`);
+      let stageState = {
+        nextStage: nextProps.routes[nextProps.routes.length - 1].path,
+        currentClientStage: this.props.routes[this.props.routes.length - 1].path,
+        currentStage: InstallerStore.get('currentStage') || null
+      };
+
+      if (this.isNavigationPrevented(stageState)) {
+        this.context.router.push(`/${stageState.currentStage}`);
         return false;
       }
     }
 
     return true;
+  }
+
+  isNavigationPrevented(stageState) {
+    if (stageState.currentClientStage === 'pre-flight'
+      && stageState.nextStage === 'setup' && PreFlightStore.isCompleted()) {
+      return false;
+    }
+
+    if (stageState.nextStage !== stageState.currentStage
+      && stageState.currentStage != null) {
+      return true;
+    }
   }
 
   onInstallerStoreCurrentStageChange() {
@@ -94,7 +147,7 @@ class EnforceStage extends mixin(StoreMixin) {
   }
 
   onSetupStoreCurrentConfigChangeError() {
-    this.setState({serverError: true});
+    this.handleServerError();
   }
 
   onSetupStoreCurrentConfigChangeSuccess() {
@@ -124,12 +177,25 @@ class EnforceStage extends mixin(StoreMixin) {
   getServerError() {
     return (
       <AlertPanel content="Please try again later."
-        heading="Cannot Connect to Server" />
+        heading="Cannot Connect to Server"
+        icon={<IconLostPlanet />} />
     );
   }
 
+  handleServerSuccess() {
+    this.setState({serverErrorCount: 0});
+  }
+
+  handleServerError() {
+    this.setState({serverErrorCount: this.state.serverErrorCount + 1});
+  }
+
+  hasError() {
+    return this.state.serverErrorCount >= 3;
+  }
+
   render() {
-    if (this.state.serverError) {
+    if (this.hasError()) {
       return this.getServerError();
     }
 

@@ -92,17 +92,17 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
 
 def do_validate_config(config_path=CONFIG_PATH, write_default_config=True):
-    print("Write file is ", write_default_config)
-    config = DCOSConfig(config_path=config_path)
-    config.write_default_config = write_default_config
-    print(config.write_default_config)
-    config.build()
-    messages = config.validate()
-    return_code = 0
-    if len(messages['errors']) > 0:
-        return_code = 1
-    elif len(messages['warning']) > 0:
-        return_code = 2
+    config = DCOSConfig(config_path=config_path, write_default_config=write_default_config)
+#    config.build()
+    if os.path.isfile(CONFIG_PATH):
+        messages = config.validate()
+        return_code = 0
+        if len(messages['errors']) > 0:
+            return_code = 1
+        elif len(messages['warning']) > 0:
+            return_code = 2
+    else:
+        return {}, 1
     return messages, return_code
 
 

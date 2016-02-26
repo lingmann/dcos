@@ -99,14 +99,22 @@ def validate_dns_search(dns_search):
     assert len(dns_search.split()) <= 6, "Must contain no more than 6 domains"
 
 
-def validate_master_list(master_list):
+def validate_json_list(json_list):
     try:
-        list_data = json.loads(master_list)
+        list_data = json.loads(json_list)
 
         assert type(list_data) is list, "Must be a JSON list. Got a {}".format(type(list_data))
     except json.JSONDecodeError as ex:
         # TODO(cmaloney):
         assert False, "Must be a valid JSON list. Errors whilewhile parsing at position {}: {}".format(ex.pos, ex.msg)
+
+
+def validate_master_list(master_list):
+    return validate_json_list(master_list)
+
+
+def validate_mesos_dns_ip_sources(mesos_dns_ip_sources):
+    return validate_json_list(mesos_dns_ip_sources)
 
 
 def calc_num_masters(master_list):
@@ -155,14 +163,16 @@ entry = {
         validate_master_list,
         validate_zk_hosts,
         validate_zk_path,
-        validate_cluster_packages],
+        validate_cluster_packages,
+        validate_mesos_dns_ip_sources],
     'default': {
         'weights': '',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': '',
         'superuser_username': '',
-        'superuser_password_hash': ''
+        'superuser_password_hash': '',
+        'mesos_dns_ip_sources': '["netinfo", "mesos", "host"]'
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),

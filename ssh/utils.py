@@ -225,3 +225,15 @@ class MemoryDelegate(JsonDelegate):
             with open(os.path.join(self.state_dir, '{}.json'.format(state)), 'w') as fh:
                 log.debug('Dumping {} to a dir {}'.format(state, self.state_dir))
                 json.dump(state_object, fh)
+
+
+class SyncCmdDelegate(AbstractSSHLibDelegate):
+    """Used for running synchronous commands in CLI or general orchestration
+    without a long-running server process
+    """
+    def on_update(self, future, callback_called):
+        chain_name, result_object, host = future.result()
+        callback_called.set_result(True)
+
+    def on_done(self, name, result, host_status=None):
+        pass

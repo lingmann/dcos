@@ -21,7 +21,7 @@ class DCOSConfig(dict):
     """
     Return the site configuration object for dcosgen library
     """
-    def __init__(self, overrides={}, config_path=CONFIG_PATH):
+    def __init__(self, overrides={}, config_path=CONFIG_PATH, write_default_config=True):
         defaults = """
 ---
 # The name of your DCOS cluster. Visable in the DCOS user interface.
@@ -58,6 +58,8 @@ ssh_port: 22
 process_timeout: 10000
 bootstrap_url: 'file:///opt/dcos_install_tmp'
 """
+
+        self.write_default_config = write_default_config
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
         self.overrides = overrides
@@ -136,11 +138,15 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                 configuration = yaml.load(data)
 
         else:
-            log.error(
-                "Configuration file not found, %s. Writing new one with all defaults.",
-                self.config_path)
-            self.write()
-            configuration = yaml.load(open(self.config_path))
+            if self.write_default_config:
+                log.error(
+                    "Configuration file not found, %s. Writing new one with all defaults.",
+                    self.config_path)
+                self.write()
+                configuration = yaml.load(open(self.config_path))
+            else:
+                log.error("Configuration file not found: %s", self.config_path)
+                return {}
 
         return configuration
 

@@ -52,7 +52,7 @@ def test_bad_create_config_from_post(tmpdir):
 def test_do_validate_config(tmpdir):
     # Create a temp config
     workspace = tmpdir.strpath
-    temp_config_path = workspace + '/config.yaml'
+    temp_config_path = '/tmp/config.yaml'
 
     expected_output = {
         'errors': {
@@ -74,22 +74,6 @@ def test_do_validate_config(tmpdir):
             'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses.",
             'ssh_port': 'Port is less than or equal to 65535'}}
 
-#        'errors': {
-#            'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
-#            'superuser_username': 'Please enter a valid string',
-#            'master_list': 'Please enter a valid IPv4 address.',
-#            'superuser_password_hash': 'Please enter a valid string',
-#            'ip_detect_path': 'File does not exist genconf/ip-detect',
-#            'ssh_user': 'Please enter a valid string',
-#            'agent_list': 'Please enter a valid IPv4 address.',
-#            'ssh_key': 'SSH key must be an unencrypted (no passphrase) SSH key which is not empty.',
-#            'ssh_key_path': 'File does not exist genconf/ssh_key',
-#            'ip_detect_script': 'Please provide a valid executable script. Script must start with #!/'},
-#        'success': {
-#            'cluster_name': 'Mesosphere: The Data Center Operating System is a valid string.',
-#            'ssh_port': 'Port is less than or equal to 65535',
-#            'resolvers': "['8.8.8.8', '8.8.4.4'] is a valid list of IPv4 addresses."},
-#        'warning': {}}
     messages, return_code = backend.do_validate_config(temp_config_path)
     assert messages == expected_output
 

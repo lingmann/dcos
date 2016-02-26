@@ -91,15 +91,22 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
     return validation_err, post_data_validation
 
 
-def do_validate_config(config_path=CONFIG_PATH):
-    config = DCOSConfig(config_path=config_path)
-    config.build()
-    messages = config.validate()
-    return_code = 0
-    if len(messages['errors']) > 0:
+def do_validate_config(config_path=CONFIG_PATH, write_default_config=True):
+    config = DCOSConfig(
+        config_path=config_path,
+        write_default_config=write_default_config)
+    if os.path.isfile(config_path):
+        config.build()
+        messages = config.validate()
+        return_code = 0
+        if len(messages['errors']) > 0:
+            return_code = 1
+        elif len(messages['warning']) > 0:
+            return_code = 2
+    else:
+        messages = {}
         return_code = 1
-    elif len(messages['warning']) > 0:
-        return_code = 2
+
     return messages, return_code
 
 

@@ -4,7 +4,7 @@
   "sources": {
     "erlang": {
       "kind": "url_extract",
-      "url": "http://www.erlang.org/download/otp_src_18.1.tar.gz",
+      "url": "https://downloads.mesosphere.com/pkgpanda-artifact-cache/otp_src_18.1.tar.gz",
       "sha1": "99361cb597548298cb14b104ebafa4e5a40ff442"
     },
     "minuteman": {

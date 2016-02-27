@@ -2,7 +2,6 @@ asyncio
 aiohttp==0.20.0
 aiohttp_jinja2
 coloredlogs
-docker_py
 passlib
 pytest
 pytest-mock

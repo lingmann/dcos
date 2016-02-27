@@ -10,7 +10,6 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 import requests
 
-HOST_PORT = 9080
 LOG_LEVEL = logging.DEBUG
 TEST_UUID_VARNAME = "DCOS_TEST_UUID"
 
@@ -256,7 +255,7 @@ def _verify_environment():
         sys.exit(1)
 
 
-def start_http_server():
+def start_http_server(listen_port):
     """Start the test server
 
     This function makes sure that the environment is sane and signals are properly
@@ -265,8 +264,8 @@ def start_http_server():
     _verify_environment()
 
     logging.info("HTTP server is starting, port: "
-                 "{}, test-UUID: '{}'".format(HOST_PORT, os.environ[TEST_UUID_VARNAME]))
-    test_server = HTTPServer(('', HOST_PORT), TestHTTPRequestHandler)
+                 "{}, test-UUID: '{}'".format(listen_port, os.environ[TEST_UUID_VARNAME]))
+    test_server = HTTPServer(('', listen_port), TestHTTPRequestHandler)
 
     def sigterm_handler(_signo, _stack_frame):
         test_server.server_close()
@@ -281,7 +280,7 @@ def start_http_server():
 
 def main():
     setup_logging()
-    start_http_server()
+    start_http_server(int(sys.argv[1]))
 
 
 if __name__ == '__main__':

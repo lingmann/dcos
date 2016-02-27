@@ -172,7 +172,7 @@ entry = {
         'dns_search': '',
         'superuser_username': '',
         'superuser_password_hash': '',
-        'mesos_dns_ip_sources': '["netinfo", "mesos", "host"]'
+        'mesos_dns_ip_sources': '["host", "netinfo"]'
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),

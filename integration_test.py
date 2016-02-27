@@ -223,24 +223,36 @@ class Cluster:
         hdrs = self._suheader(disable_suauth)
         return requests.head(self.dcos_uri + path, headers=hdrs)
 
-    def get_base_testapp_definition(self):
+    def get_base_testapp_definition(self, docker_network_bridge=True):
         test_uuid = uuid.uuid4().hex
+
+        docker_config = {
+            'image': '{}:5000/test_server'.format(self.registry),
+            'forcePullImage': True,
+        }
+        if docker_network_bridge:
+            cmd = '/opt/test_server.py 9080'
+            docker_config['network'] = 'BRIDGE'
+            docker_config['portMappings'] = [{
+                'containerPort':  9080,
+                'hostPort': 0,
+                'servicePort': 0,
+                'protocol': 'tcp',
+            }]
+            ports = []
+        else:
+            cmd = '/opt/test_server.py $PORT0'
+            docker_config['network'] = 'HOST'
+            ports = [0]
+
         return {
             'id': TEST_APP_NAME_FMT.format(test_uuid),
             'container': {
                 'type': 'DOCKER',
-                'docker': {
-                    'image': '{}:5000/test_server'.format(self.registry),
-                    "forcePullImage": True,
-                    'network': 'BRIDGE',
-                    'portMappings': [
-                        {'containerPort':  9080,
-                         'hostPort': 0,
-                         'servicePort': 0,
-                         'protocol': 'tcp'}
-                    ]
-                }
+                'docker': docker_config,
             },
+            'cmd': cmd,
+            'ports': ports,
             'cpus': 0.1,
             'mem': 64,
             'instances': 1,
@@ -570,7 +582,7 @@ def test_if_Marathon_app_can_be_deployed(cluster):
     cluster.destroy_marathon_app(app_definition['id'])
 
 
-def test_if_service_discovery_works(cluster):
+def _service_discovery_test(cluster, docker_network_bridge=True):
     """Service discovery integration test
 
     This test verifies if service discovery works, by comparing marathon data
@@ -614,7 +626,7 @@ def test_if_service_discovery_works(cluster):
     itself match and the IP of the test server matches the service point of that
     container as reported by Marathon.
     """
-    app_definition, test_uuid = cluster.get_base_testapp_definition()
+    app_definition, test_uuid = cluster.get_base_testapp_definition(docker_network_bridge=docker_network_bridge)
     app_definition['instances'] = 2
 
     if len(cluster.slaves) >= 2:
@@ -673,6 +685,14 @@ def test_if_service_discovery_works(cluster):
         assert r_data['my_ip'] == service_points[0].host
 
     cluster.destroy_marathon_app(app_definition['id'])
+
+
+def test_if_service_discovery_works_docker_bridged_network(cluster):
+    return _service_discovery_test(cluster, docker_network_bridge=True)
+
+
+def test_if_service_discovery_works_docker_host_network(cluster):
+    return _service_discovery_test(cluster, docker_network_bridge=False)
 
 
 def test_if_search_is_working(cluster):

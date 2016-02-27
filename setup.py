@@ -31,8 +31,7 @@ setup(
         'coloredlogs',
         'pyyaml',
         'pytest',
-        'retrying',
-        'termcolor'],
+        'retrying'],
     entry_points={
         'console_scripts': [
             'release=providers.release:main',

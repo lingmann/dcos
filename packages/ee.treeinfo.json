@@ -1,6 +1,6 @@
 {
   "variants": {
-    "nginx": "ee",
+    "adminrouter": "ee",
     "dcos-ui": "ee"
   },
   "exclude": [

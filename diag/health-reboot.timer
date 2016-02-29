@@ -1,5 +1,0 @@
-[Unit]
-Description=Reboot healthy box 20 times
-[Timer]
-OnBootSec=2min
-Unit=health-reboot.service

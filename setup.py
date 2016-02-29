@@ -24,8 +24,8 @@ setup(
     ],
     packages=['gen', 'gen.aws', 'gen.azure', 'providers', 'ssh'],
     install_requires=[
-        'requests==2.8.1',
-        'azure-storage==0.20.2',
+        'requests',
+        'azure-storage==0.30.0',
         'boto3',
         'botocore',
         'coloredlogs',

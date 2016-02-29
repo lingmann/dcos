@@ -52,7 +52,6 @@ setup(
         'build_ui': BuildUi},
     packages=['dcos_installer'] + find_packages(),
     install_requires=[
-        'asyncio',
         'aiohttp==0.20.0',
         'aiohttp_jinja2',
         'coloredlogs',

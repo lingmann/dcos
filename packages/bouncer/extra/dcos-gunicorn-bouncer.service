@@ -1,7 +1,10 @@
 [Unit]
 Description=Bouncer (DCOS Access Control Service API provider)
-# Make sure that bouncer is running when nginx comes up
-Before=dcos-nginx.service
+# TODO(cmaloney): Make sure that bouncer is running when nginx comes up
+# We currently don't because systemd unit ordering / dependencies can break
+# startup entirely, whereas "just restart always" and catch things in the right
+# order will always get us to a working box eventually.
+# Before=dcos-adminrouter.service
 
 [Service]
 Type=simple

@@ -131,7 +131,7 @@ class Cluster:
     @retrying.retry(wait_fixed=1000,
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
-    def _wait_for_nginx_up(self):
+    def _wait_for_adminrouter_up(self):
         try:
             # Yeah, we can also put it in retry_on_exception, but
             # this way we will loose debug messages
@@ -146,7 +146,7 @@ class Cluster:
 
     def _wait_for_DCOS(self):
         self._wait_for_leader_election()
-        self._wait_for_nginx_up()
+        self._wait_for_adminrouter_up()
         # The following "tests" require authentication.
         if self.is_enterprise:
             self._authenticate()

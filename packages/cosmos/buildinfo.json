@@ -5,7 +5,7 @@
   ],
   "single_source": {
     "kind": "url",
-    "url": "https://downloads.mesosphere.com/dcos/cosmos/0.1.1-1/cosmos-0.1.1-1-one-jar.jar",
-    "sha1": "35cf362ee2ada59a1327a8f3c8e5be459db619fd"
+    "url": "https://downloads.mesosphere.com/dcos/cosmos/0.1.2-2/cosmos-0.1.2-2-one-jar.jar",
+    "sha1": "7d2072b72e8f044f6cdbb3cb32d9b41724082181"
   }
 }

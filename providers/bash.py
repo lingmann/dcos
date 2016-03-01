@@ -149,6 +149,19 @@ function check_version() {
     return $RC
 }
 
+function check_selinux() {
+  ENABLED=$(getenforce)
+
+  if [[ $ENABLED == 'Permissive' ]]; then
+    RC=0
+  else
+    RC=1
+  fi
+
+  print_status $RC "Is SELinux disabled?"
+  return $RC
+}
+
 function check() {
     # Wrapper to invoke both check_commmand and version check in one go
     if [[ $# -eq 4 ]]; then
@@ -236,7 +249,7 @@ function check_all() {
     echo -e "${BOLD}Running preflight checks${NORMAL}"
 
     check_preexisting_dcos
-
+    check_selinux
     check_sort_capability
 
     local docker_version=$(command -v docker >/dev/null 2>&1 && docker version 2>/dev/null | awk '

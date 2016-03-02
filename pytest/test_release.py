@@ -492,11 +492,14 @@ def test_get_package_artifact(tmpdir):
 def mock_do_build_packages(cache_repository_url, skip_build):
     subprocess.check_call(['mkdir', '-p', 'packages'])
     write_string("packages/bootstrap_id.bootstrap.tar.xz", "bootstrap_contents")
-    write_json("packages/bootstrap_id.active.json", ['a--b', 'c--d', 'e--f'])
+    write_json("packages/bootstrap_id.active.json", ['a--b', 'c--d'])
     write_string("packages/bootstrap.latest", "bootstrap_id")
+    write_string("packages/installer.bootstrap.latest", "bootstrap_id")
+    write_json("packages/installer_bootstrap_id.active.json", ['c--d', 'e--f'])
 
     return {
-        None: "bootstrap_id"
+        None: "bootstrap_id",
+        "installer": "installer_bootstrap_id"
     }
 
 
@@ -513,6 +516,12 @@ stable_artifacts_metadata = {
             'reproducible_path': 'packages/a/a--b.tar.xz'},
         {'local_path': 'packages/c/c--d.tar.xz',
             'reproducible_path': 'packages/c/c--d.tar.xz'},
+        {'local_path': 'packages/installer_bootstrap_id.bootstrap.tar.xz',
+            'reproducible_path': 'bootstrap/installer_bootstrap_id.bootstrap.tar.xz'},
+        {'local_path': 'packages/installer_bootstrap_id.active.json',
+            'reproducible_path': 'bootstrap/installer_bootstrap_id.active.json'},
+        {'local_path': 'packages/installer.bootstrap.latest',
+            'channel_path': 'installer.bootstrap.latest'},
         {'local_path': 'packages/e/e--f.tar.xz',
             'reproducible_path': 'packages/e/e--f.tar.xz'}
     ],

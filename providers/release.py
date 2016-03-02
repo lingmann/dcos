@@ -582,7 +582,13 @@ def make_stable_artifacts(cache_repository_url, skip_build):
 
     # TODO(cmaloney): Rather than guessing / reverse-engineering all these paths
     # have do_build_packages get them directly from pkgpanda
-    bootstrap_dict = do_build_packages(cache_repository_url, skip_build)
+    all_bootstraps = do_build_packages(cache_repository_url, skip_build)
+
+    # The installer is a built bootstrap, but not a DCOS variant. We use
+    # iteration over the bootstrap_dict to enumerate all variants a whole lot,
+    # so explicity remove installer here so people don't accidentally hit it.
+    bootstrap_dict = copy.copy(all_bootstraps)
+    del bootstrap_dict['installer']
     metadata["bootstrap_dict"] = bootstrap_dict
 
     def add_file(info):
@@ -596,7 +602,7 @@ def make_stable_artifacts(cache_repository_url, skip_build):
 
     # Add the bootstrap, active.json, packages as reproducible_path artifacts
     # Add the <variant>.bootstrap.latest as a channel_path
-    for name, bootstrap_id in bootstrap_dict.items():
+    for name, bootstrap_id in sorted(all_bootstraps.items(), key=lambda kv: util.variant_str(kv[0])):
         bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
         add_file({
             'reproducible_path': 'bootstrap/' + bootstrap_filename,

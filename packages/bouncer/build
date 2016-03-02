@@ -8,15 +8,10 @@ for package in jsonschema pyjwt kazoo ldap3 pyasn1; do
   pip3 install --no-deps --no-index --target="$LIB_INSTALL_DIR" /pkg/src/$package/*.whl
 done
 
-# Install gunicorn (is an extracted archive).
-pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/gunicorn
-
-# Install python-mimeparse (is an extracted archive).
-pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/python-mimeparse
-
-# Install falcon (is an extracted archive)
-# TODO(jp): set up Cython before installing, for speed-up.
-pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/falcon
+# TODO(jp): set up Cython before installing falcon, for speed-up.
+for package in falcon gunicorn python-mimeparse; do
+  pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/$package
+done
 
 # TODO(cmaloney): Make bouncer install as a proper python package.
 # Install bouncer (only cp directory tree).

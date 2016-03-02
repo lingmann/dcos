@@ -1,5 +1,5 @@
 {
-  "requires": ["python", "python-requests"],
+  "requires": ["python", "python-jinja2", "python-markupsafe", "python-requests"],
   "docker": "dcos-builder",
   "sources": {
     "Flask": {
@@ -12,11 +12,6 @@
       "url": "https://github.com/wichitacode/flask-compress/archive/v1.2.0.tar.gz",
       "sha1": "15acb04e85f86b2ea8ee7bd2b8c3e3cfcf703756"
     },
-    "Jinja2": {
-      "kind": "url_extract",
-      "url": "https://github.com/mitsuhiko/jinja2/archive/2.7.3.tar.gz",
-      "sha1": "06b974934629879b6fec45889ac006630bfcf7f9"
-    },
     "itsdangerous": {
       "kind": "url_extract",
       "url": "https://github.com/mitsuhiko/itsdangerous/archive/0.24.tar.gz",
@@ -26,11 +21,6 @@
       "kind": "url_extract",
       "url": "https://github.com/mitsuhiko/werkzeug/archive/0.10.4.tar.gz",
       "sha1": "aa0c13e3c2a59f53e857f5bf33dc5aea282550cb"
-    },
-    "markupsafe": {
-      "kind": "url_extract",
-      "url": "https://github.com/mitsuhiko/markupsafe/archive/0.23.tar.gz",
-      "sha1": "441a234ccb7e02002cf233a77bf210c7ba094893"
     }
   }
 }

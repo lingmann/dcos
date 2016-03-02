@@ -1,10 +1,9 @@
-from setuptools import setup, find_packages
-from pkgpanda.constants import version
+from setuptools import setup
 
 setup(
     name='pkgpanda',
-    version=version,
-    description='Panda package manager and utilities',
+    version='0.8',
+    description='DCOS package manager and utilities',
     url='https://mesosphere.com',
     author='Mesosphere, Inc.',
     author_email='support@mesosphere.io',
@@ -15,16 +14,13 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    packages=find_packages(exclude=['tests']),
+    packages=['pkgpanda', 'pkgpanda.build'],
     install_requires=['docopt'],
     entry_points={
         'console_scripts': [
             'pkgpanda=pkgpanda.cli:main',
             'mkpanda=pkgpanda.build.cli:main',
         ],
-    },
-    package_data={
-        '': ['*.service', '*.target']
     },
     zip_safe=True
 )

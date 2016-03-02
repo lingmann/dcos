@@ -1,37 +1,27 @@
 #!/bin/bash
-export PATH=/opt/mesosphere/bin:$PATH
+source /opt/mesosphere/environment.export
 export LIB_INSTALL_DIR="$PKG_PATH/lib/python3.4/site-packages"
-
 mkdir -p "$LIB_INSTALL_DIR"
 
 # Install wheels.
 for package in jsonschema pyjwt passlib kazoo ldap3 pyasn1; do
-  pushd "/pkg/src/$package"
-  pip install --no-deps  --target="$LIB_INSTALL_DIR" *.whl
-  popd
+  pip3 install --no-deps --no-index --target="$LIB_INSTALL_DIR" /pkg/src/$package/*.whl
 done
 
 # Install gunicorn (is an extracted archive).
-pushd "/pkg/src/gunicorn"
-python3 setup.py install --root=/ --prefix=$PKG_PATH
-popd
+pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/gunicorn
 
 # Install python-mimeparse (is an extracted archive).
-pushd "/pkg/src/python-mimeparse"
-python3 setup.py install --root=/ --prefix=$PKG_PATH
-popd
+pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/python-mimeparse
 
 # Install retrying (is an extracted archive).
-pushd "/pkg/src/retrying"
-python3 setup.py install --root=/ --prefix=$PKG_PATH
-popd
+pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/retrying
 
 # Install falcon (is an extracted archive)
 # TODO(jp): set up Cython before installing, for speed-up.
-pushd "/pkg/src/falcon"
-python3 setup.py install --root=/ --prefix=$PKG_PATH
-popd
+pip3 install --no-deps --install-option="--prefix=$PKG_PATH" --root=/ /pkg/src/falcon
 
+# TODO(cmaloney): Make bouncer install as a proper python package.
 # Install bouncer (only cp directory tree).
 # TODO(jp): cherry-pick what is required.
 cp -r "/pkg/src/bouncer" "$PKG_PATH/bouncer"

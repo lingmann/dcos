@@ -65,6 +65,30 @@ class EnforceStage extends mixin(StoreMixin) {
           'currentConfigChangeSuccess',
           'currentConfigChangeError'
         ]
+      },
+      {
+        name: 'deploy',
+        events: [
+          'stateError',
+          'beginSuccess',
+          'stateChange'
+        ]
+      },
+      {
+        name: 'postFlight',
+        events: [
+          'stateError',
+          'beginSuccess',
+          'stateChange'
+        ]
+      },
+      {
+        name: 'preFlight',
+        events: [
+          'stateError',
+          'beginSuccess',
+          'stateChange'
+        ]
       }
     ];
 
@@ -79,12 +103,10 @@ class EnforceStage extends mixin(StoreMixin) {
       getEventsFromStoreListeners.call(this);
 
     errorEventHandlers.forEach((event) => {
-      console.log(event);
       this[event] = this.handleServerError;
     });
 
     successEventHandlers.forEach((event) => {
-      console.log(event);
       this[event] = this.handleServerSuccess;
     });
   }
@@ -187,12 +209,10 @@ class EnforceStage extends mixin(StoreMixin) {
 
   handleServerSuccess() {
     this.setState({serverErrorCount: 0});
-    console.log('success', this.state.serverErrorCount);
   }
 
   handleServerError() {
     this.setState({serverErrorCount: this.state.serverErrorCount + 1});
-    console.log('error', this.state.serverErrorCount);
   }
 
   hasError() {

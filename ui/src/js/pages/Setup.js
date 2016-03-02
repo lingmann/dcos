@@ -358,9 +358,9 @@ class Setup extends mixin(StoreMixin) {
         showLabel: (
           <FormLabel>
             <FormLabelContent>
-              SSH Key
-              <Tooltip content={'The SSH key must be the same on all target ' +
-                'hosts.'} width={200} wrapText={true} />
+              Private SSH Key
+              <Tooltip content={'Enter the private SSH key.'}
+                width={200} wrapText={true} />
             </FormLabelContent>
             <FormLabelContent position="right">
               <Upload displayText="Upload"
@@ -440,7 +440,7 @@ class Setup extends mixin(StoreMixin) {
           showLabel: (
             <FormLabel>
               <FormLabelContent>
-                Bootstrapping Zookeeper IP Address(es)
+                ZooKeeper for Exhibitor Private IP
                 <Tooltip content={
                     <span>
                       Exhibitor uses this Zookeeper cluster to orchestrate its
@@ -468,7 +468,7 @@ class Setup extends mixin(StoreMixin) {
           showLabel: (
             <FormLabel>
               <FormLabelContent>
-                Bootstrapping Zookeeper Port
+                ZooKeeper for Exhibitor Port
                 <Tooltip content={'We recommend leaving this set to the ' +
                   'default port, 2181.'} width={200} wrapText={true} />
               </FormLabelContent>

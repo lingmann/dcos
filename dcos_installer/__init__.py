@@ -69,7 +69,7 @@ def check_config_validation(gen_val=False):
     includes SSH stuff. However, if we do have warnings, we need to ensure this
     validation passes even if superuser_username and superuser_password_hash
     exist since they're optional between CE and EE'''
-    messages, code = backend.do_validate_config()
+    messages, code = backend.do_validate_config(write_default_config=False)
     if code == 1:
         if gen_val:
             log.error("Configuration generation (--genconf) requires the following errors to be fixed:")
@@ -86,7 +86,7 @@ def check_config_validation(gen_val=False):
             if k in warn:
                 del warn[k]
         if len(warn) > 0:
-            log.error("Please fix all warnings and errors before proceeding.")
+            log.error("Please fix all errors before proceeding.")
             sys.exit(1)
 
 
@@ -308,7 +308,7 @@ Environment Settings:
                     'color': 'blue'
                 }
             },
-            fmt='%(asctime)s %(name)s:: %(message)s',
+            fmt='%(asctime)s:: %(message)s',
             isatty=True
         )
 

@@ -6,12 +6,13 @@ the necessary dependencies.
 
 Usage:
   mkpanda [--repository-url=<repository_url>]
-  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>]
+  mkpanda tree [--mkbootstrap] [--repository-url=<repository_url>] [<variant>]
   mkpanda clean
 """
 
 import copy
 import glob
+import json
 import os.path
 import shutil
 import sys
@@ -81,7 +82,7 @@ def main():
 
     # Make a local repository for build dependencies
     if arguments['tree']:
-        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'])
+        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -234,7 +235,7 @@ def make_bootstrap_tarball(packages, variant, repository_url):
                 pass
             # Fall out and do the build since the command errored.
 
-    print("Building bootstrap tarball")
+    print("Creating bootstrap tarball for variant {}".format(variant))
 
     work_dir = tempfile.mkdtemp(prefix='mkpanda_bootstrap_tmp')
 
@@ -280,14 +281,20 @@ def make_bootstrap_tarball(packages, variant, repository_url):
     return mark_latest()
 
 
-ALLOWED_TREEINFO_KEYS = {'exclude', 'variants'}
+ALLOWED_TREEINFO_KEYS = {'exclude', 'variants', 'core_package_list'}
 
 
-def get_tree_packages(tree_variant, built_packages, package_requires):
+def get_tree_package_tuples(tree_variant, possible_packages, package_requires):
     treeinfo = load_config_variant(os.getcwd(), tree_variant, 'treeinfo.json')
 
     if treeinfo.keys() > ALLOWED_TREEINFO_KEYS:
         print("treeinfo can only include the keys {}. Found {}".format(ALLOWED_TREEINFO_KEYS, treeinfo.keys()))
+        sys.exit(1)
+
+    core_package_list = treeinfo.get('core_package_list', None)
+    if core_package_list is not None and not isinstance(core_package_list, list):
+        print("ERROR: core_package_list must either be null meaning don't use "
+              "or a list of the core packages to include (dependencies are automatically picked up).")
         sys.exit(1)
 
     excludes = treeinfo.get('exclude', list())
@@ -301,6 +308,19 @@ def get_tree_packages(tree_variant, built_packages, package_requires):
                   "Found a", type(exclude), "with the value: {}".format(exclude))
             sys.exit(1)
 
+    # Validate core_package_lists is formatted as expected, doesn't contain
+    # any of exclude.
+    if core_package_list is not None:
+        for name in core_package_list:
+            if not isinstance(name, str):
+                print("ERROR: core_package_list should be a list of package name "
+                      "strings, found a", type(name), "with the value: {}".format(name))
+                sys.exit(1)
+
+            if name in excludes:
+                print("ERROR: Package found in both exclude and core_package_list: {}".format(name))
+                sys.exit(1)
+
     # List of mandatory package variants to include in the buildinfo.
     variants = treeinfo.get('variants', dict())
 
@@ -310,20 +330,45 @@ def get_tree_packages(tree_variant, built_packages, package_requires):
 
     # Generate the list of package paths of all packages variants which were
     # included and excluding those removed.
-    package_paths = list()
     package_names = set()
     package_tuples = set()
-    for name, built_variants in built_packages.items():
+
+    def include_package(name, variant):
+        if name in excludes:
+            print("ERROR: package", name, "is in excludes but was needed as a "
+                  "dependency of an included package.")
+            sys.exit(1)
+
+        if name not in possible_packages or variant not in possible_packages[name]:
+            print("ERROR: package", name, "variant", variant, " is needed but is "
+                  "not in the set of built packages but is needed (explicitly "
+                  "requested or as a requires)")
+            sys.exit(1)
+
+        # Allow adding duplicates. There is a check that we don't have a repeat
+        # of the same package name with different variants, so we can ignore the
+        # variant name.
+        if name in package_names:
+            pass
+        package_names.add(name)
+        package_tuples.add((name, variant))
+
+    for name in possible_packages.keys():
+        if core_package_list is not None:
+            assert isinstance(core_package_list, list)
+
+            # Skip over packages not in the core package list. We'll add requires
+            # later when resolving / validating the requires graph.
+            if name not in core_package_list:
+                continue
+
         if name in excludes:
             continue
 
         # Sanity check
         assert name not in package_names
 
-        variant = variants.get(name)
-        package_paths.append(built_variants[variant])
-        package_names.add(name)
-        package_tuples.add((name, variant))
+        include_package(name, variants.get(name))
 
     # Validate that all mandatory package variants are included
     for name, variant in variants.items():
@@ -340,25 +385,38 @@ def get_tree_packages(tree_variant, built_packages, package_requires):
     # because we iterate over the list of packages once so only one variant
     # could get included. If another variant is asked for in the requires,
     # then that variant won't be included and we'll error.
-    for name, variant in variants.items():
+    to_visit = list(package_tuples)
+    while len(to_visit) > 0:
+        name, variant = to_visit.pop()
         requires = package_requires[(name, variant)]['requires']
         for require in requires:
             require_tuple = expand_require(require)
             if require_tuple not in package_tuples:
-                print("ERROR: Package", name, "requires", require_tuple[0],
-                      "variant", require_tuple[1], "but that is not in the set",
-                      "of packages listed for the tree", tree_variant, ":", package_tuples)
-                sys.exit(1)
+                if core_package_list is not None:
+                    # TODO(cmaloney): Include the context information of the
+                    # else case when printing out the info.
+                    include_package(require_tuple[0], require_tuple[1])
+                    to_visit.append(require_tuple)
+                else:
+                    print("ERROR: Package", name, "requires", require_tuple[0],
+                          "variant", require_tuple[1], "but that is not in the set",
+                          "of packages listed for the tree", tree_variant, ":", package_tuples)
+                    sys.exit(1)
 
     # Integrity / programming check excludes were all excluded.
     for exclude in excludes:
         assert exclude not in package_names
+    return package_tuples
 
-    return package_paths
 
-
-def build_tree(mkbootstrap, repository_url):
+def build_tree(mkbootstrap, repository_url, tree_variant=None):
     packages = find_packages_fs()
+
+    # Turn packages into the possible_packages dictionary
+    possible_packages = dict()
+    for name, variant in packages.keys():
+        possible_packages.setdefault(name, set())
+        possible_packages[name].add(variant)
 
     # Check the requires and figure out a feasible build order
     # depth-first traverse the dependency tree, yielding when we reach a
@@ -368,6 +426,8 @@ def build_tree(mkbootstrap, repository_url):
     # TODO(cmaloney): Add support for circular dependencies. They are doable
     # long as there is a pre-built version of enough of the packages.
 
+    # TODO(cmaloney): Make it so when we're building a treeinfo which has a
+    # explicit package list we don't build all the other packages.
     build_order = list()
     visited = set()
     built = set()
@@ -412,12 +472,20 @@ def build_tree(mkbootstrap, repository_url):
     def key_func(elem):
         return elem[0], elem[1] is None,  elem[1] or ""
 
-    # Since there may be multiple isolated dependency trees, iterate through
-    # all packages to find them all.
-    for pkg_tuple in sorted(packages.keys(), key=key_func):
-        if pkg_tuple in visited:
-            continue
-        visit(pkg_tuple)
+    # Build everything if no variant is given
+    if tree_variant is None:
+        # Since there may be multiple isolated dependency trees, iterate through
+        # all packages to find them all.
+        for pkg_tuple in sorted(packages.keys(), key=key_func):
+            if pkg_tuple in visited:
+                continue
+            visit(pkg_tuple)
+    else:
+        # Build all the things needed for this variant and only this variant
+        for pkg_tuple in sorted(get_tree_package_tuples(tree_variant, possible_packages, packages), key=key_func):
+            if pkg_tuple in visited:
+                continue
+            visit(pkg_tuple)
 
     built_packages = dict()
     start_dir = os.getcwd()
@@ -426,19 +494,28 @@ def build_tree(mkbootstrap, repository_url):
 
         # Run the build, store the built package path for later use.
         os.chdir(start_dir + '/' + name)
+        # TODO(cmaloney): Only build the requested variants, rather than all variants.
         built_packages[name] = build_package_variants(name, repository_url)
         os.chdir(start_dir)
 
-    def make_bootstrap(variant):
-        print("Making bootstrap variant:", variant or "<default>")
-        package_paths = get_tree_packages(variant, built_packages, packages)
+    def make_bootstrap(bootstrap_variant):
+        print("Making bootstrap variant:", bootstrap_variant or "<default>")
+        package_paths = list()
+        for name, variant in get_tree_package_tuples(bootstrap_variant, possible_packages, packages):
+            package_paths.append(built_packages[name][variant])
 
         if mkbootstrap:
-            return make_bootstrap_tarball(list(sorted(package_paths)), variant, repository_url)
+            return make_bootstrap_tarball(list(sorted(package_paths)), bootstrap_variant, repository_url)
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.
-    return for_each_variant(make_bootstrap, "treeinfo.json", [])
+    # TODO(cmaloney): Allow distinguishing between "build all" and "build the default one".
+    if tree_variant is None:
+        return for_each_variant(make_bootstrap, "treeinfo.json", [])
+    else:
+        return {
+            tree_variant: make_bootstrap(tree_variant)
+        }
 
 
 def expand_single_source_alias(pkg_name, buildinfo):
@@ -705,6 +782,10 @@ def build(variant, name, repository_url):
             except:
                 pass
             # Fall out and do the build since the command errored.
+
+    print("Building package {} with buildinfo: {}".format(
+        pkg_id,
+        json.dumps(buildinfo, indent=2, sort_keys=True)))
 
     # Clean out src, result so later steps can use them freely for building.
     clean()

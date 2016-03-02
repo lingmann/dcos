@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 
-import azure.storage
+import azure.common
 import azure.storage.blob
 import botocore.client
 import pkgpanda
@@ -176,7 +176,7 @@ class AzureStorageProvider(AbstractStorageProvider):
     def __init__(self, account_name, account_key, container, dl_base_url):
         assert dl_base_url.endswith('/')
         self.container = container
-        self.blob_service = azure.storage.blob.BlobService(account_name=account_name, account_key=account_key)
+        self.blob_service = azure.storage.blob.BlockBlobService(account_name=account_name, account_key=account_key)
         self.__url = dl_base_url
 
     @property
@@ -195,15 +195,15 @@ class AzureStorageProvider(AbstractStorageProvider):
         except azure.common.AzureConflictHttpError:
             # Cancel the past copy, make a new copy
             properties = self.blob_service.get_blob_properties(self.container, destination_path)
-            assert 'x-ms-copy-id' in properties
-            self.blob_service.abort_copy_blob(self.container, destination_path, properties['x-ms-copy-id'])
+            assert properties.id
+            self.blob_service.abort_copy_blob(self.container, destination_path, properties.id)
 
             # Try the copy again
             resp = self.blob_service.copy_blob(self.container, destination_path, az_blob_url)
 
         # Since we're copying inside of one bucket the copy should always be
         # synchronous and successful.
-        assert resp['x-ms-copy-status'] == 'success'
+        assert resp.status == 'success'
 
     def upload(self,
                destination_path,
@@ -211,40 +211,40 @@ class AzureStorageProvider(AbstractStorageProvider):
                local_path=None,
                no_cache=None,
                content_type=None):
-        extra_args = {}
+        content_settings = azure.storage.blob.ContentSettings()
 
         if no_cache:
-            extra_args['cache_control'] = None
+            content_settings.cache_control = None
         if content_type:
-            extra_args['x_ms_blob_content_type'] = content_type
+            content_settings.content_type = content_type
 
         # Must be a local_path or blob upload, not both
         assert local_path is None or blob is None
         if local_path:
             # Upload local_path
-            self.blob_service.put_block_blob_from_path(
+            self.blob_service.create_blob_from_path(
                 self.container,
                 destination_path,
                 local_path,
-                **extra_args)
+                content_settings=content_settings)
         else:
             assert blob is not None
             assert isinstance(blob, bytes)
-            self.blob_service.put_block_blob_from_text(
+            self.blob_service.create_blob_from_text(
                 self.container,
                 destination_path,
                 blob,
-                **extra_args)
+                content_settings=content_settings)
 
     def exists(self, path):
         try:
             self.blob_service.get_blob_properties(self.container, path)
             return True
-        except azure.storage._common_error.AzureMissingResourceHttpError:
+        except azure.common.AzureMissingResourceHttpError:
             return False
 
     def fetch(self, path):
-        return self.blob_service.get_blob_to_bytes(self.container, path)
+        return self.blob_service.get_blob_to_bytes(self.container, path).content
 
     def download_inner(self, path, local_path):
         return self.blob_service.get_blob_to_path(self.container, path, local_path)

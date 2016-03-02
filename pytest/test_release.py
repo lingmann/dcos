@@ -142,6 +142,10 @@ def exercise_storage_provider(tmpdir, storage_provider):
         # Test uploading bytes.
         upload_bytes = make_content("upload_bytes")
         upload_bytes_path = get_path('upload_bytes.txt')
+
+        # Check if exists on non-existent object works
+        assert not store.exists(upload_bytes_path)
+
         store.upload(
             upload_bytes_path,
             blob=upload_bytes,

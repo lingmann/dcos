@@ -34,7 +34,6 @@ from urllib.error import URLError
 
 from docopt import docopt
 from pkgpanda import Install, PackageId, Repository, urllib_fetcher
-from pkgpanda.constants import version
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import extract_tarball, if_exists, load_json, load_string, write_string
 
@@ -293,7 +292,7 @@ def run_checks(checks, install, repository):
 
 
 def main():
-    arguments = docopt(__doc__, version="Panda Package Management {}".format(version))
+    arguments = docopt(__doc__, version="Pkpganda Package Manager")
     umask(0o022)
 
     # NOTE: Changing root or repository will likely break actually running packages.

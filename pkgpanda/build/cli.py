@@ -21,6 +21,7 @@ from os.path import abspath, basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
 import pkgpanda.build.constants
+import requests.exceptions
 from docopt import docopt
 from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
@@ -28,8 +29,8 @@ from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
 from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import PackageError, ValidationError
-from pkgpanda.util import (check_forbidden_services, load_json, load_string, make_file, make_tar, rewrite_symlinks,
-                           write_json, write_string)
+from pkgpanda.util import (check_forbidden_services, download, load_json, load_string, make_file, make_tar,
+                           rewrite_symlinks, write_json, write_string)
 
 
 class DockerCmd:
@@ -212,17 +213,9 @@ def make_bootstrap_tarball(packages, variant, repository_url):
             active_url = repository_url + '/bootstrap/' + active_name
             print("Attempting to download", bootstrap_name, "from", bootstrap_url)
             # Normalize to no trailing slash for repository_url
-            check_call([
-                'curl',
-                '-fsSL',
-                '-o', tmp_bootstrap,
-                bootstrap_url])
+            download(tmp_bootstrap, bootstrap_url)
             print("Attempting to download", active_name, "from", active_url)
-            check_call([
-                'curl',
-                '-fsSL',
-                '-o', tmp_active,
-                active_url])
+            download(tmp_active, active_url)
 
             # Move into place
             os.rename(tmp_bootstrap, bootstrap_name)
@@ -230,7 +223,7 @@ def make_bootstrap_tarball(packages, variant, repository_url):
 
             print("Bootstrap already up to date, Not recreating. Downloaded from repository-url.")
             return mark_latest()
-        except CalledProcessError:
+        except requests.exceptions.HTTPError:
             try:
                 os.remove(tmp_bootstrap)
             except:
@@ -697,11 +690,7 @@ def build(variant, name, repository_url):
             print("Attempting to download", pkg_id, "from", url)
             # Normalize to no trailing slash for repository_url
             repository_url = repository_url.rstrip('/')
-            check_call([
-                'curl',
-                '-fsSL',
-                '-o', tmp_filename,
-                url])
+            download(tmp_filename, url)
             os.rename(tmp_filename, pkg_path)
 
             print("Package up to date. Not re-building. Downloaded from repository-url.")
@@ -710,7 +699,7 @@ def build(variant, name, repository_url):
             check_call(["mkdir", "-p", "cache"])
             write_string(last_build_filename(variant), str(pkg_id))
             return pkg_path
-        except CalledProcessError as ex:
+        except requests.exceptions.HTTPError:
             try:
                 os.remove(tmp_filename)
             except:

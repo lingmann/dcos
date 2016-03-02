@@ -1,11 +1,40 @@
 import json
 import os
 import re
+import shutil
 from itertools import chain
 from shutil import rmtree, which
 from subprocess import check_call
 
+import requests
 from pkgpanda.exceptions import ValidationError
+
+
+def download(out_filename, url):
+    # Strip off whitespace to make it so scheme matching doesn't fail because
+    # of simple user whitespace.
+    url = url.strip()
+
+    # Handle file:// urls specially since requests doesn't know about them.
+    try:
+        if url.startswith('file://'):
+            abspath = os.path.abspath(url[len('file://'):])
+            shutil.copyfile(abspath, out_filename)
+        else:
+            # Download the file.
+            with open(out_filename, "w+b") as f:
+                r = requests.get(url, stream=True)
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=4096):
+                    f.write(chunk)
+    except Exception as fetch_exception:
+        print("ERROR: Unable to fetch {}".format(url), fetch_exception)
+        try:
+            os.remove(out_filename)
+        except Exception as cleanup_exception:
+            print("ERROR: Unable to remove temp file: {}. Future builds may have problems because of it.".format(
+                out_filename), cleanup_exception)
+        raise
 
 
 def extract_tarball(path, target):

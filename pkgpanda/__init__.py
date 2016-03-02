@@ -18,14 +18,12 @@ import os.path
 import re
 import shutil
 import tempfile
-import urllib.parse
-import urllib.request
 from itertools import chain
 from subprocess import CalledProcessError, check_call
 
 from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
-from pkgpanda.util import extract_tarball, if_exists, load_json, write_json, write_string
+from pkgpanda.util import download, extract_tarball, if_exists, load_json, write_json, write_string
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?
@@ -250,7 +248,7 @@ def validate_compatible(packages, roles):
 
 
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
-def urllib_fetcher(base_url, id_str, target):
+def requests_fetcher(base_url, id_str, target):
     assert base_url
     assert type(id_str) == str
     id = PackageId(id_str)
@@ -261,24 +259,9 @@ def urllib_fetcher(base_url, id_str, target):
     url = base_url + "/packages/{0}/{1}.tar.xz".format(id.name, id_str)
     # TODO(cmaloney): Use a private tmp directory so there is no chance of a user
     # intercepting the tarball + other validation data locally.
-    fd, temp_filename = tempfile.mkstemp(suffix=".tar.xz")
-    try:
-        # Download the package.
-        with os.fdopen(fd, "w+b") as f:
-            with urllib.request.urlopen(url) as response:
-                shutil.copyfileobj(response, f)
-
-        # Extraction is an explicit seperate step from the download to minimize
-        # chance of corruption when unpacking.
-        extract_tarball(temp_filename, target)
-    except:
-        print("DEBUG: ", base_url, id_str, target, url)
-        raise
-    finally:
-        try:
-            os.remove(temp_filename)
-        except:
-            pass
+    with tempfile.NamedTemporaryFile(suffix=".tar.xz") as file:
+        download(file.name, url)
+        extract_tarball(file.name, target)
 
 
 class Repository:

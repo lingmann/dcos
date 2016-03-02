@@ -30,10 +30,10 @@ from functools import partial
 from itertools import groupby
 from os import umask
 from subprocess import CalledProcessError, check_call
-from urllib.error import URLError
 
+import requests.exceptions
 from docopt import docopt
-from pkgpanda import Install, PackageId, Repository, urllib_fetcher
+from pkgpanda import Install, PackageId, Repository, requests_fetcher
 from pkgpanda.exceptions import PackageError, ValidationError
 from pkgpanda.util import extract_tarball, if_exists, load_json, load_string, write_string
 
@@ -85,7 +85,7 @@ def do_bootstrap(install, repository):
         if repository_url is None:
             print("ERROR: Non-local package {} but no repository url given.".format(repository_url))
             sys.exit(1)
-        return urllib_fetcher(repository_url, id, target)
+        return requests_fetcher(repository_url, id, target)
 
     # Copy host/cluster-specific packages written to the filesystem manually
     # from the setup-packages folder into the repository. Do not overwrite or
@@ -326,7 +326,7 @@ def main():
 
     if arguments['fetch']:
         def fetcher(id, target):
-            return urllib_fetcher(arguments['--repository-url'], id, target)
+            return requests_fetcher(arguments['--repository-url'], id, target)
 
         for pkg_id in arguments['<id>']:
             # TODO(cmaloney): Make this not use escape sequences when not at a
@@ -335,8 +335,8 @@ def main():
             sys.stdout.flush()
             try:
                 repository.add(fetcher, pkg_id)
-            except URLError as ex:
-                print("\nUnable to fetch package {0}: {1}".format(pkg_id, ex.reason))
+            except requests.exceptions.HTTPError as ex:
+                print("\nUnable to fetch package {0}: {1}".format(pkg_id, ex))
                 sys.exit(1)
             sys.stdout.write("\rFetched: {0}\n".format(pkg_id))
             sys.stdout.flush()

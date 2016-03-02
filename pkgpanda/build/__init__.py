@@ -2,12 +2,10 @@ import binascii
 import hashlib
 import os.path
 import shutil
-import urllib.request
 from subprocess import CalledProcessError, check_call, check_output
-from urllib.parse import urlparse
 
 from pkgpanda.exceptions import ValidationError
-from pkgpanda.util import load_string
+from pkgpanda.util import download, load_string
 
 
 def sha1(filename):
@@ -63,12 +61,8 @@ def hash_folder(directory):
 
 
 def get_filename(out_dir, url_str):
-    url = urlparse(url_str)
-    if url.scheme == 'file':
-        path = url_str[len('file://'):]
-        return os.path.join(out_dir, os.path.basename(path))
-    else:
-        return os.path.join(out_dir, os.path.basename(url.path))
+    assert '://' in url_str, "Scheme separator not found in url {}".format(url_str)
+    return os.path.join(out_dir, os.path.basename(url_str.split('://', 2)[1]))
 
 
 def _identify_archive_type(filename):
@@ -154,30 +148,6 @@ def extract_archive(archive, dst_dir):
         _strip_first_path_component(dst_dir)
     else:
         raise ValidationError("Unsupported archive: {}".format(os.path.basename(archive)))
-
-
-def fetch_url(out_filename, url_str):
-    url = urlparse(url_str)
-
-    # Handle file:// urls specially since urllib will interpret them to have a
-    # netloc when they never have a netloc...
-    try:
-        if url.scheme == 'file':
-            abspath = os.path.abspath(url_str[len('file://'):])
-            shutil.copyfile(abspath, out_filename)
-        else:
-            # Download the file.
-            with open(out_filename, "w+b") as f:
-                with urllib.request.urlopen(url_str) as response:
-                    shutil.copyfileobj(response, f)
-    except Exception as fetch_exception:
-        print("ERROR: Unable to fetch {}".format(url_str), fetch_exception)
-        try:
-            os.remove(out_filename)
-        except Exception as cleanup_exception:
-            print("ERROR: Unable to remove temp file: {}. Future builds may have problems because of it.".format(
-                out_filename), cleanup_exception)
-        raise
 
 
 # TODO(cmaloney): Restructure checkout_sources and fetch_sources so all
@@ -380,7 +350,7 @@ def fetch_sources(sources):
 
             # if the file isn't downloaded yet, get it.
             if not os.path.exists(cache_filename):
-                fetch_url(cache_filename, info['url'])
+                download(cache_filename, info['url'])
 
             # Validate the sha1 of the source is given and matches the sha1
             file_sha = sha1(cache_filename)

@@ -15,7 +15,7 @@ setup(
         'Programming Language :: Python :: 3.4',
     ],
     packages=['pkgpanda', 'pkgpanda.build'],
-    install_requires=['docopt'],
+    install_requires=['docopt', 'requests'],
     entry_points={
         'console_scripts': [
             'pkgpanda=pkgpanda.cli:main',

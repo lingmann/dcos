@@ -12,6 +12,7 @@ Usage:
 
 import copy
 import glob
+import json
 import os.path
 import shutil
 import sys
@@ -713,6 +714,10 @@ def build(variant, name, repository_url):
             except:
                 pass
             # Fall out and do the build since the command errored.
+
+    print("Building package {} with buildinfo: {}".format(
+        pkg_id,
+        json.dumps(buildinfo, indent=2, sort_keys=True)))
 
     # Clean out src, result so later steps can use them freely for building.
     clean()

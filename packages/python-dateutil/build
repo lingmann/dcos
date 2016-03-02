@@ -1,10 +1,6 @@
 #!/bin/bash
-export PATH=/opt/mesosphere/bin:$PATH
+source /opt/mesosphere/environment.export
 export LIB_INSTALL_DIR="$PKG_PATH/lib/python3.4/site-packages"
-
 mkdir -p "$LIB_INSTALL_DIR"
 
-# Do not resolve and install dependencies automatically.
-pushd "/pkg/src/python-dateutil"
-pip install --no-deps --target="$LIB_INSTALL_DIR" *.whl
-popd
+pip3 install --no-deps --no-index --target="$LIB_INSTALL_DIR" /pkg/src/$PKG_NAME/*.whl

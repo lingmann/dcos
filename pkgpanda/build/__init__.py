@@ -197,7 +197,7 @@ def checkout_sources(sources):
         root = os.path.abspath("src/{0}".format(src))
         os.mkdir(root)
 
-        if info['kind'] == 'git':
+        if info['kind'] == 'git' or info['kind'] == 'git_local':
             bare_folder = os.path.abspath("cache/{0}.git".format(src))
 
             # Clone into `src/`.
@@ -275,14 +275,13 @@ def fetch_sources(sources):
     """Fetch sources to the source cache."""
     ids = dict()
 
-    def get_git_sha1(git_dir, git_ref):
+    def get_git_sha1(git_dir, git_ref, bare):
         try:
-            return check_output([
-                "git",
-                "--git-dir",
-                git_dir,
-                "rev-parse",
-                git_ref + "^{commit}"]).decode('ascii').strip()
+            return check_output(
+                ["git"] +
+                (["--git-dir", git_dir] if bare else ['-C', git_dir]) +
+                ["rev-parse", git_ref + "^{commit}"]
+                ).decode('ascii').strip()
         except CalledProcessError as ex:
             raise ValidationError(
                 "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
@@ -308,14 +307,14 @@ def fetch_sources(sources):
 
             if not is_sha(ref):
                 raise ValidationError("ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
-            commit = get_git_sha1(bare_folder, ref)
+            commit = get_git_sha1(bare_folder, ref, True)
 
             # Warn if the ref_origin is set and gives a different sha1 than the
             # current ref.
             if 'ref_origin' in info:
                 origin_commit = None
                 try:
-                    origin_commit = get_git_sha1(bare_folder, info['ref_origin'])
+                    origin_commit = get_git_sha1(bare_folder, info['ref_origin'], True)
                 except Exception as ex:
                     print("WARNING: Unable to find sha1 of ref_origin:", ex)
                 if origin_commit != commit:
@@ -331,6 +330,51 @@ def fetch_sources(sources):
             ids[src] = {
                 "commit": commit
             }
+        elif info['kind'] == 'git_local':
+            if info.keys() > {'kind', 'rel_path'}:
+                raise ValidationError("Only kind, rel_path can be specified for git_local")
+            if os.path.isabs(info['rel_path']):
+                raise ValidationError("rel_path must be a relative path to the current directory "
+                                      "when used with git_local. Using a relative path means others "
+                                      "that clone the repository will have things just work rather "
+                                      "than a path.")
+            src_repo_path = os.path.abspath(info['rel_path']).rstrip('/')
+
+            # Make sure there are no local changes, we can't `git clone` local changes.
+            try:
+                git_status = check_output([
+                    'git',
+                    '-C',
+                    src_repo_path,
+                    'status',
+                    '--porcelain',
+                    '-uno',
+                    '-z']).decode()
+                if len(git_status):
+                    raise ValidationError("No local changse are allowed in the git_local_work base repository. "
+                                          "Use `git -C {0} status` to see local changes. "
+                                          "All local changes must be committed or stashed before the "
+                                          "package can be built. One workflow (temporary commit): `git -C {0} "
+                                          "commit -am TMP` to commit everything, build the package, "
+                                          "`git -C {0} reset --soft HEAD^` to get back to where you were.".format(
+                                                src_repo_path))
+            except CalledProcessError as ex:
+                raise ValidationError("Unable to check status of git_local_work checkout {}. Is the "
+                                      "rel_path correct?".format(info['rel_path']))
+
+            # Set the ref
+            commit = get_git_sha1(src_repo_path, "HEAD", False)
+
+            # TODO(cmaloney): HACK. We set the ref here, so it gets picked up by checkout_sources.
+            info['ref'] = commit
+
+            ids[src] = {
+                "commit": commit
+            }
+
+            # Clone to the bare folder so checkout_sources will work
+            fetch_git(src, src_repo_path)
+
         elif info['kind'] == 'url' or info['kind'] == 'url_extract':
             cache_filename = get_filename(os.path.abspath("cache"), info['url'])
 

@@ -243,10 +243,50 @@ def is_sha(sha_str):
         return False
 
 
+def fetch_git(src, git_uri):
+    # Do a git clone if the cache folder doesn't exist yet, otherwise
+    # do a git pull of everything.
+    bare_folder = os.path.abspath("cache/{0}.git".format(src))
+    if not os.path.exists(bare_folder):
+        check_call(["git", "clone", "--bare", "--progress", git_uri, bare_folder])
+    else:
+        check_call([
+            "git",
+            "--git-dir",
+            bare_folder,
+            "remote",
+            "set-url",
+            "origin",
+            git_uri])
+        check_call([
+            "git",
+            "--git-dir",
+            bare_folder,
+            "fetch",
+            "origin",
+            "-t",
+            "+refs/heads/*:refs/heads/*"])
+
+    return bare_folder
+
+
 # TODO(cmaloney): Validate sources has all expected fields...
 def fetch_sources(sources):
     """Fetch sources to the source cache."""
     ids = dict()
+
+    def get_git_sha1(git_dir, git_ref):
+        try:
+            return check_output([
+                "git",
+                "--git-dir",
+                git_dir,
+                "rev-parse",
+                git_ref + "^{commit}"]).decode('ascii').strip()
+        except CalledProcessError as ex:
+            raise ValidationError(
+                "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
+
     # TODO(cmaloney): Update if already exists rather than hard-failing
     for src, info in sorted(sources.items()):
 
@@ -256,28 +296,7 @@ def fetch_sources(sources):
             os.mkdir(cache_dir)
 
         if info['kind'] == 'git':
-            # Do a git clone if the cache folder doesn't exist yet, otherwise
-            # do a git pull of everything.
-            bare_folder = os.path.abspath("cache/{0}.git".format(src))
-            if not os.path.exists(bare_folder):
-                check_call(["git", "clone", "--bare", "--progress", info['git'], bare_folder])
-            else:
-                check_call([
-                    "git",
-                    "--git-dir",
-                    bare_folder,
-                    "remote",
-                    "set-url",
-                    "origin",
-                    info['git']])
-                check_call([
-                    "git",
-                    "--git-dir",
-                    bare_folder,
-                    "fetch",
-                    "origin",
-                    "-t",
-                    "+refs/heads/*:refs/heads/*"])
+            bare_folder = fetch_git(src, info['git'])
 
             if 'branch' in info:
                 raise ValidationError("Use of 'branch' field has been removed. Please replace with 'ref'")
@@ -287,28 +306,16 @@ def fetch_sources(sources):
 
             ref = info['ref']
 
-            def get_sha1(git_ref):
-                try:
-                    return check_output([
-                        "git",
-                        "--git-dir",
-                        bare_folder,
-                        "rev-parse",
-                        git_ref + "^{commit}"]).decode('ascii').strip()
-                except CalledProcessError as ex:
-                    raise ValidationError(
-                        "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
-
             if not is_sha(ref):
                 raise ValidationError("ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
-            commit = get_sha1(ref)
+            commit = get_git_sha1(bare_folder, ref)
 
             # Warn if the ref_origin is set and gives a different sha1 than the
             # current ref.
             if 'ref_origin' in info:
                 origin_commit = None
                 try:
-                    origin_commit = get_sha1(info['ref_origin'])
+                    origin_commit = get_git_sha1(bare_folder, info['ref_origin'])
                 except Exception as ex:
                     print("WARNING: Unable to find sha1 of ref_origin:", ex)
                 if origin_commit != commit:

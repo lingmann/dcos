@@ -58,7 +58,7 @@ setup(
         'passlib',
         'pyyaml'],
     tests_require=[
-        'pytest==2.8.7',
+        'pytest==2.9.0',
         'pytest-mock==0.11.0',
         'webtest==2.0.20',
         'webtest-aiohttp==1.0.0'],

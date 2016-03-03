@@ -251,7 +251,7 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, asy
 # Run the DCOS diagnostic script for up to 15 minutes (900 seconds) to ensure
 # we do not return ERROR on a cluster that hasn't fully achieved quorum.
 T=900
-until OUT=$(/opt/mesosphere/bin/dcos-diagnostics.py) || [[ T -eq 0 ]]; do
+until OUT=$(/opt/mesosphere/bin/./3dt -diag) || [[ T -eq 0 ]]; do
     sleep 1
     let T=T-1
 done
@@ -305,6 +305,8 @@ def uninstall_dcos(config, block=False, state_json_dir=None, async_delegate=None
 def _add_prereqs_script(chain):
     inline_script = """
 #/bin/sh
+# setenforce is in this path
+PATH=$PATH:/sbin
 
 dist=$(cat /etc/*-release | sed -n 's@^ID="\(.*\)"$@\\1@p')
 

@@ -1,5 +1,8 @@
 {
   "core_package_list": [
-    "pkgpanda"
+    "pkgpanda",
+    "dcos-image",
+    "dcos-installer",
+    "dcos-installer-ui"
   ]
 }

@@ -4,6 +4,10 @@
     "dcos-ui": "ee"
   },
   "exclude": [
-    "dcos-signal"
+    "dcos-signal",
+    "dcos-image",
+    "dcos-image-deps",
+    "dcos-installer",
+    "dcos-installer-ui"
   ]
 }

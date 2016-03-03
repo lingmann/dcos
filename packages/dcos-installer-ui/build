@@ -1,0 +1,6 @@
+#!/bin/bash
+cd "/pkg/src/dcos-installer-ui/ui"
+npm install
+./node_modules/.bin/gulp dist
+
+cp -r ../dcos_installer/templates/ "$PKG_PATH"/usr

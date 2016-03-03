@@ -526,7 +526,10 @@ stable_artifacts_metadata = {
             'reproducible_path': 'packages/e/e--f.tar.xz'}
     ],
     'packages': ['a--b', 'c--d', 'e--f'],
-    'bootstrap_dict': {None: "bootstrap_id"}}
+    'bootstrap_dict': {None: "bootstrap_id"},
+    'all_bootstraps': {
+        None: "bootstrap_id",
+        "installer": "installer_bootstrap_id"}}
 
 
 # TODO(cmaloney): Add test for do_build_packages returning multiple bootstraps
@@ -542,10 +545,10 @@ def test_make_stable_artifacts(monkeypatch, tmpdir):
 
 # NOTE: Implicitly tests all providers do_create functions since it calls them.
 # TODO(cmaloney): Test make_channel_artifacts, module do_create functions
-def mock_build_installers(bootstrap_dict):
+def mock_build_installers(bootstrap_dict, installer_bootstrap_id):
     return {
         None: ('genconf-id', 'dcos_generate_config.sh'),
-        'ee': ('genconf-id-ee', 'dcos_generate_config.ee.sh')
+        'ee': ('genconf-id-ee', 'dcos_generate_config.ee.sh'),
     }
 
 
@@ -560,6 +563,11 @@ def test_make_channel_artifacts(monkeypatch):
         'bootstrap_dict': {
             None: 'bootstrap_id',
             'ee': 'ee_bootstrap_id'
+        },
+        'all_bootstraps': {
+            None: 'bootstrap_id',
+            'ee': 'ee_bootstrap_id',
+            'installer': 'installer_bootstrap_id'
         },
         'repo_channel_path': 'r_path/channel',
         'channel_commit_path': 'r_path/channel/commit/sha-1',

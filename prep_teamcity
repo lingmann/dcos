@@ -1,8 +1,18 @@
 #!/bin/bash
+#
+# Simple helper script to build wheels and install pkgpanda, dcos-image inside
+# of CI
+#
+# Expects that it is being run inside of a virtual environment.
+#
+# A checkout of pkgpanda lives at `ext/pkgpanda`. To work on pkgpanda edit
+# that checkout.
+
 set -o errexit -o nounset -o pipefail
 
+: ${VIRTUAL_ENV?"Must be run in a python virtual environment"}
+
 ./fetch_pkgpanda
-./fetch_installer
 
 # NOTE: If the directory already exists that is indeed a hard error. Should be
 # cleaned up between builds to guarantee we get the artifacts we expect.
@@ -21,19 +31,16 @@ git -C ext/dcos-image checkout -qf `git rev-parse --verify HEAD^{commit}`
 pip install wheel
 
 # Download distro independent artifacts
-pip install --download wheelhouse --no-binary :all: ext/dcos-image
-pip install --download wheelhouse --no-binary :all: ext/dcos-installer
 pip install --download wheelhouse --no-binary :all: ext/pkgpanda
+pip install --download wheelhouse --no-binary :all: ext/dcos-image
 
 # Make the wheels, they will be output into the folder `wheelhouse` by default.
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/pkgpanda
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image
-pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-installer
 
 # Install the wheels
 pip install --no-index --find-links=wheelhouse pkgpanda
 pip install --no-index --find-links=wheelhouse dcos-image
-pip install --no-index --find-links=wheelhouse dcos-installer
 
 # Cleanup the checkout
 rm -rf ext/dcos-image

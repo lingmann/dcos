@@ -152,7 +152,7 @@ function check_version() {
 function check_selinux() {
   ENABLED=$(getenforce)
 
-  if [[ $ENABLED == 'Permissive' ]]; then
+  if [[ $ENABLED != 'Enforcing' ]]; then
     RC=0
   else
     RC=1

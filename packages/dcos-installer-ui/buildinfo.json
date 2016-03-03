@@ -1,0 +1,9 @@
+{
+  "docker": "node:4.2.6",
+  "single_source": {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-installer.git",
+    "ref": "eda83e13b08276ca3b0d3fce609aa89f67d35669",
+    "ref_origin": "master"
+  }
+}

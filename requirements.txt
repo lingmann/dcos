@@ -3,7 +3,7 @@ aiohttp==0.20.0
 aiohttp_jinja2
 coloredlogs
 passlib
-pytest==2.8.7
+pytest
 pytest-mock
 webtest
 webtest-aiohttp==1.0.0

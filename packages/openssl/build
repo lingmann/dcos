@@ -1,11 +1,12 @@
 #!/bin/bash
 
 mkdir -p "/build"
+mkdir -p "$PKG_PATH/etc"
 
 # TODO(cmaloney): Fix the rpath
 pushd "/pkg/src/openssl"
 ./Configure "--prefix=$PKG_PATH" \
-  --openssldir=/etc/ssl \
+  --openssldir="$PKG_PATH/etc/ssl" \
   shared \
   zlib \
   no-krb5 \

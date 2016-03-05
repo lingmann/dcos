@@ -91,12 +91,16 @@ def check_config_validation(gen_val=False):
 
 
 def try_genconf():
-    check_config_validation(gen_val=True)
-    messages = backend.do_configure()
-    if 'errors' in messages:
-        for k, v in messages['errors'].items():
-            log.error('{}: {}'.format(k, v))
-        log.error('Errors found in configuration.')
+    # Ensure the genconf dir and config.yaml exist first
+    if os.path.exists('{}/config.yaml'.format(GENCONF_DIR)):
+        check_config_validation(gen_val=True)
+        messages = backend.do_configure()
+        if 'errors' in messages:
+            for k, v in messages['errors'].items():
+                log.error(k + ": " + v)
+            sys.exit(1)
+    else:
+        log.error('{}/config.yaml must exist before running --genconf. Exiting.'.format(GENCONF_DIR))
         sys.exit(1)
     sys.exit(0)
 

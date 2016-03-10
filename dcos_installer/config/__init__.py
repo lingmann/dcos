@@ -1,11 +1,13 @@
-# Configuration loader for dcosgen
-# Set all configuration for a given run with a simple map
-# my_opts = {
-#     'config_dir':  '/tmp'
-# }
-#
-# c = DcosConfig()
-# print(c)
+"""
+Configuration loader for dcosgen
+Set all configuration for a given run with a simple map
+my_opts = {
+    'config_dir':  '/tmp'
+}
+
+c = DcosConfig()
+print(c)
+"""
 import gen
 import json
 import logging

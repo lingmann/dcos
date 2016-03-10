@@ -85,7 +85,7 @@ def test_configure(monkeypatch, mocker):
         if method == 'POST':
             res = client.request(route, method=method, body=bytes(expected[2].encode('utf-8')), expect_errors=True)
         else:
-           res = client.request(route, method=method, expect_errors=True)
+            res = client.request(route, method=method, expect_errors=True)
         assert res.status_code == expected[0], '{}: {}'.format(
             method,
             expected)
@@ -186,7 +186,7 @@ def action_side_effect_return_config(arg):
                             "stdout": [
                                 ""
                             ],
-                                "pid": 2259
+                            "pid": 2259
                         }
                     ]
                 }
@@ -213,7 +213,7 @@ def action_side_effect_return_config(arg):
                             "stdout": [
                                 ""
                             ],
-                                "pid": 2260
+                            "pid": 2260
                         }
                     ]
                 }
@@ -305,7 +305,7 @@ def test_action_deploy(monkeypatch, mocker):
                         "stdout": [
                             ""
                         ],
-                            "pid": 2259
+                        "pid": 2259
                     }
                 ]
             },
@@ -324,7 +324,7 @@ def test_action_deploy(monkeypatch, mocker):
                         "stdout": [
                             ""
                         ],
-                            "pid": 2260
+                        "pid": 2260
                     }
                 ]
                 }

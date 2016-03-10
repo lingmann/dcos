@@ -6,7 +6,6 @@ import re
 log = logging.getLogger(__name__)
 
 
-
 def print_header(string):
     delimiter = '====>'
     log.warning('{:5s} {:6s}'.format(delimiter, string))
@@ -78,7 +77,8 @@ class PrettyPrint():
     def print_summary(self):
         print_header('SUMMARY')
         total = len(self.fail_hosts) + len(self.success_hosts)
-        log.warning('{} out of {} hosts successfully completed {} stage.'.format(len(self.success_hosts), total, self.stage_name))
+        err_msg = '{} out of {} hosts successfully completed {} stage.'
+        log.warning(err_msg.format(len(self.success_hosts), total, self.stage_name))
         if len(self.fail_hosts) > 0:
             log.error('The following hosts had failures detected during {} stage:'.format(self.stage_name))
             for host in self.fail_hosts:

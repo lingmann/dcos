@@ -152,7 +152,8 @@ class DcosInstaller:
                 check_config_validation()
                 deploy_returncode = 0
                 for role in ['master', 'agent']:
-                    action = lambda *args, **kwargs: action_lib.install_dcos(*args, role=role, **kwargs)
+                    def action(*args, **kwargs):
+                        return action_lib.install_dcos(*args, role=role, **kwargs)
                     action.__name__ = 'deploy_{}'.format(role)
                     stage_returncode = run_loop(action, options)
                     if stage_returncode != 0:

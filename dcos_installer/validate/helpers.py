@@ -1,23 +1,24 @@
-# Validation helper methods. Each helper method is accessed when the dep_tree
-# is rendered in .validate. In order to access this tree and execute functions
-# on possible None or empty key values (i.e., the key does not exist in the
-# configuration passed to validate), we always pass the func the key to validate
-# and the complete config dictionary passed to validate. This way, we can
-# return false and None if the key is not in the config.
-#
-# This setup is required for all helpers:
-# def validate_something(key=None, config=None):
-#   if not key in config:
-#   ...
-#   else:
-#       return False, None
-#
-# Helper methods should start with 'validate_' and methods that are helpers
-# to those should follow a 'is_something_..' construct as to be able to use
-# them in other validate methods.
+"""
+Validation helper methods. Each helper method is accessed when the dep_tree
+is rendered in .validate. In order to access this tree and execute functions
+on possible None or empty key values (i.e., the key does not exist in the
+configuration passed to validate), we always pass the func the key to validate
+and the complete config dictionary passed to validate. This way, we can
+return false and None if the key is not in the config.
+
+This setup is required for all helpers:
+def validate_something(key=None, config=None):
+  if not key in config:
+  ...
+  else:
+      return False, None
+
+Helper methods should start with 'validate_' and methods that are helpers
+to those should follow a 'is_something_..' construct as to be able to use
+them in other validate methods.
+"""
 import logging
 import os
-import re
 import socket
 
 log = logging.getLogger(__name__)
@@ -186,7 +187,7 @@ def validate_list(key=None, config=None, optional=False):
             return [True, '{} is a valid list.'.format(key), optional]
 
         else:
-            return [False, '{} is not a valid list.'.format(key), optiona]
+            return [False, '{} is not a valid list.'.format(key), optional]
 
     return [False, None, optional]
 

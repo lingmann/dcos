@@ -3,7 +3,6 @@ from unittest import mock
 from dcos_installer import async_server
 
 
-
 class TestDcosInstaller(unittest.TestCase):
     def test_merge_json(self):
         r = {}

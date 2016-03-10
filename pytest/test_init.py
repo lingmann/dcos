@@ -1,5 +1,3 @@
-import pytest
-
 from dcos_installer import DcosInstaller
 
 
@@ -37,57 +35,3 @@ def test_set_arg_parser():
     assert parser.test is True
     parser = DcosInstaller().parse_args(['--uninstall'])
     assert parser.uninstall is True
-
-
-def test_mutual_exclusion(capsys):
-    """
-    This is changing to fast, passing until we get it solid.
-    """
-    pass
-#    usage_header = """
-#usage:
-#Install Mesosophere's Data Center Operating System
-#
-#dcos_installer [-h] [-f LOG_FILE] [--hash-password HASH_PASSWORD] [-v]
-#                      [--web | --genconf | --preflight | --deploy | --postflight | --uninstall | --validate-config | --test]
-#
-#Environment Settings:
-#
-#  PORT                  Set the :port to run the web UI
-#  CHANNEL_NAME          ADVANCED - Set build channel name
-#  BOOTSTRAP_ID          ADVANCED - Set bootstrap ID for build
-#"""
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--genconf'])
-#    out, err = capsys.readouterr()
-#    assert usage_header + 'argument -gen/--genconf: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--preflight'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -pre/--preflight: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--postflight'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -pos/--postflight: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--validate-config'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -vc/--validate-config: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--deploy'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -d/--deploy: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--test'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -t/--test: not allowed with argument -w/--web' in str(err)
-#
-#    with pytest.raises(SystemExit):
-#        DcosInstaller().parse_args(['--web', '--uninstall'])
-#    out, err = capsys.readouterr()
-#    assert 'argument -u/--uninstall: not allowed with argument -w/--web' in str(err)

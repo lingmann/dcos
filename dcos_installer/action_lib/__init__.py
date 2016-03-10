@@ -9,7 +9,6 @@ from ssh.exceptions import ExecuteException
 import ssh.utils
 
 from .utils import REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, get_async_runner, add_post_action, add_pre_action
-from .prettyprint import PrettyPrint
 
 log = logging.getLogger(__name__)
 

@@ -33,11 +33,13 @@ class BuildUi(Command):
 
     def run(self):
         src_dir = os.path.dirname(os.path.abspath(__file__))
-        cmd = ['docker', 'run', '-v', "{}:/code".format(src_dir),
-                '-w', '/code/ui', 'node:4.2.6', 'npm', 'install']
+        cmd = [
+            'docker', 'run', '-v', "{}:/code".format(src_dir),
+            '-w', '/code/ui', 'node:4.2.6', 'npm', 'install']
         subprocess.check_call(cmd)
-        cmd = ['docker', 'run', '-v', "{}:/code".format(src_dir),
-                '-w', '/code/ui', 'node:4.2.6', './node_modules/.bin/gulp', 'dist']
+        cmd = [
+            'docker', 'run', '-v', "{}:/code".format(src_dir),
+            '-w', '/code/ui', 'node:4.2.6', './node_modules/.bin/gulp', 'dist']
         subprocess.check_call(cmd)
 
 

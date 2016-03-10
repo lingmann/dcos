@@ -36,6 +36,7 @@
     },
     "PublicSubnet" : {
       "Type" : "AWS::EC2::Subnet",
+      "DependsOn" : "Vpc",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
         "CidrBlock" : { "Ref" : "PublicSubnetRange" },
@@ -46,6 +47,7 @@
     },
     "PrivateSubnet" : {
       "Type" : "AWS::EC2::Subnet",
+      "DependsOn" : "Vpc",
       "Properties" : {
         "VpcId" : { "Ref" : "Vpc" },
         "CidrBlock" : { "Ref" : "PrivateSubnetRange" },

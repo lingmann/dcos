@@ -9,9 +9,9 @@ import threading
 import time
 import uuid
 
-import pkgpanda.util
 import pytest
 
+import pkgpanda.util
 from ssh.ssh_runner import MultiRunner, Node
 from ssh.utils import (AbstractSSHLibDelegate, CommandChain, MemoryDelegate,
                        set_timer)

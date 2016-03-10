@@ -20,10 +20,10 @@ import tempfile
 import azure.common
 import azure.storage.blob
 import botocore.client
+
 import pkgpanda
 import pkgpanda.build
 import pkgpanda.util
-
 import providers.aws_config as aws_config
 import providers.util as util
 

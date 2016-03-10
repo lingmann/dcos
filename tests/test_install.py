@@ -2,10 +2,10 @@
 
 import shutil
 
+import pytest
+
 from pkgpanda import Install, Repository
 from pkgpanda.util import expect_fs
-
-import pytest
 
 
 @pytest.fixture

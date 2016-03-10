@@ -1,9 +1,9 @@
 """Test functionality of the local package repository"""
 
+import pytest
+
 import pkgpanda.exceptions
 from pkgpanda import Repository
-
-import pytest
 
 
 @pytest.fixture

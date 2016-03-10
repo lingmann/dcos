@@ -1,9 +1,9 @@
 from shutil import copytree
 from subprocess import CalledProcessError, check_call, check_output
 
-from pkgpanda.util import expect_fs
-
 import pytest
+
+from pkgpanda.util import expect_fs
 
 
 def get_tar_contents(filename):

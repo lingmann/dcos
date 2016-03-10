@@ -21,9 +21,10 @@ from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
-import pkgpanda.build.constants
 import requests.exceptions
 from docopt import docopt
+
+import pkgpanda.build.constants
 from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1

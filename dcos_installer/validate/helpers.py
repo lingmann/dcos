@@ -118,7 +118,6 @@ def validate_agent_list(key=None, config=None, optional=False):
     return [True, None, optional]
 
 
-
 def validate_string(key=None, config=None, optional=False):
     if key in config and key is not None:
         key = config[key]

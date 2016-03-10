@@ -8,7 +8,6 @@ my_opts = {
 c = DcosConfig()
 print(c)
 """
-import gen
 import json
 import logging
 import os

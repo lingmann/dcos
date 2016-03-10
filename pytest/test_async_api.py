@@ -96,7 +96,6 @@ def test_configure(monkeypatch, mocker):
             assert res.json == {'test': 'config'}
 
 
-
 def test_configure_status(monkeypatch, mocker):
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)

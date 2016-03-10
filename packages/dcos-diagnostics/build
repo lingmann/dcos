@@ -1,2 +1,0 @@
-#!/bin/bash
-cp -r /pkg/extra/bin "$PKG_PATH"

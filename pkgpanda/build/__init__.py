@@ -325,8 +325,10 @@ def fetch_sources(sources):
                                           "All local changes must be committed or stashed before the "
                                           "package can be built. One workflow (temporary commit): `git -C {0} "
                                           "commit -am TMP` to commit everything, build the package, "
-                                          "`git -C {0} reset --soft HEAD^` to get back to where you were.".format(
-                                                src_repo_path))
+                                          "`git -C {0} reset --soft HEAD^` to get back to where you were.\n\n"
+                                          "Found changes: {1}".format(
+                                                src_repo_path,
+                                                git_status))
             except CalledProcessError as ex:
                 raise ValidationError("Unable to check status of git_local_work checkout {}. Is the "
                                       "rel_path correct?".format(info['rel_path']))

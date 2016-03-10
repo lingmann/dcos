@@ -7,6 +7,7 @@ from shutil import rmtree, which
 from subprocess import check_call
 
 import requests
+
 from pkgpanda.exceptions import ValidationError
 
 

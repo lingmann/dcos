@@ -232,10 +232,9 @@ def fetch_git(src, git_uri):
             "git",
             "--git-dir",
             bare_folder,
-            "fetch",
-            "origin",
-            "-t",
-            "+refs/heads/*:refs/heads/*"])
+            "remote",
+            "update",
+            "origin"])
 
     return bare_folder
 

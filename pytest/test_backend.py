@@ -138,3 +138,13 @@ def test_success(tmpdir):
         "agent_count": 0
     }
     assert got_output == expected_output
+
+
+def test_accept_overrides_for_undefined_config_params(tmpdir):
+    temp_config_path = tmpdir.strpath + '/config.yaml'
+    param = ('fake_test_param_name', 'fake_test_param_value')
+    backend.create_config_from_post(
+        post_data=dict([param]),
+        config_path=temp_config_path)
+
+    assert backend.get_config(config_path=temp_config_path)[param[0]] == param[1]

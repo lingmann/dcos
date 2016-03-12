@@ -1,9 +1,9 @@
 {
-  "docker": "node:0.10",
+  "docker": "node:4.3",
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-ui.git",
-    "ref": "0790f8ee4d3a4e368fbc7dd7946c1682bc492bf6",
-    "ref_origin": "release/1.6"
+    "ref": "3770b5a0b7a7082b630fcd6cfee83d0e6ea8ea0b",
+    "ref_origin": "release/1.7"
   }
 }

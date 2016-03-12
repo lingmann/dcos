@@ -242,7 +242,8 @@ entry = {
             'true': {
                 'must': {
                     'ui_authentication': 'true',
-                    'ui_settings': 'true'
+                    'ui_networking': 'true',
+                    'ui_organization': 'true'
                 },
                 'default': {
                     'ui_tracking': 'false'
@@ -251,7 +252,8 @@ entry = {
             'false': {
                 'must': {
                     'ui_authentication': 'false',
-                    'ui_settings': 'false'
+                    'ui_networking': 'false',
+                    'ui_organization': 'false'
                 },
                 'default': {
                     'ui_tracking': 'true'

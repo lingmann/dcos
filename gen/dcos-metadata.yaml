@@ -19,10 +19,11 @@ package:
       {
         "uiConfiguration": {
           "plugins": {
-            "banner": {},
-            "tracking": {"enabled": {{ ui_tracking }}},
             "authentication": {"enabled": {{ ui_authentication }}},
-            "settings": {"enabled": {{ ui_settings }}}
+            "banner": {},
+            "networking": {"enabled": {{ ui_networking }}},
+            "organization": {"enabled": {{ ui_organization }}},
+            "tracking": {"enabled": {{ ui_tracking }}}
           }
         }
       }

@@ -4,11 +4,11 @@ import subprocess
 import uuid
 
 import pytest
-from pkgpanda.util import write_json, write_string
 
 import providers.aws_config
 import providers.release as release
 import providers.util as util
+from pkgpanda.util import write_json, write_string
 
 
 def roundtrip_to_json(data, mid_state, new_end_state=None):

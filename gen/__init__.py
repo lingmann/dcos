@@ -27,11 +27,11 @@ from tempfile import TemporaryDirectory
 
 import yaml
 from pkg_resources import resource_string
-from pkgpanda import PackageId
-from pkgpanda.util import make_tar
 
 import gen.calc
 import gen.template
+from pkgpanda import PackageId
+from pkgpanda.util import make_tar
 
 # List of all roles all templates should have.
 role_names = {"master", "slave", "slave_public"}

@@ -5,13 +5,13 @@ import sys
 from math import floor
 from subprocess import check_output
 
-import pkgpanda.exceptions
 import yaml
-from pkgpanda import PackageId
-from pkgpanda.build import hash_checkout
 
 import gen.aws.calc
 import gen.azure.calc
+import pkgpanda.exceptions
+from pkgpanda import PackageId
+from pkgpanda.build import hash_checkout
 
 
 def calculate_is_ee():

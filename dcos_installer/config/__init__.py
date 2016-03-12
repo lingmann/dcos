@@ -117,8 +117,8 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = list(value)
 
-                elif key in self:
-                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
+                else:
+                    log.warning("Overriding %s: %s -> %s", key, self.get(key), value)
                     self[key] = value
 
     def validate(self):

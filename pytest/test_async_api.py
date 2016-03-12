@@ -10,29 +10,6 @@ client = TestApp(app)
 client.expect_errors = False
 
 
-def test_root_route(monkeypatch):
-    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
-    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
-    route = '/'
-    featured_methods = {
-        'GET': [200, 'text/html'],
-        'POST': [405, 'text/plain'],
-        'PUT': [405, 'text/plain'],
-        'DELETE': [405, 'text/plain'],
-        'HEAD': [405, 'text/plain'],
-        'TRACE': [405, 'text/plain'],
-        'CONNECT': [405, 'text/plain'],
-    }
-    for method, expected in featured_methods.items():
-        res = client.request(route, method=method, expect_errors=True)
-        assert res.status_code == expected[0], '{}: {}'.format(
-            method,
-            expected)
-        assert res.content_type == expected[1], '{}: {}'.format(
-            method,
-            expected)
-
-
 def test_redirect_to_root(monkeypatch):
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)

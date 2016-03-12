@@ -1,0 +1,135 @@
+@keyframes icon-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes icon-loading-indicator-pulse {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0.35;
+  }
+}
+
+.icon-arrow {
+  fill: @white;
+}
+
+.icon-chevron {
+
+  &.reversed {
+    transform: rotate(180deg);
+  }
+}
+
+.icon-checkmark,
+.icon-circle-checkmark {
+  fill: @green;
+}
+
+.icon-close-small {
+  fill: #ee2133;
+}
+
+.icon-download {
+  fill: #3f4453;
+}
+
+.icon-edit {
+  fill: #272b3d;
+}
+
+.icon-error {
+  fill: @red;
+}
+
+.icon-loading-indicator {
+  animation: icon-loading-indicator-pulse 1s linear 1.5s infinite alternate;
+}
+
+.icon-password-strength {
+  fill: #ee2133;
+
+  .bar {
+    fill: @password-strength-neutral;
+    fill-rule: evenodd;
+    opacity: 0.9;
+  }
+
+  &.strength-1 {
+
+    .bar-1 {
+      fill: @password-strength-red;
+    }
+  }
+
+  &.strength-2 {
+
+    .bar-1,
+    .bar-2 {
+      fill: @password-strength-orange;
+    }
+  }
+
+  &.strength-3 {
+
+    .bar-1,
+    .bar-2,
+    .bar-3 {
+      fill: @password-strength-yellow;
+    }
+  }
+
+  &.strength-4 {
+
+    .bar {
+      fill: @password-strength-green;
+    }
+  }
+}
+
+.icon-retry {
+  fill: #3f4453;
+}
+
+.icon-spinner {
+  animation: icon-spinner 0.9s linear infinite;
+}
+
+.icon-tooltip {
+  fill: #abadb4;
+  height: 18px;
+  width: 18px;
+}
+
+.icon-warning,
+.icon-warning-small {
+  fill: @red;
+}
+
+.icon-warning-small-inverse {
+
+  .icon-warning-small-inverse-triangle {
+    fill: #ef4861;
+  }
+
+  .icon-warning-small-inverse-exclamation {
+    fill: @white;
+  }
+}
+
+// Sizes
+.icon {
+
+  &.icon-large {
+    height: 96px;
+    width: 96px;
+  }
+}

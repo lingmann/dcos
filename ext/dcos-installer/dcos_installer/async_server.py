@@ -24,6 +24,9 @@ VERSION = '1'
 loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app['current_action'] = ''
+ui_dist_path = os.getenv('INSTALLER_UI_PATH', pkg_resources.resource_filename(__name__, 'templates/'))
+index_path = '{}index.html'.format(ui_dist_path)
+assets_path = '{}assets/'.format(ui_dist_path)
 
 # Action map is a dict that contains an action name and an action handler from action_lib.
 action_map = {
@@ -42,7 +45,6 @@ remove_on_done = ['preflight', 'postflight']
 # some are not.
 def root(request):
     log.info("Root page requested.")
-    index_path = pkg_resources.resource_filename(__name__, 'templates/index.html')
     index_file = open(index_path)
     log.info("Serving %s", index_path)
     resp = web.Response(body=index_file.read().encode('utf-8'))
@@ -267,7 +269,7 @@ def logs_handler(request):
 
 
 try:
-    app.router.add_static('/assets', pkg_resources.resource_filename(__name__, 'templates/assets/'))
+    app.router.add_static('/assets', assets_path)
     app.router.add_static('/download/log', '/genconf/state/')
 except ValueError as err:
     log.warning(err)
@@ -311,7 +313,8 @@ def start(cli_options):
     else:
         os.makedirs(STATE_DIR)
 
-    assert os.path.isdir(pkg_resources.resource_filename(__name__, 'templates/assets/'))
+    log.warn(assets_path)
+    assert os.path.isdir(assets_path)
     assert os.path.isdir('/genconf/state/')
 
     try:

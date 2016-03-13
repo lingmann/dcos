@@ -15,6 +15,7 @@ docker-tag
 dcos_generate_config.sh
 .*.swp
 ext/
+!ext/dcos-installer
 *.egg-info
 wheelhouse/
 

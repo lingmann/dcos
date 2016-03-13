@@ -17,3 +17,4 @@ set -o errexit -o nounset -o pipefail
 # Install the packages in editable mode to the virtual environment.
 pip install -e ext/pkgpanda
 pip install -e $PWD
+pip install -e ext/dcos-installer

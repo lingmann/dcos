@@ -1,6 +1,7 @@
 #!/bin/bash
 cd "/pkg/src/dcos-installer-ui"
 npm install
-./node_modules/.bin/gulp dist
+echo "module.exports = {};" > ./src/js/config/Config.dev.js
+npm run dist
 
-cp -r ../dcos_installer/templates/ "$PKG_PATH"/usr
+cp -r dist/ "$PKG_PATH"/usr

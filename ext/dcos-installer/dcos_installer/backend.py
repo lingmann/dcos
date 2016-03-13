@@ -147,7 +147,7 @@ def determine_config_type(config_path=CONFIG_PATH):
     advanced_cluster_config = {
         "bootstrap_url": 'file:///opt/dcos_install_tmp',
         "docker_remove_delay": None,
-        "exhibitor_storage_backend": 'zookeeper',
+        "exhibitor_storage_backend": 'static',
         "gc_delay": None,
         "master_discovery": 'static',
         "roles": None,

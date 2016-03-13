@@ -73,7 +73,6 @@ def test_do_validate_config(tmpdir):
             'ip_detect_script': 'Provide a valid executable script. Script must start with #!/',
             'master_list': 'Enter a valid IPv4 address.'},
         'warning': {
-            'exhibitor_zk_hosts': 'None is not a valid Exhibitor Zookeeper host',
             'ssh_key_path': 'File does not exist genconf/ssh_key',
             'ssh_key': 'SSH key must be an unencrypted (no passphrase) SSH key that is not empty.',
             'superuser_password_hash': 'Enter a valid string',
@@ -114,10 +113,8 @@ def test_get_config(tmpdir):
   ],
   "superuser_password_hash": null,
   "ssh_user": null,
-  "exhibitor_zk_hosts": null,
   "process_timeout": 10000,
-  "exhibitor_storage_backend": "zookeeper",
-  "exhibitor_zk_path": "/dcos",
+  "exhibitor_storage_backend": "static",
   "master_discovery": "static"
 }
     """
@@ -133,8 +130,8 @@ def test_determine_config_type(tmpdir):
 
     got_output = backend.determine_config_type(config_path=temp_config_path)
     expected_output = {
-       'message': '',
-       'type': 'minimal',
+        'message': '',
+        'type': 'minimal',
     }
     assert got_output == expected_output
 

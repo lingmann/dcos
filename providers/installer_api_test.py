@@ -94,20 +94,20 @@ class DcosApiInstaller(AbstractDcosInstaller):
         wait_for_up()
 
     def genconf(
-            self, master_list, agent_list, ssh_user, zk_host, ssh_key,
+            self, master_list, agent_list, ssh_user, ssh_key,
             ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            expect_errors=False):
+            zk_host=None, expect_errors=False):
         """Runs configuration generation.
 
         Args:
             master_list: list of IPv4 addresses to be used as masters
             agent_list: list of IPv4 addresses to be used as agents
-            zk_host (str): host and port for bootstrap ZK
             ip_detect_script (str): complete contents of IP-detect script
             ssh_user (str): name of SSH user that has access to targets
             ssh_key (str): complete public SSH key for ssh_user. Must already
                 be installed on tagets as authorized_key
             rexray_config (str): complete contents of REX-Ray config file
+            zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
 
         Raises:
@@ -119,10 +119,11 @@ class DcosApiInstaller(AbstractDcosInstaller):
             'master_list': master_list,
             'agent_list': agent_list,
             'ssh_user': ssh_user,
-            'exhibitor_zk_hosts': zk_host,
             'ssh_key': ssh_key,
             'ip_detect_script': ip_detect_script,
             'rexray_config': rexray_config}
+        if zk_host:
+            payload['exhibitor_zk_hosts'] = zk_host
         if superuser:
             payload["superuser_username"] = superuser
         if su_passwd:
@@ -231,22 +232,21 @@ class DcosCliInstaller(AbstractDcosInstaller):
             assert p.returncode == 0, err_msg.format(mode, p.returncode, out)
 
     def genconf(
-            self, master_list, agent_list, ssh_user, zk_host, ssh_key,
+            self, master_list, agent_list, ssh_user, ssh_key,
             ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            expect_errors=False):
+            zk_host=None, expect_errors=False):
         """Runs configuration generation.
 
         Args:
             master_list: list of IPv4 addresses to be used as masters
             agent_list: list of IPv4 addresses to be used as agents
-            zk_host (str): host and port for bootstrap ZK
             ip_detect_script (str): complete contents of IP-detect script
             ssh_user (str): name of SSH user that has access to targets
             ssh_key (str): complete public SSH key for ssh_user. Must already
                 be installed on tagets as authorized_key
             rexray_config (str): complete contents of REX-Ray config file
+            zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
-            sy
 
         Raises:
             AssertionError: "error" present in returned json keys when error
@@ -256,9 +256,6 @@ class DcosCliInstaller(AbstractDcosInstaller):
             'cluster_name': 'SSH Installed DCOS',
             'bootstrap_url': 'file:///opt/dcos_install_tmp',
             'dns_search': 'mesos',
-            'exhibitor_storage_backend': 'zookeeper',
-            'exhibitor_zk_hosts': zk_host,
-            'exhibitor_zk_path': '/exhibitor',
             'master_discovery': 'static',
             'master_list': master_list,
             'ssh_user': ssh_user,
@@ -266,6 +263,12 @@ class DcosCliInstaller(AbstractDcosInstaller):
             'process_timeout': 900,
             'rexray_config_method': 'file',
             'rexray_config_filename': 'genconf/rexray.yaml'}
+        if zk_host:
+            test_config['exhibitor_storage_backend'] = 'zookeeper'
+            test_config['exhibitor_zk_hosts'] = zk_host
+            test_config['exhibitor_zk_path'] = '/exhibitor'
+        else:
+            test_config['exhibitor_storage_backend'] = 'static'
         if superuser:
             test_config['superuser_username'] = superuser
         if su_passwd:

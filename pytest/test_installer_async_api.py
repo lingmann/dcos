@@ -1,9 +1,8 @@
-import aiohttp
 import asyncio
 
+import aiohttp
 from dcos_installer.async_server import app
 from webtest_aiohttp import TestApp
-
 
 version = 1
 client = TestApp(app)

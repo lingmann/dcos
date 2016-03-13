@@ -1,5 +1,5 @@
 #!/bin/bash
-cd "/pkg/src/dcos-installer-ui/ui"
+cd "/pkg/src/dcos-installer-ui"
 npm install
 ./node_modules/.bin/gulp dist
 

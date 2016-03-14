@@ -18,10 +18,9 @@ Options:
 import json
 import sys
 
+import docopt
 import requests
 from retrying import retry
-
-import docopt
 
 CCM_HOST = "https://ccm.mesosphere.com"
 

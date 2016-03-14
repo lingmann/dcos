@@ -5,12 +5,15 @@ import os
 
 import pkgpanda
 from ssh.ssh_runner import Node
-from ssh.exceptions import ExecuteException
 import ssh.utils
 
 from .utils import REMOTE_TEMP_DIR, CLUSTER_PACKAGES_FILE, get_async_runner, add_post_action, add_pre_action
 
 log = logging.getLogger(__name__)
+
+
+class ExecuteException(Exception):
+    """Raised when execution fails"""
 
 
 @asyncio.coroutine

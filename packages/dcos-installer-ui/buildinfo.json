@@ -3,7 +3,7 @@
   "single_source": {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-installer-ui.git",
-    "ref": "6bfcbe68951fb1d177b99ae08c878d1b41c5963f",
+    "ref": "1dddc50db048609101cab0f18c4d4ea8c873c794",
     "ref_origin": "master"
   }
 }

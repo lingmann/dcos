@@ -5,8 +5,8 @@
     "bouncer": {
       "kind": "git",
       "git": "git@github.com:mesosphere/bouncer.git",
-      "ref": "e5270870860eb2c4fa75447968f890828b2b9ed6",
-      "ref_origin": "dcos/1.6"
+      "ref": "d7a1e55d5c2b3566e83a8d4925758396d5e59228",
+      "ref_origin": "dcos/1.7"
     },
     "gunicorn": {
       "kind": "url_extract",

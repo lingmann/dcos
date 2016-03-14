@@ -12,8 +12,6 @@ set -o errexit -o nounset -o pipefail
 
 : ${VIRTUAL_ENV?"Must be run in a python virtual environment"}
 
-./fetch_pkgpanda
-
 # NOTE: If the directory already exists that is indeed a hard error. Should be
 # cleaned up between builds to guarantee we get the artifacts we expect.
 mkdir wheelhouse || (echo wheelhouse folder must be deleted before prep_teamcity is rerun && exit 1)
@@ -31,11 +29,11 @@ git -C ext/dcos-image checkout -qf `git rev-parse --verify HEAD^{commit}`
 pip install wheel
 
 # Download distro independent artifacts
-pip install --download wheelhouse --no-binary :all: ext/pkgpanda
+pip install --download wheelhouse --no-binary :all: ext/dcos-image/ext/pkgpanda
 pip install --download wheelhouse --no-binary :all: ext/dcos-image
 
 # Make the wheels, they will be output into the folder `wheelhouse` by default.
-pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/pkgpanda
+pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image/ext/pkgpanda
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image
 
 # Install the wheels

@@ -1,9 +1,7 @@
 {
   "requires": ["python", "python-requests"],
   "single_source": {
-    "kind": "git",
-    "git": "git@github.com:mesosphere/pkgpanda.git",
-    "ref": "d09d422c55e5a53c85bfa33befa14e4c0d471aa9",
-    "ref_origin": "master"
+    "kind": "git_local",
+    "rel_path": "../../"
   }
 }

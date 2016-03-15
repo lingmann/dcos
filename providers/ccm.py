@@ -52,6 +52,9 @@ class VpcCluster():
     def get_ssh_key(self):
         return self.ccm.get_ssh_key(self.pk)
 
+    def get_region(self):
+        return self.ccm.get_cluster_info(self.pk)["region"]
+
 
 class Ccm():
     def __init__(self, url=CCM_HOST):

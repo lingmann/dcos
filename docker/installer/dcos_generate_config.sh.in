@@ -19,10 +19,9 @@ if [ ! -d genconf/state ]; then
 fi
 
 PORT=${{PORT:-9000}}
-trap 'kill -INT $PID' HUP INT TERM
+trap 'docker kill {genconf_tar}' HUP INT TERM
 
-setsid docker run -i -p $PORT:9000 -v $(pwd)/genconf/:/genconf {docker_image_name} "$@" &
-PID=$!
+setsid docker run --rm=true --name={genconf_tar} -i -p $PORT:9000 -v $(pwd)/genconf/:/genconf {docker_image_name} "$@" &
 
-wait $PID
+wait $!
 exit $?

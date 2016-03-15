@@ -27,6 +27,14 @@ package:
   - path: /etc_master/master_count
     content: |
       {{ num_masters }}
+  - path: /etc/spartan.json
+    content: |
+      {
+        "upstream_resolvers": {{ resolvers }},
+        "local_addresses": ["198.51.100.1", "198.51.100.2", "198.51.100.3"],
+        "udp_port": 53,
+        "tcp_port": 53
+      }
   - path: /etc/mesos-dns.json
     content: |
       {
@@ -34,7 +42,7 @@ package:
         "refreshSeconds": 30,
         "ttl": 60,
         "domain": "mesos",
-        "port": 53,
+        "port": 61053,
         {{ mesos_dns_resolvers_str }},
         "timeout": 5,
         "listener": "0.0.0.0",

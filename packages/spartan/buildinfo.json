@@ -1,0 +1,12 @@
+{
+  "docker": "dcos-builder",
+  "requires": ["openssl", "ncurses", "erlang"],
+  "sources": {
+    "spartan": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/spartan.git",
+      "ref": "1ff2261e3239eace804a354d0c8115badb9aa886",
+      "ref_origin": "master"
+    }
+  }
+}

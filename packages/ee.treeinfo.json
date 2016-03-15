@@ -5,8 +5,6 @@
   },
   "exclude": [
     "dcos-signal",
-    "dcos-image",
-    "dcos-image-deps",
     "dcos-installer",
     "dcos-installer-ui"
   ]

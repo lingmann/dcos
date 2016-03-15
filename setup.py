@@ -22,7 +22,7 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    packages=['gen', 'gen.aws', 'gen.azure', 'providers', 'ssh'],
+    packages=['gen', 'gen.aws', 'gen.azure', 'pkgpanda', 'pkgpanda.build', 'providers', 'ssh'],
     install_requires=[
         'requests',
         'azure-common==1.0.0',
@@ -32,11 +32,14 @@ setup(
         'coloredlogs',
         'docopt',
         'pyyaml',
+        'requests',
         'retrying'],
     entry_points={
         'console_scripts': [
             'release=providers.release:main',
             'ccm-deploy-test=providers.test_installer_ccm:main',
+            'pkgpanda=pkgpanda.cli:main',
+            'mkpanda=pkgpanda.build.cli:main',
         ],
     },
     package_data={

@@ -1,8 +1,6 @@
 {
   "exclude": [
     "bouncer",
-    "dcos-image-deps",
-    "dcos-image",
     "dcos-installer",
     "dcos-installer-ui"
   ]

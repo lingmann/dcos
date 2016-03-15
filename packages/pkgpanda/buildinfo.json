@@ -1,7 +1,0 @@
-{
-  "requires": ["python", "python-requests"],
-  "single_source": {
-    "kind": "git_local",
-    "rel_path": "../../"
-  }
-}

@@ -438,7 +438,7 @@ def make_bash(gen_out):
     Assert the cloud-config is only write_files
     """
     setup_flags = ""
-    cloud_config = gen_out.templates['cloud-config']
+    cloud_config = gen_out.templates['cloud-config.yaml']
     assert len(cloud_config) == 1
     for file_dict in cloud_config['write_files']:
         # NOTE: setup-packages is explicitly disallowed. Should all be in extra
@@ -455,7 +455,7 @@ def make_bash(gen_out):
     # Reformat the DCOS systemd units to be bash written and started.
     # Write out the units as files
     setup_services = ""
-    for service in gen_out.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services.yaml']:
         # If no content, service is assumed to already exist
         if 'content' not in service:
             continue
@@ -470,7 +470,7 @@ def make_bash(gen_out):
     setup_services += "\n"
 
     # Start, enable services which request it.
-    for service in gen_out.templates['dcos-services']:
+    for service in gen_out.templates['dcos-services.yaml']:
         assert service['name'].endswith('.service')
         name = service['name'][:-8]
         if service.get('enable'):

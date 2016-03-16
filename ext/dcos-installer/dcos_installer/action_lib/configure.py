@@ -1,4 +1,3 @@
-import copy
 import logging
 import os
 import subprocess
@@ -6,7 +5,7 @@ import sys
 
 import gen
 import pkgpanda
-import providers.bash as bash
+import providers.bash
 from dcos_installer.util import IP_DETECT_PATH, SERVE_DIR
 
 log = logging.getLogger(__name__)
@@ -17,10 +16,15 @@ def do_configure(gen_config):
 
     subprocess.check_output(['mkdir', '-p', SERVE_DIR])
 
-    gen_out = do_onprem(
-        bash,
-        ['bash', 'centos', 'onprem'],
-        gen_config)
+    validated = do_validate_gen_config(gen_config)
+    if 'errors' in validated:
+        errors = validated['errors']
+        for optional_key in ('superuser_username', 'superuser_password_hash'):
+            if optional_key in errors:
+                del gen_config[optional_key]
+
+    gen_out = gen.generate(arguments=gen_config)
+    providers.bash.generate(gen_out, SERVE_DIR)
 
     # Get bootstrap from artifacts
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])
@@ -46,30 +50,7 @@ def get_gen_extra_args():
 def do_validate_gen_config(gen_config, mixins=['bash', 'centos', 'onprem']):
     # run validate first as this is the only way we have for now to remove "optional" keys
     gen_config.update(get_gen_extra_args())
-    validated = gen.validate(
-        arguments=gen_config,
-        mixins=copy.copy(mixins),  # FIXME: do a copy because gen.validate appends a '' at the end
-        extra_templates=dict(),
-        cc_package_files=list()
-    )
-    return validated
-
-
-def do_onprem(provider_module, mixins, arguments):
-    validated = do_validate_gen_config(arguments)
-    if 'errors' in validated:
-        errors = validated['errors']
-        for optional_key in ('superuser_username', 'superuser_password_hash'):
-            if optional_key in errors:
-                del arguments[optional_key]
-
-    gen_out = gen.generate(
-        arguments=arguments,
-        mixins=mixins
-        )
-
-    provider_module.generate(gen_out, '/genconf/serve')
-    return gen_out
+    return gen.validate(arguments=gen_config)
 
 
 def fetch_bootstrap(bootstrap_id):

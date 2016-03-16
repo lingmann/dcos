@@ -181,18 +181,20 @@ def gen_supporting_template():
         })
 
 
-def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
+extra_templates = ['aws/dcos-config.yaml', 'coreos-aws/cloud-config.yaml', 'coreos/cloud-config.yaml']
+
+
+def make_advanced_bunch(variant_args, template_name, cc_params):
     results = gen.generate(
-        mixins=['aws', 'coreos', 'coreos-aws'],
-        extra_templates={template_key: [template_name]},
         arguments=variant_args,
+        extra_templates=extra_templates + ['aws/templates/advanced/' + template_name],
         cc_package_files=[
             '/etc/cfn_signal_metadata',
             '/etc/dns_config',
             '/etc/exhibitor',
             '/etc/mesos-master-provider'])
 
-    cloud_config = results.templates['cloud-config']
+    cloud_config = results.templates['cloud-config.yaml']
 
     # Add general services
     cloud_config = results.utils.add_services(cloud_config)
@@ -212,10 +214,9 @@ def make_advanced_bunch(variant_args, template_key, template_name, cc_params):
 
     # Render the cloudformation
     cloudformation = render_cloudformation(
-        results.templates[template_key],
+        results.templates[template_name],
         cloud_config=variant_cloudconfig,
         )
-
     print("Validating CloudFormation: {}".format(template_name))
     validate_cf(cloudformation)
 
@@ -235,15 +236,13 @@ def gen_advanced_template(arguments, variant_prefix, channel_commit_path):
         params['report_name'] = node_args.pop('report_name')
         template_key = 'advanced-{}'.format(node_type)
         template_name = template_key + '.json'
-        template_path = 'aws/templates/advanced/' + template_name
         if node_type == 'master':
             for num_masters in [1, 3, 5, 7]:
                 master_tk = '{}-{}'.format(template_key, num_masters)
                 print('Building {} for num_masters = {}'.format(node_type, num_masters))
                 node_args['num_masters'] = str(num_masters)
                 bunch = make_advanced_bunch(node_args,
-                                            master_tk,
-                                            template_path,
+                                            template_name,
                                             params)
                 yield '{}.json'.format(master_tk), bunch
 
@@ -261,24 +260,22 @@ def gen_advanced_template(arguments, variant_prefix, channel_commit_path):
         else:
             node_args['num_masters'] = "1"
             bunch = make_advanced_bunch(node_args,
-                                        template_key,
-                                        template_path,
+                                        template_name,
                                         params)
             yield template_name, bunch
 
 
 def gen_templates(arguments):
     results = gen.generate(
-        mixins=['aws', 'coreos', 'coreos-aws'],
-        extra_templates={'cloudformation': ['aws/templates/cloudformation.json']},
         arguments=arguments,
+        extra_templates=extra_templates + ['aws/templates/cloudformation.json'],
         cc_package_files=[
             '/etc/cfn_signal_metadata',
             '/etc/dns_config',
             '/etc/exhibitor',
             '/etc/mesos-master-provider'])
 
-    cloud_config = results.templates['cloud-config']
+    cloud_config = results.templates['cloud-config.yaml']
 
     # Add general services
     cloud_config = results.utils.add_services(cloud_config)
@@ -303,7 +300,7 @@ def gen_templates(arguments):
 
     # Render the cloudformation
     cloudformation = render_cloudformation(
-        results.templates['cloudformation'],
+        results.templates['cloudformation.json'],
         master_cloud_config=variant_cloudconfig['master'],
         slave_cloud_config=variant_cloudconfig['slave'],
         slave_public_cloud_config=variant_cloudconfig['slave_public']

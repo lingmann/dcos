@@ -21,7 +21,6 @@ import os
 import os.path
 import sys
 from copy import copy, deepcopy
-from itertools import chain
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
@@ -115,16 +114,6 @@ def merge_dictionaries(base, additions):
     return base_copy
 
 
-# Order in a file determines order in which things like services get placed,
-# changing it can break components (Ex: moving dcos-download and dcos-setup
-# too early will break some configurations).
-def get_name(mixin_name, target, sep='/'):
-    if mixin_name:
-        return mixin_name + sep + target
-    else:
-        return target
-
-
 # Render the Jinja/YAML into YAML, then load the YAML and merge it to make the
 # final configuration files.
 def render_templates(template_names, arguments):
@@ -132,13 +121,7 @@ def render_templates(template_names, arguments):
     for name, templates in template_names.items():
         full_template = None
         for template in templates:
-
-            # Render the template. If the file doesn't exist that just means the
-            # current mixin doesn't have it, which is fine.
-            try:
-                rendered_template = gen.template.parse_resources(template).render(arguments)
-            except FileNotFoundError:
-                continue
+            rendered_template = gen.template.parse_resources(template).render(arguments)
 
             # If not yaml, just treat opaquely.
             if not template.endswith('.yaml'):
@@ -168,21 +151,10 @@ def get_parameters(template_dict):
         assert isinstance(template_list, list)
         for template in template_list:
             assert isinstance(template, str)
-            try:
-                ast = gen.template.parse_resources(template)
-                scoped_arguments = ast.get_scoped_arguments()
-                parameters = merge_dictionaries(parameters, scoped_arguments)
-            except FileNotFoundError as ex:
-                # Needs to be implemented with a logger
-                log.debug("Template not found: %s", ex)
+            ast = gen.template.parse_resources(template)
+            parameters = merge_dictionaries(parameters, ast.get_scoped_arguments())
 
     return parameters
-
-
-def update_dictionary(base, addition):
-    base_copy = base.copy()
-    base_copy.update(addition)
-    return base_copy
 
 
 def get_function_parameters(function):
@@ -447,21 +419,6 @@ def prompt_arguments(can_set, defaults, can_calc):
     return arguments
 
 
-# Returns a dictionary of the jinja templates to use
-def get_templates(mixin_name, cluster_packages, core_templates):
-    templates = dict()
-    # dcos-config contains stuff statically known for clusters (ex: mesos slave
-    # configuration parameters).
-    # cloud-config contains things injected per-cluster by tools such as
-    # cloudformation. Ex: AWS S3 bucket to use for Exhibitor,
-    # master loadbalancer DNS name3
-    for template in chain(cluster_packages, core_templates):
-        # Stored as list for easier later processing / dictionary merging.
-        templates[template] = [get_name(mixin_name, template + '.yaml')]
-
-    return templates
-
-
 def validate_arguments_strings(arguments):
     errors = dict()
     # Validate that all keys and vlaues of arguments are strings
@@ -592,9 +549,16 @@ def validate_all_arguments_match_parameters(parameters, setters, arguments):
         raise ValidationError(errors)
 
 
-def validate(mixins, arguments, extra_templates, cc_package_files):
+def validate(
+        arguments,
+        extra_templates=list(),
+        cc_package_files=list()):
     try:
-        generate(mixins, arguments, extra_templates, cc_package_files, validate_only=True)
+        generate(
+                arguments=arguments,
+                extra_templates=extra_templates,
+                cc_package_files=cc_package_files,
+                validate_only=True)
         return {'status': 'ok'}
     except ValidationError as ex:
         messages = {}
@@ -608,37 +572,30 @@ def validate(mixins, arguments, extra_templates, cc_package_files):
 
 
 def generate(
-        mixins,
         arguments,
-        extra_templates=dict(),
+        extra_templates=list(),
         cc_package_files=list(),
         validate_only=False):
     log.info("Generating configuration files...")
+
+    assert isinstance(extra_templates, list)
 
     # To maintain the old API where we passed arguments rather than the new name.
     user_arguments = arguments
     arguments = None
 
-    templates = dict()
     setters = dict()
     validate = list()
 
     # Make sure all user provided arguments are strings.
     validate_arguments_strings(user_arguments)
 
-    # Empty string (top level directory) is always implicitly included
-    assert '' not in mixins
-    assert None not in mixins
+    # TODO(cmaloney): Make these all just defined by the base calc.py
+    package_names = ['dcos-config', 'dcos-metadata']
+    template_filenames = ['dcos-config.yaml', 'cloud-config.yaml', 'dcos-metadata.yaml', 'dcos-services.yaml']
 
-    package_names = list(sorted(set(
-        ['dcos-config', 'dcos-metadata'])))
-    core_templates = ['cloud-config', 'dcos-services']
-
-    # Add the empty mixin so we pick up top-level config.
-    mixins.append('')
-
-    # Make sure no mixins were given twice
-    assert len(set(mixins)) == len(mixins), "Repeated mixin in list of mixins: {}".format(mixins)
+    # TODO(cmaloney): Check there are no duplicates between templates and extra_template_files
+    template_filenames += extra_templates
 
     def add_setter(name, value, is_optional, conditions, is_user):
         setters.setdefault(name, list()).append(Setter(name, value, is_optional, conditions, is_user))
@@ -646,12 +603,6 @@ def generate(
     # Add in all user arguments as setters
     for name, value in user_arguments.items():
         add_setter(name, value, False, [], True)
-
-    for mixin in mixins:
-        mixin_templates = get_templates(mixin, package_names, core_templates)
-        # TODO(cmaloney): merge_dictionaries, hard error on duplicate leaf keys.
-        # Right now we arbitrarily get one of them in conflicts.
-        templates = merge_dictionaries(templates, mixin_templates)
 
     def add_conditional_scope(scope, conditions):
         nonlocal validate
@@ -674,18 +625,19 @@ def generate(
 
     add_conditional_scope(gen.calc.entry, [])
 
-    # Make sure only yaml templates have more than one mixin providing them / are provided more than once.
-    for name, template_list in templates.items():
-        if len(template_list) > 1:
-            for template in template_list:
-                if not template.endswith('.yaml'):
-                    raise Exception(
-                        "Internal Error: Only know how to merge YAML templates at this "
-                        "point in time. Can't merge template {} in template_list {}".format(
-                            name, template_list))
+    # Re-arrange templates to be indexed by common name. Only allow multiple for one key if the key
+    # is yaml (ends in .yaml).
+    templates = dict()
+    for filename in template_filenames:
+        key = os.path.basename(filename)
+        templates.setdefault(key, list())
+        templates[key].append(filename)
 
-    # Inject extra_templates and parameters inside.
-    templates.update(extra_templates)
+        if len(templates[key]) > 1 and not key.endswith('.yaml'):
+            raise Exception(
+                "Internal Error: Only know how to merge YAML templates at this point in time. "
+                "Can't merge template {} in template_list {}".format(name, template_list))
+
     mandatory_parameters = get_parameters(templates)
 
     validate_all_arguments_match_parameters(mandatory_parameters, setters, user_arguments)
@@ -693,7 +645,9 @@ def generate(
     def add_builtin(name, value):
         add_setter(name, json.dumps(value, **json_prettyprint_args), False, [], False)
 
-    add_builtin('mixins', mixins)
+    # TODO(cmaloney): Hash the contents of all teh templates rather than using the list of filenames
+    # since the filenames might not live in this git repo, or may be locally modified.
+    add_builtin('template_filenames', template_filenames)
     add_builtin('package_names', list(package_names))
     add_builtin('user_arguments', user_arguments)
 
@@ -716,9 +670,9 @@ def generate(
     # Validate there aren't any unexpected top level directives in any of the files
     # (likely indicates a misspelling)
     for name, template in rendered_templates.items():
-        if name == 'dcos-services':  # yaml list of the service files
+        if name == 'dcos-services.yaml':  # yaml list of the service files
             assert isinstance(template, list)
-        elif name == 'cloud-config':
+        elif name == 'cloud-config.yaml':
             assert template.keys() <= CLOUDCONFIG_KEYS, template.keys()
         elif isinstance(template, str):  # Not a yaml template
             pass
@@ -728,9 +682,9 @@ def generate(
 
     # Extract cc_package_files out of the dcos-config template and put them into
     # the cloud-config package.
-    cc_package_files, dcos_config_files = extract_files_with_path(rendered_templates['dcos-config']['package'],
+    cc_package_files, dcos_config_files = extract_files_with_path(rendered_templates['dcos-config.yaml']['package'],
                                                                   cc_package_files)
-    rendered_templates['dcos-config'] = {'package': dcos_config_files}
+    rendered_templates['dcos-config.yaml'] = {'package': dcos_config_files}
 
     # Add a empty pkginfo.json to the cc_package_files.
     # Also assert there isn't one already (can only write out a file once).
@@ -748,7 +702,7 @@ def generate(
         assert item['path'].startswith('/')
         item['path'] = '/etc/mesosphere/setup-packages/dcos-provider-{}--setup'.format(
             arguments['provider']) + item['path']
-        rendered_templates['cloud-config']['root'].append(item)
+        rendered_templates['cloud-config.yaml']['root'].append(item)
 
     cluster_package_info = {}
 
@@ -760,7 +714,7 @@ def generate(
             package_id_str)
 
         # Build the package
-        do_gen_package(rendered_templates[package_id.name], package_filename)
+        do_gen_package(rendered_templates[package_id.name + '.yaml'], package_filename)
 
         cluster_package_info[package_id.name] = {
             'id': package_id_str,
@@ -768,7 +722,7 @@ def generate(
         }
 
     # Convert cloud-config to just contain write_files rather than root
-    cc = rendered_templates['cloud-config']
+    cc = rendered_templates['cloud-config.yaml']
 
     # Shouldn't contain any packages. Providers should pull what they need to
     # late bind out of other packages via cc_package_file.
@@ -781,12 +735,12 @@ def generate(
     for item in cc_root:
         assert item['path'].startswith('/')
         cc['write_files'].append(item)
-    rendered_templates['cloud-config'] = cc
+    rendered_templates['cloud-config.yaml'] = cc
 
     # Add in the add_services util. Done here instead of the initial
     # map since we need to bind in parameters
     def add_services(cloudconfig):
-        return add_units(cloudconfig, rendered_templates['dcos-services'])
+        return add_units(cloudconfig, rendered_templates['dcos-services.yaml'])
 
     utils.add_services = add_services
 

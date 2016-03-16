@@ -5,6 +5,8 @@ import os
 import urllib.parse
 import uuid
 
+import boto3
+import botocore.exceptions
 import bs4
 import dns.exception
 import dns.resolver
@@ -16,6 +18,9 @@ import retrying
 LOG_LEVEL = logging.INFO
 TEST_APP_NAME_FMT = '/integration-test-{}'
 MESOS_DNS_ENTRY_UPDATE_TIMEOUT = 60  # in seconds
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+AWS_REGION = os.environ.get('AWS_REGION', '')
 
 
 @pytest.fixture(scope='module')
@@ -56,6 +61,37 @@ def _setup_logging():
     logger.addHandler(handler)
 
     logging.getLogger("requests").setLevel(logging.WARNING)
+
+
+def _delete_ec2_volume(name, timeout=300):
+    """Delete an EC2 EBS volume by its "Name" tag
+
+    Args:
+        timeout: seconds to wait for volume to become available for deletion
+
+    """
+    @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
+                    retry_on_exception=lambda exc: isinstance(exc, botocore.exceptions.ClientError))
+    def _delete_volume(volume):
+        volume.delete()  # Raises ClientError if the volume is still attached.
+
+    volumes = list(boto3.session.Session(
+        aws_access_key_id=AWS_ACCESS_KEY_ID,
+        aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+        region_name=AWS_REGION,
+    ).resource('ec2').volumes.filter(Filters=[{'Name': 'tag:Name', 'Values': [name]}]))
+
+    if len(volumes) == 0:
+        raise Exception('no volumes found with name {}'.format(name))
+    elif len(volumes) > 1:
+        raise Exception('multiple volumes found with name {}'.format(name))
+    volume = volumes[0]
+
+    try:
+        _delete_volume(volume)
+    except retrying.RetryError:
+        pytest.fail("Volume destroy failed - operation was not "
+                    "completed in {} seconds.".format(timeout))
 
 
 class Cluster:
@@ -198,6 +234,10 @@ class Cluster:
         self.is_enterprise = os.environ.get('DCOS_VARIANT', None) == 'ee'
         self._wait_for_DCOS()
 
+    @staticmethod
+    def _marathon_req_headers():
+        return {'Accept': 'application/json, text/plain, */*'}
+
     def _suheader(self, disable_suauth):
         if not disable_suauth and self.is_enterprise:
             return self.superuser_auth_header
@@ -209,15 +249,17 @@ class Cluster:
         return requests.get(
             self.dcos_uri + path, params=params, headers=hdrs, **kwargs)
 
-    def post(self, path="", payload=None, disable_suauth=False):
+    def post(self, path="", payload=None, disable_suauth=False, **kwargs):
         hdrs = self._suheader(disable_suauth)
+        hdrs.update(kwargs.pop('headers', {}))
         if payload is None:
             payload = {}
         return requests.post(self.dcos_uri + path, json=payload, headers=hdrs)
 
-    def delete(self, path="", disable_suauth=False):
+    def delete(self, path="", disable_suauth=False, **kwargs):
         hdrs = self._suheader(disable_suauth)
-        return requests.delete(self.dcos_uri + path, headers=hdrs)
+        hdrs.update(kwargs.pop('headers', {}))
+        return requests.delete(self.dcos_uri + path, headers=hdrs, **kwargs)
 
     def head(self, path="", disable_suauth=False):
         hdrs = self._suheader(disable_suauth)
@@ -273,7 +315,7 @@ class Cluster:
             },
         }, test_uuid
 
-    def deploy_marathon_app(self, app_definition, timeout=300):
+    def deploy_marathon_app(self, app_definition, timeout=300, check_health=True):
         """Deploy an app to marathon
 
         This function deploys an an application and then waits for marathon to
@@ -288,13 +330,15 @@ class Cluster:
                             Marathon API (https://mesosphere.github.io/marathon/docs/rest-api.html#post-v2-apps)
             timeout: a time to wait for the application to reach 'Healthy' status
                      after which the test should be failed.
+            check_health: wait until Marathon reports tasks as healthy before
+                          returning
 
         Returns:
             A list of named tuples which represent service points of deployed
             applications. I.E:
                 [Endpoint(host='172.17.10.202', port=10464), Endpoint(host='172.17.10.201', port=1630)]
         """
-        r = self.post('/marathon/v2/apps', app_definition)
+        r = self.post('/marathon/v2/apps', app_definition, headers=self._marathon_req_headers())
         assert r.ok
 
         @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
@@ -308,7 +352,7 @@ class Cluster:
                           ('embed', 'apps.counts'))
             req_uri = '/marathon/v2/apps' + app_id
 
-            r = self.get(req_uri, req_params)
+            r = self.get(req_uri, req_params, headers=self._marathon_req_headers())
             assert r.ok
 
             data = r.json()
@@ -316,11 +360,10 @@ class Cluster:
             assert 'lastTaskFailure' not in data['app'], "Application " + \
                 'deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
 
-            tasksRunning = data['app']['tasksRunning']
-            tasksHealthy = data['app']['tasksHealthy']
-
-            if tasksHealthy == app_definition['instances'] and \
-                    tasksRunning == app_definition['instances']:
+            if (
+                data['app']['tasksRunning'] == app_definition['instances'] and
+                (not check_health or data['app']['tasksHealthy'] == app_definition['instances'])
+            ):
                 res = [Endpoint(t['host'], t['ports'][0]) for t in data['app']['tasks']]
                 logging.info('Application deployed, running on {}'.format(res))
                 return res
@@ -334,16 +377,37 @@ class Cluster:
             pytest.fail("Application deployment failed - operation was not "
                         "completed in {} seconds.".format(timeout))
 
-    def destroy_marathon_app(self, app_name):
+    def destroy_marathon_app(self, app_name, timeout=300):
         """Remove a marathon app
 
         Abort the test if the removal was unsuccesful.
 
         Args:
             app_name: name of the applicatoin to remove
+            timeout: seconds to wait for destruction before failing test
         """
-        r = self.delete('/marathon/v2/apps' + app_name)
+        @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
+                        retry_on_result=lambda ret: not ret,
+                        retry_on_exception=lambda x: False)
+        def _destroy_complete(deployment_id):
+            r = self.get('/marathon/v2/deployments', headers=self._marathon_req_headers())
+            assert r.ok
+
+            for deployment in r.json():
+                if deployment_id == deployment.get('id'):
+                    logging.info('Waiting for application to be destroyed')
+                    return False
+            logging.info('Application destroyed')
+            return True
+
+        r = self.delete('/marathon/v2/apps' + app_name, headers=self._marathon_req_headers())
         assert r.ok
+
+        try:
+            _destroy_complete(r.json()['deploymentId'])
+        except retrying.RetryError:
+            pytest.fail("Application destroy failed - operation was not "
+                        "completed in {} seconds.".format(timeout))
 
 
 def test_if_DCOS_UI_is_up(cluster):
@@ -836,3 +900,63 @@ def test_if_minuteman_routes_to_vip(cluster):
     assert(r.ok)
     data = r.text
     assert 'imok' in data
+
+
+@pytest.mark.ccm
+def test_move_external_volume_to_new_agent(cluster):
+    """Test that an external volume is successfully attached to a new agent.
+
+    If the cluster has only one agent, the volume will be detached and
+    reattached to the same agent.
+
+    """
+    hosts = cluster.slaves[0], cluster.slaves[-1]
+    test_uuid = uuid.uuid4().hex
+    test_label = 'integration-test-move-external-volume-{}'.format(test_uuid)
+    test_file = '/var/lib/rexray/volumes/{}/data/test'.format(test_label)
+    base_app = {
+        'mem': 32,
+        'cpus': 0.1,
+        'instances': 1,
+        'env': {
+            'DVDI_VOLUME_NAME': test_label,
+            'DVDI_VOLUME_DRIVER': 'rexray',
+            'DVDI_VOLUME_OPTS': 'size=1,volumetype=standard,newfstype=ext4,overwritefs=false',
+        },
+    }
+
+    write_app = base_app.copy()
+    write_app.update({
+        'id': '/{}/write'.format(test_label),
+        'cmd': (
+            # Check that the volume is empty.
+            '[ $(ls -A "$(dirname "{test_file}")" | grep -v --line-regexp "lost+found" | wc -l) -eq 0 ] && '
+            # Write the test UUID to a file.
+            'echo "{test_uuid}" >> "{test_file}" && '
+            'while true; do sleep 1000; done'
+        ).format(test_uuid=test_uuid, test_file=test_file),
+        'constraints': [['hostname', 'LIKE', hosts[0]]],
+    })
+
+    read_app = base_app.copy()
+    read_app.update({
+        'id': '/{}/read'.format(test_label),
+        'cmd': (
+            # Diff the file and the UUID.
+            'echo "{test_uuid}" | diff - "{test_file}" && '
+            'while true; do sleep 1000; done'
+        ).format(test_uuid=test_uuid, test_file=test_file),
+        'constraints': [['hostname', 'LIKE', hosts[1]]],
+    })
+
+    try:
+        cluster.deploy_marathon_app(write_app, check_health=False)
+        cluster.destroy_marathon_app(write_app['id'])
+
+        cluster.deploy_marathon_app(read_app, check_health=False)
+        cluster.destroy_marathon_app(read_app['id'])
+    finally:
+        try:
+            _delete_ec2_volume(test_label)
+        except Exception:
+            logging.exception("Failed to clean up volume %s", test_label)

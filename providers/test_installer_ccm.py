@@ -22,10 +22,32 @@ import providers.installer_api_test
 from ssh.ssh_runner import MultiRunner
 from ssh.utils import CommandChain, SyncCmdDelegate
 
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID', '')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
+
+DEFAULT_AWS_REGION = 'us-west-2'
+
+
 variant_config_generators = {
     'default': 'dcos_generate_config.sh',
     'ee': 'dcos_generate_config.ee.sh'
 }
+
+
+REXRAY_CONFIG = """
+rexray:
+  loglevel: info
+  storageDrivers:
+    - ec2
+  volume:
+    mount:
+      preempt: true
+    unmount:
+      ignoreusedcount: true
+aws:
+  accessKey: {}
+  secretKey: {}
+""".format(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
 
 
 def pkg_filename(relative_path):
@@ -163,7 +185,7 @@ def test_setup(ssh_runner, registry, remote_dir):
 
 
 def integration_test(
-        ssh_runner, dcos_dns, master_list, slave_list, registry_host,
+        ssh_runner, dcos_dns, master_list, slave_list, region, registry_host,
         use_ee, test_minuteman, test_dns_search, ci_flags):
     """Runs integration test on host
     Note: check_results() will raise AssertionError if test fails
@@ -173,6 +195,7 @@ def integration_test(
         dcos_dns: string representing IP of DCOS DNS host
         master_list: string of comma separated master addresses
         slave_list: string of comma separated agent addresses
+        region: string indicating AWS region in which cluster is running
         registry_host: string for address where marathon can pull test app
         use_ee: if set to True then use 'ee' variant artifact, else use default
         test_minuteman: if set to True then test for minuteman service
@@ -196,6 +219,9 @@ def integration_test(
         '-e', 'REGISTRY_HOST='+registry_host,
         '-e', 'DCOS_VARIANT='+variant,
         '-e', 'DNS_SEARCH='+dns_search,
+        '-e', 'AWS_ACCESS_KEY_ID='+AWS_ACCESS_KEY_ID,
+        '-e', 'AWS_SECRET_ACCESS_KEY='+AWS_SECRET_ACCESS_KEY,
+        '-e', 'AWS_REGION='+region,
         '--net=host', 'py.test', 'py.test',
         '-vv', ci_flags, marker_args, '/integration_test.py'])
 
@@ -248,10 +274,10 @@ def make_vpc(use_bare_os=False):
     vpc = ccm.create_vpc(
         name=unique_cluster_id,
         time=60,
-        instance_count=3,
+        instance_count=4,  # 1 bootstrap, 1 master, 2 agents
         instance_type="m3.xlarge",
         instance_os=os_name,
-        region="us-west-2",
+        region=DEFAULT_AWS_REGION,
         key_pair_name=unique_cluster_id
         )
 
@@ -374,7 +400,8 @@ def main():
             ssh_user=ssh_user,
             ssh_key=ssh_key,
             superuser='bootstrapuser',
-            su_passwd=installer.get_hashed_password('deleteme'))
+            su_passwd=installer.get_hashed_password('deleteme'),
+            rexray_config=REXRAY_CONFIG)
 
     # Test install-prereqs. This may take up 15 minutes...
     if options.test_install_prereqs:
@@ -424,6 +451,7 @@ def main():
         dcos_dns=local_ip[host_list[1]],
         master_list=local_ip[host_list[1]],
         slave_list=','.join([local_ip[_] for _ in host_list[2:]]),
+        region=vpc.get_region() if vpc else DEFAULT_AWS_REGION,
         registry_host=registry_host,
         use_ee=True if options.variant == 'ee' else False,
         # Setting dns_search: mesos not currently supported in API

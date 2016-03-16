@@ -1,0 +1,45 @@
+#!/bin/bash
+set -o errexit -o nounset -o pipefail
+
+srcdir=$GOPATH/src/github.com/emccode/rexray
+mkdir -p $(dirname $srcdir)
+ln -s /pkg/src/rexray $srcdir
+
+pushd $srcdir
+make build-linux-amd64 || true  # suppress failed `go get` for vendored lib
+mkdir -p $PKG_PATH/bin/
+mv .build/bin/Linux-x86_64/rexray $PKG_PATH/bin/
+popd
+
+
+systemd_slave=$PKG_PATH/dcos.target.wants_slave/dcos-rexray.service
+mkdir -p $(dirname $systemd_slave)
+cat <<EOF > $systemd_slave
+[Unit]
+Description=rexray
+Before=dcos-mesos-slave.service
+
+[Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+Environment=REXRAY_HOME=/
+ExecStart=$PKG_PATH/bin/rexray start -f
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+EOF
+
+systemd_slave_public=$PKG_PATH/dcos.target.wants_slave_public/dcos-rexray.service
+mkdir -p $(dirname $systemd_slave_public)
+cat <<EOF > $systemd_slave_public
+[Unit]
+Description=rexray
+Before=dcos-mesos-slave-public.service
+
+[Service]
+EnvironmentFile=/etc/environment
+EnvironmentFile=/opt/mesosphere/environment
+Environment=REXRAY_HOME=/
+ExecStart=$PKG_PATH/bin/rexray start -f
+ExecReload=/bin/kill -HUP \$MAINPID
+KillMode=process
+EOF

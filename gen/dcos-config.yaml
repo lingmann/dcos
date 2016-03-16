@@ -89,6 +89,23 @@ package:
                 ]
               }
             ]
+          },
+          {
+            "file": "/opt/mesosphere/lib/mesos/libmesos_dvdi_isolator.so",
+            "modules": [
+              {
+                "name": "com_emccode_mesos_DockerVolumeDriverIsolator",
+                "parameters": [
+                  {
+                    "key": "work_dir",
+                    "value": "/var/lib/mesos/slave"
+                  }, {
+                    "key": "dvdcli",
+                    "value": "/opt/mesosphere/bin/dvdcli"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
@@ -100,7 +117,7 @@ package:
       MESOS_MODULES=file:///opt/mesosphere/etc/mesos-slave-modules.json
       MESOS_CONTAINER_LOGGER=org_apache_mesos_LogrotateContainerLogger
       MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
-      MESOS_ISOLATION=cgroups/cpu,cgroups/mem,posix/disk
+      MESOS_ISOLATION=cgroups/cpu,cgroups/mem,posix/disk,com_emccode_mesos_DockerVolumeDriverIsolator
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json

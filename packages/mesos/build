@@ -4,7 +4,6 @@ libdir="$PKG_PATH/lib"
 # TODO(cmaloney): Check prerequisites installed (glog, protobuf, boost)
 pushd "/pkg/src/mesos"
 ./bootstrap
-popd
 
 mkdir -p build
 pushd build
@@ -24,6 +23,7 @@ make -j8
 
 make install
 cp src/java/target/mesos-*.jar "$libdir"
+popd
 popd
 
 # TODO(cmaloney): Make these a seperate mesos library package.
@@ -51,3 +51,33 @@ envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-slave.service > "$systemd_slave"
 systemd_slave_public="$PKG_PATH"/dcos.target.wants_slave_public/dcos-mesos-slave-public.service
 mkdir -p "$(dirname "$systemd_slave_public")"
 envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-slave-public.service > "$systemd_slave_public"
+
+
+# TODO(branden): dvdi is built here rather than in its own package because it
+# builds against private interfaces that mesos does not install. See
+# https://issues.apache.org/jira/browse/MESOS-3388.
+
+echo "Building dvdi"
+
+export ISOLATOR_VERSION=0.27.0
+export LD_LIBRARY_PATH=/opt/mesosphere/lib
+
+. /opt/mesosphere/active/mesos-buildenv/activate
+
+pushd /pkg/src/mesos-module-dvdi/isolator
+./bootstrap
+
+mkdir -p build
+pushd build
+"/pkg/src/mesos-module-dvdi/isolator/configure" \
+  --prefix="$PKG_PATH" \
+  --with-mesos-root=/pkg/src/mesos \
+  --with-mesos-build-dir=/pkg/src/mesos/build \
+  --with-protobuf=/opt/mesosphere/active/mesos-buildenv
+
+make install
+popd
+popd
+
+
+tar -xf /pkg/src/dvdcli/* -C $PKG_PATH/bin/

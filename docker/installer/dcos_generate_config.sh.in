@@ -19,9 +19,13 @@ if [ ! -d genconf/state ]; then
 fi
 
 PORT=${{PORT:-9000}}
-trap 'docker kill {genconf_tar}' HUP INT TERM
+DCOS_INSTALLER_DAEMONIZE=${{DCOS_INSTALLER_DAEMONIZE:-false}}
 
-setsid docker run --rm=true --name={genconf_tar} -i -p $PORT:9000 -v $(pwd)/genconf/:/genconf {docker_image_name} "$@" &
-
+if [ "$DCOS_INSTALLER_DAEMONIZE" == "true" ]; then
+    docker run --name={genconf_tar} -d -p $PORT:9000 -v $(pwd)/genconf/:/genconf {docker_image_name} "$@"
+else
+    trap 'docker kill {genconf_tar}' HUP QUIT INT TERM
+    setsid docker run --rm=true --name={genconf_tar} -i -p $PORT:9000 -v $(pwd)/genconf/:/genconf {docker_image_name} "$@" &
+fi
 wait $!
 exit $?

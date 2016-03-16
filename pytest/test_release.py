@@ -494,12 +494,15 @@ def mock_do_build_packages(cache_repository_url, skip_build):
     write_string("packages/bootstrap_id.bootstrap.tar.xz", "bootstrap_contents")
     write_json("packages/bootstrap_id.active.json", ['a--b', 'c--d'])
     write_string("packages/bootstrap.latest", "bootstrap_id")
-    write_string("packages/installer.bootstrap.latest", "bootstrap_id")
+    write_string("packages/installer.bootstrap.latest", "installer_bootstrap_id")
     write_json("packages/installer_bootstrap_id.active.json", ['c--d', 'e--f'])
+    write_string("packages/ee.installer.bootstrap.latest", "ee_installer_bootstrap_id")
+    write_json("packages/ee_installer_bootstrap_id.active.json", [])
 
     return {
         None: "bootstrap_id",
-        "installer": "installer_bootstrap_id"
+        "installer": "installer_bootstrap_id",
+        "ee.installer": "ee_installer_bootstrap_id"
     }
 
 
@@ -516,6 +519,12 @@ stable_artifacts_metadata = {
             'reproducible_path': 'packages/a/a--b.tar.xz'},
         {'local_path': 'packages/c/c--d.tar.xz',
             'reproducible_path': 'packages/c/c--d.tar.xz'},
+        {'local_path': 'packages/ee_installer_bootstrap_id.bootstrap.tar.xz',
+         'reproducible_path': 'bootstrap/ee_installer_bootstrap_id.bootstrap.tar.xz'},
+        {'local_path': 'packages/ee_installer_bootstrap_id.active.json',
+         'reproducible_path': 'bootstrap/ee_installer_bootstrap_id.active.json'},
+        {'channel_path': 'ee.installer.bootstrap.latest',
+         'local_path': 'packages/ee.installer.bootstrap.latest'},
         {'local_path': 'packages/installer_bootstrap_id.bootstrap.tar.xz',
             'reproducible_path': 'bootstrap/installer_bootstrap_id.bootstrap.tar.xz'},
         {'local_path': 'packages/installer_bootstrap_id.active.json',
@@ -529,7 +538,8 @@ stable_artifacts_metadata = {
     'bootstrap_dict': {None: "bootstrap_id"},
     'all_bootstraps': {
         None: "bootstrap_id",
-        "installer": "installer_bootstrap_id"}}
+        "installer": "installer_bootstrap_id",
+        "ee.installer": "ee_installer_bootstrap_id"}}
 
 
 # TODO(cmaloney): Add test for do_build_packages returning multiple bootstraps

@@ -1,0 +1,17 @@
+{
+  "docker": "node:4.2.6",
+  "sources": {
+    "dcos-installer-ui": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/dcos-installer-ui.git",
+      "ref": "44e095191c12cd4d20e7f5d15a7a59a35a738343",
+      "ref_origin": "master"
+    },
+    "dcos-installer-ui-plugins-private": {
+      "kind": "git",
+      "git": "git@github.com:mesosphere/dcos-installer-ui-plugins-private.git",
+      "ref": "348eb6899c6f5dfc587101a9ccd3a70bf5ff190f",
+      "ref_origin": "master"
+    }
+  }
+}

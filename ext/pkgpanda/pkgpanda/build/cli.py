@@ -73,7 +73,7 @@ def clean():
     cmd.volumes = {
         abspath(""): "/pkg/:rw",
     }
-    cmd.container = "ubuntu:14.04"
+    cmd.container = "ubuntu:14.04.4"
     cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
 
 
@@ -616,7 +616,7 @@ def build(variant, name, repository_url):
         buildinfo['extra_source'] = extra_id
 
     # Figure out the docker name.
-    docker_name = buildinfo.get('docker', 'ubuntu:14.04.2')
+    docker_name = buildinfo.get('docker', 'ubuntu:14.04.4')
     cmd.container = docker_name
 
     # Add the id of the docker build environment to the build_ids.

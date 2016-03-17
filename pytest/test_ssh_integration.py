@@ -80,8 +80,8 @@ def loop():
 
 def test_ssh_async(tmpdir, loop):
     class DummyAsyncDelegate(AbstractSSHLibDelegate):
-        def on_update(self, *args, **kwargs):
-            pass
+        def on_update(self, future, callback):
+            callback.set_result(True)
 
         def on_done(self, *args, **kwargs):
             pass

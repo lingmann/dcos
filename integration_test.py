@@ -315,7 +315,7 @@ class Cluster:
             },
         }, test_uuid
 
-    def deploy_marathon_app(self, app_definition, timeout=300, check_health=True):
+    def deploy_marathon_app(self, app_definition, timeout=300, check_health=True, ignore_failed_tasks=False):
         """Deploy an app to marathon
 
         This function deploys an an application and then waits for marathon to
@@ -357,8 +357,10 @@ class Cluster:
 
             data = r.json()
 
-            assert 'lastTaskFailure' not in data['app'], "Application " + \
-                'deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
+            if not ignore_failed_tasks:
+                assert 'lastTaskFailure' not in data['app'], (
+                    'Application deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
+                )
 
             if (
                 data['app']['tasksRunning'] == app_definition['instances'] and

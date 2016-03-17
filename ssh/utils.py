@@ -24,7 +24,7 @@ class CommandChain():
         self.namespace = namespace
 
     def add_execute(self, cmd, rollback=None, comment=None):
-        assert isinstance(cmd, list)
+        assert isinstance(cmd, list) or callable(cmd)
         self.commands_stack.append((self.execute_flag, cmd, rollback, comment))
 
     def add_copy(self, local_path, remote_path, remote_to_local=False, recursive=False, comment=None):

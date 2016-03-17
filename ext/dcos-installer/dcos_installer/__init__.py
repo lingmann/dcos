@@ -106,14 +106,15 @@ def try_genconf():
 
 
 def tall_enough_to_ride():
-    choices_true = ['Yes', 'yes', 'y']
-    choices_false = ['No', 'no', 'n']
+    choices_true = ['yes', 'y']
+    choices_false = ['no', 'n']
     while True:
-        do_uninstall = input(
-'This will uninstall DCOS on your cluster. You may need to manually remove /var/lib/zookeeper in some cases after this completes, please see our documentation for details. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')  # noqa
-        if do_uninstall in choices_true:
+        do_uninstall = input('This will uninstall DCOS on your cluster. You may need to manually remove '
+                             '/var/lib/zookeeper in some cases after this completes, please see our documentation '
+                             'for details. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')
+        if do_uninstall.lower() in choices_true:
             return True
-        elif do_uninstall in choices_false:
+        elif do_uninstall.lower() in choices_false:
             return False
         else:
             log.error('Choices are [y]es or [n]o. "{}" is not a choice'.format(do_uninstall))
@@ -154,15 +155,7 @@ class DcosInstaller:
             if options.deploy:
                 print_header("EXECUTING DCOS INSTALLATION")
                 check_config_validation()
-                deploy_returncode = 0
-                for role in ['master', 'agent']:
-                    def action(*args, **kwargs):
-                        return action_lib.install_dcos(*args, role=role, **kwargs)
-                    action.__name__ = 'deploy_{}'.format(role)
-                    stage_returncode = run_loop(action, options)
-                    if stage_returncode != 0:
-                        deploy_returncode = 1
-                sys.exit(deploy_returncode)
+                sys.exit(run_loop(action_lib.install_dcos, options))
 
             if options.postflight:
                 check_config_validation()

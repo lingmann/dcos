@@ -1,5 +1,3 @@
-import asyncio
-
 import aiohttp
 from dcos_installer.async_server import app
 from webtest_aiohttp import TestApp
@@ -143,60 +141,6 @@ def action_action_name(route):
 
 
 def action_side_effect_return_config(arg):
-    if arg == 'deploy_master':
-        return {
-            "hosts": {
-                "10.33.2.21:22": {
-                    "host_status": "failed",
-                    "commands": [
-                        {
-                            "date": "2016-01-22 21:10:41.316282",
-                            "returncode": 255,
-                            "cmd": [
-                                'cmd1'
-                            ],
-                            "stderr": [
-                                ""
-                            ],
-                            "stdout": [
-                                ""
-                            ],
-                            "pid": 2259
-                        }
-                    ]
-                }
-            },
-            "chain_name": "deploy_master",
-            "total_hosts": 1,
-            "hosts_failed": 1
-        }
-    elif arg == 'deploy_agent':
-        return {
-            "hosts": {
-                "10.33.2.22:22": {
-                    "host_status": "success",
-                    "commands": [
-                        {
-                            "date": "2016-01-22 21:10:41.316282",
-                            "returncode": 0,
-                            "cmd": [
-                                'cmd2'
-                            ],
-                            "stderr": [
-                                ""
-                            ],
-                            "stdout": [
-                                ""
-                            ],
-                            "pid": 2260
-                        }
-                    ]
-                }
-            },
-            "chain_name": "deploy_agent",
-            "total_hosts": 1,
-            "hosts_success": 1
-        }
     return {
         arg: {
             'mock_config': True
@@ -263,54 +207,7 @@ def test_action_deploy(monkeypatch, mocker):
 
     mocked_read_json_state.side_effect = action_side_effect_return_config
     res = client.request(route, method='GET')
-    assert res.json == {
-        "hosts": {
-            "10.33.2.21:22": {
-                "host_status": "failed",
-                "commands": [
-                    {
-                        "date": "2016-01-22 21:10:41.316282",
-                        "returncode": 255,
-                        "cmd": [
-                            'cmd1'
-                        ],
-                        "stderr": [
-                            ""
-                        ],
-                        "stdout": [
-                            ""
-                        ],
-                        "pid": 2259
-                    }
-                ]
-            },
-            "10.33.2.22:22": {
-                "host_status": "success",
-                "commands": [
-                    {
-                        "date": "2016-01-22 21:10:41.316282",
-                        "returncode": 0,
-                        "cmd": [
-                            'cmd2'
-                        ],
-                        "stderr": [
-                            ""
-                        ],
-                        "stdout": [
-                            ""
-                        ],
-                        "pid": 2260
-                    }
-                ]
-                }
-        },
-        "chain_name": "deploy",
-        "total_hosts": 2,
-        "hosts_success": 1,
-        "hosts_failed": 1,
-        "total_masters": 1,
-        "total_agents": 1
-    }
+    assert res.json == {'deploy': {'mock_config': True}}
 
     mocked_read_json_state.side_effect = lambda x: {}
     res = client.request(route, method='GET')
@@ -367,7 +264,7 @@ def test_configure_type(monkeypatch, mocker):
             expected)
 
 
-def test_action_deploy_xxx(monkeypatch, mocker):
+def test_action_deploy_post(monkeypatch, mocker):
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
     monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
     route = '/api/v{}/action/deploy'.format(version)
@@ -375,17 +272,28 @@ def test_action_deploy_xxx(monkeypatch, mocker):
     mocked_read_json_state = mocker.patch('dcos_installer.async_server.read_json_state')
 
     mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
-    mocked_get_config.return_value = {"test": "config"}
+    mocked_get_config.return_value = {
+        'ssh_user': 'centos',
+        'master_list': ['127.0.0.1'],
+        'agent_list': ['127.0.0.2']
+    }
 
-    @asyncio.coroutine
-    def mock_coroutine(*args, **kwargs):
-        yield from asyncio.sleep(.1)
+    mocked_get_bootstrap_tarball = mocker.patch('dcos_installer.action_lib._get_bootstrap_tarball')
+    mocked_get_bootstrap_tarball.return_value = '123'
 
-    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
-    mocked_install_dcos.side_effect = mock_coroutine
+    mocked_add_copy_packages = mocker.patch('dcos_installer.action_lib._add_copy_packages')
 
     # Deploy should be already executed for action 'deploy'
-    mocked_read_json_state.side_effect = action_side_effect_return_config
+    mocked_read_json_state.side_effect = lambda arg: {
+        'hosts': {
+            '127.0.0.1': {
+                'host_status': 'success'
+            },
+            '127.0.0.2': {
+                'host_status': 'success'
+            }
+        }
+    }
     res = client.request(route, method='POST')
     assert res.json == {'status': 'deploy was already executed, skipping'}
 
@@ -393,44 +301,54 @@ def test_action_deploy_xxx(monkeypatch, mocker):
     mocked_read_json_state.side_effect = lambda arg: False
     res = client.request(route, method='POST')
     assert res.json == {'status': 'deploy started'}
+    assert mocked_add_copy_packages.call_count == 1
+
+
+def test_action_deploy_retry(monkeypatch, mocker):
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_cork', lambda s, v: True)
+    monkeypatch.setattr(aiohttp.parsers.StreamWriter, 'set_tcp_nodelay', lambda s, v: True)
+    route = '/api/v{}/action/deploy'.format(version)
+
+    mocked_read_json_state = mocker.patch('dcos_installer.async_server.read_json_state')
+
+    mocked_get_config = mocker.patch('dcos_installer.backend.get_config')
+    mocked_get_config.return_value = {
+        'ssh_user': 'centos',
+        'master_list': ['127.0.0.1'],
+        'agent_list': ['127.0.0.2']
+    }
+
+    mocked_get_bootstrap_tarball = mocker.patch('dcos_installer.action_lib._get_bootstrap_tarball')
+    mocked_get_bootstrap_tarball.return_value = '123'
+
+    mocked_add_copy_packages = mocker.patch('dcos_installer.action_lib._add_copy_packages')
+    mocked_remove_host = mocker.patch('dcos_installer.action_lib._remove_host')
+    mocked_read_state_file = mocker.patch('dcos_installer.action_lib._read_state_file')
 
     # Test retry
     def mocked_json_state(arg):
-        if arg == 'deploy':
-            return False
-
-        if arg == 'deploy_master':
-            return {
-                'hosts': {
-                    'master:22': {
-                        'host_status': 'failed'
-                    }
+        return {
+            'hosts': {
+                '127.0.0.1:22': {
+                    'host_status': 'failed'
+                },
+                '127.0.0.2:22022': {
+                    'host_status': 'success'
+                },
+                '127.0.0.3:22022': {
+                    'host_status': 'failed'
                 }
             }
-
-        if arg == 'deploy_agent':
-            return {
-                'hosts': {
-                    'agent:22': {
-                        'host_status': 'failed'
-                    }
-                }
-            }
-
-    mocked_install_dcos = mocker.patch('dcos_installer.action_lib.install_dcos')
-    mocked_install_dcos.side_effect = mock_coroutine
+        }
 
     mocked_read_json_state.side_effect = mocked_json_state
     res = client.post(route, params={'retry': 'true'}, content_type='application/x-www-form-urlencoded')
-    assert res.json == {'status': 'retried', 'details': {'deploy_agent': ['agent:22'], 'deploy_master': ['master:22']}}
-
-    assert mocked_install_dcos.call_count == 2
-
-    mocked_install_dcos.assert_any_call({'test': 'config'}, try_remove_stale_dcos=True, role='master', retry='true',
-                                        hosts=['master:22'], state_json_dir='/genconf/state')
-
-    mocked_install_dcos.assert_any_call({'test': 'config'}, try_remove_stale_dcos=True, role='agent', retry='true',
-                                        hosts=['agent:22'], state_json_dir='/genconf/state')
+    assert res.json == {'details': ['127.0.0.1:22', '127.0.0.3:22022'], 'status': 'retried'}
+    assert mocked_add_copy_packages.call_count == 1
+    mocked_remove_host.assert_any_call('/genconf/state/deploy.json', '127.0.0.3:22022')
+    mocked_remove_host.assert_any_call('/genconf/state/deploy.json', '127.0.0.1:22')
+    assert mocked_remove_host.call_count == 2
+    mocked_read_state_file.assert_called_with('/genconf/state/deploy.json')
 
 
 # def test_logs(monkeypatch):

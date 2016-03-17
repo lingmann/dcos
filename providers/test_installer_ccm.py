@@ -399,8 +399,8 @@ def main():
             ip_detect_script=ip_detect_script,
             ssh_user=ssh_user,
             ssh_key=ssh_key,
-            superuser='bootstrapuser',
-            su_passwd=installer.get_hashed_password('deleteme'),
+            superuser='testadmin',
+            su_passwd=installer.get_hashed_password('testpassword'),
             rexray_config=REXRAY_CONFIG)
 
     # Test install-prereqs. This may take up 15 minutes...

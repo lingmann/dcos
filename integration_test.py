@@ -193,7 +193,7 @@ class Cluster:
     def _authenticate(self):
         r = requests.post(
             self.dcos_uri + '/acs/api/v1/auth/login',
-            json={'uid': 'bootstrapuser', 'password': 'deleteme'}
+            json={'uid': 'testadmin', 'password': 'testpassword'}
             )
         assert r.status_code == 200
         self.superuser_auth_header = {

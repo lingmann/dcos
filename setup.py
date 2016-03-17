@@ -30,6 +30,7 @@ setup(
         'boto3',
         'botocore',
         'coloredlogs',
+        'docopt',
         'pyyaml',
         'pytest',
         'retrying'],

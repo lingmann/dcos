@@ -279,9 +279,7 @@ def test_tags_async(sshd_manager, loop):
 
         targets = []
         for _port in sshd_ports:
-            _host = Node('127.0.0.1:{}'.format(_port))
-            _host.add_tag({'tag1': 'test1'})
-            _host.add_tag({'tag2': 'test2'})
+            _host = Node('127.0.0.1:{}'.format(_port), {'tag1': 'test1', 'tag2': 'test2'})
             targets.append(_host)
         runner = MultiRunner(targets, ssh_user=getpass.getuser(),
                              ssh_key_path=workspace + '/host_key')
@@ -403,8 +401,7 @@ def test_memory_delegate_async(sshd_manager, loop):
                                                                                                **kwargs))
         nodes = []
         for port in sshd_ports:
-            node = Node('127.0.0.1:{}'.format(port))
-            node.add_tag({'custom_tag': 'my_tag'})
+            node = Node('127.0.0.1:{}'.format(port), {'custom_tag': 'my_tag'})
             nodes.append(node)
         runner = MultiRunner(nodes, ssh_user=getpass.getuser(), ssh_key_path=workspace + '/host_key',
                              async_delegate=memory_delegate)

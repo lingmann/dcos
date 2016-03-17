@@ -2,6 +2,7 @@
   "requires": [
     "boto",
     "python",
+    "python-docopt",
     "python-jinja2",
     "python-markupsafe",
     "python-passlib",

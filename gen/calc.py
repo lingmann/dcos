@@ -193,6 +193,7 @@ entry = {
         'dns_search': '',
         'superuser_username': '',
         'superuser_password_hash': '',
+        'auth_cookie_secure_flag': 'false',
         'mesos_dns_ip_sources': '["host", "netinfo"]',
         'rexray_config_method': 'empty',
     },

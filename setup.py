@@ -32,7 +32,6 @@ setup(
         'coloredlogs',
         'docopt',
         'pyyaml',
-        'pytest',
         'retrying'],
     entry_points={
         'console_scripts': [

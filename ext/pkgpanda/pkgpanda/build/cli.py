@@ -21,7 +21,6 @@ from os import getcwd, mkdir, umask
 from os.path import abspath, basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
-import requests.exceptions
 from docopt import docopt
 
 import pkgpanda.build.constants
@@ -30,7 +29,7 @@ from pkgpanda import Install, PackageId, Repository
 from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
 from pkgpanda.cli import add_to_repository
 from pkgpanda.constants import RESERVED_UNIT_NAMES
-from pkgpanda.exceptions import PackageError, ValidationError
+from pkgpanda.exceptions import FetchError, PackageError, ValidationError
 from pkgpanda.util import (check_forbidden_services, download, load_json, load_string, make_file, make_tar,
                            rewrite_symlinks, write_json, write_string)
 
@@ -225,7 +224,7 @@ def make_bootstrap_tarball(packages, variant, repository_url):
 
             print("Bootstrap already up to date, Not recreating. Downloaded from repository-url.")
             return mark_latest()
-        except requests.exceptions.HTTPError:
+        except FetchError:
             try:
                 os.remove(tmp_bootstrap)
             except:
@@ -234,7 +233,9 @@ def make_bootstrap_tarball(packages, variant, repository_url):
                 os.remove(tmp_active)
             except:
                 pass
+
             # Fall out and do the build since the command errored.
+            print("Unable to download from cache. Building.")
 
     print("Creating bootstrap tarball for variant {}".format(variant))
 
@@ -777,12 +778,14 @@ def build(variant, name, repository_url):
             check_call(["mkdir", "-p", "cache"])
             write_string(last_build_filename(variant), str(pkg_id))
             return pkg_path
-        except requests.exceptions.HTTPError:
+        except FetchError:
             try:
                 os.remove(tmp_filename)
             except:
                 pass
+
             # Fall out and do the build since the command errored.
+            print("Unable to download from cache. Proceeding to build")
 
     print("Building package {} with buildinfo: {}".format(
         pkg_id,

@@ -315,7 +315,7 @@ class Cluster:
             },
         }, test_uuid
 
-    def deploy_marathon_app(self, app_definition, timeout=300, check_health=True):
+    def deploy_marathon_app(self, app_definition, timeout=300, check_health=True, ignore_failed_tasks=False):
         """Deploy an app to marathon
 
         This function deploys an an application and then waits for marathon to
@@ -357,8 +357,10 @@ class Cluster:
 
             data = r.json()
 
-            assert 'lastTaskFailure' not in data['app'], "Application " + \
-                'deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
+            if not ignore_failed_tasks:
+                assert 'lastTaskFailure' not in data['app'], (
+                    'Application deployment failed, reason: {}'.format(data['app']['lastTaskFailure']['message'])
+                )
 
             if (
                 data['app']['tasksRunning'] == app_definition['instances'] and
@@ -949,11 +951,17 @@ def test_move_external_volume_to_new_agent(cluster):
         'constraints': [['hostname', 'LIKE', hosts[1]]],
     })
 
+    deploy_kwargs = {
+        'check_health': False,
+        # A volume might fail to attach because EC2. We can tolerate that and retry.
+        'ignore_failed_tasks': True,
+    }
+
     try:
-        cluster.deploy_marathon_app(write_app, check_health=False)
+        cluster.deploy_marathon_app(write_app, **deploy_kwargs)
         cluster.destroy_marathon_app(write_app['id'])
 
-        cluster.deploy_marathon_app(read_app, check_health=False)
+        cluster.deploy_marathon_app(read_app, **deploy_kwargs)
         cluster.destroy_marathon_app(read_app['id'])
     finally:
         try:

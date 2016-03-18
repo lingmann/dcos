@@ -951,11 +951,17 @@ def test_move_external_volume_to_new_agent(cluster):
         'constraints': [['hostname', 'LIKE', hosts[1]]],
     })
 
+    deploy_kwargs = {
+        'check_health': False,
+        # A volume might fail to attach because EC2. We can tolerate that and retry.
+        'ignore_failed_tasks': True,
+    }
+
     try:
-        cluster.deploy_marathon_app(write_app, check_health=False)
+        cluster.deploy_marathon_app(write_app, **deploy_kwargs)
         cluster.destroy_marathon_app(write_app['id'])
 
-        cluster.deploy_marathon_app(read_app, check_health=False)
+        cluster.deploy_marathon_app(read_app, **deploy_kwargs)
         cluster.destroy_marathon_app(read_app['id'])
     finally:
         try:

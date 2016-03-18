@@ -458,10 +458,10 @@
       "4","a","g","m","s","y","5","b","h","n","t","z"
     ],
     "storageAccountPrefixesCount": "[length(variables('storageAccountPrefixes'))]",
-    "storageAccountBaseName": "[concat(uniqueString(variables('masterEndpointDNSNamePrefix')), variables('orchestratorName'))]",
-    "agentStoragePublicAccountName": "[concat(uniqueString(variables('masterEndpointDNSNamePrefix')), 'agntpub')]",
-    "agentStoragePrivateAccountName": "[concat(uniqueString(variables('masterEndpointDNSNamePrefix')), 'agntpri')]",
-    "masterStorageAccountName": "[concat(variables('storageAccountBaseName'), '0')]",
+    "storageAccountBaseName": "[uniqueString(concat(variables('masterEndpointDNSNamePrefix'), resourceGroup().location, variables('orchestratorName')))]",
+    "agentStoragePublicAccountName": "[concat(variables('storageAccountBaseName'), 'agntpub')]",
+    "agentStoragePrivateAccountName": "[concat(variables('storageAccountBaseName'), 'agntpri')]",
+    "masterStorageAccountName": "[concat(variables('storageAccountBaseName'), 'mstr0')]",
     "omsStorageAccount": "none",
     "omsStorageAccountKey": "none",
     "clusterInstallParameters": "[concat(variables('masterCount'), ' ',variables('masterVMNamePrefix'), ' ',variables('masterFirstAddr'), ' ',variables('swarmEnabled'),' ',variables('marathonEnabled'),' ',variables('chronosEnabled'),' ',variables('omsStorageAccount'),' ',variables('omsStorageAccountKey'),' ', variables('adminUsername'),' ',variables('postInstallScriptURI'))]",
@@ -511,6 +511,9 @@
       "name": "[variables('masterStorageAccountName')]",
       "apiVersion": "2015-06-15",
       "location": "[variables('storageLocation')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
+      ],
       "properties": {
         "accountType": "[variables('vmSizesMap')[variables('masterVMSize')].storageAccountType]"
       }
@@ -830,6 +833,9 @@
       "name": "[variables('agentStoragePublicAccountName')]",
       "apiVersion": "2015-06-15",
       "location": "[variables('storageLocation')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
+      ],
       "properties": {
         "accountType": "[variables('vmSizesMap')[variables('agentVMSize')].storageAccountType]"
       }
@@ -1053,6 +1059,9 @@
       "name": "[concat(variables('storageAccountPrefixes')[mod(copyIndex(),variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(copyIndex(),variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),copyIndex())]",
       "apiVersion": "2015-06-15",
       "location": "[variables('storageLocation')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
+      ],
       "copy": {
         "name": "agentPrivateLoopNode",
         "count": "[variables('agentStorageAccountsCount')]"

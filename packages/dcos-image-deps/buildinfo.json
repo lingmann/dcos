@@ -23,6 +23,17 @@
       "url": "https://pypi.python.org/packages/py3/a/aiohttp_jinja2/aiohttp_jinja2-0.7.0-py3-none-any.whl",
       "sha1": "e5710a2a89210b3b0a804a18f00aa4023498dc38"
     },
+    "azure-common": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/sdk/a/azure-common/azure_common-1.0.0-py2.py3-none-any.whl",
+      "sha1": "fecf9143eba99f957141a8d519cc50d994191626"
+    },
+    "azure-nspkg": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/sdk/a/azure-nspkg/azure_nspkg-1.0.0-py2.py3-none-any.whl",
+      "sha1": "388d8454c7c487c1f810378579df1028e7847ee1"
+
+    },
     "azure-storage": {
       "kind": "url_extract",
       "url": "https://pypi.python.org/packages/source/a/azure-storage/azure-storage-0.30.0.zip",
@@ -47,6 +58,11 @@
       "kind": "url_extract",
       "url": "https://pypi.python.org/packages/source/d/docker-py/docker-py-1.7.2.tar.gz",
       "sha1": "bc4f33cac9d6ad13c41ac7ff3e76de30fef8c4cf"
+    },
+    "docutils": {
+      "kind": "url",
+      "url": "https://pypi.python.org/packages/3.4/d/docutils/docutils-0.12-py3-none-any.whl",
+      "sha1": "88749802f8d61883da36a5abfca171a4ae60cc71"
     },
     "humanfriendly": {
       "kind": "url_extract",

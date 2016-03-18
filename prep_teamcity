@@ -4,9 +4,6 @@
 # of CI
 #
 # Expects that it is being run inside of a virtual environment.
-#
-# A checkout of pkgpanda lives at `ext/pkgpanda`. To work on pkgpanda edit
-# that checkout.
 
 set -o errexit -o nounset -o pipefail
 
@@ -29,15 +26,12 @@ git -C ext/dcos-image checkout -qf `git rev-parse --verify HEAD^{commit}`
 pip install wheel
 
 # Download distro independent artifacts
-pip install --download wheelhouse --no-binary :all: ext/dcos-image/ext/pkgpanda
 pip install --download wheelhouse --no-binary :all: ext/dcos-image
 
 # Make the wheels, they will be output into the folder `wheelhouse` by default.
-pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image/ext/pkgpanda
 pip wheel --wheel-dir=wheelhouse --no-index --find-links=wheelhouse ext/dcos-image
 
 # Install the wheels
-pip install --no-index --find-links=wheelhouse pkgpanda
 pip install --no-index --find-links=wheelhouse dcos-image
 
 # Cleanup the checkout

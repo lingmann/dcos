@@ -1,5 +1,0 @@
-.tox
-*.egg-info
-__pycache__
-.idea
-.*.swp

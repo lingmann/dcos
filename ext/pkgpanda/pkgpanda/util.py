@@ -8,7 +8,7 @@ from subprocess import check_call
 
 import requests
 
-from pkgpanda.exceptions import ValidationError
+from pkgpanda.exceptions import FetchError, ValidationError
 
 
 def download(out_filename, url):
@@ -29,13 +29,18 @@ def download(out_filename, url):
                 for chunk in r.iter_content(chunk_size=4096):
                     f.write(chunk)
     except Exception as fetch_exception:
-        print("ERROR: Unable to fetch {}".format(url), fetch_exception)
+        rm_passed = False
+
+        # try / except so if remove fails we don't get an exception during an exception.
+        # Sets rm_passed to true so if this fails we can include a special error message in the
+        # FetchError
         try:
             os.remove(out_filename)
-        except Exception as cleanup_exception:
-            print("ERROR: Unable to remove temp file: {}. Future builds may have problems because of it.".format(
-                out_filename), cleanup_exception)
-        raise
+            rm_passed = True
+        except Exception:
+            pass
+
+        raise FetchError(url, out_filename, fetch_exception, rm_passed) from fetch_exception
 
 
 def extract_tarball(path, target):

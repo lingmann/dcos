@@ -31,11 +31,10 @@ from itertools import groupby
 from os import umask
 from subprocess import CalledProcessError, check_call
 
-import requests.exceptions
 from docopt import docopt
 
 from pkgpanda import Install, PackageId, Repository, requests_fetcher
-from pkgpanda.exceptions import PackageError, ValidationError
+from pkgpanda.exceptions import FetchError, PackageError, ValidationError
 from pkgpanda.util import extract_tarball, if_exists, load_json, load_string, write_string
 
 
@@ -336,7 +335,7 @@ def main():
             sys.stdout.flush()
             try:
                 repository.add(fetcher, pkg_id)
-            except requests.exceptions.HTTPError as ex:
+            except FetchError as ex:
                 print("\nUnable to fetch package {0}: {1}".format(pkg_id, ex))
                 sys.exit(1)
             sys.stdout.write("\rFetched: {0}\n".format(pkg_id))

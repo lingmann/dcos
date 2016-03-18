@@ -4,9 +4,9 @@
   "sources": {
     "exhibitor": {
       "kind": "git",
-      "git": "https://github.com/YuraTolochkevich/exhibitor.git",
-      "ref": "69eb6b084655e8c0dc531e0afcb6594070588660",
-      "ref_origin": "gce_support_new"
+      "git": "https://github.com/mesosphere/exhibitor.git",
+      "ref": "2b8e9031de69e01f2c2bad0a8289c56232df8bfe",
+      "ref_origin": "master"
     },
     "zookeeper": {
       "kind": "url_extract",

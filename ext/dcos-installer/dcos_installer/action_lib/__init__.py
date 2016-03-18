@@ -28,13 +28,11 @@ def run_preflight(config, pf_script_path='/genconf/serve/dcos_install.sh', block
         raise FileNotFoundError('genconf/serve/dcos_install.sh does not exist')
     targets = []
     for host in config['master_list']:
-        s = Node(host)
-        s.add_tag({'role': 'master'})
+        s = Node(host, {'role': 'master'})
         targets += [s]
 
     for host in config['agent_list']:
-        s = Node(host)
-        s.add_tag({'role': 'agent'})
+        s = Node(host, {'role': 'agent'})
         targets += [s]
 
     pf = get_async_runner(config, targets, async_delegate=async_delegate)
@@ -178,8 +176,7 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
 
     targets = []
     for host in default['hosts']:
-        s = Node(host)
-        s.add_tag(default['tags'])
+        s = Node(host, default['tags'])
         targets += [s]
 
     runner = get_async_runner(config, targets, async_delegate=async_delegate)
@@ -231,13 +228,11 @@ def run_postflight(config, dcos_diag=None, block=False, state_json_dir=None, asy
                    options=None):
     targets = []
     for host in config['master_list']:
-        s = Node(host)
-        s.add_tag({'role': 'master'})
+        s = Node(host, {'role': 'master'})
         targets += [s]
 
     for host in config['agent_list']:
-        s = Node(host)
-        s.add_tag({'role': 'agent'})
+        s = Node(host, {'role': 'agent'})
         targets += [s]
 
     pf = get_async_runner(config, targets, async_delegate=async_delegate)

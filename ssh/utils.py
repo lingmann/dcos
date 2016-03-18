@@ -151,9 +151,7 @@ class JsonDelegate(AbstractSSHLibDelegate):
                     }
 
                 if host_object.tags and 'tags' not in status_json['hosts'][host]:
-                    status_json['hosts'][host]['tags'] = {}
-                    for tag in host_object.tags:
-                        status_json['hosts'][host]['tags'].update(tag)
+                    status_json['hosts'][host]['tags'] = host_object.tags
 
                 # Update chain status to running if not other state found.
                 if 'host_status' not in status_json['hosts'][host]:

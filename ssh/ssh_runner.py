@@ -126,26 +126,12 @@ def save_logs(results, log_directory, log_postfix):
 
 
 class Node():
-    def __init__(self, host, tags=None):
-        if tags:
-            assert isinstance(tags, list)
-        if not tags:
-            tags = []
+    def __init__(self, host, tags=dict()):
+        assert isinstance(tags, dict)
         self.tags = tags
         self.host = parse_ip(host)
         self.ip = self.host['ip']
         self.port = self.host['port']
-
-    def add_tag(self, tag):
-        assert isinstance(tag, dict)
-        self.tags.append(tag)
-
-    def remove_tag(self, tag):
-        assert isinstance(tag, dict)
-        if tag not in self.tags:
-            return None
-        _index = self.tags.index(tag)
-        del self.tags[_index]
 
     def get_full_host(self):
         _host = self.host.copy()
@@ -153,7 +139,10 @@ class Node():
         return _host
 
     def __repr__(self):
-        return '{}:{} tags={}'.format(self.ip, self.port, self.tags)
+        return '{}:{} tags={}'.format(
+            self.ip,
+            self.port,
+            ','.join(['='.join(item) for item in sorted(self.tags, key=lambda x: x[0])]))
 
 
 def add_host(target):

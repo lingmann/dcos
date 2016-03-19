@@ -3,9 +3,7 @@
 import abc
 import json
 import os
-import stat
 import subprocess
-from contextlib import contextmanager
 
 import requests
 import yaml
@@ -13,9 +11,47 @@ from retrying import retry
 
 
 class AbstractDcosInstaller(metaclass=abc.ABCMeta):
+
+    def __init__(self):
+        self.offline_mode = False
+
+    def setup_remote(self, host, ssh_user, ssh_key_path, installer_path, download_url):
+        # Refresh ssh info
+        self.url = "http://{}:9000".format(host)
+        self.installer_path = installer_path
+        self.host = host
+        ssh_opts = [
+                '-i', ssh_key_path,
+                '-oConnectTimeout=10',
+                '-oStrictHostKeyChecking=no',
+                '-oUserKnownHostsFile=/dev/null',
+                '-oBatchMode=yes',
+                '-oPasswordAuthentication=no']
+
+        def ssh(cmd):
+            assert isinstance(cmd, list)
+            return ['/usr/bin/ssh']+ssh_opts+['{}@{}'.format(ssh_user, host)]+cmd
+
+        def scp(src, dst):
+            return ['/usr/bin/scp']+ssh_opts+[src, '{}@{}:{}'.format(ssh_user, host, dst)]
+
+        self.ssh = ssh
+        self.scp = scp
+        if download_url:
+            dir_name = os.path.dirname(self.installer_path)
+            if len(dir_name) > 0:
+                subprocess.check_call(self.ssh(['mkdir', '-p', dir_name]))
+
+            @retry
+            def curl_download():
+                # If it takes more than 5 minutes, it probably got hung
+                subprocess.check_call(self.ssh(['curl', '-s', '-m', '300', download_url, '>', self.installer_path]))
+
+            curl_download()
+
     def get_hashed_password(self, password):
         p = subprocess.Popen(
-                ["bash", self.installer_path, "--hash-password", password],
+                self.ssh(["bash", self.installer_path, "--hash-password", password]),
                 stdout=subprocess.PIPE)
         # there is a newline after the hash, so second to last split is hash
         passwd_hash = p.communicate()[0].decode('ascii').split('\n')[-2]
@@ -43,36 +79,19 @@ class AbstractDcosInstaller(metaclass=abc.ABCMeta):
 
 
 class DcosApiInstaller(AbstractDcosInstaller):
-    def __init__(self, port=9000, installer_path=None):
-        assert os.path.isfile(installer_path), "Not a file: {}".format(installer_path)
-        self.url = "http://0.0.0.0:{}".format(port)
-        self.installer_path = installer_path
-        self.process_handler = None
-        self.timeout = 900
-        self.offline_mode = False
 
-    @contextmanager
-    def run_web_server(self):
+    def start_web_server(self):
+        cmd = ['DCOS_INSTALLER_DAEMONIZE=true', 'bash', self.installer_path, '--web']
+        if self.offline_mode:
+            cmd.append('--offline')
+        subprocess.check_call(self.ssh(cmd))
+
         @retry(wait_fixed=1000, stop_max_delay=10000)
         def wait_for_up():
             assert requests.get(self.url).status_code == 200
             print("Webserver started")
 
-        cmd = ["bash", self.installer_path, "--web"]
-        if self.offline_mode:
-            cmd.append('--offline')
-        p = subprocess.Popen(cmd)
-        assert p.poll() is None, "Webserver failed to start!"
         wait_for_up()
-        yield
-        print("Stopping installer...")
-
-        @retry(wait_fixed=1000)
-        def wait_for_death():
-            p.terminate()
-            assert p.poll() is not None
-
-        wait_for_death()
 
     def genconf(
             self, master_list, agent_list, ssh_user, zk_host, ssh_key,
@@ -95,27 +114,26 @@ class DcosApiInstaller(AbstractDcosInstaller):
             AssertionError: "error" present in returned json keys when error
                 was not expected or vice versa
         """
-        with self.run_web_server():
-            headers = {'content-type': 'application/json'}
-            payload = {
-                "master_list": master_list,
-                "agent_list": agent_list,
-                "ssh_user": ssh_user,
-                "exhibitor_zk_hosts": zk_host,
-                "ssh_key": ssh_key,
-                'ip_detect_script': ip_detect_script,
-                "rexray_config": rexray_config}
-            if superuser:
-                payload["superuser_username"] = superuser
-            if su_passwd:
-                payload["superuser_password_hash"] = su_passwd
-            response = requests.post(self.url + '/api/v1/configure', headers=headers, data=json.dumps(payload))
-            assert response.status_code == 200
-            response_json_keys = list(response.json().keys())
-            if expect_errors:
-                assert "error" in response_json_keys
-            else:
-                assert "error" not in response_json_keys
+        headers = {'content-type': 'application/json'}
+        payload = {
+            'master_list': master_list,
+            'agent_list': agent_list,
+            'ssh_user': ssh_user,
+            'exhibitor_zk_hosts': zk_host,
+            'ssh_key': ssh_key,
+            'ip_detect_script': ip_detect_script,
+            'rexray_config': rexray_config}
+        if superuser:
+            payload["superuser_username"] = superuser
+        if su_passwd:
+            payload["superuser_password_hash"] = su_passwd
+        response = requests.post(self.url + '/api/v1/configure', headers=headers, data=json.dumps(payload))
+        assert response.status_code == 200
+        response_json_keys = list(response.json().keys())
+        if expect_errors:
+            assert "error" in response_json_keys
+        else:
+            assert "error" not in response_json_keys
 
     def install_prereqs(self, expect_errors=False):
         assert not self.offline_mode, "Install prereqs can only be run without --offline mode"
@@ -134,11 +152,10 @@ class DcosApiInstaller(AbstractDcosInstaller):
         """Args:
             action (str): one of 'preflight', 'deploy', 'postflight'
         """
-        with self.run_web_server():
-            self.start_action(action)
-            self.wait_for_check_action(
-                action=action, expect_errors=expect_errors,
-                wait=30000, stop_max_delay=900*1000)
+        self.start_action(action)
+        self.wait_for_check_action(
+            action=action, expect_errors=expect_errors,
+            wait=30000, stop_max_delay=900*1000)
 
     def wait_for_check_action(self, action, wait, stop_max_delay, expect_errors):
         """Retries method against API until returned data shows that all hosts
@@ -189,10 +206,6 @@ class DcosApiInstaller(AbstractDcosInstaller):
 
 
 class DcosCliInstaller(AbstractDcosInstaller):
-    def __init__(self, installer_path=None):
-        assert os.path.isfile(installer_path), "Not a file: {}".format(installer_path)
-        self.installer_path = installer_path
-
     def run_cli_cmd(self, mode, expect_errors=False):
         """Runs commands through the CLI
         NOTE: We use `bash` as a wrapper here to make it so dcos_generate_config.sh
@@ -208,7 +221,7 @@ class DcosCliInstaller(AbstractDcosInstaller):
                 -nonzero and expect_errors is False
         """
         cmd = ['bash', self.installer_path, mode]
-        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        p = subprocess.Popen(self.ssh(cmd), stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         out = p.communicate()[1].decode()
         if expect_errors:
             err_msg = "{} exited with error code {} (success), but expected an error.\nOutput: {}"
@@ -239,7 +252,6 @@ class DcosCliInstaller(AbstractDcosInstaller):
             AssertionError: "error" present in returned json keys when error
                 was not expected or vice versa
         """
-        rexray_config_filename = 'genconf/rexray.yaml'
         test_config = {
             'cluster_name': 'SSH Installed DCOS',
             'bootstrap_url': 'file:///opt/dcos_install_tmp',
@@ -253,20 +265,26 @@ class DcosCliInstaller(AbstractDcosInstaller):
             'agent_list': agent_list,
             'process_timeout': 900,
             'rexray_config_method': 'file',
-            'rexray_config_filename': rexray_config_filename}
+            'rexray_config_filename': 'genconf/rexray.yaml'}
         if superuser:
             test_config['superuser_username'] = superuser
         if su_passwd:
             test_config['superuser_password_hash'] = su_passwd
-        with open('genconf/config.yaml', 'w') as config_fh:
+        with open('config.yaml', 'w') as config_fh:
             config_fh.write(yaml.dump(test_config))
-        with open('genconf/ip-detect', 'w') as ip_detect_fh:
+        with open('ip-detect', 'w') as ip_detect_fh:
             ip_detect_fh.write(ip_detect_script)
-        with open('genconf/ssh_key', 'w') as key_fh:
+        with open('ssh_key', 'w') as key_fh:
             key_fh.write(ssh_key)
-        with open(rexray_config_filename, 'w') as rexray_fh:
+        with open('rexray.yaml', 'w') as rexray_fh:
             rexray_fh.write(rexray_config)
-        os.chmod("genconf/ssh_key", stat.S_IREAD | stat.S_IWRITE)
+        remote_dir = os.path.dirname(self.installer_path)
+        subprocess.check_call(self.ssh(['mkdir', '-p', os.path.join(remote_dir, 'genconf')]))
+        subprocess.check_call(self.scp('rexray.yaml', os.path.join(remote_dir, 'genconf/rexray.yaml')))
+        subprocess.check_call(self.scp('config.yaml', os.path.join(remote_dir, 'genconf/config.yaml')))
+        subprocess.check_call(self.scp('ip-detect', os.path.join(remote_dir, 'genconf/ip-detect')))
+        subprocess.check_call(self.scp('ssh_key', os.path.join(remote_dir, 'genconf/ssh_key')))
+        subprocess.check_call(self.ssh(['chmod', '600', os.path.join(remote_dir, 'genconf/ssh_key')]))
         self.run_cli_cmd('--genconf', expect_errors=expect_errors)
 
     def preflight(self, expect_errors=False):

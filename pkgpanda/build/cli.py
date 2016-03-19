@@ -11,7 +11,6 @@ Usage:
 """
 
 import copy
-import glob
 import json
 import os.path
 import shutil
@@ -537,9 +536,13 @@ def assert_no_duplicate_keys(lhs, rhs):
 
 
 def for_each_variant(fn, extension, extra_args):
+    extension = '.' + extension
+    # Find all the files which end in the extension. Remove the extension to get just the variant
+    variants = [sorted(filename[:-len(extension)] for filename in os.listdir() if filename.endswith(extension))]
+
+    # Do all named variants
     results = dict()
-    for filename in glob.glob("*." + extension):
-        variant = filename[:-len("." + extension)]
+    for variant in variants:
         results[variant] = fn(variant, *extra_args)
 
     # Always do the base variant

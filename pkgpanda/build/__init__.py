@@ -218,7 +218,7 @@ def fetch_git(src, git_uri):
     # do a git pull of everything.
     bare_folder = os.path.abspath("cache/{0}.git".format(src))
     if not os.path.exists(bare_folder):
-        check_call(["git", "clone", "--bare", "--progress", git_uri, bare_folder])
+        check_call(["git", "clone", "--mirror", "--progress", git_uri, bare_folder])
     else:
         check_call([
             "git",

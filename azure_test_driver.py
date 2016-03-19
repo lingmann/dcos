@@ -99,7 +99,7 @@ def run():
         json_pretty_print(deployment_response)
 
         @retry(wait_fixed=(5*1000),
-               stop_max_delay=(15*60*1000),
+               stop_max_delay=(30*60*1000),
                retry_on_exception=lambda x: isinstance(x, AssertionError))
         def poll_on_template_deploy_status(client):
             provisioning_state = client.get_template_deployment()['properties']['provisioningState']
@@ -143,7 +143,7 @@ def run():
 
         poll_location = delete_resource_group(client)
 
-        @retry(wait_fixed=(5*1000), stop_max_delay=(20*60*1000))
+        @retry(wait_fixed=(5*1000), stop_max_delay=(60*60*1000))
         def wait_for_delete(poll_location):
             r = client.status_delete_resource_group(poll_location)
             assert r.status_code == requests.codes.ok, "Timed out waiting for delete: {}".format(r.status_code)

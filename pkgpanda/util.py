@@ -11,7 +11,10 @@ import requests
 from pkgpanda.exceptions import FetchError, ValidationError
 
 
-def download(out_filename, url):
+def download(out_filename, url, work_dir):
+    assert os.path.isabs(work_dir)
+    work_dir = work_dir.rstrip('/')
+
     # Strip off whitespace to make it so scheme matching doesn't fail because
     # of simple user whitespace.
     url = url.strip()
@@ -19,8 +22,10 @@ def download(out_filename, url):
     # Handle file:// urls specially since requests doesn't know about them.
     try:
         if url.startswith('file://'):
-            abspath = os.path.abspath(url[len('file://'):])
-            shutil.copyfile(abspath, out_filename)
+            src_filename = url[len('file://'):]
+            if not os.path.isabs(src_filename):
+                src_filename = work_dir + '/' + src_filename
+            shutil.copyfile(src_filename, out_filename)
         else:
             # Download the file.
             with open(out_filename, "w+b") as f:

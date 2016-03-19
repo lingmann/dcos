@@ -153,22 +153,29 @@ def extract_archive(archive, dst_dir):
 # TODO(cmaloney): Restructure checkout_sources and fetch_sources so all
 # the code dealing with one particular kind of source is located
 # together rather than half in checkout_sources, half in fetch_sources.
-def checkout_sources(sources):
+def checkout_sources(sources, package_dir):
     """Checkout all the sources which are assumed to have been fetched
     already and live in the cache folder."""
+    assert not package_dir.endswith('/')
 
-    if os.path.exists("src"):
+    def pkg_abs(name):
+        return package_dir + '/' + name
+
+    src_dir = pkg_abs('src')
+    print("package_dir", package_dir, src_dir, "sources", sources)
+
+    if os.path.exists(src_dir):
         raise ValidationError(
             "'src' directory already exists, did you have a previous build? " +
             "Currently all builds must be from scratch. Support should be " +
-            "added for re-using a src directory when possible. src={}".format(os.path.abspath("src")))
-    os.mkdir("src")
+            "added for re-using a src directory when possible. src={}".format(src_dir))
+    os.mkdir(src_dir)
     for src, info in sources.items():
-        root = os.path.abspath("src/{0}".format(src))
+        root = pkg_abs('src/' + src)
         os.mkdir(root)
 
         if info['kind'] == 'git' or info['kind'] == 'git_local':
-            bare_folder = os.path.abspath("cache/{0}.git".format(src))
+            bare_folder = pkg_abs('cache/{}.git'.format(src))
 
             # Clone into `src/`.
             check_call(["git", "clone", "-q", bare_folder, root])
@@ -189,7 +196,7 @@ def checkout_sources(sources):
             for patcher in info.get('patches', []):
                 raise NotImplementedError()
         elif info['kind'] == 'url':
-            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+            cache_filename = get_filename(pkg_abs("cache"), info['url'])
 
             # Copy the file(s) into src/
             # TODO(cmaloney): Hardlink to save space?
@@ -197,7 +204,7 @@ def checkout_sources(sources):
             shutil.copyfile(cache_filename, filename)
         elif info['kind'] == 'url_extract':
             # Extract the files into src.
-            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+            cache_filename = get_filename(pkg_abs("cache"), info['url'])
             extract_archive(cache_filename, root)
         else:
             raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
@@ -213,10 +220,10 @@ def is_sha(sha_str):
         return False
 
 
-def fetch_git(src, git_uri):
+def fetch_git(package_dir, src, git_uri):
     # Do a git clone if the cache folder doesn't exist yet, otherwise
     # do a git pull of everything.
-    bare_folder = os.path.abspath("cache/{0}.git".format(src))
+    bare_folder = '{}/cache/{}.git'.format(package_dir, src)
     if not os.path.exists(bare_folder):
         check_call(["git", "clone", "--mirror", "--progress", git_uri, bare_folder])
     else:
@@ -240,9 +247,11 @@ def fetch_git(src, git_uri):
 
 
 # TODO(cmaloney): Validate sources has all expected fields...
-def fetch_sources(sources):
+def fetch_sources(sources, package_dir):
     """Fetch sources to the source cache."""
-    ids = dict()
+
+    def pkg_abs(name):
+        return package_dir + '/' + name
 
     def get_git_sha1(git_dir, git_ref, bare):
         try:
@@ -255,16 +264,18 @@ def fetch_sources(sources):
             raise ValidationError(
                 "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
 
+    ids = dict()
+
     # TODO(cmaloney): Update if already exists rather than hard-failing
     for src, info in sorted(sources.items()):
 
         # Stash directory for download reuse between builds.
-        cache_dir = os.path.abspath("cache")
+        cache_dir = pkg_abs("cache")
         if not os.path.exists(cache_dir):
             os.mkdir(cache_dir)
 
         if info['kind'] == 'git':
-            bare_folder = fetch_git(src, info['git'])
+            bare_folder = fetch_git(package_dir, src, info['git'])
 
             if 'branch' in info:
                 raise ValidationError("Use of 'branch' field has been removed. Please replace with 'ref'")
@@ -307,7 +318,7 @@ def fetch_sources(sources):
                                       "when used with git_local. Using a relative path means others "
                                       "that clone the repository will have things just work rather "
                                       "than a path.")
-            src_repo_path = os.path.abspath(info['rel_path']).rstrip('/')
+            src_repo_path = os.path.normpath(pkg_abs(info['rel_path'])).rstrip('/')
 
             # Make sure there are no local changes, we can't `git clone` local changes.
             try:
@@ -344,14 +355,14 @@ def fetch_sources(sources):
             }
 
             # Clone to the bare folder so checkout_sources will work
-            fetch_git(src, src_repo_path)
+            fetch_git(package_dir, src, src_repo_path)
 
         elif info['kind'] == 'url' or info['kind'] == 'url_extract':
-            cache_filename = get_filename(os.path.abspath("cache"), info['url'])
+            cache_filename = get_filename(pkg_abs("cache"), info['url'])
 
             # if the file isn't downloaded yet, get it.
             if not os.path.exists(cache_filename):
-                download(cache_filename, info['url'])
+                download(cache_filename, info['url'], package_dir)
 
             # Validate the sha1 of the source is given and matches the sha1
             file_sha = sha1(cache_filename)

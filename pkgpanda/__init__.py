@@ -248,7 +248,7 @@ def validate_compatible(packages, roles):
 
 
 # TODO(cmaloney): Add a github fetcher, useful for grabbing config tarballs.
-def requests_fetcher(base_url, id_str, target):
+def requests_fetcher(base_url, id_str, target, work_dir):
     assert base_url
     assert type(id_str) == str
     id = PackageId(id_str)
@@ -260,7 +260,7 @@ def requests_fetcher(base_url, id_str, target):
     # TODO(cmaloney): Use a private tmp directory so there is no chance of a user
     # intercepting the tarball + other validation data locally.
     with tempfile.NamedTemporaryFile(suffix=".tar.xz") as file:
-        download(file.name, url)
+        download(file.name, url, work_dir)
         extract_tarball(file.name, target)
 
 

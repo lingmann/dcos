@@ -17,7 +17,7 @@ import shutil
 import sys
 import tempfile
 from os import getcwd, mkdir, umask
-from os.path import abspath, basename, exists
+from os.path import basename, exists
 from subprocess import CalledProcessError, check_call, check_output
 
 from docopt import docopt
@@ -65,11 +65,11 @@ def get_docker_id(docker_name):
     return check_output(["docker", "inspect", "-f", "{{ .Id }}", docker_name]).decode('utf-8').strip()
 
 
-def clean():
+def clean(package_dir):
     # Run a docker container to remove src/ and result/
     cmd = DockerCmd()
     cmd.volumes = {
-        abspath(""): "/pkg/:rw",
+        package_dir: "/pkg/:rw",
     }
     cmd.container = "ubuntu:14.04.4"
     cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
@@ -81,7 +81,7 @@ def main():
 
     # Make a local repository for build dependencies
     if arguments['tree']:
-        build_tree(arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
+        build_tree(getcwd(), arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
         sys.exit(0)
 
     # Check for the 'build' file to verify this is a valid package directory.
@@ -94,11 +94,11 @@ def main():
 
     # Only clean in valid build locations (Why this is after buildinfo.json)
     if arguments['clean']:
-        clean()
+        clean(getcwd())
         sys.exit(0)
 
     # No command -> build package.
-    pkg_dict = build_package_variants(name, arguments['--repository-url'])
+    pkg_dict = build_package_variants(getcwd(), name, arguments['--repository-url'])
 
     print("Package variants available as:")
     for k, v in pkg_dict.items():
@@ -137,28 +137,23 @@ def load_buildinfo(path, variant):
     return load_config_variant(path, variant, 'buildinfo.json')
 
 
-def find_packages_fs():
+def find_packages_fs(packages_dir):
     # Treat the current directory as the base of a repository of packages.
     # The packages are in folders, each containing a buildinfo.json, build.
     # Load all the requires out of all the buildinfo.json variants and return
     # them.
-    start_dir = os.getcwd()
-
     packages = dict()
-    for name in os.listdir():
+    for name in os.listdir(packages_dir):
         if os.path.isdir(name):
             if not os.path.exists(os.path.join(name, "build")):
                 continue
 
             def get_requires(variant):
-                buildinfo = load_buildinfo(os.getcwd(), variant)
+                buildinfo = load_buildinfo(packages_dir + '/' + name, variant)
                 return {
                     'requires': buildinfo.get('requires', list())
                 }
-
-            os.chdir(start_dir + '/' + name)
-            variant_requires = for_each_variant(get_requires, "buildinfo.json", [])
-            os.chdir(start_dir)
+            variant_requires = for_each_variant(packages_dir + '/' + name, get_requires, "buildinfo.json", {})
 
             for variant, requires in variant_requires.items():
                 packages[(name, variant)] = requires
@@ -166,7 +161,7 @@ def find_packages_fs():
     return packages
 
 
-def make_bootstrap_tarball(packages, variant, repository_url):
+def make_bootstrap_tarball(packages_dir, packages, variant, repository_url):
     # Convert filenames to package ids
     pkg_ids = list()
     for pkg_path in packages:
@@ -213,9 +208,9 @@ def make_bootstrap_tarball(packages, variant, repository_url):
             active_url = repository_url + '/bootstrap/' + active_name
             print("Attempting to download", bootstrap_name, "from", bootstrap_url)
             # Normalize to no trailing slash for repository_url
-            download(tmp_bootstrap, bootstrap_url)
+            download(tmp_bootstrap, bootstrap_url, packages_dir)
             print("Attempting to download", active_name, "from", active_url)
-            download(tmp_active, active_url)
+            download(tmp_active, active_url, packages_dir)
 
             # Move into place
             os.rename(tmp_bootstrap, bootstrap_name)
@@ -285,8 +280,8 @@ def make_bootstrap_tarball(packages, variant, repository_url):
 ALLOWED_TREEINFO_KEYS = {'exclude', 'variants', 'core_package_list'}
 
 
-def get_tree_package_tuples(tree_variant, possible_packages, package_requires):
-    treeinfo = load_config_variant(os.getcwd(), tree_variant, 'treeinfo.json')
+def get_tree_package_tuples(packages_dir, tree_variant, possible_packages, package_requires):
+    treeinfo = load_config_variant(packages_dir, tree_variant, 'treeinfo.json')
 
     if treeinfo.keys() > ALLOWED_TREEINFO_KEYS:
         print("treeinfo can only include the keys {}. Found {}".format(ALLOWED_TREEINFO_KEYS, treeinfo.keys()))
@@ -410,8 +405,8 @@ def get_tree_package_tuples(tree_variant, possible_packages, package_requires):
     return package_tuples
 
 
-def build_tree(mkbootstrap, repository_url, tree_variant=None):
-    packages = find_packages_fs()
+def build_tree(packages_dir, mkbootstrap, repository_url, tree_variant):
+    packages = find_packages_fs(packages_dir)
 
     # Turn packages into the possible_packages dictionary
     possible_packages = dict()
@@ -483,36 +478,34 @@ def build_tree(mkbootstrap, repository_url, tree_variant=None):
             visit(pkg_tuple)
     else:
         # Build all the things needed for this variant and only this variant
-        for pkg_tuple in sorted(get_tree_package_tuples(tree_variant, possible_packages, packages), key=key_func):
+        all_tuples = get_tree_package_tuples(packages_dir, tree_variant, possible_packages, packages)
+        for pkg_tuple in sorted(all_tuples, key=key_func):
             if pkg_tuple in visited:
                 continue
             visit(pkg_tuple)
 
     built_packages = dict()
-    start_dir = os.getcwd()
     for name in build_order:
         print("Building: {}".format(name))
 
         # Run the build, store the built package path for later use.
-        os.chdir(start_dir + '/' + name)
         # TODO(cmaloney): Only build the requested variants, rather than all variants.
-        built_packages[name] = build_package_variants(name, repository_url)
-        os.chdir(start_dir)
+        built_packages[name] = build_package_variants(packages_dir + '/' + name, name, repository_url)
 
-    def make_bootstrap(bootstrap_variant):
-        print("Making bootstrap variant:", bootstrap_variant or "<default>")
+    def make_bootstrap(variant):
+        print("Making bootstrap variant:", variant or "<default>")
         package_paths = list()
-        for name, variant in get_tree_package_tuples(bootstrap_variant, possible_packages, packages):
-            package_paths.append(built_packages[name][variant])
+        for name, pkg_variant in get_tree_package_tuples(packages_dir, variant, possible_packages, packages):
+            package_paths.append(built_packages[name][pkg_variant])
 
         if mkbootstrap:
-            return make_bootstrap_tarball(list(sorted(package_paths)), bootstrap_variant, repository_url)
+            return make_bootstrap_tarball(packages_dir, list(sorted(package_paths)), variant, repository_url)
 
     # Make sure all treeinfos are satisfied and generate their bootstrap
     # tarballs if requested.
     # TODO(cmaloney): Allow distinguishing between "build all" and "build the default one".
     if tree_variant is None:
-        return for_each_variant(make_bootstrap, "treeinfo.json", [])
+        return for_each_variant(packages_dir, make_bootstrap, "treeinfo.json", {})
     else:
         return {
             tree_variant: make_bootstrap(tree_variant)
@@ -535,31 +528,47 @@ def assert_no_duplicate_keys(lhs, rhs):
         assert len(lhs.keys() & rhs.keys()) == 0
 
 
-def for_each_variant(fn, extension, extra_args):
+def for_each_variant(variant_dir, fn, extension, extra_kwargs):
     extension = '.' + extension
-    # Find all the files which end in the extension. Remove the extension to get just the variant
-    variants = [sorted(filename[:-len(extension)] for filename in os.listdir() if filename.endswith(extension))]
+    # Find all the files which end in the extension. Remove the extension to get just the variant. Include
+    # the None / default variant always
+    variants = []
+    for filename in os.listdir(variant_dir):
+        if not filename.endswith(extension):
+            continue
+
+        variants.append(filename[:-len(extension)])
 
     # Do all named variants
     results = dict()
     for variant in variants:
-        results[variant] = fn(variant, *extra_args)
+        results[variant] = fn(variant=variant, **extra_kwargs)
 
     # Always do the base variant
-    results[None] = fn(None, *extra_args)
+    results[None] = fn(None, **extra_kwargs)
 
     return results
 
 
 # Find all build variants and build them
-def build_package_variants(name, repository_url):
-    return for_each_variant(build, "buildinfo.json", [name, repository_url])
+def build_package_variants(package_dir, name, repository_url):
+    return for_each_variant(
+        package_dir,
+        build,
+        "buildinfo.json",
+        {
+            "package_dir": package_dir,
+            "name": name,
+            "repository_url": repository_url})
 
 
-def build(variant, name, repository_url):
+def build(variant, package_dir, name, repository_url):
     print("Building package {} variant {}".format(name, variant or "<default>"))
     tmpdir = tempfile.TemporaryDirectory(prefix="pkgpanda_repo")
     repository = Repository(tmpdir.name)
+
+    def pkg_abs(name):
+        return package_dir + '/' + name
 
     # Build pkginfo over time, translating fields from buildinfo.
     pkginfo = {}
@@ -567,7 +576,7 @@ def build(variant, name, repository_url):
     # Build up the docker command arguments over time, translating fields as needed.
     cmd = DockerCmd()
 
-    buildinfo = load_buildinfo(os.getcwd(), variant)
+    buildinfo = load_buildinfo(package_dir, variant)
 
     if 'name' in buildinfo:
         print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
@@ -593,7 +602,7 @@ def build(variant, name, repository_url):
     print("Fetching sources")
     # Clone the repositories, apply patches as needed using the patch utilities.
     try:
-        checkout_ids = fetch_sources(sources)
+        checkout_ids = fetch_sources(sources, package_dir)
     except ValidationError as ex:
         print("ERROR: Validation error when fetching sources for package:", ex)
         sys.exit(1)
@@ -609,13 +618,14 @@ def build(variant, name, repository_url):
 
     # Add the sha1sum of the buildinfo.json + build file to the build ids
     build_ids = {"sources": checkout_ids}
-    build_ids['build'] = sha1("build")
+    build_ids['build'] = sha1(pkg_abs("build"))
     build_ids['pkgpanda_version'] = pkgpanda.build.constants.version
 
+    extra_dir = pkg_abs("extra")
     # Add the "extra" folder inside the package as an additional source if it
     # exists
-    if os.path.exists('extra'):
-        extra_id = pkgpanda.build.hash_folder('extra')
+    if os.path.exists(extra_dir):
+        extra_id = pkgpanda.build.hash_folder(extra_dir)
         build_ids['extra_source'] = extra_id
         buildinfo['extra_source'] = extra_id
 
@@ -684,8 +694,8 @@ def build(variant, name, repository_url):
 
             # Figure out the last build of the dependency, add that as the
             # fully expanded dependency.
-            pkg_dir = '../' + requires_name
-            last_build = pkg_dir + '/' + last_build_filename(requires_variant)
+            require_package_dir = os.path.normpath(pkg_abs('../' + requires_name))
+            last_build = require_package_dir + '/' + last_build_filename(requires_variant)
             if not os.path.exists(last_build):
                 print("ERROR: No last build file found for dependency",
                       requires_name, "variant", requires_variant,
@@ -695,11 +705,11 @@ def build(variant, name, repository_url):
             try:
                 pkg_id_str = load_string(last_build)
                 auto_deps.add(pkg_id_str)
-                pkg_buildinfo = load_buildinfo(pkg_dir, requires_variant)
+                pkg_buildinfo = load_buildinfo(require_package_dir, requires_variant)
                 pkg_requires = pkg_buildinfo.get('requires', list())
                 pkg_path = repository.package_path(pkg_id_str)
                 pkg_tar = pkg_id_str + '.tar.xz'
-                if not os.path.exists(pkg_dir + '/' + pkg_tar):
+                if not os.path.exists(require_package_dir + '/' + pkg_tar):
                     print("ERROR: The build tarball", pkg_tar, "refered to by",
                           "the last_build file of the dependency",
                           requires_name, "variant", requires_variant, "doesn't",
@@ -751,7 +761,7 @@ def build(variant, name, repository_url):
     buildinfo['variant'] = variant
 
     # If the package is already built, don't do anything.
-    pkg_path = abspath("{}.tar.xz".format(pkg_id))
+    pkg_path = pkg_abs("{}.tar.xz".format(pkg_id))
 
     # Done if it exists locally
     if exists(pkg_path):
@@ -759,8 +769,8 @@ def build(variant, name, repository_url):
 
         # TODO(cmaloney): Updating / filling last_build should be moved out of
         # the build function.
-        check_call(["mkdir", "-p", "cache"])
-        write_string(last_build_filename(variant), str(pkg_id))
+        check_call(["mkdir", "-p", pkg_abs("cache")])
+        write_string(pkg_abs(last_build_filename(variant)), str(pkg_id))
 
         return pkg_path
 
@@ -768,18 +778,18 @@ def build(variant, name, repository_url):
     if repository_url:
         tmp_filename = pkg_path + '.tmp'
         try:
-            url = repository_url + '/packages/{0}/{1}.tar.xz'.format(pkg_id.name, str(pkg_id))
-            print("Attempting to download", pkg_id, "from", url)
             # Normalize to no trailing slash for repository_url
             repository_url = repository_url.rstrip('/')
-            download(tmp_filename, url)
+            url = repository_url + '/packages/{0}/{1}.tar.xz'.format(pkg_id.name, str(pkg_id))
+            print("Attempting to download", pkg_id, "from", url)
+            download(tmp_filename, url, package_dir)
             os.rename(tmp_filename, pkg_path)
 
             print("Package up to date. Not re-building. Downloaded from repository-url.")
             # TODO(cmaloney): Updating / filling last_build should be moved out of
             # the build function.
-            check_call(["mkdir", "-p", "cache"])
-            write_string(last_build_filename(variant), str(pkg_id))
+            check_call(["mkdir", "-p", pkg_abs("cache")])
+            write_string(pkg_abs(last_build_filename(variant)), str(pkg_id))
             return pkg_path
         except FetchError:
             try:
@@ -795,12 +805,13 @@ def build(variant, name, repository_url):
         json.dumps(buildinfo, indent=2, sort_keys=True)))
 
     # Clean out src, result so later steps can use them freely for building.
-    clean()
+    clean(package_dir)
 
     # Only fresh builds are allowed which don't overlap existing artifacts.
-    if exists("result"):
+    result_dir = pkg_abs("result")
+    if exists(result_dir):
         print("result folder must not exist. It will be made when the package " +
-              "is built. {}".format(abspath("result")))
+              "is built. {}".format(result_dir))
         sys.exit(1)
 
     # 'mkpanda add' all implicit dependencies since we actually need to build.
@@ -808,11 +819,11 @@ def build(variant, name, repository_url):
         print("Auto-adding dependency: {}".format(dep))
         # NOTE: Not using the name pkg_id because that overrides the outer one.
         id_obj = PackageId(dep)
-        add_to_repository(repository, '../{0}/{1}.tar.xz'.format(id_obj.name, dep))
+        add_to_repository(repository, pkg_abs('../{0}/{1}.tar.xz'.format(id_obj.name, dep)))
         package = repository.load(dep)
         active_packages.append(package)
 
-    checkout_sources(sources)
+    checkout_sources(sources, package_dir)
 
     # Copy over environment settings
     if 'environment' in buildinfo:
@@ -836,13 +847,13 @@ def build(variant, name, repository_url):
     # TODO(cmaloney): Run as a specific non-root user, make it possible
     # for non-root to cleanup afterwards.
     # Run the build, prepping the environment as necessary.
-    mkdir("result")
+    mkdir(pkg_abs("result"))
 
     # Copy the build info to the resulting tarball
-    write_json("src/buildinfo.full.json", buildinfo)
-    write_json("result/buildinfo.full.json", buildinfo)
+    write_json(pkg_abs("src/buildinfo.full.json"), buildinfo)
+    write_json(pkg_abs("result/buildinfo.full.json"), buildinfo)
 
-    write_json("result/pkginfo.json", pkginfo)
+    write_json(pkg_abs("result/pkginfo.json"), pkginfo)
 
     # Make the folder for the package we are building. If docker does it, it
     # gets auto-created with root permissions and we can't actually delete it.
@@ -852,16 +863,16 @@ def build(variant, name, repository_url):
     # Source we checked out
     cmd.volumes.update({
         # TODO(cmaloney): src should be read only...
-        abspath("src"): "/pkg/src:rw",
+        pkg_abs("src"): "/pkg/src:rw",
         # The build script
-        abspath(buildinfo.get('build_script', 'build')): "/pkg/build:ro",
+        pkg_abs(buildinfo.get('build_script', 'build')): "/pkg/build:ro",
         # Getting the result out
-        abspath("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
+        pkg_abs("result"): "/opt/mesosphere/packages/{}:rw".format(pkg_id),
         install_dir: "/opt/mesosphere:ro"
     })
 
-    if os.path.exists("extra"):
-        cmd.volumes[abspath("extra")] = "/pkg/extra:ro"
+    if os.path.exists(extra_dir):
+        cmd.volumes[extra_dir] = "/pkg/extra:ro"
 
     cmd.environment = {
         "PKG_VERSION": version,
@@ -894,19 +905,19 @@ def build(variant, name, repository_url):
 
     # TODO(cmaloney): Updating / filling last_build should be moved out of
     # the build function.
-    check_call(["mkdir", "-p", "cache"])
-    write_string(last_build_filename(variant), str(pkg_id))
+    check_call(["mkdir", "-p", pkg_abs("cache")])
+    write_string(pkg_abs(last_build_filename(variant)), str(pkg_id))
 
     # Check for forbidden services before packaging the tarball:
     try:
-        check_forbidden_services(abspath("result"), RESERVED_UNIT_NAMES)
+        check_forbidden_services(pkg_abs("result"), RESERVED_UNIT_NAMES)
     except ValidationError as e:
         print("Package validation failed: {}".format(e))
         sys.exit(1)
 
     # Bundle the artifacts into the pkgpanda package
     tmp_name = pkg_path + "-tmp.tar.xz"
-    make_tar(tmp_name, "result")
+    make_tar(tmp_name, pkg_abs("result"))
     os.rename(tmp_name, pkg_path)
     print("Package built.")
     return pkg_path

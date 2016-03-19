@@ -35,10 +35,13 @@ def invoke_detect_ip():
             "inet_aton exited with {}. {} is not a valid IPv4 address".format(e, ip))
         sys.exit(1)
 
+java_home = get_var_assert_set('JAVA_HOME')
+
 # TODO(cmaloney): Move exhibitor_defaults to a temp runtime conf dir.
 # Base for building up the command line
 exhibitor_cmdline = [
     'java',
+    '-Xbootclasspath/a:' + java_home + '/lib/tools.jar',
     '-jar', '$PKG_PATH/usr/exhibitor/exhibitor.jar',
     '--port', '8181',
     '--defaultconfig', '/run/dcos_exhibitor/exhibitor_defaults.conf',

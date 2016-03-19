@@ -59,7 +59,7 @@ envsubst '$PKG_PATH' < /pkg/extra/dcos-mesos-slave-public.service > "$systemd_sl
 
 echo "Building dvdi"
 
-export ISOLATOR_VERSION=0.27.0
+export ISOLATOR_VERSION=0.28.0
 export LD_LIBRARY_PATH=/opt/mesosphere/lib
 
 . /opt/mesosphere/active/mesos-buildenv/activate

@@ -19,11 +19,11 @@
             "InstanceProtocol" : "TCP"
           }],
         "HealthCheck" : {
-          "Target" : "HTTP:80/",
+          "Target" : "HTTP:9090/_haproxy_health_check",
           "HealthyThreshold" : "2",
           "UnhealthyThreshold" : "2",
-          "Interval" : "30",
-          "Timeout" : "5"
+          "Interval" : "5",
+          "Timeout" : "2"
         }
       }
     },

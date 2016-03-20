@@ -241,9 +241,9 @@ def prep_hosts(ssh_runner, registry, minuteman_enabled=False):
     host_prep_chain.add_execute(['sudo', 'systemctl', 'restart', 'docker'])
     host_prep_chain.add_execute(['sudo', 'groupadd', '-g', '65500', 'nogroup'])
     host_prep_chain.add_execute(['sudo', 'usermod', '-aG', 'docker', 'centos'])
+    host_prep_chain.add_execute(['sudo', 'yum', 'install', '-y', 'ipset'])
 
     if minuteman_enabled:
-        host_prep_chain.add_execute(['sudo', 'yum', 'install', '-y', 'ipset'])
         host_prep_chain.add_execute(['sudo', 'mkdir', '-p', '/etc/mesosphere/roles'])
         host_prep_chain.add_execute(['sudo', 'touch', '/etc/mesosphere/roles/minuteman'])
 

@@ -104,6 +104,7 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         """
         arrays = ['master_list', 'resolvers', 'target_hosts']
         if self.overrides is not None and len(self.overrides) > 0:
+            no_config_write = ['ssh_key', 'ip_detect_script']
             for key, value in self.overrides.items():
                 if key == 'ssh_key':
                     self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
@@ -114,7 +115,9 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
                     self['rexray_config_filename'] = REXRAY_CONFIG_PATH
                     self.write_to_disk(value, REXRAY_CONFIG_PATH)
 
-                if key in arrays and value is None:
+                if key in no_config_write:
+                    pass
+                elif key in arrays and value is None:
                     log.warning("Overriding %s: %s -> %s", key, self[key], value)
                     self[key] = list(value)
                 else:

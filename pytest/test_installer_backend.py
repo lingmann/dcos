@@ -1,6 +1,19 @@
 import json
+import subprocess
+
+import passlib.hash
 
 from dcos_installer import backend
+
+
+def test_password_hash():
+    """Tests that the password hashing method creates de-cryptable hash
+    """
+    password = 'DcosTestingPassword!@#'
+    # only reads from STDOUT
+    hash_pw = subprocess.check_output(['dcos_installer', '--hash-password', password])
+    hash_pw = hash_pw.decode('ascii').strip('\n')
+    assert passlib.hash.sha512_crypt.verify(password, hash_pw), 'Hash does not match password'
 
 
 def test_good_create_config_from_post(tmpdir):

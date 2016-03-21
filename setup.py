@@ -31,6 +31,7 @@ setup(
         'botocore',
         'coloredlogs',
         'docopt',
+        'passlib',
         'pyyaml',
         'requests',
         'retrying'],

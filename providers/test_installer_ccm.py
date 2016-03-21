@@ -14,6 +14,7 @@ import stat
 import string
 import sys
 
+import passlib.hash
 import pkg_resources
 from retrying import retry
 
@@ -391,6 +392,9 @@ def main():
         ip_detect_script = ip_detect_fh.read()
     with open('ssh_key', 'r') as key_fh:
         ssh_key = key_fh.read()
+    test_pass = 'testpassword'
+    hash_passwd = installer.get_hashed_password(test_pass)
+    assert passlib.hash.sha512_crypt.verify(test_pass, hash_passwd), 'Hash does not match password'
     # use first node as zk backend, second node as master, all others as slaves
     installer.genconf(
             zk_host=host_list[0]+":2181",
@@ -400,7 +404,7 @@ def main():
             ssh_user=ssh_user,
             ssh_key=ssh_key,
             superuser='testadmin',
-            su_passwd=installer.get_hashed_password('testpassword'),
+            su_passwd=hash_passwd,
             rexray_config=REXRAY_CONFIG)
 
     # Test install-prereqs. This may take up 15 minutes...

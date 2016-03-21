@@ -10,14 +10,3 @@ service="$PKG_PATH/dcos.target.wants_master/dcos-mesos-dns.service"
 mkdir -p "$(dirname "$service")"
 cp /pkg/extra/dcos-mesos-dns.service "$service"
 
-resolvconf_service="$PKG_PATH/dcos.target.wants/dcos-gen-resolvconf.service"
-mkdir -p "$(dirname "$resolvconf_service")"
-cp /pkg/extra/dcos-gen-resolvconf.service "$resolvconf_service"
-
-resolvconf_timer="$PKG_PATH/dcos.target.wants/dcos-gen-resolvconf.timer"
-mkdir -p "$(dirname "$resolvconf_timer")"
-cp /pkg/extra/dcos-gen-resolvconf.timer "$resolvconf_timer"
-
-gen_resolvconf="$PKG_PATH/bin/gen_resolvconf.py"
-cp /pkg/extra/gen_resolvconf.py "$gen_resolvconf"
-chmod +x "$gen_resolvconf"

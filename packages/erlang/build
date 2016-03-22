@@ -10,3 +10,19 @@ pushd /pkg/src/erlang
 make -j8
 make install
 popd
+
+service=${PKG_PATH}/dcos.target.wants/dcos-epmd.service
+mkdir -p $(dirname $service)
+cat <<EOF > $service
+[Unit]
+Description=Erlang epmd process
+
+[Service]
+Restart=always
+StartLimitInterval=0
+RestartSec=5
+WorkingDirectory=${PKG_PATH}
+EnvironmentFile=/opt/mesosphere/environment
+ExecStart=${PKG_PATH}/bin/epmd -port 61420
+Environment=HOME=/opt/mesosphere
+EOF

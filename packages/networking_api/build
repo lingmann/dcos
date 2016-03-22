@@ -49,19 +49,18 @@ chmod 600 /tmp/ssh_key
 ssh-add /tmp/ssh_key
 
 
-pushd /pkg/src/minuteman
+pushd /pkg/src/networking_api
 make rel
 popd
 
-cp -r /pkg/src/minuteman/_build/prod/rel/minuteman ${PKG_PATH}
+cp -r /pkg/src/networking_api/_build/default/rel/networking_api ${PKG_PATH}
 
-service=${PKG_PATH}/dcos.target.wants/dcos-minuteman.service
+service=${PKG_PATH}/dcos.target.wants_master/dcos-networking_api.service
 mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
-Description=Minuteman
-Requires=dcos-gen-resolvconf.service
-After=dcos-gen-resolvconf.service
+Description=NetworkMetricAggregator
+After=dcos-mesos-dns.service
 After=dcos-epmd.service
 BindsTo=dcos-epmd.service
 
@@ -69,10 +68,8 @@ BindsTo=dcos-epmd.service
 Restart=always
 StartLimitInterval=0
 RestartSec=5
-WorkingDirectory=${PKG_PATH}/minuteman
+WorkingDirectory=${PKG_PATH}/networking_api
 EnvironmentFile=/opt/mesosphere/environment
-ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/mnesia
-ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/lashup
-ExecStart=${PKG_PATH}/minuteman/bin/env foreground
+ExecStart=${PKG_PATH}/networking_api/bin/env foreground
 Environment=HOME=/opt/mesosphere
 EOF

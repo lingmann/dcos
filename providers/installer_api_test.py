@@ -16,8 +16,10 @@ class AbstractDcosInstaller(metaclass=abc.ABCMeta):
     def get_hashed_password(self, password):
         p = subprocess.Popen(
                 ["bash", self.installer_path, "--hash-password", password],
-                stderr=subprocess.PIPE)
-        return p.communicate()[1].decode('utf-8').split("\n")[-2].strip('\x1b[0m')
+                stdout=subprocess.PIPE)
+        # there is a newline after the hash, so second to last split is hash
+        passwd_hash = p.communicate()[0].decode('ascii').split('\n')[-2]
+        return passwd_hash
 
     @abc.abstractmethod
     def genconf(self, expect_errors=False):

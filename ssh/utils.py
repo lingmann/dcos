@@ -3,29 +3,8 @@ import datetime
 import json
 import logging
 import os
-from threading import Timer
-
-from ssh.exceptions import ExecuteException
 
 log = logging.getLogger(__name__)
-
-
-def handle_command(command):
-    '''
-    A wrapper, checks command output.
-    :param command:
-    :raises: ExecuteException if command return code != 0
-    '''
-    failed = []
-    for output in command():
-        if output['stdout']:
-            log.info('\n'.join(output['stdout']))
-        if output['returncode'] != 0:
-            log.error(output)
-            failed.append(output)
-
-    if failed:
-        raise ExecuteException()
 
 
 class CommandChain():
@@ -164,65 +143,6 @@ class JsonDelegate(AbstractSSHLibDelegate):
         self._dump_json_state(name, status_json)
         if callback_called:
                 callback_called.set_result(True)
-
-
-def set_timer(state_dir, interval=10, invoke_func=None):
-    assert os.path.isdir(state_dir), 'state_dir should be a path to dump state files'
-    t = Timer(interval, invoke_func)
-    t.start()
-    return t
-
-
-class MemoryDelegate(JsonDelegate):
-    """
-    MemoryDelegate reuses JsonDelegate logic, overriding save/load logic
-    A state is stored self.state['chain_name']
-    """
-    def __init__(self, total_hosts=None, total_masters=None, total_agents=None, state_dir=None,
-                 trigger_states_func=set_timer):
-        self.total_hosts = total_hosts
-        self.total_agents = total_agents
-        self.total_masters = total_masters
-        self.state_dir = state_dir
-        self.state = {}
-        self.trigger_states_func = trigger_states_func
-        self.timer = None
-        self.set_up_trigger()
-
-    def set_up_trigger(self):
-        # If you want to change the default interval simply:
-        #
-        # from ssh.utils import set_timer
-        # md = MemoryDelegate(trigger_states_func=lambda *args, **kwargs: set_timer(*args, interval=1, **kwargs))
-        if not self.trigger_states_func:
-            log.warning('Json states will not be dumped to a disk.')
-            return None
-
-        def funcs():
-            self.dump_status_files()
-            self.set_up_trigger()
-
-        # Set timer only if user provided a directory to store states.
-        if self.state_dir and os.path.isdir(self.state_dir):
-            self.timer = self.trigger_states_func(self.state_dir, invoke_func=lambda: funcs())
-
-    def _read_json_state(self, name):
-        if name not in self.state:
-            self.state[name] = {}
-        return self.state.get(name)
-
-    def _dump_json_state(self, name, status_json):
-        # Hard copy status_json object
-        self.state[name] = status_json.copy()
-
-    def dump_status_files(self):
-        if not self.state_dir:
-            log.error('Cannot save state files, state_dir should be passed via constructor')
-            return False
-        for state, state_object in self.state.items():
-            with open(os.path.join(self.state_dir, '{}.json'.format(state)), 'w') as fh:
-                log.debug('Dumping {} to a dir {}'.format(state, self.state_dir))
-                json.dump(state_object, fh)
 
 
 class SyncCmdDelegate(AbstractSSHLibDelegate):

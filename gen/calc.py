@@ -175,6 +175,7 @@ def validate_zk_hosts(exhibitor_zk_hosts):
 def validate_zk_path(exhibitor_zk_path):
     assert exhibitor_zk_path.startswith('/'), "Must be of the form /path/to/znode"
 
+
 entry = {
     'validate': [
         validate_num_masters,

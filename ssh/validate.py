@@ -2,164 +2,91 @@ import os
 import socket
 import stat
 
-import ssh.ssh_runner
-from ssh.exceptions import ValidationException
 
-OWNERSHIP_BITMASK = 0b111111
+def validate_ssh_user(ssh_user):
+    assert ssh_user, 'ssh_user must be set'
+    assert isinstance(ssh_user, str), 'ssh_user must be a string'
 
 
-def is_valid_ipv4_address(address):
-    try:
-        socket.inet_pton(socket.AF_INET, address)
-    except AttributeError:  # no inet_pton here, sorry
+def validate_ssh_key_path(ssh_key_path):
+    assert isinstance(ssh_key_path, str), 'ssh_key_path must be a string'
+    assert ssh_key_path, 'ssh_key_path must be set'
+    assert os.path.isfile(ssh_key_path), 'could not find ssh private key: {}'.format(ssh_key_path)
+    assert stat.S_IMODE(
+        os.stat(ssh_key_path).st_mode) & (stat.S_IRWXG + stat.S_IRWXO) == 0, (
+            'ssh_key_path must be only read / write / executable by the owner. It may not be read / write / executable '
+            'by group, or other.')
+    with open(ssh_key_path) as fh:
+        assert 'ENCRYPTED' not in fh.read(), ('Encrypted SSH keys (which contain passphrases) '
+                                              'are not allowed. Use a key without a passphrase.')
+
+
+def validate_ssh_port(ssh_port):
+    # Validate ssh port between 1 - 32000
+    assert isinstance(ssh_port, int), 'ssh port should be integer'
+    assert 1 <= ssh_port <= 32000, 'ssh port should be int between 1 - 32000'
+
+
+def validate_hosts_list(agent_list):
+    assert agent_list, 'agent_list must be set'
+    assert isinstance(agent_list, list), 'agent_list must be a list'
+    assert len(agent_list) > 0, 'agent_list should have at least 1 entry'
+    check_duplicates(agent_list)
+    check_ipv4_addrs(agent_list)
+
+
+def validate_master_agent_lists(master_list, agent_list):
+    validate_hosts_list(master_list)
+    assert isinstance(agent_list, list), 'agent_list must be provided along with master_list'
+    assert len(agent_list) > 0, 'agent_list must have at least one entry'
+    compare_lists(master_list, agent_list)
+
+
+def check_duplicates(arg_list):
+    assert isinstance(arg_list, list), 'only lists can be verified for duplicates'
+    dups = list(filter(lambda x: arg_list.count(x) > 1, arg_list))
+    assert len(dups) == 0, 'List cannot contain duplicates: {}'.format(', '.join(set(dups)))
+
+
+def compare_lists(first_list, second_list):
+    assert isinstance(first_list, list), 'can compare only lists'
+    assert isinstance(second_list, list), 'can compare only lists'
+    dups = set(first_list) & set(second_list)
+    assert len(dups) == 0, 'master_list and agent_list cannot contain duplicates {}'.format(', '.join(dups))
+
+
+def check_ipv4_addrs(ips):
+    assert isinstance(ips, list)
+    invalid_ips = []
+    for ip in ips:
         try:
-            socket.inet_aton(address)
-        except socket.error:
-            return False
-        return address.count('.') == 3
-    except socket.error:  # not a valid address
-        return False
-    return True
+            socket.inet_pton(socket.AF_INET, str(ip))
+        except OSError:
+            invalid_ips.append(ip)
+    assert not len(invalid_ips), ('Only IPv4 values are allowed. The following are invalid IPv4 addresses: '
+                                  '{}'.format(invalid_ips))
 
 
-class ErrorsCollector():
-    def __init__(self, throw_if_errors=True):
-        self.errors = []
-        self.throw_if_errors = throw_if_errors
+def validate_config(config):
+    assert isinstance(config, dict)
 
-    def __enter__(self):
-        return self
+    ssh_keys_checks_map = {
+        'ssh_user': validate_ssh_user,
+        'ssh_port': validate_ssh_port,
+        'ssh_key_path': validate_ssh_key_path,
+        'agent_list': validate_hosts_list,
+        'master_list': lambda master_list: validate_master_agent_lists(master_list, config.get('agent_list'))
+    }
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        pass
+    errors = {}
+    for ssh_key, validate_func in ssh_keys_checks_map.items():
+        input_value = config.get(ssh_key)
+        if not input_value:
+            errors[ssh_key] = 'required parameter {} was not provided'.format(ssh_key)
+            continue
 
-    def validate(self):
-        if not self.errors:
-            return []
-        if not self.throw_if_errors:
-            return self.errors
-        raise ValidationException(self.errors)
-
-    def is_type(self, keys, cls, instance):
-        '''
-        Helper function to test a variable type.
-        :param keys: array of strings, each string is a property in cls
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param instance: type of object to test
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            if not isinstance(check_value, instance):
-                self.errors.append('{} must be {}'.format(key, instance.__name__))
-
-    def is_not_none(self, cls, keys):
-        '''
-        Test if variable is not None
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            if check_value is None:
-                self.errors.append('{} must not be None'.format(key))
-
-    def is_string(self, cls, keys):
-        '''
-        Test if variable is String
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        self.is_type(keys, cls, str)
-
-    def is_int(self, cls, keys):
-        '''
-        Test if variable is not Integer
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        self.is_type(keys, cls, int)
-
-    def is_list_not_empty(self, cls, keys):
-        '''
-        Test if variable keys are not an empty dict
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            if not check_value:
-                self.errors.append('{} list should not be empty'.format(key))
-
-    def is_file(self, cls, keys):
-        '''
-        Test if keys are valid file
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            error_msg = '{} file {} does not exist on filesystem'
-            try:
-                if not os.path.isfile(check_value):
-                    self.errors.append(error_msg.format(key, check_value))
-            except TypeError:
-                self.errors.append(error_msg.format(key, check_value))
-
-    def is_dir(self, cls, keys):
-        '''
-        Test if keys are valid directory
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            error_msg = '{} directory {} does not exist on filesystem'
-            try:
-                if not os.path.isdir(check_value):
-                    self.errors.append(error_msg.format(key, check_value))
-            except TypeError:
-                self.errors.append(error_msg.format(key, check_value))
-
-    def is_valid_ip(self, cls, keys):
-        '''
-        Test if keys are valid IPv4 address
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        '''
-        for key in keys:
-            for ip in getattr(cls, key):
-                ip = ssh.ssh_runner.parse_ip(ip)['ip']
-                if not is_valid_ipv4_address(ip):
-                    self.errors.append('{} is not a valid IPv4 address, field: {}'.format(ip, key))
-                    # cmaloney: I think we should actually hard-error on IPv6 addresses, at this point in time
-                    # (And for the forseeable future) Mesos is IPv4 only, and some of our software falls apart in
-                    # dual-stack environments (Although more of it works now than it used to).
-
-    def is_valid_private_key_permission(self, cls, keys, ssh_key_owner=None):
-        '''
-        Test if keys have valid provate key ownership and permission
-        :param cls: self instance of ssh_runner class, will be used to find keys with getattr()
-        :param keys: array of strings, each string is a property in cls
-        :param ssh_key_owner: assume default key owner is a current user, unless this parameter is specified
-        '''
-        for key in keys:
-            check_value = getattr(cls, key)
-            try:
-                os.stat(check_value).st_uid
-            except FileNotFoundError:
-                self.errors.append('No such file or directory: {}'.format(check_value))
-                continue
-            except TypeError:
-                self.errors.append('Cannot specify {} for path argument'.format(check_value))
-                continue
-
-            try:
-                with open(check_value, 'r') as key_fh:
-                    key_fh.read()
-            except PermissionError:
-                self.errors.append("Key is not readable by current user")
-
-            # OWNERSHIP_BITMASK is used to check that only owner permissions set
-            if os.stat(check_value).st_mode & OWNERSHIP_BITMASK > 0:
-                oct_permissions = oct(os.stat(check_value)[stat.ST_MODE])[-4:]
-                self.errors.append('permissions {} for {} are too open'.format(oct_permissions, check_value))
+        try:
+            validate_func(input_value)
+        except AssertionError as err:
+            errors[ssh_key] = str(err)
+    return errors

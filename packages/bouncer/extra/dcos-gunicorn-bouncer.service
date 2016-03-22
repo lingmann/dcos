@@ -5,6 +5,9 @@ Description=Bouncer (DCOS Access Control Service API provider)
 # startup entirely, whereas "just restart always" and catch things in the right
 # order will always get us to a working box eventually.
 # Before=dcos-adminrouter.service
+Requires=dcos-gen-resolvconf.service
+After=dcos-gen-resolvconf.service
+
 
 [Service]
 Type=simple
@@ -17,6 +20,7 @@ Environment=BOUNCER_PACKAGE_PATH=${PKG_PATH}
 EnvironmentFile=/opt/mesosphere/environment
 
 # Wait for ZK cluster to be up and running.
+ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 
 WorkingDirectory=${PKG_PATH}

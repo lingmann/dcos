@@ -1,7 +1,9 @@
 [Unit]
 Description=Update systemd-resolved for mesos-dns
+Requires=dcos-spartan.service
+
 [Service]
-Type=simple
+Type=oneshot
 StandardOutput=journal
 StandardError=journal
 EnvironmentFile=/etc/environment

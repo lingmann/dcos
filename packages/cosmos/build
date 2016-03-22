@@ -12,6 +12,9 @@ cat <<EOF > "$cosmos_service"
 [Unit]
 Description=Cosmos
 After=dcos-mesos-master.service
+Requires=dcos-gen-resolvconf.service
+After=dcos-gen-resolvconf.service
+
 [Service]
 Restart=always
 StartLimitInterval=0

@@ -256,7 +256,7 @@ def validate_exhibitor_storage_backend(key=None, config=None, optional=False):
     """
     if key in config:
         key = config[key]
-        options = ['zookeeper', 'aws_s3', 'shared_filesystem']
+        options = ['static', 'zookeeper', 'aws_s3', 'shared_filesystem']
         if key in options:
             return [True, 'exhibitor_storage_backend is valid.', optional]
 

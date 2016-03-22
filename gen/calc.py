@@ -176,6 +176,12 @@ def validate_zk_path(exhibitor_zk_path):
     assert exhibitor_zk_path.startswith('/'), "Must be of the form /path/to/znode"
 
 
+def calculate_exhibitor_static_ensemble(master_list):
+    masters = json.loads(master_list)
+    masters.sort()
+    return ','.join(['%d:%s' % (i+1, m) for i, m in enumerate(masters)])
+
+
 entry = {
     'validate': [
         validate_num_masters,
@@ -209,6 +215,7 @@ entry = {
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,
         'config_id': calculate_config_id,
+        'exhibitor_static_ensemble': calculate_exhibitor_static_ensemble,
     },
     'conditional': {
         'master_discovery': {

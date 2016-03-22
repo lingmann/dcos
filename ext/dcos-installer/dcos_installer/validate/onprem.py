@@ -54,7 +54,6 @@ def get_onprem_dependencies(config):
 
     dep_tree = {
         "master_list": helpers.validate_master_list('master_list', config),
-        "exhibitor_zk_hosts": helpers.validate_exhibitor_zk_hosts('exhibitor_zk_hosts', config, optional=True),
         "cluster_name": helpers.validate_string('cluster_name', config),
         "resolvers": helpers.validate_ip_list('resolvers', config, optional=True),
         "ssh_port": helpers.validate_port('ssh_port', config, optional=True),

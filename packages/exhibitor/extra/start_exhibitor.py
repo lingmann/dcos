@@ -65,7 +65,7 @@ zookeeper-install-directory=/opt/mesosphere/active/exhibitor/usr/zookeeper
 zookeeper-log-directory=/var/lib/zookeeper/transactions
 log-index-directory=/var/lib/zookeeper/transactions
 cleanup-period-ms=300000
-check-ms=30000
+check-ms=5000
 backup-period-ms=600000
 client-port=2181
 cleanup-max-files=20
@@ -138,6 +138,12 @@ elif exhibitor_backend == 'SHARED_FS':
     exhibitor_cmdline += [
         '--configtype=file',
         '--fsconfigdir', get_var_assert_set('EXHIBITOR_FSCONFIGDIR')
+    ]
+elif exhibitor_backend == 'STATIC':
+    print("Exhibitor configured for static ZK ensemble")
+    exhibitor_cmdline += [
+        '--configtype=static',
+        '--staticensemble', get_var_assert_set('EXHIBITOR_STATICENSEMBLE')
     ]
 else:
     print("ERROR: No known exhibitor backend:", exhibitor_backend)

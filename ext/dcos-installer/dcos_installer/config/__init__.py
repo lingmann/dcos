@@ -39,10 +39,8 @@ master_list:
 agent_list:
 -
 
-# The bootstrapping exhibitor hosts. Format is ip:port.
-exhibitor_zk_hosts:
-exhibitor_storage_backend: 'zookeeper'
-exhibitor_zk_path: '/dcos'
+# The bootstrapping exhibitor backend
+exhibitor_storage_backend: 'static'
 
 # Upstream DNS resolvers for MesosDNS
 resolvers:

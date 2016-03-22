@@ -130,7 +130,7 @@ def break_prereqs(ssh_runner):
     check_results(run_loop(ssh_runner, break_prereq_chain))
 
 
-def test_setup(ssh_runner, registry, remote_dir):
+def test_setup(ssh_runner, registry, remote_dir, use_zk_backend):
     """Transfer resources and issues commands on host to build test app,
     host it on a docker registry, and prepare the integration_test container
 
@@ -147,15 +147,15 @@ def test_setup(ssh_runner, registry, remote_dir):
     pytest_docker = pkg_filename('../docker/py.test/Dockerfile')
     test_script = pkg_filename('../integration_test.py')
     test_setup_chain = CommandChain('test_setup')
-    # First start bootstrap Zookeeper
-    test_setup_chain.add_execute([
-        'sudo', 'docker', 'run', '-d', '-p', '2181:2181', '-p', '2888:2888',
-        '-p', '3888:3888', 'jplock/zookeeper'])
-    # Create test application
+    if use_zk_backend:
+        test_setup_chain.add_execute([
+            'sudo', 'docker', 'run', '-d', '-p', '2181:2181', '-p', '2888:2888',
+            '-p', '3888:3888', 'jplock/zookeeper'])
 
     def remote(path):
         return remote_dir + '/' + path
 
+    # Create test application
     test_setup_chain.add_execute(['mkdir', '-p', remote('test_server')])
     test_setup_chain.add_copy(test_server_docker, remote('test_server/Dockerfile'))
     test_setup_chain.add_copy(test_server_script, remote('test_server/test_server.py'))
@@ -412,9 +412,14 @@ def main():
         ip_detect_script = ip_detect_fh.read()
     with open('ssh_key', 'r') as key_fh:
         ssh_key = key_fh.read()
-    # use first node as zk backend, second node as master, all others as slaves
+    # Using static exhibitor is the only option in the GUI installer
+    if options.use_api:
+        zk_host = None  # causes genconf to use static exhibitor backend
+    else:
+        zk_host = registry_host + ':2181'
+    # use first node as independent test/bootstrap node, second node as master, all others as slaves
     installer.genconf(
-            zk_host=registry_host+":2181",
+            zk_host=zk_host,
             master_list=master_list,
             agent_list=agent_list,
             ip_detect_script=ip_detect_script,
@@ -445,7 +450,7 @@ def main():
         # TODO: remove calls to both multiprocessing and asyncio
         # at time of writing block=False only supported for JSON delegates
         test_setup_handler = multiprocessing.Process(
-                target=test_setup, args=(test_host_runner, registry_host, remote_dir))
+                target=test_setup, args=(test_host_runner, registry_host, remote_dir, not options.use_api))
         # Wait for this to finish later as it is not required for deploy and preflight
         test_setup_handler.start()
 

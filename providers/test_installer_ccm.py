@@ -28,13 +28,6 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 
 DEFAULT_AWS_REGION = 'us-west-2'
 
-
-variant_config_generators = {
-    'default': 'dcos_generate_config.sh',
-    'ee': 'dcos_generate_config.ee.sh'
-}
-
-
 REXRAY_CONFIG = """
 rexray:
   loglevel: info
@@ -186,7 +179,7 @@ def test_setup(ssh_runner, registry, remote_dir):
 
 
 def integration_test(
-        ssh_runner, dcos_dns, master_list, slave_list, region, registry_host,
+        ssh_runner, dcos_dns, master_list, agent_list, region, registry_host,
         use_ee, test_minuteman, test_dns_search, ci_flags):
     """Runs integration test on host
     Note: check_results() will raise AssertionError if test fails
@@ -195,8 +188,8 @@ def integration_test(
         ssh_runner: instance of ssh.ssh_runner.MultiRunner
         dcos_dns: string representing IP of DCOS DNS host
         master_list: string of comma separated master addresses
-        slave_list: string of comma separated agent addresses
         region: string indicating AWS region in which cluster is running
+        agent_list: string of comma separated agent addresses
         registry_host: string for address where marathon can pull test app
         use_ee: if set to True then use 'ee' variant artifact, else use default
         test_minuteman: if set to True then test for minuteman service
@@ -214,9 +207,9 @@ def integration_test(
     run_test_chain.add_execute([
         'docker', 'run', '-v', '/home/centos/integration_test.py:/integration_test.py',
         '-e', 'DCOS_DNS_ADDRESS=http://'+dcos_dns,
-        '-e', 'MASTER_HOSTS='+master_list,
-        '-e', 'PUBLIC_MASTER_HOSTS='+master_list,
-        '-e', 'SLAVE_HOSTS='+slave_list,
+        '-e', 'MASTER_HOSTS='+','.join(master_list),
+        '-e', 'PUBLIC_MASTER_HOSTS='+','.join(master_list),
+        '-e', 'SLAVE_HOSTS='+','.join(agent_list),
         '-e', 'REGISTRY_HOST='+registry_host,
         '-e', 'DCOS_VARIANT='+variant,
         '-e', 'DNS_SEARCH='+dns_search,
@@ -299,16 +292,9 @@ def check_environment():
         AssertionError: if any environment variables or resources are missing
             or do not conform
     """
-    assert not os.path.exists("genconf"), "Remove old genconf directory before test!"
-    os.makedirs("genconf")
     options = type('Options', (object,), {})()
 
     options.variant = os.getenv('DCOS_VARIANT', 'default')
-
-    options.config_generator_path = variant_config_generators[options.variant]
-    err_msg = "Must have executable {} to run test!".format(options.config_generator_path)
-    assert os.path.exists(options.config_generator_path), err_msg
-    print("Using installer: {}".format(options.config_generator_path))
 
     if 'CCM_VPC_HOSTS' in os.environ:
         options.host_list = os.environ['CCM_VPC_HOSTS'].split(',')
@@ -318,6 +304,12 @@ def check_environment():
     if 'CCM_HOST_SETUP' in os.environ:
         assert os.environ['CCM_HOST_SETUP'] in ['true', 'false']
     options.do_setup = os.getenv('CCM_HOST_SETUP', 'true') == 'true'
+
+    if options.do_setup:
+        assert 'INSTALLER_URL' in os.environ, 'INSTALLER_URL must be set!'
+        options.installer_url = os.environ['INSTALLER_URL']
+    else:
+        options.installer_url = None
 
     if 'MINUTEMAN_ENABLED' in os.environ:
         assert os.environ['MINUTEMAN_ENABLED'] in ['true', 'false']
@@ -359,8 +351,6 @@ def main():
     # key must be chmod 600 for SSH lib to use
     os.chmod('ssh_key', stat.S_IREAD | stat.S_IWRITE)
 
-    print("VPC hosts: {}".format(host_list))
-    # use first node as zk backend, second node as master, all others as slaves
     # Create custom SSH Runnner to help orchestrate the test
     ssh_user = 'centos'
     ssh_key_path = 'ssh_key'
@@ -373,33 +363,60 @@ def main():
 
     all_host_runner = make_runner(host_list)
     test_host_runner = make_runner([host_list[0]])
+    dcos_host_runner = make_runner(host_list[1:])
 
     print('Checking that hosts are accessible')
     local_ip = get_local_addresses(all_host_runner, remote_dir)
+
+    print("VPC hosts: {}".format(host_list))
+    # use first node as bootstrap node, second node as master, all others as agents
     registry_host = local_ip[host_list[0]]
-    print("Registry/Test Host Local IP: {}".format(registry_host))
+    master_list = [local_ip[_] for _ in host_list[1:2]]
+    agent_list = [local_ip[_] for _ in host_list[2:]]
 
     if options.use_api:
-        installer = providers.installer_api_test.DcosApiInstaller(installer_path=options.config_generator_path)
+        installer = providers.installer_api_test.DcosApiInstaller()
         if not options.test_install_prereqs:
             # If we dont want to test the prereq install, use offline mode to avoid it
             installer.offline_mode = True
     else:
-        installer = providers.installer_api_test.DcosCliInstaller(installer_path=options.config_generator_path)
+        installer = providers.installer_api_test.DcosCliInstaller()
+
+    # If installer_url is not set, then no downloading occurs
+    installer.setup_remote(
+            host_list[0], ssh_user, ssh_key_path,
+            remote_dir+'/dcos_generate_config.sh',
+            download_url=options.installer_url)
+
+    if options.do_setup:
+        host_prep_chain = CommandChain('host_prep')
+        host_prep_chain.add_execute([
+            'sudo', 'sed', '-i',
+            "'/ExecStart=\/usr\/bin\/docker/ !b; s/$/ --insecure-registry={}:5000/'".format(registry_host),
+            '/etc/systemd/system/docker.service.d/execstart.conf'])
+        host_prep_chain.add_execute(['sudo', 'systemctl', 'daemon-reload'])
+        host_prep_chain.add_execute(['sudo', 'systemctl', 'restart', 'docker'])
+        host_prep_chain.add_execute(['sudo', 'usermod', '-aG', 'docker', 'centos'])
+        check_results(run_loop(test_host_runner, host_prep_chain))
+
+    # Retrieve and test the password hash before starting web server
+    test_pass = 'testpassword'
+    hash_passwd = installer.get_hashed_password(test_pass)
+    assert passlib.hash.sha512_crypt.verify(test_pass, hash_passwd), 'Hash does not match password'
+
+    if options.do_setup and options.use_api:
+        installer.start_web_server()
 
     print("Configuring install...")
     with open(pkg_filename("../scripts/ip-detect/aws.sh")) as ip_detect_fh:
         ip_detect_script = ip_detect_fh.read()
     with open('ssh_key', 'r') as key_fh:
         ssh_key = key_fh.read()
-    test_pass = 'testpassword'
-    hash_passwd = installer.get_hashed_password(test_pass)
-    assert passlib.hash.sha512_crypt.verify(test_pass, hash_passwd), 'Hash does not match password'
     # use first node as zk backend, second node as master, all others as slaves
     installer.genconf(
-            zk_host=host_list[0]+":2181",
-            master_list=host_list[1:2],
-            agent_list=host_list[2:],
+            zk_host=registry_host+":2181",
+            master_list=master_list,
+            agent_list=agent_list,
             ip_detect_script=ip_detect_script,
             ssh_user=ssh_user,
             ssh_key=ssh_key,
@@ -415,16 +432,15 @@ def main():
                 vpc.delete()
             sys.exit(0)
 
-    print("Making sure prereqs are broken...")
-    break_prereqs(all_host_runner)
-    print('Check that --preflight gives an error')
-    installer.preflight(expect_errors=True)
-
     test_setup_handler = None
     if options.do_setup:
+        print("Making sure prereqs are broken...")
+        break_prereqs(all_host_runner)
+        print('Check that --preflight gives an error')
+        installer.preflight(expect_errors=True)
         print("Prepping all hosts...")
-        prep_hosts(all_host_runner, registry=registry_host, minuteman_enabled=options.minuteman_enabled)
-        # This will start up the bootstrap ZK in BG
+        prep_hosts(dcos_host_runner, registry=registry_host, minuteman_enabled=options.minuteman_enabled)
+        # This will setup the integration test and its resources
         print('Setting up test node while deploy runs...')
         # TODO: remove calls to both multiprocessing and asyncio
         # at time of writing block=False only supported for JSON delegates
@@ -452,10 +468,10 @@ def main():
     # Runs dcos-image/integration_test.py inside the cluster
     integration_test(
         test_host_runner,
-        dcos_dns=local_ip[host_list[1]],
-        master_list=local_ip[host_list[1]],
-        slave_list=','.join([local_ip[_] for _ in host_list[2:]]),
         region=vpc.get_region() if vpc else DEFAULT_AWS_REGION,
+        dcos_dns=master_list[0],
+        master_list=master_list,
+        agent_list=agent_list,
         registry_host=registry_host,
         use_ee=True if options.variant == 'ee' else False,
         # Setting dns_search: mesos not currently supported in API

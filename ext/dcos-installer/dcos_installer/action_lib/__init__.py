@@ -348,6 +348,7 @@ sudo yum install -y git
 sudo yum install -y unzip
 sudo yum install -y curl
 sudo yum install -y xz
+sudo yum install -y ipset
 
 sudo getent group nogroup || sudo groupadd nogroup
 """

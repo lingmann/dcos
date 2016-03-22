@@ -60,15 +60,17 @@ mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
 Description=Minuteman
-After=dcos-mesos-dns.service
+Requires=dcos-gen-resolvconf.service
+After=dcos-gen-resolvconf.service
+
 [Service]
 Restart=always
 StartLimitInterval=0
 RestartSec=5
 WorkingDirectory=${PKG_PATH}/minuteman
 EnvironmentFile=/opt/mesosphere/environment
-ExecStartPre=mkdir -p /var/lib/dcos/minuteman/mnesia
-ExecStartPre=mkdir -p /var/lib/dcos/minuteman/lashup
+ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/mnesia
+ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/lashup
 ExecStart=${PKG_PATH}/minuteman/bin/env foreground
 Environment=HOME=/opt/mesosphere
 EOF

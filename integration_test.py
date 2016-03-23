@@ -121,8 +121,8 @@ class Cluster:
             return False
         data = r.json()
         num_slaves = len([x['hostname'] for x in data['slaves']])
-        # There is one slave on every master, as well as the slaves on each agent.
-        min_slaves = len(self.slaves) + len(self.masters)
+        # For single node setup there is only one slave node:
+        min_slaves = min(len(self.slaves), 2)
         if num_slaves >= min_slaves:
             msg = "Sufficient ({} >= {}) number of slaves have joined the cluster"
             logging.info(msg.format(num_slaves, min_slaves))
@@ -486,21 +486,7 @@ def test_if_all_Mesos_slaves_have_registered(cluster):
     data = r.json()
     slaves_ips = sorted(x['hostname'] for x in data['slaves'])
 
-    assert set(slaves_ips) == set(cluster.slaves + cluster.masters)
-
-    # Check that the registered slaves have the expected roles for their resources (*, master_agent)
-    for slave_info in data['slaves']:
-        if slave_info['hostname'] in cluster.slaves:
-            # Should be no reserved_Resources, all are pool resources
-            assert slave_info['reserved_resources'] == {}
-            assert slave_info['unreserved_resources']['cpus'] > 0
-        else:
-            # Agent on the master, should have all it's resources in reserved_resources under the
-            # master_agente role.
-            assert slave_info['hostname'] in cluster.masters
-
-            assert 'agent_master' in slave_info['reserved_resources']
-            assert slave_info['unreserved_resources']['cpus'] == 0
+    assert slaves_ips == cluster.slaves
 
 
 # Retry if returncode is False, do not retry on exceptions.

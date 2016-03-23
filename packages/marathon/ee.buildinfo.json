@@ -1,4 +1,5 @@
 {
+  "docker": "dcos-builder",
   "requires": ["java", "exhibitor"],
   "sources": {
     "marathon": {

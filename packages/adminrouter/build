@@ -73,6 +73,7 @@ PrivateDevices=yes
 StandardOutput=journal
 StandardError=journal
 ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStartPre=/bin/ping -c1 marathon.mesos
 ExecStart=$PKG_PATH/nginx/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT

@@ -48,7 +48,7 @@ class Node():
         return '{}:{} tags={}'.format(
             self.ip,
             self.port,
-            ','.join(['='.join(item) for item in sorted(self.tags, key=lambda x: x[0])]))
+            ', '.join(['{}:{}'.format(k, v) for k, v in sorted(self.tags.items())]))
 
 
 def add_host(target):
@@ -146,6 +146,11 @@ class MultiRunner():
         # command consists of (command_flag, command, rollback, comment)
         # we will ignore all but command for now
         _, cmd, _, _ = command
+
+        # we may lazy evaluate a command based on Node() class
+        if callable(cmd):
+            cmd = cmd(host)
+
         full_cmd = self._get_base_args(self.ssh_bin, host) + ['{}@{}'.format(self.ssh_user, host.ip)] + cmd
         log.debug('executing command {}'.format(full_cmd))
         result = yield from self.run_cmd_return_dict_async(full_cmd, host, namespace, future)
@@ -194,9 +199,12 @@ class MultiRunner():
             }
         }
         for command in chain.get_commands():
-            # command[-1] stands for comment
-            if command[-1] is not None:
-                log.debug('{}: {}'.format(host_port, command[-1]))
+            comment = command[-1]
+            if comment is not None:
+                # a comment can be a function which takes a Node() object and does evaluation
+                if callable(comment):
+                    comment = comment(host)
+                log.debug('{}: {}'.format(host_port, comment))
             future = asyncio.Future()
 
             if self.async_delegate is not None:

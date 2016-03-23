@@ -48,6 +48,7 @@ class PrettyPrint():
         return failed_data, success_data
 
     def print_data(self):
+        print_header('OUTPUT FOR {}'.format(self.stage_name))
         if len(self.failed_data) > 0:
             for host in self.failed_data:
                 for ip, data in host.items():
@@ -75,7 +76,7 @@ class PrettyPrint():
                     log.debug('')
 
     def print_summary(self):
-        print_header('SUMMARY')
+        print_header('SUMMARY FOR {}'.format(self.stage_name))
         total = len(self.fail_hosts) + len(self.success_hosts)
         err_msg = '{} out of {} hosts successfully completed {} stage.'
         log.warning(err_msg.format(len(self.success_hosts), total, self.stage_name))
@@ -83,6 +84,7 @@ class PrettyPrint():
             log.error('The following hosts had failures detected during {} stage:'.format(self.stage_name))
             for host in self.fail_hosts:
                 log.error('     {} failures detected.'.format(host))
+        print_header('END OF SUMMARY FOR {}'.format(self.stage_name))
 
     def color_preflight(self, host='NULL', rc=0, data_array=[]):
         """

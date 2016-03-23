@@ -7,7 +7,8 @@ import os
 import pkg_resources
 from aiohttp import web
 
-from dcos_installer import action_lib, backend
+import dcos_installer
+from dcos_installer import backend
 from dcos_installer.action_lib.prettyprint import print_header
 from dcos_installer.util import STATE_DIR
 
@@ -30,11 +31,9 @@ assets_path = '{}assets/'.format(ui_dist_path)
 
 # Action map is a dict that contains an action name and an action handler from action_lib.
 action_map = {
-    'preflight': action_lib.run_preflight,
-    'deploy_master': lambda *args, **kwargs: action_lib.install_dcos(*args, role='master', **kwargs),
-    'deploy_agent': lambda *args, **kwargs: action_lib.install_dcos(*args, role='agent', **kwargs),
-    'postflight': action_lib.run_postflight,
-    'deploy': ['deploy_master', 'deploy_agent']
+    'preflight': dcos_installer.action_lib.run_preflight,
+    'deploy': dcos_installer.action_lib.install_dcos,
+    'postflight': dcos_installer.action_lib.run_postflight,
 }
 
 remove_on_done = ['preflight', 'postflight']
@@ -107,29 +106,6 @@ def success(request):
     return web.json_response(backend.success())
 
 
-def _merge_json(result, data_json, original_action):
-    total_role = 'total_{}s'.format(original_action.split('_').pop())
-    if total_role not in result:
-        if 'total_hosts' in data_json:
-            result[total_role] = data_json['total_hosts']
-
-    for key, value in data_json.items():
-        # Increment ints
-        if isinstance(value, int):
-            value = result.get(key, 0) + value
-        elif isinstance(value, dict):
-            if key in result:
-                result[key].update(value)
-                continue
-            else:
-                result[key] = value
-        elif isinstance(value, str):
-            if value.startswith('deploy') and not value.endswith('deploy'):
-                value = 'deploy'
-
-        result.update({key: value})
-
-
 def unlink_state_file(action_name):
     json_status_file = STATE_DIR + '/{}.json'.format(action_name)
     if os.path.isfile(json_status_file):
@@ -159,23 +135,13 @@ def action_action_name(request):
     if request.method == 'GET':
         log.info('GET {}'.format(action_name))
 
-        action_key = action_map.get(action_name)
-        if isinstance(action_key, list):
-            # Deploy action consists of 2 json states: deploy_agent.json and deploy_master.json
-            # Use a _merge_json to unite both states into one common response.
-            result = {}
-            for action in action_key:
-                json_state = read_json_state(action)
-                if not json_state:
-                    return web.json_response({})
-                _merge_json(result, json_state, action)
-            return web.json_response(result)
         if json_state:
             return web.json_response(json_state)
         return web.json_response({})
 
     elif request.method == 'POST':
         log.info('POST {}'.format(action_name))
+        action = action_map.get(action_name)
         # If the action name is preflight, attempt to run configuration
         # generation. If genconf fails, present the UI with a usable error
         # for the end-user
@@ -190,11 +156,29 @@ def action_action_name(request):
                 return web.json_response(genconf_failure, status=400)
 
         params = yield from request.post()
+
         if json_state:
+            if action_name == 'deploy' and 'retry' in params:
+                if 'hosts' in json_state:
+                    failed_hosts = []
+                    for deploy_host, deploy_params in json_state['hosts'].items():
+                        if deploy_params['host_status'] != 'success':
+                            failed_hosts.append(deploy_host)
+                    log.debug('failed hosts: {}'.format(failed_hosts))
+                    if failed_hosts:
+                        yield from asyncio.async(
+                            action(
+                                backend.get_config(),
+                                state_json_dir=STATE_DIR,
+                                hosts=failed_hosts,
+                                try_remove_stale_dcos=True,
+                                **params))
+                        return web.json_response({'status': 'retried', 'details': sorted(failed_hosts)})
+
             if action_name not in remove_on_done:
                 return web.json_response({'status': '{} was already executed, skipping'.format(action_name)})
-            running = False
 
+            running = False
             for host, attributes in json_state['hosts'].items():
                 if attributes['host_status'].lower() == 'running':
                     running = True
@@ -205,44 +189,7 @@ def action_action_name(request):
             else:
                 unlink_state_file(action_name)
 
-        action = action_map.get(action_name)
-        if not action:
-            return web.json_response({'error': 'action {} not implemented'.format(action_name)})
-
-        failed_hosts = {}
-        if isinstance(action, list):
-            deploy_executed = False
-            for new_action_str in action:
-                new_json_state = read_json_state(new_action_str)
-                if new_json_state:
-                    deploy_executed = True
-
-            if deploy_executed:
-                for new_action_str in action:
-                    new_json_state = read_json_state(new_action_str)
-                    if 'retry' in params and params['retry'] == 'true':
-                        if 'hosts' in new_json_state:
-                            for deploy_host, deploy_params in new_json_state['hosts'].items():
-                                if deploy_params['host_status'] != 'success':
-                                    failed_hosts.setdefault(new_action_str, []).append(deploy_host)
-                            log.debug('failed hosts: {}'.format(failed_hosts))
-
-                if failed_hosts:
-                    for failed_host_action, failed_hosts_list in failed_hosts.items():
-                        new_action = action_map.get(failed_host_action)
-                        yield from asyncio.async(
-                            new_action(backend.get_config(), state_json_dir=STATE_DIR,
-                                       hosts=failed_hosts_list, try_remove_stale_dcos=True, **params))
-                    return web.json_response({'status': 'retried', 'details': failed_hosts})
-                else:
-                    return web.json_response({'status': 'deploy was already executed, skipping'})
-            else:
-                for new_action_str in action:
-                    print_header('EXECUTING {}'.format(new_action_str))
-                    new_action = action_map.get(new_action_str)
-                    yield from asyncio.async(new_action(backend.get_config(), state_json_dir=STATE_DIR, **params))
-        else:
-            yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, options=options, **params))
+        yield from asyncio.async(action(backend.get_config(), state_json_dir=STATE_DIR, options=options, **params))
         return web.json_response({'status': '{} started'.format(action_name)})
 
 

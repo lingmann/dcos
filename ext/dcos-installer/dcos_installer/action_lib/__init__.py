@@ -125,7 +125,7 @@ def _get_bootstrap_tarball(tarball_base_dir='/genconf/serve/bootstrap'):
 
 def _read_state_file(state_file):
     if not os.path.isfile(state_file):
-        return False
+        return {}
 
     with open(state_file) as fh:
         return json.load(fh)
@@ -152,36 +152,34 @@ def _remove_host(state_file, host):
 
 @asyncio.coroutine
 def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_delegate=None, try_remove_stale_dcos=False,
-                 **kwargs):
-    role = kwargs.get('role')
-    roles = {
+                 roles=None, **kwargs):
+    if roles is None:
+        roles = ['master', 'agent']
+
+    # Role specific parameters
+    role_params = {
         'master': {
-            'tags': {'role': 'master'},
-            'hosts': hosts if hosts else config['master_list'],
-            'chain_name': 'deploy_master',
-            'script_parameter': 'master',
-            'comment': 'INSTALLING DCOS ON MASTERS'
+            'tags': {'role': 'master', 'dcos_install_param': 'master'},
+            'hosts': hosts if hosts else config['master_list']
         },
         'agent': {
-            'tags': {'role': 'agent'},
-            'hosts': hosts if hosts else config['agent_list'],
-            'chain_name': 'deploy_agent',
-            'script_parameter': 'slave',
-            'comment': 'INSTALLING DCOS ON AGENTS'
+            'tags': {'role': 'agent', 'dcos_install_param': 'slave'},
+            'hosts': hosts if hosts else config['agent_list']
         }
     }
-    assert role in roles, 'Role must be: {}'.format(roles.keys())
-    default = roles.get(role)
 
     bootstrap_tarball = _get_bootstrap_tarball()
-    log.debug('Start deploying {}'.format(role))
+
     log.debug("Local bootstrap found: %s", bootstrap_tarball)
 
     targets = []
-    for host in default['hosts']:
-        s = Node(host, default['tags'])
-        targets += [s]
+    for role in roles:
+        default_params = role_params[role]
+        for host in default_params['hosts']:
+            node = Node(host, default_params['tags'])
+            targets += [node]
 
+    log.debug('Got {} hosts'.format(targets))
     runner = get_async_runner(config, targets, async_delegate=async_delegate)
     chains = []
     if try_remove_stale_dcos:
@@ -194,7 +192,7 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
         remove_dcos_chain.add_execute(['rm', '-rf', '/opt/mesosphere', '/etc/mesosphere'])
         chains.append(remove_dcos_chain)
 
-    chain = ssh.utils.CommandChain(default['chain_name'])
+    chain = ssh.utils.CommandChain('deploy')
     chains.append(chain)
 
     add_pre_action(chain, runner.ssh_user)
@@ -202,14 +200,21 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
     _add_copy_packages(chain)
     _add_copy_bootstap(chain, bootstrap_tarball)
 
-    chain.add_execute(['sudo', 'bash', '{}/dcos_install.sh'.format(REMOTE_TEMP_DIR), default['script_parameter']],
-                      comment=default['comment'])
+    chain.add_execute(
+        lambda node: (
+            'sudo bash {}/dcos_install.sh {}'.format(REMOTE_TEMP_DIR, node.tags['dcos_install_param'])).split(),
+        comment=lambda node: 'INSTALLING DCOS ON NODE {}, ROLE {}'.format(node.ip, node.tags['role'])
+    )
 
-    delegate_extra_params = {}
+    # UI expects total_masters, total_agents to be top level keys in deploy.json
+    delegate_extra_params = {
+        'total_masters': len(config['master_list']),
+        'total_agents': len(config['agent_list'])
+    }
     if kwargs.get('retry') and state_json_dir:
-        state_file_path = os.path.join(state_json_dir, '{}.json'.format(default['chain_name']))
-        log.debug('retry executed for a state file {}'.format(state_file_path))
-        for _host in default['hosts']:
+        state_file_path = os.path.join(state_json_dir, 'deploy.json')
+        log.debug('retry executed for a state file deploy.json')
+        for _host in hosts:
             _remove_host(state_file_path, _host)
 
         # We also need to update total number of hosts
@@ -217,7 +222,7 @@ def install_dcos(config, block=False, state_json_dir=None, hosts=[], async_deleg
         delegate_extra_params['total_hosts'] = json_state['total_hosts']
 
     # Setup the cleanup chain
-    cleanup_chain = ssh.utils.CommandChain('{}_cleanup'.format(default['chain_name']))
+    cleanup_chain = ssh.utils.CommandChain('deploy_cleanup')
     add_post_action(cleanup_chain)
     chains.append(cleanup_chain)
 

@@ -268,7 +268,7 @@ entry = {
                 'must': {'rexray_config_contents': yaml.dump(AWS_REXRAY_CONFIG)},
             },
             'empty': {
-                'must': {'rexray_config_contents': ''},
+                'must': {'rexray_config_contents': yaml.dump('')},
             },
         }
     }

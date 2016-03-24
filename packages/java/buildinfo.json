@@ -1,10 +1,17 @@
 {
-  "single_source" : {
-    "kind": "url_extract",
-    "url": "https://downloads.mesosphere.com/java/jdk-8u51-linux-x64.tar.gz",
-    "sha1": "da1fe118417180c374ba9446f2ea3b4206db2ed6"
+  "sources" : {
+    "jdk": {
+      "kind": "url_extract",
+      "url": "https://downloads.mesosphere.com/java/jdk-8u74-linux-x64.tar.gz",
+      "sha1": "25d468495c8d44f71233cf240560b9d2c681d5e4"
+    },
+    "jre": {
+      "kind": "url_extract",
+      "url": "https://downloads.mesosphere.com/java/jre-8u74-linux-x64.tar.gz",
+      "sha1": "35a63bebd873444b738160a652bd7e1b026d0902"
+    }
   },
   "environment": {
-    "JAVA_HOME": "/opt/mesosphere/active/java/usr/java"
+    "JAVA_HOME": "/opt/mesosphere/active/java/usr/jre"
   }
 }

@@ -1,6 +1,7 @@
 #!/bin/bash
 set -euo pipefail
 set -x
+WORKDIR=$(pwd)
 
 cleanup_vagrant_leftovers() {
   echo "Cleaning up Vagrant leftovers (if any)"
@@ -73,6 +74,7 @@ EOF
 cleanup_vagrant_leftovers
 
 echo "Starting Vagrant VMs"
+
 vagrant up boot m1 m2 m3 a1 a2
 
 # TODO(cmaloney): Configure insecure registry inside the dcos-vagrant cluster
@@ -91,7 +93,13 @@ docker build -t 127.0.0.1:5000/test_server -f ../../docker/test_server/Dockerfil
 # host insecure registry setting...
 vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:5000/test_server
 
+for i in boot m1 m2 m3 a1 a2; do
+  vagrant ssh $i -c 'sudo yum install -y ipset'
+done
+
 echo "Running integration test"
+set +e # So we can portentially capture the logs
+
 docker run -v $PWD/../../integration_test.py:/integration_test.py \
     -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
     -e MASTER_HOSTS=$MASTER_HOSTS \
@@ -103,13 +111,16 @@ docker run -v $PWD/../../integration_test.py:/integration_test.py \
     --net=host py.test py.test -vv -s -m "not minuteman and not ccm" ${CI_FLAGS:-} /integration_test.py
 RET=$?
 
+mkdir -p $WORKDIR/test/vagrant-logs
 if [ $RET -ne 0 ]; then
   echo "TEST FAILED"
+  for i in boot m1 m2 m3 a1 a2; do
+    vagrant ssh $i -c 'sudo journalctl -o short' > $WORKDIR/test/vagrant-logs/$i
+  done
   exit 1
 fi
 
 echo "Cleaning up vagrant"
-set +e
 vagrant destroy -f
 set -e
 

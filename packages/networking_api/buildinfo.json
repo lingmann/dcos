@@ -2,10 +2,10 @@
   "docker": "dcos-builder",
   "requires": ["openssl", "ncurses", "erlang"],
   "sources": {
-    "minuteman": {
+    "networking_api": {
       "kind": "git",
-      "git": "git@github.com:mesosphere/minuteman.git",
-      "ref": "63cfed81838e404e453924b4dc561e192f34d1a9",
+      "git": "git@github.com:mesosphere/networking-api-service.git",
+      "ref": "a89bab31e759dad974091bff5fd5980f08fbbc72",
       "ref_origin": "master"
     }
   }

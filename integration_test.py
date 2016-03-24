@@ -830,8 +830,9 @@ def test_if_we_have_capabilities(cluster):
     assert {'name': 'PACKAGE_MANAGEMENT'} in r.json()['capabilities']
 
 
-@pytest.mark.minuteman
-def test_if_minuteman_routes_to_vip(cluster):
+# By default telemetry-net sends the metrics about once a minute
+# Therefore, we wait up till 2 minutes and a bit before we give up
+def test_if_minuteman_routes_to_vip(cluster, timeout=125):
     """Test if we are able to connect to a task with a vip using minuteman.
     """
     # Launch the app and proxy
@@ -882,12 +883,39 @@ def test_if_minuteman_routes_to_vip(cluster):
 
     service_points = cluster.deploy_marathon_app(proxy_definition)
 
-    # Get the status
-    r = requests.get('http://{}:{}'.format(service_points[0].host,
-                                           service_points[0].port))
-    assert(r.ok)
-    data = r.text
-    assert 'imok' in data
+    def _ensure_routable():
+        r = requests.get('http://{}:{}'.format(service_points[0].host,
+                                               service_points[0].port))
+        assert(r.ok)
+        data = r.text
+        assert 'imok' in data
+
+    _ensure_routable()
+
+    @retrying.retry(wait_fixed=1000,
+                    stop_max_delay=timeout*1000,
+                    retry_on_result=lambda ret: ret is False,
+                    retry_on_exception=lambda x: False)
+    def _wait_for_networking_api_up():
+        try:
+            _ensure_routable()
+            r = cluster.get('/networking/api/v1/vips')
+            if r.status_code < 400 and len(r.json().get('array', [])) >= 1:
+                logging.info("Networking api is probably up")
+                return True
+            else:
+                msg = "Waiting for networking api, resp is: {}: {}"
+                logging.info(msg.format(r.status_code, r.text))
+                return False
+        except Exception as e:
+            logging.info("Failed to query networking api: {}".format(e))
+            return False
+
+    try:
+        _wait_for_networking_api_up()
+    except retrying.RetryError:
+        pytest.fail("Network api query failed - operation was not "
+                    "completed in {} seconds.".format(timeout))
 
 
 @pytest.mark.ccm

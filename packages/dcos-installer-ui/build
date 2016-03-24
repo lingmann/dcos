@@ -2,6 +2,10 @@
 cd "/pkg/src/dcos-installer-ui"
 npm install
 echo "module.exports = {};" > ./src/js/config/Config.dev.js
+if [ "$PKG_VARIANT" = "ee" ]; then
+  echo "module.exports = {pluginsConfig: {authentication: {enabled: true}}};" > ./src/js/config/Config.production.js
+fi
+
 npm run dist
 
 cp -r dist/ "$PKG_PATH"/usr

@@ -589,6 +589,7 @@ def make_stable_artifacts(cache_repository_url, skip_build):
     # so explicity remove installer here so people don't accidentally hit it.
     bootstrap_dict = copy.copy(all_bootstraps)
     del bootstrap_dict['installer']
+    del bootstrap_dict['ee.installer']
     metadata["bootstrap_dict"] = bootstrap_dict
     metadata["all_bootstraps"] = all_bootstraps
 
@@ -646,7 +647,7 @@ def make_stable_artifacts(cache_repository_url, skip_build):
 def make_channel_artifacts(metadata):
     artifacts = []
 
-    installers = build_installers(metadata['bootstrap_dict'], metadata['all_bootstraps']['installer'])
+    installers = build_installers(metadata['bootstrap_dict'], metadata['all_bootstraps'])
 
     artifacts.append({'channel_path': 'docker-tag', 'local_content': installers[None][0]})
     artifacts.append({'channel_path': 'docker-tag.txt', 'local_content': installers[None][0]})
@@ -815,7 +816,7 @@ def make_installer_docker(variant, bootstrap_id, installer_bootstrap_id):
     return image_version, installer_filename
 
 
-def build_installers(bootstrap_dict, installer_bootstrap_id):
+def build_installers(bootstrap_dict, all_bootstraps):
     """Create a installer script for each variant in bootstrap_dict.
 
     Writes a dcos_generate_config.<variant>.sh for each variant in
@@ -830,7 +831,9 @@ def build_installers(bootstrap_dict, installer_bootstrap_id):
     # Variants are sorted for stable ordering.
     for variant, bootstrap_id in sorted(bootstrap_dict.items(), key=lambda kv: util.variant_str(kv[0])):
         print("Building installer for variant:", util.variant_name(variant))
-        installers[variant] = make_installer_docker(variant, bootstrap_id, installer_bootstrap_id)
+        bootstrap_installer_name = '{}installer'.format(util.variant_prefix(variant))
+        bootstrap_installer_id = all_bootstraps[bootstrap_installer_name]
+        installers[variant] = make_installer_docker(variant, bootstrap_id, bootstrap_installer_id)
     return installers
 
 

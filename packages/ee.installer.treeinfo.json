@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "dcos-installer-ui": "ee"
+  },
+  "core_package_list": [
+    "dcos-image",
+    "dcos-installer",
+    "dcos-installer-ui"
+  ]
+}

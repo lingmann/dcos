@@ -19,13 +19,11 @@ import json
 import logging as log
 import os
 import os.path
-import sys
 from copy import copy, deepcopy
 from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import yaml
-from pkg_resources import resource_string
 
 import gen.calc
 import gen.template
@@ -361,62 +359,6 @@ def do_gen_package(config, package_filename):
         make_tar(package_filename, tmpdir)
 
     log.info("Package filename: %s", package_filename)
-
-
-def prompt_argument(non_interactive, name, can_calc=False, default=None, possible_values=None):
-    if non_interactive:
-        log.error("Unset variable in configuration: %s", name)
-        sys.exit(1)
-
-    while True:
-        default_str = ''
-        if default is not None:
-            # Validate default
-            if possible_values is not None:
-                assert default in possible_values
-            default_str = ' [{}]'.format(default)
-        elif can_calc:
-            default_str = ' <calculated>'
-
-        # Print key to desired input with possible defaults and type to be asserted
-        possible_values_str = ''
-        if possible_values:
-            possible_values_str = '{' + ",".join(possible_values) + '}'
-
-        descriptions = json.loads(resource_string(__name__, "descriptions.json"))
-
-        if name in descriptions:
-            print("")
-            print("Please provide values for: %s" % name)
-            print(descriptions[name])
-
-        value = input('{}{}{}: '.format(name, default_str, possible_values_str))
-
-        # Make sure value is one of the allowed values
-        if possible_values is not None and value not in possible_values:
-            log.error("Value not one of the possible values: %s", ','.join(possible_values))
-            continue
-
-        if value:
-            return value
-        if default:
-            return default
-        if can_calc:
-            return None
-
-        log.error("ERROR: Must provide a value")
-
-
-def prompt_arguments(can_set, defaults, can_calc):
-    arguments = dict()
-    for name in sorted(can_set):
-        result = prompt_argument(False, name, name in can_calc, defaults.get(name))
-
-        # Only if we got a value (Shouldn't calculate), set the argument.
-        if result is not None:
-            arguments[name] = result
-
-    return arguments
 
 
 def validate_arguments_strings(arguments):

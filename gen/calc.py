@@ -1,7 +1,5 @@
 import json
-import logging as log
 import os
-import sys
 from math import floor
 from subprocess import check_output
 
@@ -74,11 +72,8 @@ def calculate_mesos_dns_resolvers_str(resolvers):
 
 
 def calculate_ip_detect_contents(ip_detect_filename):
-    if os.path.exists(ip_detect_filename):
-        return yaml.dump(open(ip_detect_filename, encoding='utf-8').read())
-    else:
-        log.error("Ip-detect script: %s. Does not exist.", ip_detect_filename)
-        sys.exit(1)
+    assert os.path.exists(ip_detect_filename), "ip-detect script: {} must exist".format(ip_detect_filename)
+    return yaml.dump(open(ip_detect_filename, encoding='utf-8').read())
 
 
 def calculate_rexray_config_contents(rexray_config_filename):

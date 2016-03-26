@@ -4,6 +4,7 @@ MAINTAINER support+docker@mesosphere.io
 RUN apt-get -qq update && apt-get -y install \
   autoconf \
   automake \
+  cmake \
   make \
   gcc \
   cpp \

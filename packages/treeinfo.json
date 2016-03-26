@@ -2,7 +2,8 @@
   "exclude": [
     "bouncer",
     "dcos-installer",
-    "dcos-installer-ui"
+    "dcos-installer-ui",
+    "mesos-metrics-module"
   ]
 }
 

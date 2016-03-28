@@ -110,7 +110,7 @@ def validate_num_masters(num_masters):
 
 
 def validate_bootstrap_url(bootstrap_url):
-    assert len(bootstrap_url) > 1, "Must be more than one character"
+    assert len(bootstrap_url) > 1, "Should be a url (http://example.com/bar or file:///path/to/local/cache)"
     assert bootstrap_url[-1] != '/', "Must not end in a '/'"
 
 

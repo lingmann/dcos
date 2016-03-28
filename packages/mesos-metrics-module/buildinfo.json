@@ -1,0 +1,10 @@
+{
+  "requires": ["mesos-buildenv", "mesos", "boost-system"],
+  "docker": "dcos-builder",
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-stats.git",
+    "ref" : "7ce4fdd9477db1e6a3708aae99f57916915d0310",
+    "ref_origin": "master"
+  }
+}

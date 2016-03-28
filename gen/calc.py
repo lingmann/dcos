@@ -91,6 +91,20 @@ def calculate_gen_resolvconf_search(dns_search):
         return ""
 
 
+def calculate_mesos_hooks_env_var(mesos_hooks):
+    if mesos_hooks == '':
+        return ''
+    return 'MESOS_HOOKS=' + mesos_hooks
+
+
+def calculate_mesos_slave_modules_json(mesos_slave_modules):
+    # Ensure that this file is readable by humans by including newlines in the output.
+    json_multiline = json.dumps({"libraries": mesos_slave_modules}, indent=2)
+    # Preserve indentation in dcos-config.yaml's template by adding indentation to this content
+    injected_indent = 6 * ' '
+    return json_multiline.replace('\n', '\n' + injected_indent)
+
+
 def validate_num_masters(num_masters):
     assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
@@ -177,6 +191,67 @@ def calculate_exhibitor_static_ensemble(master_list):
     return ','.join(['%d:%s' % (i+1, m) for i, m in enumerate(masters)])
 
 
+__logrotate_slave_module_name = 'org_apache_mesos_LogrotateContainerLogger'
+__logrotate_slave_module = {
+    'file': '/opt/mesosphere/lib/liblogrotate_container_logger.so',
+    'modules': [{
+        'name': __logrotate_slave_module_name,
+        'parameters': [
+            {'key': 'launcher_dir', 'value': '/opt/mesosphere/active/mesos/libexec/mesos/'},
+            {'key': 'max_stdout_size', 'value': '2MB'},
+            {'key': 'logrotate_stdout_options', 'value': 'rotate 9'},
+            {'key': 'max_stderr_size', 'value': '2MB'},
+            {'key': 'logrotate_stderr_options', 'value': 'rotate 9'},
+        ]
+    }]
+}
+
+__dvdi_slave_module_name = 'com_emccode_mesos_DockerVolumeDriverIsolator'
+__dvdi_slave_module = {
+    'file': '/opt/mesosphere/lib/mesos/libmesos_dvdi_isolator.so',
+    'modules': [{
+        'name': __dvdi_slave_module_name,
+        'parameters': [
+            {'key': 'work_dir', 'value': '/var/lib/mesos/slave'},
+            {'key': 'dvdcli', 'value': '/opt/mesosphere/bin/dvdcli'},
+        ]
+    }]
+}
+
+__stats_isolator_slave_module_name = 'com_mesosphere_StatsIsolatorModule'
+__stats_hook_slave_module_name = 'com_mesosphere_StatsEnvHook'
+__stats_slave_module = {
+    'file': '/opt/mesosphere/lib/libstats-slave.so',
+    'modules': [{
+        'name': __stats_isolator_slave_module_name,
+    }, {
+        'name': __stats_hook_slave_module_name,
+        'parameters': [
+            {'key': 'dest_host', 'value': 'metrics.marathon.mesos'},
+            {'key': 'dest_port', 'value': '8125'},
+            {'key': 'dest_refresh_seconds', 'value': '60'},
+            {'key': 'listen_host', 'value': '127.0.0.1'},
+            {'key': 'listen_port_mode', 'value': 'ephemeral'},
+            {'key': 'annotations', 'value': 'true'},
+            {'key': 'chunking', 'value': 'true'},
+            {'key': 'chunk_size_bytes', 'value': '512'},
+        ]
+    }]
+}
+
+__default_mesos_slave_modules = [
+    __logrotate_slave_module,
+    __dvdi_slave_module,
+]
+
+__default_isolation_modules = [
+    'cgroups/cpu',
+    'cgroups/mem',
+    'posix/disk',
+    __dvdi_slave_module_name,
+]
+
+
 entry = {
     'validate': [
         validate_num_masters,
@@ -198,6 +273,7 @@ entry = {
         'auth_cookie_secure_flag': 'false',
         'mesos_dns_ip_sources': '["host", "netinfo"]',
         'rexray_config_method': 'empty',
+        'mesos_container_logger': __logrotate_slave_module_name,
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
@@ -210,6 +286,7 @@ entry = {
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,
         'config_id': calculate_config_id,
+        'mesos_hooks_env_var': calculate_mesos_hooks_env_var,
         'exhibitor_static_ensemble': calculate_exhibitor_static_ensemble,
     },
     'conditional': {
@@ -238,20 +315,29 @@ entry = {
                 'must': {
                     'ui_authentication': 'true',
                     'ui_networking': 'true',
-                    'ui_organization': 'true'
+                    'ui_organization': 'true',
+                    'mesos_isolation_modules': ','.join(__default_isolation_modules + [
+                        __stats_isolator_slave_module_name]),
+                    'mesos_hooks': __stats_hook_slave_module_name,
+                    'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
+                        __default_mesos_slave_modules + [__stats_slave_module]),
                 },
                 'default': {
-                    'ui_tracking': 'false'
+                    'ui_tracking': 'false',
                 }
             },
             'false': {
                 'must': {
                     'ui_authentication': 'false',
                     'ui_networking': 'false',
-                    'ui_organization': 'false'
+                    'ui_organization': 'false',
+                    'mesos_isolation_modules': ','.join(__default_isolation_modules),
+                    'mesos_hooks': '',
+                    'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
+                        __default_mesos_slave_modules),
                 },
                 'default': {
-                    'ui_tracking': 'true'
+                    'ui_tracking': 'true',
                 }
             }
         },

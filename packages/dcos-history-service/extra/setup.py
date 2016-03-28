@@ -1,13 +1,11 @@
-import history
-
 from setuptools import setup
 
 config = {
     'name': 'dcos-history',
-    'version': history.__version__,
+    'version': '0.1.0',
     'description': 'Buffers the state of the mesos leading master state',
-    'author': 'Matthias',
-    'author_email': 'matthias@mesosphere.io',
+    'author': 'Michael Ellenburg',
+    'author_email': 'mellenburg@mesosphere.io',
     'maintainer': 'Mesosphere',
     'maintainer_email': 'support@mesosphere.io',
     'url': 'https://github.com/mesosphere/dcos-history-service',
@@ -20,10 +18,9 @@ config = {
         ]
     },
     'install_requires': [
-        "Flask>=0.10.1",
-        "flask-compress",
-        "requests"
-    ]
+        'Flask>=0.10.1',
+        'flask-compress',
+        'requests']
 }
 
 setup(**config)

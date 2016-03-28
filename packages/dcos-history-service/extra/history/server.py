@@ -1,10 +1,10 @@
-
 import logging
+import os
+import sys
 
 from flask import Flask, Response
 from flask.ext.compress import Compress
-from history.statebuffer import StateBuffer
-from os import environ
+from history.statebuffer import BufferCollection, BufferUpdater
 
 app = Flask(__name__)
 compress = Compress()
@@ -26,22 +26,21 @@ def ping():
 
 @app.route('/history/last')
 def last():
-    return _response_(state_buffer.last)
+    return _response_(state_buffer.dump('last')[0])
 
 
 @app.route('/history/minute')
 def minute():
-    return _buffer_response_("minute")
+    return _buffer_response_('minute')
 
 
 @app.route('/history/hour')
 def hour():
-    return _buffer_response_("hour")
+    return _buffer_response_('hour')
 
 
 def _buffer_response_(name):
-    schedule = state_buffer.schedules.get(name)
-    return _response_("[" + ",".join(schedule.buffer) + "]")
+    return _response_("[" + ",".join(state_buffer.dump(name)) + "]")
 
 
 def _response_(content):
@@ -58,13 +57,15 @@ def _response_(content):
     return Response(response=content, content_type="application/json", headers=headers)
 
 
-def start(
-        port=int(environ.get('PORT', '15055')),
-        frequency=int(environ.get('FETCH_FREQUENCY', "2"))):
+def start():
     global state_buffer
     logging.basicConfig(format='[%(levelname)s:%(asctime)s] %(message)s', level='INFO')
 
     compress.init_app(app)
-    state_buffer = StateBuffer(frequency)
-    state_buffer.run()
-    app.run(host='0.0.0.0', port=port)
+
+    if 'HISTORY_BUFFER_DIR' not in os.environ:
+        sys.exit('HISTORY_BUFFER_DIR must be set!')
+
+    state_buffer = BufferCollection(os.environ['HISTORY_BUFFER_DIR'])
+    BufferUpdater(state_buffer).run()
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', '15055')))

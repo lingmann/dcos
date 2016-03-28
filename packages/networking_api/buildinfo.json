@@ -5,7 +5,7 @@
     "networking_api": {
       "kind": "git",
       "git": "git@github.com:mesosphere/networking-api-service.git",
-      "ref": "a89bab31e759dad974091bff5fd5980f08fbbc72",
+      "ref": "18b48e190a9c6955cfaa23b583761275e6a1e09a",
       "ref_origin": "master"
     }
   }

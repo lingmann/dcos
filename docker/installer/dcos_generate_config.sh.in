@@ -5,6 +5,13 @@ set -o errexit -o nounset -o pipefail
 # preflight checks
 docker version >/dev/null 2>&1 || {{ echo >&2 "docker should be installed and running. Aborting."; exit 1; }}
 
+backout(){{
+    if [ -f "{genconf_tar}" ]; then
+        rm {genconf_tar}
+    fi
+    exit 1
+}}
+trap 'backout' INT
 # extract payload and load into docker if not extracted
 if [ ! -f "{genconf_tar}" ]
 then
@@ -12,6 +19,7 @@ then
     sed '0,/^#EOF#$/d' $0 | tar xv
     docker load -i {genconf_tar}
 fi
+trap - INT
 
 echo "Running mesosphere/dcos-genconf docker with BUILD_DIR set to $PWD/genconf"
 if [ ! -d genconf/state ]; then

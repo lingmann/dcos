@@ -900,7 +900,7 @@ def test_if_minuteman_routes_to_vip(cluster, timeout=125):
         try:
             _ensure_routable()
             r = cluster.get('/networking/api/v1/vips')
-            if r.status_code < 400 and len(r.json().get('array', [])) >= 1:
+            if r.status_code < 400 and len(r.json().get('array', [])) is 1:
                 logging.info("Networking api is probably up")
                 return True
             else:

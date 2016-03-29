@@ -14,7 +14,7 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Download the DCOS
+      Description=Pkgpanda: Download the DCOS
       After=network-online.target
       Wants=network-online.target
       ConditionPathExists=!/opt/mesosphere/
@@ -31,7 +31,7 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Prep the Pkgpanda working directories for this host.
+      Description=Pkgpanda: Specialize DCOS for this host.
       Requires=dcos-download.service
       After=dcos-download.service
       [Service]
@@ -73,7 +73,7 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Write out dynamic config values
+      Description=Pkgpanda: Write out dynamic config values
       Requires=dcos-setup.service
       After=dcos-setup.service
       [Service]

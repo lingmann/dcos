@@ -1,5 +1,5 @@
 [Unit]
-Description=DCOS History Service
+Description=Mesos History: DCOS Resource Metrics History Service/API
 After=dcos-mesos-master.service
 [Service]
 Restart=always

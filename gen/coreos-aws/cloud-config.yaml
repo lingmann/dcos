@@ -4,7 +4,7 @@ coreos:
       command: start
       content: |
         [Unit]
-        Description=Formats the /var/lib ephemeral drive
+        Description=AWS Setup: Formats the /var/lib ephemeral drive
         Before=var-lib.mount dbus.service
         [Service]
         Type=oneshot
@@ -14,7 +14,7 @@ coreos:
       command: start
       content: |
         [Unit]
-        Description=Mount /var/lib
+        Description=AWS Setup: Mount /var/lib
         Before=dbus.service
         [Mount]
         What=/dev/xvdb

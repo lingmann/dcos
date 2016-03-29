@@ -1,5 +1,5 @@
 [Unit]
-Description=Bouncer (DCOS Access Control Service API provider)
+Description=Identity and Access Management: DCOS Identity and Access Management Service/API 
 # TODO(cmaloney): Make sure that bouncer is running when nginx comes up
 # We currently don't because systemd unit ordering / dependencies can break
 # startup entirely, whereas "just restart always" and catch things in the right

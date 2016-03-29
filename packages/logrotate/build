@@ -36,7 +36,7 @@ logrotate_service="$PKG_PATH/dcos.target.wants/dcos-logrotate.service"
 mkdir -p "$(dirname "$logrotate_service")"
 cat <<EOF > "$logrotate_service"
 [Unit]
-Description=Rotate various logs on the system
+Description=Logrotate: Rotate various logs on the system
 [Service]
 Type=simple
 EnvironmentFile=/etc/environment
@@ -49,7 +49,7 @@ logrotate_timer="$PKG_PATH/dcos.target.wants/dcos-logrotate.timer"
 mkdir -p "$(dirname "$logrotate_timer")"
 cat <<'EOF' > "$logrotate_timer"
 [Unit]
-Description=Rotate logs every 2 minutes
+Description=Logrotate: Timer to trigger every 2 minutes
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=2min

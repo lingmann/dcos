@@ -1,5 +1,5 @@
 [Unit]
-Description=Mesos Slave Public
+Description=Mesos Slave Public: DCOS Public Slave Service
 [Service]
 Restart=always
 StartLimitInterval=0

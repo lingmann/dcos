@@ -16,7 +16,7 @@ systemd_slave=$PKG_PATH/dcos.target.wants_slave/dcos-rexray.service
 mkdir -p $(dirname $systemd_slave)
 cat <<EOF > $systemd_slave
 [Unit]
-Description=rexray
+Description=REX-Ray: A vendor agnostic storage orchestration engine
 Before=dcos-mesos-slave.service
 
 [Service]
@@ -32,7 +32,7 @@ systemd_slave_public=$PKG_PATH/dcos.target.wants_slave_public/dcos-rexray.servic
 mkdir -p $(dirname $systemd_slave_public)
 cat <<EOF > $systemd_slave_public
 [Unit]
-Description=rexray
+Description=REX-Ray: A vendor agnostic storage orchestration engine
 Before=dcos-mesos-slave-public.service
 
 [Service]

@@ -1,5 +1,5 @@
 [Unit]
-Description=Exhibitor Zookeeper Supervisor
+Description=Exhibitor: Zookeeper Supervisor Service
 After=network-online.target
 [Service]
 StandardOutput=journal

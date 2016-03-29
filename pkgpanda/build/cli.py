@@ -25,7 +25,7 @@ from docopt import docopt
 import pkgpanda.build.constants
 from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
-from pkgpanda.build import checkout_sources, fetch_sources, hash_checkout, sha1
+from pkgpanda.build import hash_checkout, src_fetchers, sha1
 from pkgpanda.cli import add_to_repository
 from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import FetchError, PackageError, ValidationError
@@ -599,10 +599,24 @@ def build(variant, package_dir, name, repository_url):
     # buildinfo.json. This also means buildinfo.json is always expanded form.
     buildinfo['sources'] = sources
 
-    print("Fetching sources")
-    # Clone the repositories, apply patches as needed using the patch utilities.
+    # Construct the source fetchers, gather the checkout ids from them
+    checkout_ids = dict()
+    fetchers = dict()
     try:
-        checkout_ids = fetch_sources(sources, package_dir)
+        for src_name, src_info in sorted(sources.items()):
+            if src_info['kind'] not in src_fetchers:
+                raise ValidationError("No known way to catch src with kind '{}'. Known kinds: {}".format(
+                    src_info['kind'],
+                    src_fetchers.keys()))
+
+            cache_dir = pkg_abs("cache")
+            if not os.path.exists(cache_dir):
+                os.mkdir(cache_dir)
+
+            fetchers[src_name] = src_fetchers[src_info['kind']](src_name,
+                                                                src_info,
+                                                                package_dir)
+            checkout_ids[src_name] = fetchers[src_name].get_id()
     except ValidationError as ex:
         print("ERROR: Validation error when fetching sources for package:", ex)
         sys.exit(1)
@@ -823,7 +837,23 @@ def build(variant, package_dir, name, repository_url):
         package = repository.load(dep)
         active_packages.append(package)
 
-    checkout_sources(sources, package_dir)
+    # Checkout all the sources int their respective 'src/' folders.
+    try:
+        src_dir = pkg_abs('src')
+        if os.path.exists(src_dir):
+            raise ValidationError(
+                "'src' directory already exists, did you have a previous build? " +
+                "Currently all builds must be from scratch. Support should be " +
+                "added for re-using a src directory when possible. src={}".format(src_dir))
+        os.mkdir(src_dir)
+        for src_name, fetcher in sorted(fetchers.items()):
+            root = pkg_abs('src/' + src_name)
+            os.mkdir(root)
+
+            fetcher.checkout_to(root)
+    except ValidationError as ex:
+        print("ERROR: Validation error when fetching sources for package:", ex)
+        sys.exit(1)
 
     # Copy over environment settings
     if 'environment' in buildinfo:

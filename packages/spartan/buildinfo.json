@@ -5,7 +5,7 @@
     "spartan": {
       "kind": "git",
       "git": "git@github.com:mesosphere/spartan.git",
-      "ref": "7c5e0a357ef01768824562de7cda5c1592a53f72",
+      "ref": "f0202fdd99c4e3fc9017176dacebd31fb42cb4bd",
       "ref_origin": "master"
     }
   }

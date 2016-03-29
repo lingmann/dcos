@@ -12,7 +12,6 @@ cat <<EOF > "$cosmos_service"
 [Unit]
 Description=Cosmos
 After=dcos-mesos-master.service
-Requires=dcos-gen-resolvconf.service
 After=dcos-gen-resolvconf.service
 
 [Service]
@@ -20,6 +19,7 @@ Restart=always
 StartLimitInterval=0
 RestartSec=15
 EnvironmentFile=/opt/mesosphere/environment
+ExecStartPre=/bin/ping -c1 ready.spartan
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 ## CoreOS
 ExecStartPre=-/usr/bin/mkdir -p /var/lib/cosmos

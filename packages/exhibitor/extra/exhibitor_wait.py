@@ -5,15 +5,15 @@ import json
 import codecs
 import urllib.request
 
-EXIHIBITOR_STATUS_URL = 'http://127.0.0.1:8181/exhibitor/v1/cluster/status'
+EXHIBITOR_STATUS_URL = 'http://127.0.0.1:8181/exhibitor/v1/cluster/status'
 
 cluster_size = int(open('/opt/mesosphere/etc/master_count').read().strip())
 
 try:
-    response = urllib.request.urlopen(EXIHIBITOR_STATUS_URL)
+    response = urllib.request.urlopen(EXHIBITOR_STATUS_URL)
 except urllib.error.URLError:
     print('Could not get exhibitor status: {}'.format(
-        EXIHIBITOR_STATUS_URL), file=sys.stderr)
+        EXHIBITOR_STATUS_URL), file=sys.stderr)
     sys.exit(1)
 reader = codecs.getreader("utf-8")
 data = json.load(reader(response))

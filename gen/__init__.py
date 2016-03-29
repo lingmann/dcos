@@ -301,19 +301,6 @@ def write_to_non_taken(base_filename, json):
     return filename
 
 
-def add_arguments(parser):
-    parser.add_argument('--assume-defaults', action='store_true')
-    parser.add_argument('--non-interactive', action='store_true')
-    parser.add_argument(
-        '-l',
-        '--log-level',
-        default='info',
-        choices=['debug', 'info'],
-        help='Logging level. Default: info. Options: info, debug.')
-
-    return parser
-
-
 def do_gen_package(config, package_filename):
     # Generate the specific dcos-config package.
     # Version will be setup-{sha1 of contents}

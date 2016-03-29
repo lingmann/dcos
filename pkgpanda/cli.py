@@ -85,7 +85,7 @@ def do_bootstrap(install, repository):
         if repository_url is None:
             print("ERROR: Non-local package {} but no repository url given.".format(repository_url))
             sys.exit(1)
-        return requests_fetcher(repository_url, id, target)
+        return requests_fetcher(repository_url, id, target, os.getcwd())
 
     # Copy host/cluster-specific packages written to the filesystem manually
     # from the setup-packages folder into the repository. Do not overwrite or
@@ -326,7 +326,7 @@ def main():
 
     if arguments['fetch']:
         def fetcher(id, target):
-            return requests_fetcher(arguments['--repository-url'], id, target)
+            return requests_fetcher(arguments['--repository-url'], id, target, os.getcwd())
 
         for pkg_id in arguments['<id>']:
             # TODO(cmaloney): Make this not use escape sequences when not at a

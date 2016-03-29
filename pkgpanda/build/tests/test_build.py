@@ -3,6 +3,7 @@ from subprocess import CalledProcessError, check_call, check_output
 
 import pytest
 
+import pkgpanda.build.cli
 from pkgpanda.util import expect_fs
 
 
@@ -11,11 +12,19 @@ def get_tar_contents(filename):
 
 
 def package(resource_dir, name, tmpdir):
+    # Build once using command line interface
     pkg_dir = tmpdir.join(name)
     copytree(resource_dir, str(pkg_dir))
     with pkg_dir.as_cwd():
         check_call(["mkpanda"])
         check_call(["mkpanda", "clean"])
+
+    # Build once using programmatic interface
+    pkg_dir_2 = str(tmpdir.join("api-build/" + name))
+    copytree(resource_dir, pkg_dir_2)
+
+    pkgpanda.build.cli.build_package_variants(pkg_dir_2, name, None)
+    pkgpanda.build.cli.clean(pkg_dir_2)
 
 
 def test_build(tmpdir):

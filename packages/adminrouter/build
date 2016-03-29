@@ -58,7 +58,6 @@ mkdir -p "$(dirname "$systemd_master")"
 cat <<EOF > "$systemd_master"
 [Unit]
 Description=A high performance web server and a reverse proxy server
-Requires=dcos-gen-resolvconf.service
 After=dcos-gen-resolvconf.service
 
 [Service]
@@ -72,8 +71,9 @@ PIDFile=$PKG_PATH/nginx/logs/nginx.pid
 PrivateDevices=yes
 StandardOutput=journal
 StandardError=journal
-ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStartPre=/bin/ping -c1 ready.spartan
 ExecStartPre=/bin/ping -c1 marathon.mesos
+ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStart=$PKG_PATH/nginx/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT

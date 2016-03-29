@@ -8,5 +8,6 @@ LimitNOFILE=infinity
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/mesos-master
 EnvironmentFile=-/opt/mesosphere/etc/mesos-master-provider
+ExecStartPre=/bin/ping -c1 ready.spartan
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 ExecStart=${PKG_PATH}/bin/mesos-master

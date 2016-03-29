@@ -4,6 +4,7 @@ set -x
 source /opt/mesosphere/environment
 
 pushd /pkg/src/spartan
+./rebar3 update
 make rel
 popd
 

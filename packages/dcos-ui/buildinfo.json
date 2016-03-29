@@ -3,7 +3,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-ui.git",
-    "ref": "3770b5a0b7a7082b630fcd6cfee83d0e6ea8ea0b",
+    "ref": "f255199fa765c21ad864538cf3f5be174d30549a",
     "ref_origin": "release/1.7"
   }
 }

@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import requests
 import sys
 import traceback
@@ -28,16 +29,32 @@ def json_pretty_print(json_str, file=sys.stdout):
     print(json.dumps(json_str, sort_keys=True, indent=4, separators=(',', ':')), file=file)
 
 
-def get_template_output_value(client, output_key):
+def get_template_output(client):
     '''
-    Returns the ARM deployment output value for the given output_key.
-    Raises an AzureClientException if the key is not found.
+    Returns the ARM deployment output values which has the format:
+      {
+        'output_key': {
+          'value': 'output_value',
+          'type': 'String'
+        }
+      }
     '''
     r = client.get_template_deployment()
-    outputs = r.get('properties', {}).get('outputs', {})
-    if output_key not in outputs:
-        raise AzureClientException("output_key: {} does not exist in deployment".format(output_key))
-    return outputs.get(output_key).get('value')
+    return r.get('properties', {}).get('outputs', {})
+
+
+def get_template_output_value(client, *output_keys):
+    '''
+    Given a tuple of output_keys, return the value for the first matching key
+    in the template output.  This is useful for testing templates which have
+    different keys for the same output value. Raises an AzureClientException if
+    none of the keys are found.
+    '''
+    outputs = get_template_output(client)
+    for k in output_keys:
+        if k in outputs:
+            return outputs.get(k).get('value')
+    raise AzureClientException("Unable to find any of the output_keys {} in deployment".format(output_keys))
 
 
 def get_dcos_ui(master_url):
@@ -47,41 +64,46 @@ def get_dcos_ui(master_url):
         pass
 
 
+def get_env_params():
+    '''
+    Return ARM input template parameters populated based on environment variables. Parameters are set as follows:
+      * AZURE_PARAM_key=value (value treated as a string)
+      * AZURE_PARAM_INT_key=value (value treated as an int)
+    '''
+    template_params = {}
+    env_param_regex = re.compile(r"AZURE_PARAM_(?P<param>.*)")
+    env_param_int_regex = re.compile(r"AZURE_PARAM_INT_(?P<param>.*)")
+    for env_key, env_val in os.environ.items():
+        match_string = env_param_regex.match(env_key)
+        match_int = env_param_int_regex.match(env_key)
+        if match_int:
+            print("Env parameter (String): {}={}".format(match_int.group('param'), env_val))
+            template_params[match_int.group('param')] = {"value": int(env_val)}
+        elif match_string:
+            print("Env parameter (Integer): {}={}".format(match_string.group('param'), env_val))
+            template_params[match_string.group('param')] = {"value": env_val}
+
+    return(template_params)
+
+
 def run():
     template_path = os.environ['AZURE_TEMPLATE_PATH']
-
     arm = open(template_path).read()
+
+    location = os.getenv('AZURE_LOCATION', 'East US')
+
+    template_params = get_env_params()
 
     client = AzureClient.create_from_env_creds(
         random_resource_group_name_prefix='teamcity')
-
-    # sshKeyData is the public SSH key used as the authorized key for the default cluster user (core)
-    # Set to the public SSH key for mesosphere-demo: https://mesosphere.onelogin.com/notes/18444
-    dummy_template_parameters = {
-        "sshKeyData": {"value": (
-            "MIIDXTCCAkWgAwIBAgIJAIIFgegSdSRMMA0GCSqGSIb3DQEBCwUAMEUxCzAJBgNVBAYTAkFVMRMwEQYDVQQIDApTb21lLVN0YXRlMSEwHw"
-            "YDVQQKDBhJbnRlcm5ldCBXaWRnaXRzIFB0eSBMdGQwHhcNMTUwNDA4MjA0MDQ5WhcNMTYwNDA3MjA0MDQ5WjBFMQswCQYDVQQGEwJBVTET"
-            "MBEGA1UECAwKU29tZS1TdGF0ZTEhMB8GA1UECgwYSW50ZXJuZXQgV2lkZ2l0cyBQdHkgTHRkMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMI"
-            "IBCgKCAQEAhx70Yc7zSzrqz3OyfoB8S22zmZ4+jpO+Dir70Qx4p8wtfhcsLjoPaNmArww6WJdbSUJktDsgpzmJVKS8fAoRnt0XtWmVETiy"
-            "wGKOMCldFYqdwLjdaWJZ4qqGDs5upMVCcV7cnCf7TBnkBNv3Az5SyzgBk00zUjcaEiwixPt9vyb4KOpI/WdXnVAI/nULdv/6DAdWLcCtGu"
-            "dyw9HEc889Ry2PHWF/6U39WWKG10ln5qYNO2Nf1OBsgI1D5kZlDj5ALnSbJ4dtH7KG1C/Zg1bOumZ4rLDYICpnODLK3/KqMWdqjcNxC8gQ"
-            "o5vd0kV1BUsYU6kDJYXvxvNd8ICjMYIycwIDAQABo1AwTjAdBgNVHQ4EFgQU4bayYwTyhuM0RxKHXiQWiLyY/0MwHwYDVR0jBBgwFoAU4b"
-            "ayYwTyhuM0RxKHXiQWiLyY/0MwDAYDVR0TBAUwAwEB/zANBgkqhkiG9w0BAQsFAAOCAQEAKQppNEpZbjd875EYiw5gPvk3hFceHoDL1+ni"
-            "ZZ/HWxkn/f5gZ8rJLrGRnxXMiD8jXtNmjHSHePR2vdeNQ2N17ObasrmFynI4LiqOOmaA5VfOWAA7AvpmJTL8hyB4xK96bYtlBVUQ9iJf+g"
-            "fwy1fzR8X8pEOaLhXkUTZb7Oex97H81yrau15PI1OGjDrQQtMpWU8tGVfXECh07/Rg1ODnza9ddY+x0xLBFjfyTY7PrIwcdhNCP82QKSfH"
-            "DltDbssw4wIm+NPsnZ9NodtjgAFxC8HEDFTozYueHOTi4DzgRjGfTHjkhwZd/LPAYXNb8PxB82cermpqn4tn0nOT76fPGg==")},
-        "authorizedSubnet": {"value": "0.0.0.0/0"},
-        "numberOfPrivateSlaves": {"value": 1},
-        "numberOfPublicSlaves": {"value": 1}
-        }
 
     # Output resource group
     print("Resource group name: {}".format(client._resource_group_name))
     print("Deployment name: {}".format(client._deployment_name))
 
     # Create a new resource group
-    print("Creating new resource group")
-    print(client.create_resource_group())
+    print("Creating new resource group in location: {}".format(location))
+    print(client.create_resource_group(location))
 
     test_successful = False
 
@@ -89,17 +111,19 @@ def run():
         # Use RPC against azure to validate the ARM template is well-formed
         verify_template_syntax(client,
                                template_body_json=json.loads(arm),
-                               template_parameters=dummy_template_parameters)
+                               template_parameters=template_params)
 
         # Actually create a template deployment
         print("Creating template deployment ...")
         deployment_response = client.create_template_deployment(
             template_body_json=json.loads(arm),
-            template_parameters=dummy_template_parameters)
+            template_parameters=template_params)
         json_pretty_print(deployment_response)
 
+        # For deploying templates, stop_max_delay must be long enough to handle the ACS template which does not signal
+        # success until leader.mesos is resolvable.
         @retry(wait_fixed=(5*1000),
-               stop_max_delay=(30*60*1000),
+               stop_max_delay=(45*60*1000),
                retry_on_exception=lambda x: isinstance(x, AssertionError))
         def poll_on_template_deploy_status(client):
             provisioning_state = client.get_template_deployment()['properties']['provisioningState']
@@ -111,8 +135,9 @@ def run():
 
         print("Waiting for template to deploy ...")
         poll_on_template_deploy_status(client)
+        print("Template deployed successfully")
 
-        master_lb = get_template_output_value(client, 'dnsAddress')
+        master_lb = get_template_output_value(client, 'dnsAddress', 'masterFQDN')
         master_url = "http://{}".format(master_lb)
 
         print("Template deployed using SSH private key: https://mesosphere.onelogin.com/notes/18444")
@@ -135,12 +160,12 @@ def run():
     finally:
         @retry(wait_exponential_multiplier=1000, wait_exponential_max=60*1000, stop_max_delay=(30*60*1000))
         def delete_resource_group(client):
-            print("Deleting resource group: {} ...".format(client._resource_group_name))
             del_response = client.delete_resource_group()
             assert del_response.status_code == requests.codes.accepted, \
                 "Delete request failed: {}".format(del_response.status_code)
             return del_response.headers['Location']
 
+        print("Deleting resource group: {} ...".format(client._resource_group_name))
         poll_location = delete_resource_group(client)
 
         @retry(wait_fixed=(5*1000), stop_max_delay=(60*60*1000))

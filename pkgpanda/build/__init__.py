@@ -182,8 +182,6 @@ class GitSrcFetcher(SourceFetcher):
 
         assert self.kind == 'git'
 
-        self.bare_folder = package_dir + "/cache/{}.git".format(name)
-
         if src_info.keys() != {'kind', 'git', 'ref', 'ref_origin'}:
             raise ValidationError(
                 "git source must have keys 'git' (the repo to fetch), 'ref' (the sha-1 to "
@@ -192,29 +190,33 @@ class GitSrcFetcher(SourceFetcher):
         if not is_sha(src_info['ref']):
             raise ValidationError("ref must be a sha1. Got: {}".format(src_info['ref']))
 
-        # TODO(cmaloney): Only make a bare clone to validate the sha-1 is in the git
-        # repository and matches the branch when checkout_sources is done.
-        fetch_git(self.bare_folder, src_info['git'])
-        self.commit = get_git_sha1(self.bare_folder, src_info['ref'])
+        self.url = src_info['git']
+        self.ref = src_info['ref']
+        self.ref_origin = src_info['ref_origin']
+        self.bare_folder = package_dir + "/cache/{}.git".format(name)
+
+    def get_id(self):
+        return {"commit": self.ref}
+
+    def checkout_to(self, directory):
+        # fetch into a bare repository so if we're on a host which has a cache we can
+        # only get the new commits.
+        fetch_git(self.bare_folder, self.url)
 
         # Warn if the ref_origin is set and gives a different sha1 than the
         # current ref.
         try:
-            origin_commit = get_git_sha1(self.bare_folder, src_info['ref_origin'])
+            origin_commit = get_git_sha1(self.bare_folder, self.ref_origin)
         except Exception as ex:
-            raise ValidationError("Unable to find sha1 of ref_origin {}: {}".format(src_info['ref_origin'], ex))
-        if origin_commit != self.commit:
-            raise ValidationError(
+            raise ValidationError("Unable to find sha1 of ref_origin {}: {}".format(self.ref_origin, ex))
+        if self.ref != origin_commit:
+            print(
                 "WARNING: Current ref doesn't match the ref origin. "
                 "Package ref should probably be updated to pick up "
                 "new changes to the code:" +
-                " Current: {}, Origin: {}".format(self.commit,
+                " Current: {}, Origin: {}".format(self.ref,
                                                   origin_commit))
 
-    def get_id(self):
-        return {"commit": self.commit}
-
-    def checkout_to(self, directory):
         # Clone into `src/`.
         check_call(["git", "clone", "-q", self.bare_folder, directory])
 
@@ -227,7 +229,7 @@ class GitSrcFetcher(SourceFetcher):
             directory, "checkout",
             "-f",
             "-q",
-            self.commit])
+            self.ref])
 
 
 class GitLocalSrcFetcher(SourceFetcher):

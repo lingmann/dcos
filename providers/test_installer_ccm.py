@@ -1,9 +1,42 @@
 #!/usr/bin/env python3
 """Integration test for SSH installer with CCM provided VPC
-by shelling out to installed genconf python app
 
-REQUIREMENTS:
-    dcos_generate_config.sh artifact is in current working dir
+The following environment variables control test procedure:
+
+CCM_VPC_HOSTS: comma separated IP addresses that are accesible from localhost (default=None)
+    If provided, ssh_key must be in current working directory and hosts must
+    be accessible using ssh -i ssh_key centos@IP
+
+CCM_HOST_SETUP: true or false (default=true)
+    If true, test will attempt to download the installer from INSTALLER_URL, start the bootstap
+    ZK (if required), and setup the integration_test.py requirements (setup test runner, test
+    registry, and test app in registry).
+    If false, test will skip the above steps
+
+INSTALLER_URL: URL that curl can grab the installer from (default=None)
+    This option is only used if CCM_HOST_SETUP=true. See above.
+
+MINUTEMAN_ENABLED: true or false (default=false)
+    Minuteman requires a setting that is applied when CCM_HOST_SETUP=true
+
+USE_INSTALELR_API: true or false (default=None)
+    starts installer web server as daemon when CCM_HOST_SETUP=true and proceeds to only
+    communicate with the installer via the API. In this mode, exhibitor backend is set
+    to static and a bootstrap ZK is not needed (see CCM_HOST_SETUP)
+
+TEST_INSTALL_PREREQS: true or false (default=None)
+    If true, the capability of the installer to setup prereqs will be tested by starting
+    with bare AMIs. If false, installer 'offline mode' will be used or prereq install will
+    be skipped and precooked AMIs will be used (thereby saving 5-10 minutes)
+
+TEST_INSTALL_PREREQS_ONLY: true or false (default=false)
+    If true, test will exit after preflight test passes on bare AMI. If false the test will
+    continue through completion (running integration_test.py). TEST_INSTALL_PREREQS must be
+    set in order to use this option
+
+CI_FLAGS: string (default=None)
+    If provided, this string will be passed directly to py.test as in:
+    py.test -vv CI_FLAGS integration_test.py
 """
 import asyncio
 import logging

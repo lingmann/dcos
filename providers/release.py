@@ -20,6 +20,7 @@ import tempfile
 import azure.common
 import azure.storage.blob
 import botocore.client
+import requests
 
 import pkgpanda
 import pkgpanda.build
@@ -176,7 +177,13 @@ class AzureStorageProvider(AbstractStorageProvider):
     def __init__(self, account_name, account_key, container, dl_base_url):
         assert dl_base_url.endswith('/')
         self.container = container
-        self.blob_service = azure.storage.blob.BlockBlobService(account_name=account_name, account_key=account_key)
+        session = requests.Session()
+        adapter = requests.adapters.HTTPAdapter(pool_connections=100, pool_maxsize=100)
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+        self.blob_service = azure.storage.blob.BlockBlobService(account_name=account_name,
+                                                                account_key=account_key,
+                                                                request_session=session)
         self.__url = dl_base_url
 
     @property
@@ -226,7 +233,8 @@ class AzureStorageProvider(AbstractStorageProvider):
                 self.container,
                 destination_path,
                 local_path,
-                content_settings=content_settings)
+                content_settings=content_settings,
+                max_connections=16)
         else:
             assert blob is not None
             assert isinstance(blob, bytes)
@@ -234,7 +242,8 @@ class AzureStorageProvider(AbstractStorageProvider):
                 self.container,
                 destination_path,
                 blob,
-                content_settings=content_settings)
+                content_settings=content_settings,
+                max_connections=16)
 
     def exists(self, path):
         try:

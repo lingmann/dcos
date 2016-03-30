@@ -503,13 +503,15 @@
     "agentsPublicLbBackendPoolName": "[concat(variables('orchestratorName'), '-agent-pool-', variables('nameSuffix'))]",
     "agentStorageAccountsCount": 5,
     "agentsPerIPv4Octet": 200,
-    "agentCustomScript": "[concat('/usr/bin/nohup /bin/bash -c \"/bin/bash /opt/azure/containers/configure-mesos-cluster.sh ',variables('clusterInstallParameters'),' >> /var/log/azure/cluster-bootstrap.log 2>&1 &\" &')]"
+    "agentCustomScript": "[concat('/usr/bin/nohup /bin/bash -c \"/bin/bash /opt/azure/containers/configure-mesos-cluster.sh ',variables('clusterInstallParameters'),' >> /var/log/azure/cluster-bootstrap.log 2>&1 &\" &')]",
+    "apiVersionDefault": "2016-03-30",
+    "apiVersionStorage": "2015-06-15"
   },
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('masterStorageAccountName')]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -519,7 +521,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[resourceGroup().location]",
@@ -563,14 +565,14 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[variables('masterAvailabilitySet')]",
       "location": "[resourceGroup().location]",
       "properties": {}
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('masterPublicIPAddressName')]",
       "location": "[resourceGroup().location]",
@@ -582,7 +584,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[variables('masterLbName')]",
       "type": "Microsoft.Network/loadBalancers",
       "location": "[resourceGroup().location]",
@@ -608,7 +610,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/loadBalancers/inboundNatRules",
       "name": "[concat(variables('masterLbName'), '/', 'SSH-', variables('masterVMNamePrefix'), copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -630,7 +632,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('masterNSGName')]",
       "location": "[resourceGroup().location]",
@@ -654,13 +656,13 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('agentPrivateNSGName')]",
       "location": "[resourceGroup().location]"
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('agentPublicNSGName')]",
       "location": "[resourceGroup().location]",
@@ -712,7 +714,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat(variables('masterVMNamePrefix'), 'nic-', copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -755,7 +757,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat(variables('masterVMNamePrefix'), copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -808,7 +810,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
       "name": "[concat(variables('masterVMNamePrefix'), copyIndex(), '/waitforleader')]",
       "location": "[resourceGroup().location]",
@@ -831,7 +833,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('agentStoragePublicAccountName')]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -841,7 +843,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('agentPublicIPAddressName')]",
       "location": "[resourceGroup().location]",
@@ -853,7 +855,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[variables('agentsPublicLbName')]",
       "type": "Microsoft.Network/loadBalancers",
       "location": "[resourceGroup().location]",
@@ -972,7 +974,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[concat(variables('agentPublicVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {
@@ -1057,7 +1059,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[concat(variables('storageAccountPrefixes')[mod(copyIndex(),variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(copyIndex(),variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),copyIndex())]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -1072,7 +1074,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[concat(variables('agentPrivateVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {

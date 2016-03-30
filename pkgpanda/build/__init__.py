@@ -184,11 +184,10 @@ class GitSrcFetcher(SourceFetcher):
 
         self.bare_folder = package_dir + "/cache/{}.git".format(name)
 
-        if src_info.keys() < {'git', 'ref'}:
+        if src_info.keys() != {'kind', 'git', 'ref', 'ref_origin'}:
             raise ValidationError(
-                "git source must have keys 'git' (the repo to fetch) and 'ref' (the sha-1 to checkout)")
-        if src_info.keys() > {'git', 'kind', 'ref', 'ref_origin'}:
-            raise ValidationError("git source can only have 'git', 'ref', and 'ref_origin'")
+                "git source must have keys 'git' (the repo to fetch), 'ref' (the sha-1 to "
+                "checkout), and 'ref_origin' (the branch/tag ref was derived from)")
 
         if not is_sha(src_info['ref']):
             raise ValidationError("ref must be a sha1. Got: {}".format(src_info['ref']))
@@ -200,18 +199,17 @@ class GitSrcFetcher(SourceFetcher):
 
         # Warn if the ref_origin is set and gives a different sha1 than the
         # current ref.
-        if 'ref_origin' in src_info:
-            origin_commit = None
-            try:
-                origin_commit = get_git_sha1(self.bare_folder, src_info['ref_origin'])
-            except Exception as ex:
-                print("WARNING: Unable to find sha1 of ref_origin:", ex)
-            if origin_commit != self.commit:
-                print("WARNING: Current ref doesn't match the ref origin. "
-                      "Package ref should probably be updated to pick up "
-                      "new changes to the code:" +
-                      " Current: {}, Origin: {}".format(self.commit,
-                                                        origin_commit))
+        try:
+            origin_commit = get_git_sha1(self.bare_folder, src_info['ref_origin'])
+        except Exception as ex:
+            raise ValidationError("Unable to find sha1 of ref_origin {}: {}".format(src_info['ref_origin'], ex))
+        if origin_commit != self.commit:
+            raise ValidationError(
+                "WARNING: Current ref doesn't match the ref origin. "
+                "Package ref should probably be updated to pick up "
+                "new changes to the code:" +
+                " Current: {}, Origin: {}".format(self.commit,
+                                                  origin_commit))
 
     def get_id(self):
         return {"commit": self.commit}

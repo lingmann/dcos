@@ -307,24 +307,7 @@ class UrlSrcFetcher(SourceFetcher):
         self.url = src_info['url']
         self.extract = (self.kind == 'url_extract')
         self.cache_filename = self._get_filename(package_dir + "/cache")
-
-        # TODO(cmaloney): Delay downloading until checkout_to
-        # if the file isn't downloaded yet, get it.
-        if not os.path.exists(self.cache_filename):
-            download(self.cache_filename, self.url, package_dir)
-
         self.sha = src_info['sha1']
-
-        # Validate the sha1 of the source is given and matches the sha1
-        file_sha = sha1(self.cache_filename)
-
-        if src_info['sha1'] != file_sha:
-            corrupt_filename = self.cache_filename + '.corrupt'
-            check_call(['mv', self.cache_filename, corrupt_filename])
-            raise ValidationError(
-                "Provided sha1 didn't match sha1 of downloaded file, corrupt download saved as {}. "
-                "Provided: {}, Download file's sha1: {}, Url: {}".format(
-                    corrupt_filename, src_info['sha1'], file_sha, self.url))
 
     def _get_filename(self, out_dir):
         assert '://' in self.url, "Scheme separator not found in url {}".format(self.url)
@@ -336,6 +319,21 @@ class UrlSrcFetcher(SourceFetcher):
         }
 
     def checkout_to(self, directory):
+        # Download file to cache if it isn't already there
+        if not os.path.exists(self.cache_filename):
+            download(self.cache_filename, self.url, self.package_dir)
+
+        # Validate the sha1 of the source is given and matches the sha1
+        file_sha = sha1(self.cache_filename)
+
+        if self.sha != file_sha:
+            corrupt_filename = self.cache_filename + '.corrupt'
+            check_call(['mv', self.cache_filename, corrupt_filename])
+            raise ValidationError(
+                "Provided sha1 didn't match sha1 of downloaded file, corrupt download saved as {}. "
+                "Provided: {}, Download file's sha1: {}, Url: {}".format(
+                    corrupt_filename, self.sha, file_sha, self.url))
+
         if self.extract:
             extract_archive(self.cache_filename, directory)
         else:

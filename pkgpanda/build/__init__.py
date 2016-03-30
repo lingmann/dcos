@@ -238,8 +238,6 @@ class GitLocalSrcFetcher(SourceFetcher):
 
         assert self.kind == 'git_local'
 
-        self.bare_folder = package_dir + "/cache/{}.git".format(name)
-
         if src_info.keys() > {'kind', 'rel_path'}:
             raise ValidationError("Only kind, rel_path can be specified for git_local")
         if os.path.isabs(src_info['rel_path']):
@@ -247,14 +245,14 @@ class GitLocalSrcFetcher(SourceFetcher):
                                   "when used with git_local. Using a relative path means others "
                                   "that clone the repository will have things just work rather "
                                   "than a path.")
-        src_repo_path = os.path.normpath(package_dir + '/' + src_info['rel_path']).rstrip('/')
+        self.src_repo_path = os.path.normpath(package_dir + '/' + src_info['rel_path']).rstrip('/')
 
         # Make sure there are no local changes, we can't `git clone` local changes.
         try:
             git_status = check_output([
                 'git',
                 '-C',
-                src_repo_path,
+                self.src_repo_path,
                 'status',
                 '--porcelain',
                 '-uno',
@@ -267,21 +265,23 @@ class GitLocalSrcFetcher(SourceFetcher):
                                       "commit -am TMP` to commit everything, build the package, "
                                       "`git -C {0} reset --soft HEAD^` to get back to where you were.\n\n"
                                       "Found changes: {1}".format(
-                                            src_repo_path,
+                                            self.src_repo_path,
                                             git_status))
         except CalledProcessError:
             raise ValidationError("Unable to check status of git_local_work checkout {}. Is the "
                                   "rel_path correct?".format(src_info['rel_path']))
 
-        self.commit = get_git_sha1(src_repo_path + "/.git", "HEAD")
-        fetch_git(self.bare_folder, src_repo_path)
+        self.commit = get_git_sha1(self.src_repo_path + "/.git", "HEAD")
 
     def get_id(self):
         return {"commit": self.commit}
 
     def checkout_to(self, directory):
         # Clone into `src/`.
-        check_call(["git", "clone", "-q", self.bare_folder, directory])
+        check_call(["git", "clone", "-q", self.src_repo_path, directory])
+
+        # Make sure we got the right commit as head
+        assert get_git_sha1(directory + "/.git", "HEAD") == self.commit
 
         # Checkout from the bare repo in the cache folder at the specific sha1
         check_call([

@@ -1,3 +1,4 @@
+import abc
 import binascii
 import hashlib
 import os.path
@@ -58,11 +59,6 @@ def hash_folder(directory):
             directory)
         ]).decode('ascii').strip()
     raise
-
-
-def get_filename(out_dir, url_str):
-    assert '://' in url_str, "Scheme separator not found in url {}".format(url_str)
-    return os.path.join(out_dir, os.path.basename(url_str.split('://', 2)[1]))
 
 
 def _identify_archive_type(filename):
@@ -150,64 +146,211 @@ def extract_archive(archive, dst_dir):
         raise ValidationError("Unsupported archive: {}".format(os.path.basename(archive)))
 
 
-# TODO(cmaloney): Restructure checkout_sources and fetch_sources so all
-# the code dealing with one particular kind of source is located
-# together rather than half in checkout_sources, half in fetch_sources.
-def checkout_sources(sources, package_dir):
-    """Checkout all the sources which are assumed to have been fetched
-    already and live in the cache folder."""
-    assert not package_dir.endswith('/')
+class SourceFetcher(metaclass=abc.ABCMeta):
 
-    def pkg_abs(name):
-        return package_dir + '/' + name
+    def __init__(self, name, src_info, package_dir):
+        self.name = name
+        self.package_dir = package_dir
+        self.kind = src_info['kind']
 
-    src_dir = pkg_abs('src')
-    print("package_dir", package_dir, src_dir, "sources", sources)
+    @abc.abstractmethod
+    def get_id(self):
+        """Returns a unique id for the particular version of the particular source (sha1 of tarball, git commit, etc)"""
+        pass
 
-    if os.path.exists(src_dir):
-        raise ValidationError(
-            "'src' directory already exists, did you have a previous build? " +
-            "Currently all builds must be from scratch. Support should be " +
-            "added for re-using a src directory when possible. src={}".format(src_dir))
-    os.mkdir(src_dir)
-    for src, info in sources.items():
-        root = pkg_abs('src/' + src)
-        os.mkdir(root)
+    @abc.abstractmethod
+    def checkout_to(self, directory):
+        """Makes the artifact appear in the passed directory"""
+        pass
 
-        if info['kind'] == 'git' or info['kind'] == 'git_local':
-            bare_folder = pkg_abs('cache/{}.git'.format(src))
 
-            # Clone into `src/`.
-            check_call(["git", "clone", "-q", bare_folder, root])
-
-            # Checkout from the bare repo in the cache folder at the specific sha1
-            ref = info['ref']
-            check_call([
+def get_git_sha1(bare_folder, ref):
+        try:
+            return check_output([
                 "git",
-                "--git-dir",
-                root + "/.git",
-                "--work-tree",
-                root, "checkout",
-                "-f",
-                "-q",
-                ref])
+                "--git-dir", bare_folder,
+                "rev-parse", ref + "^{commit}"
+                ]).decode('ascii').strip()
+        except CalledProcessError as ex:
+            raise ValidationError(
+                "Unable to find ref '{}' in '{}': {}".format(ref, bare_folder, ex)) from ex
 
-            # TODO(cmaloney): Support patching.
-            for patcher in info.get('patches', []):
-                raise NotImplementedError()
-        elif info['kind'] == 'url':
-            cache_filename = get_filename(pkg_abs("cache"), info['url'])
 
+class GitSrcFetcher(SourceFetcher):
+    def __init__(self, name, src_info, package_dir):
+        super().__init__(name, src_info, package_dir)
+
+        assert self.kind == 'git'
+
+        if src_info.keys() != {'kind', 'git', 'ref', 'ref_origin'}:
+            raise ValidationError(
+                "git source must have keys 'git' (the repo to fetch), 'ref' (the sha-1 to "
+                "checkout), and 'ref_origin' (the branch/tag ref was derived from)")
+
+        if not is_sha(src_info['ref']):
+            raise ValidationError("ref must be a sha1. Got: {}".format(src_info['ref']))
+
+        self.url = src_info['git']
+        self.ref = src_info['ref']
+        self.ref_origin = src_info['ref_origin']
+        self.bare_folder = package_dir + "/cache/{}.git".format(name)
+
+    def get_id(self):
+        return {"commit": self.ref}
+
+    def checkout_to(self, directory):
+        # fetch into a bare repository so if we're on a host which has a cache we can
+        # only get the new commits.
+        fetch_git(self.bare_folder, self.url)
+
+        # Warn if the ref_origin is set and gives a different sha1 than the
+        # current ref.
+        try:
+            origin_commit = get_git_sha1(self.bare_folder, self.ref_origin)
+        except Exception as ex:
+            raise ValidationError("Unable to find sha1 of ref_origin {}: {}".format(self.ref_origin, ex))
+        if self.ref != origin_commit:
+            print(
+                "WARNING: Current ref doesn't match the ref origin. "
+                "Package ref should probably be updated to pick up "
+                "new changes to the code:" +
+                " Current: {}, Origin: {}".format(self.ref,
+                                                  origin_commit))
+
+        # Clone into `src/`.
+        check_call(["git", "clone", "-q", self.bare_folder, directory])
+
+        # Checkout from the bare repo in the cache folder at the specific sha1
+        check_call([
+            "git",
+            "--git-dir",
+            directory + "/.git",
+            "--work-tree",
+            directory, "checkout",
+            "-f",
+            "-q",
+            self.ref])
+
+
+class GitLocalSrcFetcher(SourceFetcher):
+    def __init__(self, name, src_info, package_dir):
+        super().__init__(name, src_info, package_dir)
+
+        assert self.kind == 'git_local'
+
+        if src_info.keys() > {'kind', 'rel_path'}:
+            raise ValidationError("Only kind, rel_path can be specified for git_local")
+        if os.path.isabs(src_info['rel_path']):
+            raise ValidationError("rel_path must be a relative path to the current directory "
+                                  "when used with git_local. Using a relative path means others "
+                                  "that clone the repository will have things just work rather "
+                                  "than a path.")
+        self.src_repo_path = os.path.normpath(package_dir + '/' + src_info['rel_path']).rstrip('/')
+
+        # Make sure there are no local changes, we can't `git clone` local changes.
+        try:
+            git_status = check_output([
+                'git',
+                '-C',
+                self.src_repo_path,
+                'status',
+                '--porcelain',
+                '-uno',
+                '-z']).decode()
+            if len(git_status):
+                raise ValidationError("No local changse are allowed in the git_local_work base repository. "
+                                      "Use `git -C {0} status` to see local changes. "
+                                      "All local changes must be committed or stashed before the "
+                                      "package can be built. One workflow (temporary commit): `git -C {0} "
+                                      "commit -am TMP` to commit everything, build the package, "
+                                      "`git -C {0} reset --soft HEAD^` to get back to where you were.\n\n"
+                                      "Found changes: {1}".format(
+                                            self.src_repo_path,
+                                            git_status))
+        except CalledProcessError:
+            raise ValidationError("Unable to check status of git_local_work checkout {}. Is the "
+                                  "rel_path correct?".format(src_info['rel_path']))
+
+        self.commit = get_git_sha1(self.src_repo_path + "/.git", "HEAD")
+
+    def get_id(self):
+        return {"commit": self.commit}
+
+    def checkout_to(self, directory):
+        # Clone into `src/`.
+        check_call(["git", "clone", "-q", self.src_repo_path, directory])
+
+        # Make sure we got the right commit as head
+        assert get_git_sha1(directory + "/.git", "HEAD") == self.commit
+
+        # Checkout from the bare repo in the cache folder at the specific sha1
+        check_call([
+            "git",
+            "--git-dir",
+            directory + "/.git",
+            "--work-tree",
+            directory, "checkout",
+            "-f",
+            "-q",
+            self.commit])
+
+
+class UrlSrcFetcher(SourceFetcher):
+    def __init__(self, name, src_info, package_dir):
+        super().__init__(name, src_info, package_dir)
+
+        assert self.kind in {'url', 'url_extract'}
+
+        if src_info.keys() != {'kind', 'sha1', 'url'}:
+                raise ValidationError(
+                        "url and url_extract sources must have exactly 'sha1' (sha1 of the artifact"
+                        " which will be downloaded), and 'url' (url to download artifact) as options")
+
+        self.url = src_info['url']
+        self.extract = (self.kind == 'url_extract')
+        self.cache_filename = self._get_filename(package_dir + "/cache")
+        self.sha = src_info['sha1']
+
+    def _get_filename(self, out_dir):
+        assert '://' in self.url, "Scheme separator not found in url {}".format(self.url)
+        return os.path.join(out_dir, os.path.basename(self.url.split('://', 2)[1]))
+
+    def get_id(self):
+        return {
+            "downloaded_sha1": self.sha
+        }
+
+    def checkout_to(self, directory):
+        # Download file to cache if it isn't already there
+        if not os.path.exists(self.cache_filename):
+            print("Downloading source tarball {}".format(self.url))
+            download(self.cache_filename, self.url, self.package_dir)
+
+        # Validate the sha1 of the source is given and matches the sha1
+        file_sha = sha1(self.cache_filename)
+
+        if self.sha != file_sha:
+            corrupt_filename = self.cache_filename + '.corrupt'
+            check_call(['mv', self.cache_filename, corrupt_filename])
+            raise ValidationError(
+                "Provided sha1 didn't match sha1 of downloaded file, corrupt download saved as {}. "
+                "Provided: {}, Download file's sha1: {}, Url: {}".format(
+                    corrupt_filename, self.sha, file_sha, self.url))
+
+        if self.extract:
+            extract_archive(self.cache_filename, directory)
+        else:
             # Copy the file(s) into src/
             # TODO(cmaloney): Hardlink to save space?
-            filename = get_filename(root, info['url'])
-            shutil.copyfile(cache_filename, filename)
-        elif info['kind'] == 'url_extract':
-            # Extract the files into src.
-            cache_filename = get_filename(pkg_abs("cache"), info['url'])
-            extract_archive(cache_filename, root)
-        else:
-            raise ValidationError("Unsupported source fetch kind: {}".format(info['kind']))
+            shutil.copyfile(self.cache_filename, self._get_filename(directory))
+
+
+src_fetchers = {
+    "git": GitSrcFetcher,
+    "git_local": GitLocalSrcFetcher,
+    "url": UrlSrcFetcher,
+    "url_extract": UrlSrcFetcher
+}
 
 
 # Ref must be a git sha-1. We then pass it through get_sha1 to make
@@ -220,10 +363,9 @@ def is_sha(sha_str):
         return False
 
 
-def fetch_git(package_dir, src, git_uri):
+def fetch_git(bare_folder, git_uri):
     # Do a git clone if the cache folder doesn't exist yet, otherwise
     # do a git pull of everything.
-    bare_folder = '{}/cache/{}.git'.format(package_dir, src)
     if not os.path.exists(bare_folder):
         check_call(["git", "clone", "--mirror", "--progress", git_uri, bare_folder])
     else:
@@ -244,147 +386,6 @@ def fetch_git(package_dir, src, git_uri):
             "origin"])
 
     return bare_folder
-
-
-# TODO(cmaloney): Validate sources has all expected fields...
-def fetch_sources(sources, package_dir):
-    """Fetch sources to the source cache."""
-
-    def pkg_abs(name):
-        return package_dir + '/' + name
-
-    def get_git_sha1(git_dir, git_ref, bare):
-        try:
-            return check_output(
-                ["git"] +
-                (["--git-dir", git_dir] if bare else ['-C', git_dir]) +
-                ["rev-parse", git_ref + "^{commit}"]
-                ).decode('ascii').strip()
-        except CalledProcessError as ex:
-            raise ValidationError(
-                "Unable to find ref '{}' in source '{}': {}".format(git_ref, src, ex)) from ex
-
-    ids = dict()
-
-    # TODO(cmaloney): Update if already exists rather than hard-failing
-    for src, info in sorted(sources.items()):
-
-        # Stash directory for download reuse between builds.
-        cache_dir = pkg_abs("cache")
-        if not os.path.exists(cache_dir):
-            os.mkdir(cache_dir)
-
-        if info['kind'] == 'git':
-            bare_folder = fetch_git(package_dir, src, info['git'])
-
-            if 'branch' in info:
-                raise ValidationError("Use of 'branch' field has been removed. Please replace with 'ref'")
-
-            if 'ref' not in info:
-                raise ValidationError("Must specify ref inside fo the buildinfo")
-
-            ref = info['ref']
-
-            if not is_sha(ref):
-                raise ValidationError("ref must be a git commit sha-1 (40 character hex string). Got: " + ref)
-            commit = get_git_sha1(bare_folder, ref, True)
-
-            # Warn if the ref_origin is set and gives a different sha1 than the
-            # current ref.
-            if 'ref_origin' in info:
-                origin_commit = None
-                try:
-                    origin_commit = get_git_sha1(bare_folder, info['ref_origin'], True)
-                except Exception as ex:
-                    print("WARNING: Unable to find sha1 of ref_origin:", ex)
-                if origin_commit != commit:
-                    print("WARNING: Current ref doesn't match the ref origin. "
-                          "Package ref should probably be updated to pick up "
-                          "new changes to the code:" +
-                          " Current: {}, Origin: {}".format(commit,
-                                                            origin_commit))
-
-            for patcher in info.get('patches', []):
-                raise NotImplementedError()
-
-            ids[src] = {
-                "commit": commit
-            }
-        elif info['kind'] == 'git_local':
-            if info.keys() > {'kind', 'rel_path'}:
-                raise ValidationError("Only kind, rel_path can be specified for git_local")
-            if os.path.isabs(info['rel_path']):
-                raise ValidationError("rel_path must be a relative path to the current directory "
-                                      "when used with git_local. Using a relative path means others "
-                                      "that clone the repository will have things just work rather "
-                                      "than a path.")
-            src_repo_path = os.path.normpath(pkg_abs(info['rel_path'])).rstrip('/')
-
-            # Make sure there are no local changes, we can't `git clone` local changes.
-            try:
-                git_status = check_output([
-                    'git',
-                    '-C',
-                    src_repo_path,
-                    'status',
-                    '--porcelain',
-                    '-uno',
-                    '-z']).decode()
-                if len(git_status):
-                    raise ValidationError("No local changse are allowed in the git_local_work base repository. "
-                                          "Use `git -C {0} status` to see local changes. "
-                                          "All local changes must be committed or stashed before the "
-                                          "package can be built. One workflow (temporary commit): `git -C {0} "
-                                          "commit -am TMP` to commit everything, build the package, "
-                                          "`git -C {0} reset --soft HEAD^` to get back to where you were.\n\n"
-                                          "Found changes: {1}".format(
-                                                src_repo_path,
-                                                git_status))
-            except CalledProcessError as ex:
-                raise ValidationError("Unable to check status of git_local_work checkout {}. Is the "
-                                      "rel_path correct?".format(info['rel_path']))
-
-            # Set the ref
-            commit = get_git_sha1(src_repo_path, "HEAD", False)
-
-            # TODO(cmaloney): HACK. We set the ref here, so it gets picked up by checkout_sources.
-            info['ref'] = commit
-
-            ids[src] = {
-                "commit": commit
-            }
-
-            # Clone to the bare folder so checkout_sources will work
-            fetch_git(package_dir, src, src_repo_path)
-
-        elif info['kind'] == 'url' or info['kind'] == 'url_extract':
-            cache_filename = get_filename(pkg_abs("cache"), info['url'])
-
-            # if the file isn't downloaded yet, get it.
-            if not os.path.exists(cache_filename):
-                download(cache_filename, info['url'], package_dir)
-
-            # Validate the sha1 of the source is given and matches the sha1
-            file_sha = sha1(cache_filename)
-            if 'sha1' not in info:
-                raise ValidationError(
-                    "url and url_extract both require a sha1 to be given in the buildinfo but no sha1 " +
-                    "found for file " + info['url'] + " which when downloaded has the sha1 " + file_sha)
-
-            if info['sha1'] != file_sha:
-                corrupt_filename = cache_filename + '.corrupt'
-                check_call(['mv', cache_filename, corrupt_filename])
-                raise ValidationError(
-                    "Provided sha1 didn't match sha1 of downloaded file, corrupt download saved as {}. "
-                    "Provided: {}, Download file's sha1: {}, Url: {}".format(
-                        corrupt_filename, info['sha1'], file_sha, info['url']))
-            ids[src] = {
-                "downloaded_sha1": file_sha
-            }
-        else:
-            raise ValidationError("Currently only packages from url and git sources are supported")
-
-    return ids
 
 
 def get_last_bootstrap_set(path):

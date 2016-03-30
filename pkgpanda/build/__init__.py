@@ -323,6 +323,7 @@ class UrlSrcFetcher(SourceFetcher):
     def checkout_to(self, directory):
         # Download file to cache if it isn't already there
         if not os.path.exists(self.cache_filename):
+            print("Downloading source tarball {}".format(self.url))
             download(self.cache_filename, self.url, self.package_dir)
 
         # Validate the sha1 of the source is given and matches the sha1

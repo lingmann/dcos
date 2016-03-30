@@ -173,11 +173,26 @@ class CalculatorError(Exception):
 # TODO(cmaloney): Separate chain / path building when unwinding from the root
 #                 error messages.
 class DFSArgumentCalculator():
-    def __init__(self, setters):
+    def __init__(self, setters, validate_fns):
         self._setters = setters
         self._arguments = dict()
         self.__in_progress = set()
         self._errors = dict()
+        self._unset = set()
+
+        # Re-arrange the validation functions so we can more easily access them by
+        # argument name.
+        self._validate_by_arg = dict()
+        for fn in validate_fns:
+            parameters = get_function_parameters(fn)
+            assert len(parameters) == 1, "Validate functions must take exactly one parameter currently."
+            # Get out the one and only parameter's name. This will break really badly
+            # if functions have more than one parameter (We'll call for
+            # each parameter with only one parameter)
+            for parameter in parameters:
+                assert parameter not in self._validate_by_arg, \
+                    "Only one validation function per parameter is currently allowed."
+                self._validate_by_arg[parameter] = fn
 
     def _calculate_argument(self, name):
         # Filter out any setters which have predicates / conditions which are
@@ -185,7 +200,7 @@ class DFSArgumentCalculator():
         def all_conditions_met(setter):
             for condition_name, condition_value in setter.conditions:
                 try:
-                    if self[condition_name] != condition_value:
+                    if self._get(condition_name) != condition_value:
                         return False
                 except CalculatorError as ex:
                     raise CalculatorError(
@@ -197,7 +212,8 @@ class DFSArgumentCalculator():
         feasible = list(filter(all_conditions_met, self._setters.get(name, list())))
 
         if len(feasible) == 0:
-            raise CalculatorError("No known way to set {}".format(name), [])
+            self._unset.add(name)
+            raise CalculatorError("no way to set")
 
         # Filtier out all optional setters if there is more than one way to set.
         if len(feasible) > 1:
@@ -207,11 +223,13 @@ class DFSArgumentCalculator():
 
         # Must be calculated but user tried to provide.
         if len(feasible) == 2 and (feasible[0].is_user or feasible[1].is_user):
-            raise CalculatorError("{} must be calculated, but was explicitly set in the " +
-                                  "configuration. Remove it from the configuration.".format(name))
+            self._errors[name] = ("{} must be calculated, but was explicitly set in the "
+                                  "configuration. Remove it from the configuration.").format(name)
+            raise CalculatorError("{} must be calculated but set twice".format(name))
 
         if len(feasible) > 1:
-            raise CalculatorError("Internal error: Multiple ways to set {}.".format(name),
+            self._errors[name] = "Internal error: Multiple ways to set {}.".format(name)
+            raise CalculatorError("multiple ways to set",
                                   ["options: {}".format(feasible)])
 
         setter = feasible[0]
@@ -219,14 +237,27 @@ class DFSArgumentCalculator():
         # Get values for the parameters, then call. the setter function.
         kwargs = {}
         for parameter in setter.parameters:
-            kwargs[parameter] = self[parameter]
+            kwargs[parameter] = self._get(parameter)
 
-        return setter.calc(**kwargs)
+        try:
+            value = setter.calc(**kwargs)
+        except AssertionError as ex:
+            self._errors[name] = ex.args[0]
+            raise CalculatorError("assertion while calc")
 
-    def __getitem__(self, name):
+        if name in self._validate_by_arg:
+            try:
+                self._validate_by_arg[name](value)
+            except AssertionError as ex:
+                self._errors[name] = ex.args[0]
+                raise CalculatorError("assertion while validate")
+
+        return value
+
+    def _get(self, name):
         if name in self._arguments:
             if self._arguments[name] is None:
-                raise CalculatorError("{} cannot be calculated. See other errors for key error.".format(name))
+                raise CalculatorError("No way to set", [name])
             return self._arguments[name]
 
         # Detect cycles by checking if we're in the middle of calculating the
@@ -250,28 +281,35 @@ class DFSArgumentCalculator():
     # Force calculation of all arguments by accessing the arguments in this
     # scope and recursively all sub-scopes.
     def calculate(self, scope):
-        for name in scope.get('variables', set()):
+        def evaluate_var(name):
             try:
-                self[name]
+                self._get(name)
             except CalculatorError as ex:
-                self._errors[name] = ex.message
                 log.debug("Error calculating %s: %s. Chain: %s", name, ex.message, ex.chain)
+
+        for name in scope.get('variables', set()):
+            evaluate_var(name)
 
         for name, sub_scope in scope.get('sub_scopes', 'dict').items():
-            try:
-                choice = self[name]
-            except CalculatorError as ex:
-                self._errors[name] = ex.message
-                log.debug("Error calculating %s: %s. Chain: %s", name, ex.message, ex.chain)
+            if name not in self._arguments:
+                evaluate_var(name)
+
+            # If the internal arg is None, there was an error, don't check if it
+            # is a legal choice.
+            if self._arguments[name] is None:
                 continue
 
+            choice = self._get(name)
+
             if choice not in sub_scope:
-                self._errors[name] = CalculatorError("Illegal choice {}. Must choose one of {}".format(
-                    choice, ", ".join(sub_scope.keys())))
+                self._errors[name] = "Invalid choice {}. Must choose one of {}".format(
+                    choice, ", ".join(sorted(sub_scope.keys())))
+                continue
+
             self.calculate(sub_scope[choice])
 
-        if len(self._errors):
-            raise ValidationError(self._errors)
+        if len(self._errors) or len(self._unset):
+            raise ValidationError(self._errors, self._unset)
 
         return self._arguments
 
@@ -358,7 +396,7 @@ def validate_arguments_strings(arguments):
             errors[k] = ("All values in arguments must be strings. Value for argument {} isn't. " +
                          "Given value: {}").format(k, v)
     if len(errors):
-        raise ValidationError(errors)
+        raise ValidationError(errors, set())
 
 
 def extract_files_with_path(start_files, paths):
@@ -379,35 +417,6 @@ def extract_files_with_path(start_files, paths):
     assert len(found_files) + len(left_files) == len(start_files)
 
     return found_files, left_files
-
-
-def validate_given(validate_fns, arguments):
-    errors = {}
-
-    # Re-arrange the validation functions so we can more easily access them by
-    # argument name.
-    fns_by_arg = dict()
-    for fn in validate_fns:
-        parameters = get_function_parameters(fn)
-        assert len(parameters) == 1, "Validate functions must take exactly one parameter currently."
-        # Get out the one and only parameter's name. This will break really badly
-        # if functions have more than one parameter (We'll call for
-        # each parameter with only one parameter)
-        for parameter in parameters:
-            fns_by_arg[parameter] = fn
-
-    def noop(_):
-        return
-
-    # Check each argument
-    for name, value in arguments.items():
-        try:
-            fns_by_arg.get(name, noop)(value)
-        except AssertionError as ex:
-            errors[name] = ex.args[0]
-
-    if len(errors):
-        raise ValidationError(errors)
 
 
 class Setter():
@@ -453,8 +462,9 @@ def flatten_parameters(scoped_parameters):
 
 
 class ValidationError(Exception):
-    def __init__(self, errors):
+    def __init__(self, errors, unset):
         self.errors = errors
+        self.unset = unset
         super().__init__(str(errors))
 
 
@@ -475,7 +485,7 @@ def validate_all_arguments_match_parameters(parameters, setters, arguments):
             errors[argument] = 'Argument {} given but not in possible parameters {}'.format(argument, all_parameters)
 
     if len(errors):
-        raise ValidationError(errors)
+        raise ValidationError(errors, set())
 
 
 def validate(
@@ -496,7 +506,8 @@ def validate(
 
         return {
             'status': 'errors',
-            'errors': messages
+            'errors': messages,
+            'unset': ex.unset
         }
 
 
@@ -581,12 +592,10 @@ def generate(
     add_builtin('user_arguments', user_arguments)
 
     # Calculate the remaining arguments.
-    arguments = DFSArgumentCalculator(setters).calculate(mandatory_parameters)
+    arguments = DFSArgumentCalculator(setters, validate).calculate(mandatory_parameters)
 
-    # Validate arguments.
+    # Validate all new / calculated arguments are strings.
     validate_arguments_strings(arguments)
-    # Check against validation functions
-    validate_given(validate, arguments)
 
     log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 

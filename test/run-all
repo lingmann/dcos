@@ -32,7 +32,7 @@ else
 fi
 
 # Pin to just the right dcos-vagrant commit
-git -C dcos-vagrant checkout -qf 489feffa65a7125651d58e8e7fc67a1941e389b2
+git -C dcos-vagrant checkout -qf 69d6429fe46828010e4c14037c253d6cd8a6d564
 
 cp ../dcos_generate_config.sh dcos-vagrant/dcos_generate_config.sh
 
@@ -75,7 +75,7 @@ cleanup_vagrant_leftovers
 
 echo "Starting Vagrant VMs"
 
-vagrant up boot m1 m2 m3 a1 a2
+vagrant up m1 m2 m3 a1 a2 boot 
 
 # TODO(cmaloney): Configure insecure registry inside the dcos-vagrant cluster
 
@@ -101,7 +101,7 @@ for i in boot m1 m2 m3 a1 a2; do
 done
 
 echo "Running integration test"
-set +e # So we can portentially capture the logs
+set +e # So we can potentially capture the logs
 
 docker run -v $PWD/../../integration_test.py:/integration_test.py \
     -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \

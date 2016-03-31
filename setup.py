@@ -24,7 +24,6 @@ setup(
     ],
     packages=['gen', 'gen.aws', 'gen.azure', 'pkgpanda', 'pkgpanda.build', 'providers', 'ssh'],
     install_requires=[
-        'requests',
         'azure-common==1.0.0',
         'azure-storage==0.30.0',
         'boto3',

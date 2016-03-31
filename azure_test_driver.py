@@ -101,6 +101,13 @@ def run():
     print("Resource group name: {}".format(client._resource_group_name))
     print("Deployment name: {}".format(client._deployment_name))
 
+    azure_cluster = {
+                        'resource_group_name': client._resource_group_name,
+                        'deployment_name': client._deployment_name
+                    }
+
+    open('azure-cluster.json', mode='w').write(json.dumps(azure_cluster))
+
     # Create a new resource group
     print("Creating new resource group in location: {}".format(location))
     print(client.create_resource_group(location))

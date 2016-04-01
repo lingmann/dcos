@@ -147,14 +147,14 @@
     },
     "linuxSku": {
       "type": "string",
-      "defaultValue": "15.10",
+      "defaultValue": "16.04.0-DAILY-LTS",
       "metadata": {
         "description": "This is the linux sku used by the linux cluster"
       }
     },
     "linuxVersion": {
       "type": "string",
-      "defaultValue": "latest",
+      "defaultValue": "16.04.201603250",
       "metadata": {
         "description": "This is the linux version used by the linux cluster"
       }
@@ -236,9 +236,17 @@
       "metadata": {
       "description": "Sets the Domain name label for the jumpbox.  The concatenation of the domain name label and the regionalized DNS zone make up the fully qualified domain name associated with the public IP address."
       }
+    },
+    "enableVMDiagnostics": {
+      "defaultValue": true,
+      "metadata": {
+        "description": "Allows user to enable/disable boot & vm diagnostics."
+      },
+      "type": "bool"
     }
   },
   "variables": {
+    "accountid": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',variables('diagnosticsStorageAccountResourceGroup'),'/providers/','Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]",
     "adminUsername": "[parameters('linuxAdminUsername')]",
     "adminPassword": "[parameters('linuxAdminPassword')]",
     "masterEndpointDNSNamePrefix": "[tolower(parameters('masterEndpointDNSNamePrefix'))]",
@@ -264,6 +272,18 @@
     "vmsPerStorageAccount": "[parameters('vmsPerStorageAccount')]",
     "postInstallScriptURI": "[parameters('postInstallScriptURI')]",
     "nameSuffix": "[parameters('nameSuffix')]",
+    "diagnosticsStorageAccountName": "[concat(variables('storageAccountBaseName'), 'diag', '0')]",
+    "diagnosticsStorageAccountName-false": "",
+    "diagnosticsStorageAccountName-true": "[variables('diagnosticsStorageAccountName')]",
+    "diagnosticsStorageAccountResourceGroup": "[resourceGroup().name]",
+    "enableVMDiagnostics": "[parameters('enableVMDiagnostics')]",
+    "wadcfgxend": "[concat('\"><MetricAggregation scheduledTransferPeriod=\"PT1H\"/><MetricAggregation scheduledTransferPeriod=\"PT1M\"/></Metrics></DiagnosticMonitorConfiguration></WadCfg>')]",
+    "wadcfgxstart": "[concat(variables('wadlogs'),variables(concat('wadperfcounters1','-',variables('enableVMDiagnostics'))),variables(concat('wadperfcounters2','-',variables('enableVMDiagnostics'))),'<Metrics resourceId=\"')]",
+    "wadlogs": "<WadCfg><DiagnosticMonitorConfiguration>",
+    "wadperfcounters1-false": "",
+    "wadperfcounters1-true": "<PerformanceCounters scheduledTransferPeriod=\"PT1M\"><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\AvailableMemory\" sampleRate=\"PT15S\" unit=\"Bytes\"><annotation displayName=\"Memory available\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\PercentAvailableMemory\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"Mem. percent available\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\UsedMemory\" sampleRate=\"PT15S\" unit=\"Bytes\"><annotation displayName=\"Memory used\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\PercentUsedMemory\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"Memory percentage\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Memory\\PercentUsedByCache\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"Mem. used by cache\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor\\PercentIdleTime\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU idle time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor\\PercentUserTime\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU user time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor\\PercentProcessorTime\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU percentage guest OS\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\Processor\\PercentIOWaitTime\" sampleRate=\"PT15S\" unit=\"Percent\"><annotation displayName=\"CPU IO wait time\" locale=\"en-us\"/></PerformanceCounterConfiguration>",
+    "wadperfcounters2-false": "",
+    "wadperfcounters2-true": "<PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\BytesPerSecond\" sampleRate=\"PT15S\" unit=\"BytesPerSecond\"><annotation displayName=\"Disk total bytes\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\ReadBytesPerSecond\" sampleRate=\"PT15S\" unit=\"BytesPerSecond\"><annotation displayName=\"Disk read guest OS\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\WriteBytesPerSecond\" sampleRate=\"PT15S\" unit=\"BytesPerSecond\"><annotation displayName=\"Disk write guest OS\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\TransfersPerSecond\" sampleRate=\"PT15S\" unit=\"CountPerSecond\"><annotation displayName=\"Disk transfers\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\ReadsPerSecond\" sampleRate=\"PT15S\" unit=\"CountPerSecond\"><annotation displayName=\"Disk reads\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\WritesPerSecond\" sampleRate=\"PT15S\" unit=\"CountPerSecond\"><annotation displayName=\"Disk writes\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\AverageReadTime\" sampleRate=\"PT15S\" unit=\"Seconds\"><annotation displayName=\"Disk read time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\AverageWriteTime\" sampleRate=\"PT15S\" unit=\"Seconds\"><annotation displayName=\"Disk write time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\AverageTransferTime\" sampleRate=\"PT15S\" unit=\"Seconds\"><annotation displayName=\"Disk transfer time\" locale=\"en-us\"/></PerformanceCounterConfiguration><PerformanceCounterConfiguration counterSpecifier=\"\\PhysicalDisk\\AverageDiskQueueLength\" sampleRate=\"PT15S\" unit=\"Count\"><annotation displayName=\"Disk queue length\" locale=\"en-us\"/></PerformanceCounterConfiguration></PerformanceCounters>",
     "isValidation": "[parameters('isValidation')]",
     "storageLocations": [
       "[resourceGroup().location]",
@@ -503,13 +523,15 @@
     "agentsPublicLbBackendPoolName": "[concat(variables('orchestratorName'), '-agent-pool-', variables('nameSuffix'))]",
     "agentStorageAccountsCount": 5,
     "agentsPerIPv4Octet": 200,
-    "agentCustomScript": "[concat('/usr/bin/nohup /bin/bash -c \"/bin/bash /opt/azure/containers/configure-mesos-cluster.sh ',variables('clusterInstallParameters'),' >> /var/log/azure/cluster-bootstrap.log 2>&1 &\" &')]"
+    "agentCustomScript": "[concat('/usr/bin/nohup /bin/bash -c \"/bin/bash /opt/azure/containers/configure-mesos-cluster.sh ',variables('clusterInstallParameters'),' >> /var/log/azure/cluster-bootstrap.log 2>&1 &\" &')]",
+    "apiVersionDefault": "2016-03-30",
+    "apiVersionStorage": "2015-06-15"
   },
   "resources": [
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('masterStorageAccountName')]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -519,7 +541,16 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "type": "Microsoft.Storage/storageAccounts",
+      "name": "[variables('diagnosticsStorageAccountName')]",
+      "apiVersion": "[variables('apiVersionStorage')]",
+      "location": "[variables('storageLocation')]",
+      "properties": {
+        "accountType": "[variables('vmSizesMap')[variables('masterVMSize')].storageAccountType]"
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/virtualNetworks",
       "name": "[variables('virtualNetworkName')]",
       "location": "[resourceGroup().location]",
@@ -563,14 +594,14 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/availabilitySets",
       "name": "[variables('masterAvailabilitySet')]",
       "location": "[resourceGroup().location]",
       "properties": {}
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('masterPublicIPAddressName')]",
       "location": "[resourceGroup().location]",
@@ -582,7 +613,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[variables('masterLbName')]",
       "type": "Microsoft.Network/loadBalancers",
       "location": "[resourceGroup().location]",
@@ -608,7 +639,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/loadBalancers/inboundNatRules",
       "name": "[concat(variables('masterLbName'), '/', 'SSH-', variables('masterVMNamePrefix'), copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -630,7 +661,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('masterNSGName')]",
       "location": "[resourceGroup().location]",
@@ -654,13 +685,13 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('agentPrivateNSGName')]",
       "location": "[resourceGroup().location]"
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkSecurityGroups",
       "name": "[variables('agentPublicNSGName')]",
       "location": "[resourceGroup().location]",
@@ -712,7 +743,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/networkInterfaces",
       "name": "[concat(variables('masterVMNamePrefix'), 'nic-', copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -755,7 +786,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/virtualMachines",
       "name": "[concat(variables('masterVMNamePrefix'), copyIndex())]",
       "location": "[resourceGroup().location]",
@@ -766,11 +797,18 @@
       "dependsOn": [
         "[concat('Microsoft.Network/networkInterfaces/', variables('masterVMNamePrefix'), 'nic-', copyIndex())]",
         "[concat('Microsoft.Compute/availabilitySets/',variables('masterAvailabilitySet'))]",
-        "[variables('masterStorageAccountName')]"
+        "[variables('masterStorageAccountName')]",
+        "[variables('diagnosticsStorageAccountName')]"
       ],
       "properties": {
         "availabilitySet": {
           "id": "[resourceId('Microsoft.Compute/availabilitySets',variables('masterAvailabilitySet'))]"
+        },
+        "diagnosticsProfile": {
+          "bootDiagnostics": {
+            "enabled": "[variables('enableVMDiagnostics')]",
+            "storageUri": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName')), variables('apiVersionStorage')).primaryEndpoints.blob]"
+          }
         },
         "hardwareProfile": {
           "vmSize": "[variables('masterVMSize')]"
@@ -808,30 +846,53 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Compute/virtualMachines/extensions",
-      "name": "[concat(variables('masterVMNamePrefix'), copyIndex(), '/waitforleader')]",
+      "name": "[concat(variables('masterVMNamePrefix'), sub(variables('masterCount'), 1), '/waitforleader')]",
       "location": "[resourceGroup().location]",
-      "copy": {
-        "name": "masterExtLoop",
-        "count": "[variables('masterCount')]"
-      },
       "dependsOn": [
-        "[concat('Microsoft.Compute/virtualMachines/', variables('masterVMNamePrefix'), copyIndex())]"
+        "[concat('Microsoft.Compute/virtualMachines/', variables('masterVMNamePrefix'), sub(variables('masterCount'), 1))]"
       ],
       "properties": {
         "publisher": "Microsoft.OSTCExtensions",
         "type": "CustomScriptForLinux",
         "typeHandlerVersion": "1.4",
         "settings": {
-          "commandToExecute": "sh -c 'until ping -c1 leader.mesos >/dev/null;do echo waiting for leader.mesos;sleep 15;done;echo leader.mesos up'"
+          "commandToExecute": "sh -c 'until ping -c1 leader.mesos;do echo waiting for leader.mesos;sleep 15;done;echo leader.mesos up'"
         }
+      }
+    },
+    {
+      "apiVersion": "[variables('apiVersionDefault')]",
+      "type": "Microsoft.Compute/virtualMachines/extensions",
+      "name": "[concat(variables('masterVMNamePrefix'), copyIndex(), '/linuxdiagnostic')]",
+      "copy": {
+        "count": "[variables('masterCount')]",
+        "name": "vmLoopNode"
+      },
+      "location": "[resourceGroup().location]",
+      "dependsOn": [
+        "[concat('Microsoft.Compute/virtualMachines/', concat(variables('masterVMNamePrefix'), copyIndex()))]"
+      ],
+      "properties": {
+        "autoUpgradeMinorVersion": true,
+        "protectedSettings": {
+          "storageAccountKey": "[listKeys(variables('accountid'),variables('apiVersionStorage')).key1]",
+          "storageAccountName": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]"
+        },
+        "publisher": "Microsoft.OSTCExtensions",
+        "settings": {
+          "StorageAccount": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]",
+          "xmlCfg": "[base64(concat(variables('wadcfgxstart'), variables('masterVMNamePrefix'), copyIndex(), variables('wadcfgxend')))]"
+        },
+        "type": "LinuxDiagnostic",
+        "typeHandlerVersion": "2.3"
       }
     },
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[variables('agentStoragePublicAccountName')]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -841,7 +902,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "type": "Microsoft.Network/publicIPAddresses",
       "name": "[variables('agentPublicIPAddressName')]",
       "location": "[resourceGroup().location]",
@@ -853,7 +914,7 @@
       }
     },
     {
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[variables('agentsPublicLbName')]",
       "type": "Microsoft.Network/loadBalancers",
       "location": "[resourceGroup().location]",
@@ -972,7 +1033,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[concat(variables('agentPublicVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {
@@ -982,7 +1043,8 @@
       "dependsOn": [
         "[concat('Microsoft.Storage/storageAccounts/', variables('agentStoragePublicAccountName'))]",
         "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
-        "[concat('Microsoft.Network/loadBalancers/', variables('agentsPublicLbName'))]"
+        "[concat('Microsoft.Network/loadBalancers/', variables('agentsPublicLbName'))]",
+        "[variables('diagnosticsStorageAccountName')]"
       ],
       "sku": {
         "name": "[variables('agentVMSize')]",
@@ -994,6 +1056,33 @@
           "mode": "Manual"
         },
         "virtualMachineProfile": {
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": "[variables('enableVMDiagnostics')]",
+              "storageUri": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName')), variables('apiVersionStorage')).primaryEndpoints.blob]"
+            }
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "LinuxDiagnostic",
+                "properties": {
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "storageAccountKey": "[listKeys(variables('accountid'),variables('apiVersionStorage')).key1]",
+                    "storageAccountName": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]"
+                  },
+                  "publisher": "Microsoft.OSTCExtensions",
+                  "settings": {
+                    "StorageAccount": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]",
+                    "xmlCfg": "[base64(concat(variables('wadcfgxstart'), variables('agentPublicVMNamePrefix'), variables('wadcfgxend')))]"
+                  },
+                  "type": "LinuxDiagnostic",
+                  "typeHandlerVersion": "2.3"
+                }
+              }
+            ]
+          },
           "storageProfile": {
             "osDisk": {
               "vhdContainers": [
@@ -1057,7 +1146,7 @@
     {
       "type": "Microsoft.Storage/storageAccounts",
       "name": "[concat(variables('storageAccountPrefixes')[mod(copyIndex(),variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(copyIndex(),variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),copyIndex())]",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
       "dependsOn": [
         "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
@@ -1072,7 +1161,7 @@
     },
     {
       "type": "Microsoft.Compute/virtualMachineScaleSets",
-      "apiVersion": "2015-06-15",
+      "apiVersion": "[variables('apiVersionDefault')]",
       "name": "[concat(variables('agentPrivateVMNamePrefix'), '-vmss', copyIndex())]",
       "location": "[resourceGroup().location]",
       "copy": {
@@ -1085,7 +1174,8 @@
         "[concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(2,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(2,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),2)]",
         "[concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(3,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(3,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),3)]",
         "[concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(4,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(4,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),4)]",
-        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]"
+        "[concat('Microsoft.Network/virtualNetworks/', variables('virtualNetworkName'))]",
+        "[variables('diagnosticsStorageAccountName')]"
       ],
       "sku": {
         "name": "[variables('agentVMSize')]",
@@ -1097,6 +1187,33 @@
           "mode": "Manual"
         },
         "virtualMachineProfile": {
+          "diagnosticsProfile": {
+            "bootDiagnostics": {
+              "enabled": "[variables('enableVMDiagnostics')]",
+              "storageUri": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName')), variables('apiVersionStorage')).primaryEndpoints.blob]"
+            }
+          },
+          "extensionProfile": {
+            "extensions": [
+              {
+                "name": "LinuxDiagnostic",
+                "properties": {
+                  "autoUpgradeMinorVersion": true,
+                  "protectedSettings": {
+                    "storageAccountKey": "[listKeys(variables('accountid'),variables('apiVersionStorage')).key1]",
+                    "storageAccountName": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]"
+                  },
+                  "publisher": "Microsoft.OSTCExtensions",
+                  "settings": {
+                    "StorageAccount": "[variables(concat('diagnosticsStorageAccountName', '-', variables('enableVMDiagnostics')))]",
+                    "xmlCfg": "[base64(concat(variables('wadcfgxstart'), variables('agentPrivateVMNamePrefix'), variables('wadcfgxend')))]"
+                  },
+                  "type": "LinuxDiagnostic",
+                  "typeHandlerVersion": "2.3"
+                }
+              }
+            ]
+          },
           "storageProfile": {
             "osDisk": {
               "vhdContainers": [
@@ -1169,6 +1286,10 @@
     "masterFQDN": {
       "type": "string",
       "value": "[reference(concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))).dnsSettings.fqdn]"
+    },
+    "diagnosticsStorageAccountUri": {
+      "type": "string",
+      "value": "[reference(concat('Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName')), variables('apiVersionStorage')).primaryEndpoints.blob]"
     }
   }
 }

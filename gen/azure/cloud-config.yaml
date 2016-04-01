@@ -42,15 +42,27 @@ root:
       ExecStart=/opt/mesosphere/bin/pkgpanda setup --no-block-systemd
       [Install]
       WantedBy=multi-user.target
-  - path: /usr/sbin/policy-rc.d
-    permissions: "0755"
+  - path: /etc/systemd/system/dcos-docker-install.service
+    permissions: "0644"
     content: |
-      #!/usr/bin/bash
-      if [[ "$1" == "docker" && "$2" == "start" ]]; then exit 101; fi
+      [Unit]
+      Description=Install Docker Daemon
+      After=network-online.target
+      Wants=network-online.target
+      [Service]
+      Type=oneshot
+      Environment=DEBIAN_FRONTEND=noninteractive
+      StandardOutput=journal+console
+      StandardError=journal+console
+      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -o /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb http://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0~rc2-0~xenial_amd64.deb
+      ExecStart=/usr/bin/bash -c "attempt=1; until dpkg -D3 -i /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb || ((attempt > 5)); do echo retry $((attempt++)); sleep 120; done; systemctl --now start docker"
   - path: /etc/systemd/system/docker.service.d/execstart.conf
     permissions: "0644"
     content: |
       [Service]
+      Restart=always
+      StartLimitInterval=0
+      RestartSec=15
       ExecStartPre=/bin/sh -ec "until df|grep /mnt;do echo waiting for /mnt;sleep 10;done"
       # Disable unit default ExecStart statements with an empty assignment
       ExecStart=
@@ -99,11 +111,8 @@ runcmd:
     - [ cp, -p, /etc/resolv.conf, /tmp/resolv.conf ]
     - [ rm, -f, /etc/resolv.conf ]
     - [ cp, -p, /tmp/resolv.conf, /etc/resolv.conf ]
+    - [ systemctl, start, dcos-docker-install.service ]
     - [ systemctl, start, dcos-link-env.service ]
     - [ systemctl, start, dcos-download.service ]
     - [ systemctl, start, dcos-setup.service ]
     - [ systemctl, start, dcos-config-writer.service ]
-    - [ apt-get, -y, update ]
-    - curl -fLsSv --retry 20 -C - -o /tmp/docker-engine_1.9.1-0~wily_amd64.deb http://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.9.1-0~wily_amd64.deb
-    - DEBIAN_FRONTEND=noninteractive dpkg -i /tmp/docker-engine_1.9.1-0~wily_amd64.deb
-    - [ systemctl, restart, docker ]

@@ -112,6 +112,6 @@ cat <<EOF > "$systemd_master_timer"
 [Unit]
 Description=Admin Router Reload Timer: Periodically reload admin router nginx config to pickup new dns
 [Timer]
-OnBootSec=0min
+OnBootSec=5sec
 OnUnitActiveSec=30s
 EOF

@@ -25,6 +25,9 @@ nomail
     daily
     rotate 7
     copytruncate
+    postrotate
+        find  /var/log/mesos /var/log/mesos/archive -mtime +14 -delete
+    endscript
 }
 EOF
 

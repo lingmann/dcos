@@ -1,5 +1,5 @@
 {
-  "requires": ["python", "python-passlib", "python-retrying", "six"],
+  "requires": ["python", "python-kazoo", "python-passlib", "python-retrying", "six"],
   "docker": "dcos-builder",
   "sources": {
     "bouncer": {
@@ -32,11 +32,6 @@
       "kind": "url_extract",
       "url": "https://pypi.python.org/packages/source/p/python-mimeparse/python-mimeparse-0.1.4.tar.gz",
       "sha1": "bebc26249214c66f8c65e904e8eede8453eb4840"
-    },
-    "kazoo": {
-      "kind": "url",
-      "url": "https://pypi.python.org/packages/py2.py3/k/kazoo/kazoo-2.2.1-py2.py3-none-any.whl",
-      "sha1": "4e1a32ffa178f173d8ab35a6c28d2a1dd3d995b8"
     },
     "ldap3": {
       "kind": "url",

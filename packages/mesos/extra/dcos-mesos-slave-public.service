@@ -12,4 +12,5 @@ EnvironmentFile=/opt/mesosphere/etc/mesos-slave-common
 EnvironmentFile=/opt/mesosphere/etc/mesos-slave-public
 EnvironmentFile=-/var/lib/dcos/mesos-slave-common
 ExecStartPre=/bin/ping -c1 ready.spartan
+ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStart=$PKG_PATH/bin/mesos-slave

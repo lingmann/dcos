@@ -17,7 +17,7 @@
 - name: dcos-download.service
   content: |
     [Unit]
-    Description=Download the DCOS
+    Description=Pkgpanda: Download the DCOS
     After=network-online.target
     Wants=network-online.target
     ConditionPathExists=!/opt/mesosphere/
@@ -36,7 +36,7 @@
   enable: true
   content: |
     [Unit]
-    Description=Prep the Pkgpanda working directories for this host.
+    Description=Pkgpanda: Specialize DCOS for this host.
     Requires=dcos-download.service
     After=dcos-download.service
     [Service]

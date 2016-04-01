@@ -1,5 +1,5 @@
 [Unit]
-Description=Spartan
+Description=DNS Dispatcher: An RFC5625 Compliant DNS Forwarder
 [Service]
 Restart=always
 StartLimitInterval=0

@@ -1,5 +1,5 @@
 [Unit]
-Description=Tracking every interval
+Description=Signal Timer: DCOS Signal Service Timer
 [Timer]
 OnCalendar=hourly
 Unit=dcos-signal.service

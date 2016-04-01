@@ -59,7 +59,7 @@ service=${PKG_PATH}/dcos.target.wants/dcos-minuteman.service
 mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
-Description=Minuteman
+Description=Layer 4 Load Balancer: DCOS Layer 4 Load Balancing Service
 After=dcos-gen-resolvconf.service
 After=dcos-epmd.service
 BindsTo=dcos-epmd.service

@@ -1,5 +1,5 @@
 [Unit]
-Description=Periodically update systemd-resolved for mesos-dns
+Description=Generate Resolv.conf Timer: Periodically update systemd-resolved for mesos-dns
 [Timer]
 OnBootSec=0min
 OnUnitActiveSec=1min

@@ -17,7 +17,7 @@ mkdir -p $(dirname $slave_service)
 mkdir -p $(dirname $slave_public_service)
 cat <<EOF | tee $slave_service $slave_public_service
 [Unit]
-Description=DCOS Distributed Diagnostics Tool
+Description=Diagnostics: DCOS Distributed Diagnostics Tool
 [Service]
 EnvironmentFile=/opt/mesosphere/environment
 Restart=always
@@ -28,7 +28,7 @@ EOF
 
 cat <<EOF | tee $master_service
 [Unit]
-Description=DCOS Distributed Diagnostics Tool Master API and Aggregation Service
+Description=Diagnostics: DCOS Distributed Diagnostics Tool Master API and Aggregation Service
 [Service]
 EnvironmentFile=/opt/mesosphere/environment
 Restart=always

@@ -1,5 +1,5 @@
 [Unit]
-Description=DCOS Tracking
+Description=Signal Service: DCOS Telemetry and Support Utility
 After=dcos-mesos-master.service
 [Service]
 EnvironmentFile=/opt/mesosphere/environment

@@ -58,7 +58,7 @@ late_services = """- name: dcos-cfn-signal.service
   command: start
   content: |
     [Unit]
-    Description=Signal CloudFormation Success
+    Description=AWS Setup: Signal CloudFormation Success
     After=dcos.target
     Requires=dcos.target
     ConditionPathExists=!/var/lib/dcos-cfn-signal

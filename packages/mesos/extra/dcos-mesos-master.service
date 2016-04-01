@@ -1,5 +1,5 @@
 [Unit]
-Description=Mesos Master
+Description=Mesos Master: DCOS Mesos Master Service
 [Service]
 Restart=always
 StartLimitInterval=0

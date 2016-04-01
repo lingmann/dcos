@@ -15,7 +15,7 @@ service=${PKG_PATH}/dcos.target.wants/dcos-epmd.service
 mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
-Description=Erlang epmd process
+Description=Erlang Port Mapping Daemon: DCOS Erlang Port Mapping Daemon
 
 [Service]
 Restart=always

@@ -106,6 +106,10 @@ def calculate_mesos_slave_modules_json(mesos_slave_modules):
     return json_multiline.replace('\n', '\n' + injected_indent)
 
 
+def validate_customer_key(customer_key):
+    assert isinstance(customer_key, str), "Must be a string."
+
+
 def validate_num_masters(num_masters):
     assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
@@ -311,7 +315,8 @@ entry = {
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
-        validate_mesos_dns_ip_sources],
+        validate_mesos_dns_ip_sources,
+        validate_customer_key],
     'default': {
         'weights': '',
         'docker_remove_delay': '1hrs',

@@ -1,5 +1,6 @@
 import json
 import os
+import socket
 from math import floor
 from subprocess import check_output
 
@@ -135,12 +136,57 @@ def validate_json_list(json_list):
 
         assert type(list_data) is list, "Must be a JSON list. Got a {}".format(type(list_data))
     except json.JSONDecodeError as ex:
-        # TODO(cmaloney):
-        assert False, "Must be a valid JSON list. Errors whilewhile parsing at position {}: {}".format(ex.pos, ex.msg)
+        assert False, "Must be a valid JSON list. Errors while parsing at position {}: {}".format(ex.pos, ex.msg)
+
+    return list_data
+
+
+def validate_host_list(host_list):
+    host_list = validate_json_list(host_list)
+    azure_format_check = []
+    validate_duplicates(host_list)
+    for host in host_list:
+        assert isinstance(host, str), 'Host must be of type string, got {}'.format(type(host))
+        if host.startswith('[[[reference(') and host.endswith(').ipConfigurations[0].properties.privateIPAddress]]]'):  # noqa
+            azure_format_check.append(True)
+        else:
+            azure_format_check.append(False)
+    if all(azure_format_check):
+        return host_list
+    assert not any(azure_format_check), "Azure static master list and IP based static master list cannot be mixed. Use "
+    "either all Azure IP references or IPv4 addresses."
+    return validate_ipv4_addrs(host_list)
+
+
+def validate_ipv4_addrs(ips):
+    assert isinstance(ips, list)
+    invalid_ips = []
+    for ip in ips:
+        try:
+            socket.inet_pton(socket.AF_INET, str(ip))
+        except OSError:
+            invalid_ips.append(ip)
+    assert not len(invalid_ips), 'Only IPv4 values are allowed. The following are invalid IPv4 addresses: {}'.format(
+                                 ', '.join(invalid_ips))
+    return ips
+
+
+def validate_duplicates(input_list):
+    assert isinstance(input_list, list)
+    dups = list(filter(lambda x: input_list.count(x) > 1, input_list))
+    assert len(dups) == 0, "List cannot contain duplicates: {}".format(", ".join(dups))
 
 
 def validate_master_list(master_list):
-    return validate_json_list(master_list)
+    return validate_host_list(master_list)
+
+
+def validate_agent_list(agent_list):
+    return validate_host_list(agent_list)
+
+
+def validate_resolvers(resolvers):
+    return validate_host_list(resolvers)
 
 
 def validate_mesos_dns_ip_sources(mesos_dns_ip_sources):
@@ -178,6 +224,7 @@ def validate_cluster_packages(cluster_packages):
 
 
 def validate_zk_hosts(exhibitor_zk_hosts):
+    # TODO(malnick) Add validation of IPv4 address and port to this
     assert not exhibitor_zk_hosts.startswith('zk://'), "Must be of the form `host:port,host:port', not start with zk://"
 
 
@@ -259,6 +306,8 @@ entry = {
         validate_channel_name,
         validate_dns_search,
         validate_master_list,
+        validate_agent_list,
+        validate_resolvers,
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,

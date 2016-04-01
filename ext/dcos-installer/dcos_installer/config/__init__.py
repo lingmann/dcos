@@ -13,8 +13,7 @@ import logging
 import os
 import yaml
 
-from dcos_installer.validate import DCOSValidateConfig
-from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH, REXRAY_CONFIG_PATH
+from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH
 log = logging.getLogger(__name__)
 
 
@@ -27,52 +26,33 @@ class DCOSConfig(dict):
 ---
 # The name of your DCOS cluster. Visable in the DCOS user interface.
 cluster_name: 'DCOS'
-
-# Master discovery must be static
 master_discovery: static
-
-# The IPv4 addresses of your master hosts
-master_list:
--
-
-# The IPv4 addresses of your agent hosts
-agent_list:
--
-
-# The bootstrapping exhibitor backend
 exhibitor_storage_backend: 'static'
-
-# Upstream DNS resolvers for MesosDNS
 resolvers:
 - 8.8.8.8
 - 8.8.4.4
-
-# DCOS username and password
-superuser_username:
-superuser_password_hash:
-
-ssh_user:
 ssh_port: 22
-
 process_timeout: 10000
-bootstrap_url: 'file:///opt/dcos_install_tmp'
+bootstrap_url: file:///opt/dcos_install_tmp
 """
-
         self.write_default_config = write_default_config
         self.defaults = yaml.load(defaults)
         self.config_path = config_path
         self.overrides = overrides
-        self.build()
-        self.errors = []
+        self._build()
 
         log.debug("Configuration:")
         for k, v in self.items():
             log.debug("%s: %s", k, v)
 
-    def _get_hidden_config(self):
+    def get_hidden_config(self):
         self.hidden_config = {
-            'ip_detect_path':  IP_DETECT_PATH,
+            'ip_detect_filename':  IP_DETECT_PATH,
             'ssh_key_path': SSH_KEY_PATH,
+        }
+
+    def get_external_config(self):
+        self.external_config = {
             'ssh_key': self._try_loading_from_disk(SSH_KEY_PATH),
             'ip_detect_script': self._try_loading_from_disk(IP_DETECT_PATH)
         }
@@ -84,58 +64,39 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         else:
             return None
 
-    def build(self):
+    def _build(self):
+        """Build takes the default configuration, overrides this with
+        the config on disk, and overrides that with configruation POSTed
+        to the backend"""
         # Create defaults
         for key, value in self.defaults.items():
             self[key] = value
-        # Get user config file configuration
-        user_config = self.get_config()
+
         # Add user-land configuration
+        user_config = self.get_config_from_disk()
         if user_config:
             for k, v in user_config.items():
-
                 self[k] = v
 
+        # Override with POST data
         self._add_overrides()
 
     def _add_overrides(self):
-        """
-        Add overrides. Overrides expects data in the same format as the config file.
-        """
-        arrays = ['master_list', 'resolvers', 'target_hosts']
         if self.overrides is not None and len(self.overrides) > 0:
-            no_config_write = ['ssh_key', 'ip_detect_script']
             for key, value in self.overrides.items():
-                if key == 'ssh_key':
-                    self.write_to_disk(value, SSH_KEY_PATH, mode=0o600)
-                elif key == 'ip_detect_script':
-                    self.write_to_disk(value, IP_DETECT_PATH)
-                elif key == 'rexray_config':
-                    self['rexray_config_method'] = 'file'
-                    self['rexray_config_filename'] = REXRAY_CONFIG_PATH
-                    self.write_to_disk(value, REXRAY_CONFIG_PATH)
-
-                if key in no_config_write:
-                    pass
-                elif key in arrays and value is None:
-                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
-                    self[key] = list(value)
-                else:
-                    log.warning("Overriding %s: %s -> %s", key, self.get(key), value)
+                if value is None:
+                    log.warning("Adding new configuration %s: %s", key, value)
                     self[key] = value
 
-    def validate(self):
-        config = self._unbind_configuration()
-        self._get_hidden_config()
-        config.update(self.hidden_config)
-        log.debug(config)
-        _, messages = DCOSValidateConfig(config).validate()
-        return messages
+                elif key in self:
+                    log.warning("Overriding %s: %s -> %s", key, self[key], value)
+                    self[key] = value
 
-    def get_config(self):
-        """
-        Get config from disk.
-        """
+                else:
+                    log.warning("Adding new value %s: %s", key, value)
+                    self[key] = value
+
+    def get_config_from_disk(self):
         if os.path.isfile(self.config_path):
             log.debug("Loading YAML configuration: %s", self.config_path)
             with open(self.config_path, 'r') as data:
@@ -155,29 +116,21 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
         return configuration
 
     def write(self):
+        """Write the configuration to disk, removing keys that are not permitted to be
+        used by end-users"""
         if self.config_path:
+            self._remove_unrequired_config_keys()
             data = open(self.config_path, 'w')
             data.write(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))
             data.close()
         else:
             log.error("Must pass config_path=/path/to/file to execute .write().")
 
-    def write_to_disk(self, data, path, mode=0o644):
-        log.warning('Writing {} with mode {}: {}'.format(path, mode, data))
-        if data is not None and data is not "":
-            f = open(path, 'w')
-            f.write(data)
-            os.chmod(path, mode)
-        else:
-            log.warning('Request to write file {} ignored.'.format(path))
-            log.warning('Cowardly refusing to write empty values or None data to disk.')
-
     def print_to_screen(self):
         print(yaml.dump(self._unbind_configuration(), default_flow_style=False, explicit_start=True))
 
     def _unbind_configuration(self):
-        """
-        Unbinds the methods and class variables from the DCOSConfig
+        """Unbinds the methods and class variables from the DCOSConfig
         object and returns a simple dictionary.
         """
         dictionary = {}
@@ -186,28 +139,37 @@ bootstrap_url: 'file:///opt/dcos_install_tmp'
 
         return dictionary
 
-    def make_gen_config(self):
+    def stringify_configuration(self):
+        """Create a stringified version of the complete installer configuration
+        to send to gen.generate()"""
         gen_config = {}
         for key, value in self.items():
-            # Remove config values that don't concern gen
-            if key in [
-                    'log_directory',
-                    'ssh_user',
-                    'ssh_port',
-                    'ssh_key',
-                    'ssh_key_path',
-                    'agent_list',
-                    'ip_detect_path',
-                    'ip_detect_script',
-                    'process_timeout',
-                    'rexray_config']:
-                continue
-            log.debug('Adding {}: {} to gen.generate() configuration'.format(key, value))
-            # stringify the keys as they're added in:
             if isinstance(value, list):
-                log.debug("Caught list for genconf configuration, transforming to JSON string: %s", list)
+                log.debug("Caught list for genconf configuration, transforming to JSON string: %s", value)
                 value = json.dumps(value)
+
+            elif isinstance(value, int):
+                log.debug("Caught int for genconf configuration, transforming to string: %s", value)
+                value = str(value)
+
             gen_config[key] = value
 
-        log.debug('Complete genconf configuration: \n{}'.format(gen_config))
+        log.debug('Stringified configuration: \n{}'.format(gen_config))
         return gen_config
+
+    def _remove_unrequired_config_keys(self):
+        """Remove the configuration we do not want
+        in the config file.
+
+        :param config: The config dictionary
+        :type config: dict | {}
+        """
+        do_not_write = [
+            'ssh_key',
+            'ssh_key_path',
+            'ip_detect_path',
+            'ip_detect_script'
+        ]
+        for key in do_not_write:
+            if key in self:
+                del self[key]

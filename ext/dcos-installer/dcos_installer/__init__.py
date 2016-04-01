@@ -64,45 +64,23 @@ def make_default_dir(dir=GENCONF_DIR):
         os.makedirs(dir)
 
 
-def check_config_validation(gen_val=False):
-    '''Gen validation needs to ignore all warnings (optional) validation which
-    includes SSH stuff. However, if we do have warnings, we need to ensure this
-    validation passes even if superuser_username and superuser_password_hash
-    exist since they're optional between CE and EE'''
-    messages, code = backend.do_validate_config(write_default_config=False)
-    if code == 1:
-        if gen_val:
-            log.error("Configuration generation (--genconf) requires the following errors to be fixed:")
-            keys = messages['errors'].keys()
-            for key in keys:
-                log.error(key)
-
-        sys.exit(1)
-
-    elif code == 2 and not gen_val:
-        dual_distro = ['superuser_username', 'superuser_password_hash']
-        warn = messages.get('warning')
-        for k in dual_distro:
-            if k in warn:
-                del warn[k]
-        if len(warn) > 0:
-            log.error("Please fix all errors before proceeding.")
-            sys.exit(1)
-
-
-def try_genconf():
-    # Ensure the genconf dir and config.yaml exist first
-    if os.path.exists('{}/config.yaml'.format(GENCONF_DIR)):
-        check_config_validation(gen_val=True)
-        messages = backend.do_configure()
-        if 'errors' in messages:
-            for k, v in messages['errors'].items():
-                log.error(k + ": " + v)
-            sys.exit(1)
-    else:
-        log.error('{}/config.yaml must exist before running --genconf. Exiting.'.format(GENCONF_DIR))
-        sys.exit(1)
-    sys.exit(0)
+def log_warn_only():
+    """Drop to warning level and down to get around gen.generate() log.info
+    output"""
+    coloredlogs.install(
+        level='WARNING',
+        level_styles={
+            'warn': {
+                'color': 'yellow'
+            },
+            'error': {
+                'color': 'red',
+                'bold': True,
+            },
+        },
+        fmt='%(message)s',
+        isatty=True
+    )
 
 
 def tall_enough_to_ride():
@@ -113,11 +91,24 @@ def tall_enough_to_ride():
                              '/var/lib/zookeeper in some cases after this completes, please see our documentation '
                              'for details. Are you ABSOLUTELY sure you want to proceed? [ (y)es/(n)o ]: ')
         if do_uninstall.lower() in choices_true:
-            return True
+            return
         elif do_uninstall.lower() in choices_false:
-            return False
+            sys.exit(1)
         else:
             log.error('Choices are [y]es or [n]o. "{}" is not a choice'.format(do_uninstall))
+
+
+def print_validation_errors(messages):
+    log.error("Validation of configuration parameters failed: ")
+    for key, message in messages.items():
+        log.error('{}: {}'.format(key, message))
+
+
+def validate_ssh_config_or_exit():
+    validation_errors = backend.do_validate_ssh_config()
+    if validation_errors:
+        print_validation_errors(validation_errors)
+        sys.exit(1)
 
 
 class DcosInstaller:
@@ -130,6 +121,7 @@ class DcosInstaller:
         # If no args are passed to the class, then we're calling this
         # class from another library or code so we shouldn't execute
         # parser or anything else
+        make_default_dir()
         if args:
             options = self.parse_args(args)
             if len(options.hash_password) > 0:
@@ -138,47 +130,50 @@ class DcosInstaller:
                 sys.exit(0)
 
             if options.web:
-                make_default_dir()
                 print_header("Starting DCOS installer in web mode")
                 async_server.start(options)
 
             if options.genconf:
-                make_default_dir()
                 print_header("EXECUTING CONFIGURATION GENERATION")
-                try_genconf()
-
-            if options.preflight:
-                print_header("EXECUTING PREFLIGHT")
-                check_config_validation()
-                sys.exit(run_loop(action_lib.run_preflight, options))
-
-            if options.deploy:
-                print_header("EXECUTING DCOS INSTALLATION")
-                check_config_validation()
-                sys.exit(run_loop(action_lib.install_dcos, options))
-
-            if options.postflight:
-                check_config_validation()
-                print_header("EXECUTING POSTFLIGHT")
-                sys.exit(run_loop(action_lib.run_postflight, options))
-
-            if options.uninstall:
-                check_config_validation()
-                if tall_enough_to_ride():
-                    print_header("EXECUTING UNINSTALL")
-                    sys.exit(run_loop(action_lib.uninstall_dcos, options))
-                # Not sure if we need to exit 1 or 0 here TODO
+                code = backend.do_configure()
+                if code != 0:
+                    sys.exit(1)
                 sys.exit(0)
 
             if options.validate_config:
-                make_default_dir()
                 print_header('VALIDATING CONFIGURATION')
-                check_config_validation()
+                log_warn_only()
+                validation_errors = backend.do_validate_gen_config()
+                if validation_errors:
+                    print_validation_errors(validation_errors)
+                    sys.exit(1)
+                sys.exit(0)
+
+            validate_ssh_config_or_exit()
+            action = None
+
+            if options.preflight:
+                print_header("EXECUTING PREFLIGHT")
+                action = action_lib.run_preflight
+
+            if options.deploy:
+                print_header("EXECUTING DCOS INSTALLATION")
+                action = action_lib.install_dcos
+
+            if options.postflight:
+                print_header("EXECUTING POSTFLIGHT")
+                action = action_lib.run_postflight
+
+            if options.uninstall:
+                print_header("EXECUTING UNINSTALL")
+                tall_enough_to_ride()
+                action = action_lib.uninstall_dcos
 
             if options.install_prereqs:
                 print_header("EXECUTING INSTALL PREREQUISITES")
-                check_config_validation()
-                sys.exit(run_loop(action_lib.install_prereqs, options))
+                action = action_lib.install_prereqs
+
+            sys.exit(run_loop(action, options))
 
     def parse_args(self, args):
         def print_usage():
@@ -276,7 +271,7 @@ Environment Settings:
             '--validate-config',
             action='store_true',
             default=False,
-            help='Validate the configuration in config.yaml')
+            help='Validate the configuration for executing --genconf and deploy arguments in config.yaml')
 
         mutual_exc.add_argument(
             '--test',
@@ -291,7 +286,6 @@ Environment Settings:
 
         coloredlogs.install(
             level=level,
-            datefmt='%H:%M:%S',
             level_styles={
                 'warn': {
                     'color': 'yellow'
@@ -301,15 +295,9 @@ Environment Settings:
                     'bold': True,
                 },
             },
-            field_styles={
-                'asctime': {
-                    'color': 'blue'
-                }
-            },
-            fmt='%(asctime)s:: %(message)s',
+            fmt='%(message)s',
             isatty=True
         )
 
         log.debug("Logger set to DEBUG")
-
         return options

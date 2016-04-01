@@ -6,7 +6,7 @@ import sys
 import gen
 import pkgpanda
 import providers.bash
-from dcos_installer.util import IP_DETECT_PATH, SERVE_DIR
+from dcos_installer.util import SERVE_DIR
 
 log = logging.getLogger(__name__)
 
@@ -41,7 +41,6 @@ def get_gen_extra_args():
 
     arguments = {
         'cluster_id': 'TODO',
-        'ip_detect_filename': IP_DETECT_PATH,
         'bootstrap_id': bootstrap_id,
         'provider': 'onprem'}
     return arguments

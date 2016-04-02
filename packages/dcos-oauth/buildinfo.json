@@ -1,0 +1,9 @@
+{
+  "docker": "golang:1.6",
+  "single_source" : {
+    "kind": "git",
+    "git": "git@github.com:mesosphere/dcos-oauth.git",
+    "ref": "cc938e71b2f5dbd845616896c6edcf5e9a60f435",
+    "ref_origin": "master"
+  }
+}

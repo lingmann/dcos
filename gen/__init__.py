@@ -467,6 +467,9 @@ class ValidationError(Exception):
         self.unset = unset
         super().__init__(str(errors))
 
+    def __repr__(self):
+        print("<ValidationError errors: {}; unset: {}".format(self.errors, self.unset))
+
 
 def validate_all_arguments_match_parameters(parameters, setters, arguments):
     errors = dict()

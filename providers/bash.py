@@ -306,6 +306,7 @@ function check_all() {
     check tar
     check xz
     check unzip
+    check ipset
 
     # $ systemctl --version ->
     # systemd nnn

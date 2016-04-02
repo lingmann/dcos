@@ -71,6 +71,7 @@ RestartSec=5
 WorkingDirectory=${PKG_PATH}/minuteman
 EnvironmentFile=/opt/mesosphere/environment
 ExecStartPre=/bin/ping -c1 ready.spartan
+ExecStartPre=/bin/ping -c1 leader.mesos
 ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/mnesia
 ExecStartPre=/usr/bin/env mkdir -p /var/lib/dcos/minuteman/lashup
 ExecStart=${PKG_PATH}/minuteman/bin/env foreground

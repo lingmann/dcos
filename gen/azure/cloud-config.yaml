@@ -23,7 +23,7 @@ root:
       Type=oneshot
       StandardOutput=journal+console
       StandardError=journal+console
-      ExecStartPre=/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
+      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/bootstrap.tar.xz {{ bootstrap_url }}/bootstrap/${BOOTSTRAP_ID}.bootstrap.tar.xz
       ExecStartPre=/usr/bin/mkdir -p /opt/mesosphere
       ExecStart=/usr/bin/tar -axf /tmp/bootstrap.tar.xz -C /opt/mesosphere
       ExecStartPost=-/usr/bin/rm -f /tmp/bootstrap.tar.xz
@@ -54,7 +54,7 @@ root:
       Environment=DEBIAN_FRONTEND=noninteractive
       StandardOutput=journal+console
       StandardError=journal+console
-      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -o /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb http://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0~rc2-0~xenial_amd64.deb
+      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb http://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0~rc2-0~xenial_amd64.deb
       ExecStart=/usr/bin/bash -c "attempt=1; until dpkg -D3 -i /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb || ((attempt > 5)); do echo retry $((attempt++)); sleep 120; done; systemctl --now start docker"
   - path: /etc/systemd/system/docker.service.d/execstart.conf
     permissions: "0644"

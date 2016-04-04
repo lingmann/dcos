@@ -6,6 +6,9 @@ rm -rf /pkg/src/hadoop/share/doc
 rm -rf /pkg/src/hadoop/src
 rm -rf /pkg/src/hadoop/share/hadoop/{httpfs,kms,mapreduce1,mapreduce2,yarn}
 rm -rf /pkg/src/hadoop/share/hadoop/common/sources
+rm -rf /pkg/src/hadoop/share/hadoop/usr/cloudera
+rm -rf /pkg/src/hadoop/share/hadoop/usr/share/hadoop/tools
+rm -rf /pkg/src/hadoop/share/hadoop/usr/share/hadoop/common/jdiff
 cp -rp /pkg/src/hadoop/* $PKG_PATH/usr
 
 

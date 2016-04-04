@@ -22,7 +22,16 @@ setup(
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.4',
     ],
-    packages=['gen', 'gen.aws', 'gen.azure', 'pkgpanda', 'pkgpanda.build', 'providers', 'ssh'],
+    packages=[
+        'gen',
+        'gen.aws',
+        'gen.azure',
+        'gen.installer',
+        'pkgpanda',
+        'pkgpanda.build',
+        'release',
+        'ssh',
+        'test_util'],
     install_requires=[
         'azure-common==1.0.0',
         'azure-storage==0.30.0',
@@ -36,14 +45,17 @@ setup(
         'retrying'],
     entry_points={
         'console_scripts': [
-            'release=providers.release:main',
-            'ccm-deploy-test=providers.test_installer_ccm:main',
+            'release=release:main',
+            'ccm-deploy-test=test_util.test_installer_ccm:main',
             'pkgpanda=pkgpanda.cli:main',
             'mkpanda=pkgpanda.build.cli:main',
         ],
     },
     package_data={
         'gen': [
+            'ip-detect/aws.sh',
+            'ip-detect/azure.sh',
+            'ip-detect/vagrant.sh',
             'cloud-config.yaml',
             'dcos-config.yaml',
             'dcos-metadata.yaml',
@@ -59,12 +71,11 @@ setup(
             'coreos-aws/cloud-config.yaml',
             'coreos/cloud-config.yaml'
             ] + get_advanced_templates(),
-        'providers': [
-            '../docker/py.test/Dockerfile',
-            '../docker/test_server/Dockerfile',
-            '../docker/test_server/test_server.py',
-            '../integration_test.py',
-            '../scripts/ip-detect/aws.sh'],
+        'test_util': [
+            'docker/py.test/Dockerfile',
+            'docker/test_server/Dockerfile',
+            'docker/test_server/test_server.py',
+            'integration_test.py']
     },
     zip_safe=False
 )

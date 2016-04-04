@@ -23,7 +23,8 @@ from subprocess import CalledProcessError, check_call
 
 from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import InstallError, PackageError, ValidationError
-from pkgpanda.util import download, extract_tarball, if_exists, load_json, write_json, write_string
+from pkgpanda.util import (download, extract_tarball, if_exists, load_json,
+                           write_json, write_string)
 
 # TODO(cmaloney): Can we switch to something like a PKGBUILD from ArchLinux and
 # then just do the mutli-version stuff ourself and save a lot of re-implementation?

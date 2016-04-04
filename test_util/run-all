@@ -84,11 +84,11 @@ vagrant up m1 m2 m3 a1 a2 boot
 # with DCOS assembling itself to save some time.
 # Build a docker container for running py.test inside of.
 echo "Building py.test container"
-docker build -t py.test - < ../../docker/py.test/Dockerfile
+docker build -t py.test - < ../docker/py.test/Dockerfile
 
 # Build and push test server to local registry:
 echo "Building&pushing test_server container"
-docker build -t 127.0.0.1:5000/test_server -f ../../docker/test_server/Dockerfile ../../docker/test_server/
+docker build -t 127.0.0.1:5000/test_server -f ../docker/test_server/Dockerfile ../docker/test_server/
 
 # Make an ssh tunnel to the vagrant machine then push the container over it to get around
 # host insecure registry setting...
@@ -97,7 +97,7 @@ vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:50
 echo "Running integration test"
 set +e # So we can potentially capture the logs
 
-docker run -v $PWD/../../integration_test.py:/integration_test.py \
+docker run -v $PWD/../integration_test.py:/integration_test.py \
     -e DCOS_DNS_ADDRESS=$DCOS_DNS_ADDRESS \
     -e MASTER_HOSTS=$MASTER_HOSTS \
     -e PUBLIC_MASTER_HOSTS=$MASTER_HOSTS \

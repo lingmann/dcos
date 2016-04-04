@@ -14,7 +14,7 @@ def validate_helper(arguments):
 def default_arguments():
     return copy.deepcopy({
         'cluster_id': 'TODO',
-        'ip_detect_filename': pkg_resources.resource_filename('providers', '../scripts/ip-detect/aws.sh'),
+        'ip_detect_filename': pkg_resources.resource_filename('gen', 'ip-detect/aws.sh'),
         'bootstrap_id': '123',
         'exhibitor_zk_path': '/dcos',
         'master_discovery': 'static',

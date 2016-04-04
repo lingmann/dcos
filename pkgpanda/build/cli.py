@@ -33,6 +33,16 @@ from pkgpanda.util import (check_forbidden_services, download, load_json, load_s
                            rewrite_symlinks, write_json, write_string)
 
 
+class BuildError(Exception):
+    """An error while building something."""
+    def __init__(self, msg):
+        assert isinstance(msg, str)
+        self.msg = msg
+
+    def __str__(self):
+        return self.msg
+
+
 class DockerCmd:
 
     def __init__(self):
@@ -57,8 +67,7 @@ def expand_require(require):
     try:
         return expand_require_exceptions(require)
     except ValidationError as ex:
-        print("ERROR:", ex)
-        sys.exit(1)
+        raise BuildError(str(ex)) from ex
 
 
 def get_docker_id(docker_name):
@@ -76,37 +85,41 @@ def clean(package_dir):
 
 
 def main():
-    arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
-    umask(0o022)
+    try:
+        arguments = docopt(__doc__, version="mkpanda {}".format(pkgpanda.build.constants.version))
+        umask(0o022)
 
-    # Make a local repository for build dependencies
-    if arguments['tree']:
-        build_tree(getcwd(), arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
+        # Make a local repository for build dependencies
+        if arguments['tree']:
+            build_tree(getcwd(), arguments['--mkbootstrap'], arguments['--repository-url'], arguments['<variant>'])
+            sys.exit(0)
+
+        # Check for the 'build' file to verify this is a valid package directory.
+        if not exists("build"):
+            print("Not a valid package folder. No 'build' file.")
+            sys.exit(1)
+
+        # Package name is the folder name.
+        name = basename(getcwd())
+
+        # Only clean in valid build locations (Why this is after buildinfo.json)
+        if arguments['clean']:
+            clean(getcwd())
+            sys.exit(0)
+
+        # No command -> build package.
+        pkg_dict = build_package_variants(getcwd(), name, arguments['--repository-url'])
+
+        print("Package variants available as:")
+        for k, v in pkg_dict.items():
+            if k is None:
+                k = "<default>"
+            print(k + ':' + v)
+
         sys.exit(0)
-
-    # Check for the 'build' file to verify this is a valid package directory.
-    if not exists("build"):
-        print("Not a valid package folder. No 'build' file.")
+    except BuildError as ex:
+        print("ERROR: {}".format(ex))
         sys.exit(1)
-
-    # Package name is the folder name.
-    name = basename(getcwd())
-
-    # Only clean in valid build locations (Why this is after buildinfo.json)
-    if arguments['clean']:
-        clean(getcwd())
-        sys.exit(0)
-
-    # No command -> build package.
-    pkg_dict = build_package_variants(getcwd(), name, arguments['--repository-url'])
-
-    print("Package variants available as:")
-    for k, v in pkg_dict.items():
-        if k is None:
-            k = "<default>"
-        print(k + ':' + v)
-
-    sys.exit(0)
 
 
 def last_build_filename(variant):
@@ -121,8 +134,7 @@ def load_optional_json(filename):
         # not existing -> empty dictionary / no specified values.
         return {}
     except ValueError as ex:
-        print("ERROR:", ex)
-        sys.exit(1)
+        raise BuildError("Unable to parse json: {}".format(ex))
 
 
 def load_config_variant(directory, variant, extension):
@@ -168,8 +180,7 @@ def make_bootstrap_tarball(packages_dir, packages, variant, repository_url):
         # Get the package id from the given package path
         filename = os.path.basename(pkg_path)
         if not filename.endswith(".tar.xz"):
-            print("ERROR: Packages must be packaged / end with .tar.xz")
-            sys.exit(1)
+            raise BuildError("Packages must be packaged / end with a .tar.xz. Got {}".format(filename))
         pkg_id = filename[:-len(".tar.xz")]
         pkg_ids.append(pkg_id)
 
@@ -284,45 +295,40 @@ def get_tree_package_tuples(packages_dir, tree_variant, possible_packages, packa
     treeinfo = load_config_variant(packages_dir, tree_variant, 'treeinfo.json')
 
     if treeinfo.keys() > ALLOWED_TREEINFO_KEYS:
-        print("treeinfo can only include the keys {}. Found {}".format(ALLOWED_TREEINFO_KEYS, treeinfo.keys()))
-        sys.exit(1)
+        raise BuildError(
+            "treeinfo can only include the keys {}. Found {}".format(ALLOWED_TREEINFO_KEYS, treeinfo.keys()))
 
     core_package_list = treeinfo.get('core_package_list', None)
     if core_package_list is not None and not isinstance(core_package_list, list):
-        print("ERROR: core_package_list must either be null meaning don't use "
-              "or a list of the core packages to include (dependencies are automatically picked up).")
-        sys.exit(1)
+        raise BuildError(
+            "core_package_list must either be null meaning don't use or a list of the core "
+            "packages to include (dependencies are automatically picked up).")
 
     excludes = treeinfo.get('exclude', list())
     if not isinstance(excludes, list):
-        print("ERROR: treeinfo exclude must be a list of packages to exclude.")
-        sys.exit(1)
+        raise BuildError("treeinfo exclude must be a list of packages to exclude.")
 
     for exclude in excludes:
         if not isinstance(exclude, str):
-            print("ERROR: Excludes should be a list of strings of package names.",
-                  "Found a", type(exclude), "with the value: {}".format(exclude))
-            sys.exit(1)
+            raise BuildError("Excludes should be a list of strings of package names. Found a {} "
+                             "with the value: {}".format(type(exclude), exclude))
 
     # Validate core_package_lists is formatted as expected, doesn't contain
     # any of exclude.
     if core_package_list is not None:
         for name in core_package_list:
             if not isinstance(name, str):
-                print("ERROR: core_package_list should be a list of package name "
-                      "strings, found a", type(name), "with the value: {}".format(name))
-                sys.exit(1)
+                raise BuildError("core_package_list should be a list of package name strings, found "
+                                 "a {} with the value: {}".format(type(name), name))
 
             if name in excludes:
-                print("ERROR: Package found in both exclude and core_package_list: {}".format(name))
-                sys.exit(1)
+                raise BuildError("Package found in both exclude and core_package_list: {}".format(name))
 
     # List of mandatory package variants to include in the buildinfo.
     variants = treeinfo.get('variants', dict())
 
     if not isinstance(variants, dict):
-        print("ERROR: treeinfo variants must be a dictionary of package name to variant name.")
-        sys.exit(1)
+        raise BuildError("treeinfo variants must be a dictionary of package name to variant name")
 
     # Generate the list of package paths of all packages variants which were
     # included and excluding those removed.
@@ -331,15 +337,12 @@ def get_tree_package_tuples(packages_dir, tree_variant, possible_packages, packa
 
     def include_package(name, variant):
         if name in excludes:
-            print("ERROR: package", name, "is in excludes but was needed as a "
-                  "dependency of an included package.")
-            sys.exit(1)
+            raise BuildError("package {} is in excludes but was needed as a dependency of an "
+                             "included package".format(name))
 
         if name not in possible_packages or variant not in possible_packages[name]:
-            print("ERROR: package", name, "variant", variant, " is needed but is "
-                  "not in the set of built packages but is needed (explicitly "
-                  "requested or as a requires)")
-            sys.exit(1)
+            raise BuildError("package {} variant {} is needed but is not in the set of built "
+                             "packages but is needed (explicitly requested or as a requires)".format(name, variant))
 
         # Allow adding duplicates. There is a check that we don't have a repeat
         # of the same package name with different variants, so we can ignore the
@@ -369,11 +372,9 @@ def get_tree_package_tuples(packages_dir, tree_variant, possible_packages, packa
     # Validate that all mandatory package variants are included
     for name, variant in variants.items():
         if (name, variant) not in package_tuples:
-            print("ERROR: package", name, "is supposed to have variant",
-                  variant, "included in the tree according",
-                  "to the treeinfo.json, but the no such package (let alone",
-                  "variant) was found")
-            sys.exit(1)
+            raise BuildError("package {} is supposed to have variant {} included in "
+                             "the tree according to the treeinfo.json, but the no such package "
+                             "(let alone variant) was found".format(name, variant))
 
     # Validate that all required packages are included. This implicitly
     # validates that no two packages include conflicting variants. If they
@@ -394,10 +395,13 @@ def get_tree_package_tuples(packages_dir, tree_variant, possible_packages, packa
                     include_package(require_tuple[0], require_tuple[1])
                     to_visit.append(require_tuple)
                 else:
-                    print("ERROR: Package", name, "requires", require_tuple[0],
-                          "variant", require_tuple[1], "but that is not in the set",
-                          "of packages listed for the tree", tree_variant, ":", package_tuples)
-                    sys.exit(1)
+                    raise BuildError("Package {} requires {} variant {} but that is not in the set "
+                                     "of packages listed for the tree {}: {}".format(
+                                        name,
+                                        require_tuple[0],
+                                        require_tuple[1],
+                                        tree_variant,
+                                        package_tuples))
 
     # Integrity / programming check excludes were all excluded.
     for exclude in excludes:
@@ -445,18 +449,14 @@ def build_tree(packages_dir, mkbootstrap, repository_url, tree_variant):
             if require_tuple in built:
                 continue
             if require_tuple in visited:
-                print("ERROR: Circular dependency. Circular link {0} -> {1}".format(name, require_tuple))
-                raise ValueError
-                sys.exit(1)
+                raise BuildError("Circular dependency. Circular link {0} -> {1}".format(name, require_tuple))
 
             if PackageId.is_id(require_tuple[0]):
-                print("ERROR: Depending on a specific package id is not "
-                      "supported. Package", name, "depends on", require_tuple)
-                sys.exit(1)
+                raise BuildError("Depending on a specific package id is not supported. Package {} "
+                                 "depends on {}".format(name, require_tuple))
 
             if require_tuple not in packages:
-                print("ERROR: Package {0} require {1} not buildable from tree.".format(name, require_tuple))
-                sys.exit(1)
+                raise BuildError("Package {0} require {1} not buildable from tree.".format(name, require_tuple))
 
             visit(require_tuple)
 
@@ -579,21 +579,18 @@ def build(variant, package_dir, name, repository_url):
     buildinfo = load_buildinfo(package_dir, variant)
 
     if 'name' in buildinfo:
-        print("ERROR: 'name' is not allowed in buildinfo.json, it is " +
-              "implicitly the name of the folder containing the buildinfo.json")
-        sys.exit(1)
+        raise BuildError("'name' is not allowed in buildinfo.json, it is implicitly the name of the "
+                         "folder containing the buildinfo.json")
 
     # Make sure build_script is only set on variants
     if 'build_script' in buildinfo and variant is None:
-        print("ERROR: build_script can only be set on package variants")
-        sys.exit(1)
+        raise BuildError("build_script can only be set on package variants")
 
     # Convert single_source -> sources
     try:
         sources = expand_single_source_alias(name, buildinfo)
     except ValidationError as ex:
-        print("ERROR: Invalid buildinfo.json for package:", ex)
-        sys.exit(1)
+        raise BuildError("Invalid buildinfo.json for package: {}".format(ex)) from ex
 
     # Save the final sources back into buildinfo so it gets written into
     # buildinfo.json. This also means buildinfo.json is always expanded form.
@@ -618,8 +615,7 @@ def build(variant, package_dir, name, repository_url):
                                                                 package_dir)
             checkout_ids[src_name] = fetchers[src_name].get_id()
     except ValidationError as ex:
-        print("ERROR: Validation error when fetching sources for package:", ex)
-        sys.exit(1)
+        raise BuildError("Validation error when fetching sources for package: {}".format(ex))
 
     for src_name, checkout_id in checkout_ids.items():
         # NOTE: single_source buildinfo was expanded above so the src_name is
@@ -676,11 +672,9 @@ def build(variant, package_dir, name, repository_url):
         pkginfo['requires'] = buildinfo['requires']
 
         # TODO(cmaloney): Pull generating the full set of requires a function.
-        bad_requires = False
         to_check = copy.deepcopy(buildinfo['requires'])
         if type(to_check) != list:
-            print("`requires` in buildinfo.json must be an array of dependencies.")
-            sys.exit(1)
+            raise BuildError("`requires` in buildinfo.json must be an array of dependencies.")
         while to_check:
             requires_info = to_check.pop(0)
             requires_name, requires_variant = expand_require(requires_info)
@@ -695,10 +689,11 @@ def build(variant, package_dir, name, repository_url):
                     # dependencies which contain the conflicting packages.
                     # a -> b -> c -> d {foo}
                     # e {bar} -> d {baz}
-                    print("ERROR: Dependncy on multiple variants of the same",
-                          "package", requires_name, ". variants:", requires_variant,
-                          active_package_variants[requires_name])
-                    sys.exit(1)
+                    raise BuildError("Dependncy on multiple variants of the same package {}. "
+                                     "variants: {} {}".format(
+                                        requires_name,
+                                        requires_variant,
+                                        active_package_variants[requires_name]))
 
                 # The variant has package {requires_name, variant} already is a
                 # dependency, don't process it again / move on to the next.
@@ -711,10 +706,8 @@ def build(variant, package_dir, name, repository_url):
             require_package_dir = os.path.normpath(pkg_abs('../' + requires_name))
             last_build = require_package_dir + '/' + last_build_filename(requires_variant)
             if not os.path.exists(last_build):
-                print("ERROR: No last build file found for dependency",
-                      requires_name, "variant", requires_variant,
-                      "Rebuild the dependency")
-                sys.exit(1)
+                raise BuildError("No last build file found for dependency {} variant {}. Rebuild "
+                                 "the dependency".format(requires_name, requires_variant))
 
             try:
                 pkg_id_str = load_string(last_build)
@@ -724,11 +717,11 @@ def build(variant, package_dir, name, repository_url):
                 pkg_path = repository.package_path(pkg_id_str)
                 pkg_tar = pkg_id_str + '.tar.xz'
                 if not os.path.exists(require_package_dir + '/' + pkg_tar):
-                    print("ERROR: The build tarball", pkg_tar, "refered to by",
-                          "the last_build file of the dependency",
-                          requires_name, "variant", requires_variant, "doesn't",
-                          "exist. Rebuild the dependency.")
-                    sys.exit(1)
+                    raise BuildError("The build tarball {} refered to by the last_build file of the "
+                                     "dependency {} variant {} doesn't exist. Rebuild the dependency.".format(
+                                        pkg_tar,
+                                        requires_name,
+                                        requires_variant))
 
                 active_package_ids.add(pkg_id_str)
 
@@ -743,14 +736,9 @@ def build(variant, package_dir, name, repository_url):
                 # them directly.
                 to_check += pkg_requires
             except ValidationError as ex:
-                print("ERROR validating package needed as dependency {0}: {1}".format(requires_name, ex))
-                bad_requires = True
+                raise BuildError("validating package needed as dependency {0}: {1}".format(requires_name, ex)) from ex
             except PackageError as ex:
-                print("ERROR loading package needed as dependency {0}: {1}".format(requires_name, ex))
-                bad_requires = True
-
-        if bad_requires:
-            sys.exit(1)
+                raise BuildError("loading package needed as dependency {0}: {1}".format(requires_name, ex)) from ex
 
     # Add requires to the package id, calculate the final package id.
     # NOTE: active_packages isn't fully constructed here since we lazily load
@@ -824,9 +812,8 @@ def build(variant, package_dir, name, repository_url):
     # Only fresh builds are allowed which don't overlap existing artifacts.
     result_dir = pkg_abs("result")
     if exists(result_dir):
-        print("result folder must not exist. It will be made when the package " +
-              "is built. {}".format(result_dir))
-        sys.exit(1)
+        raise BuildError("result folder must not exist. It will be made when the package is "
+                         "built. {}".format(result_dir))
 
     # 'mkpanda add' all implicit dependencies since we actually need to build.
     for dep in auto_deps:
@@ -852,8 +839,7 @@ def build(variant, package_dir, name, repository_url):
 
             fetcher.checkout_to(root)
     except ValidationError as ex:
-        print("ERROR: Validation error when fetching sources for package:", ex)
-        sys.exit(1)
+        raise BuildError("Validation error when fetching sources for package: {}".format(ex))
 
     # Copy over environment settings
     if 'environment' in buildinfo:
@@ -923,9 +909,7 @@ def build(variant, package_dir, name, repository_url):
             "-o", "errexit",
             "/pkg/build"])
     except CalledProcessError as ex:
-        print("ERROR: docker exited non-zero: {}".format(ex.returncode))
-        print("Command: {}".format(' '.join(ex.cmd)))
-        sys.exit(1)
+        raise BuildError("docker exited non-zero: {}\nCommand: {}".format(ex.returncode, ' '.join(ex.cmd)))
 
     # Clean up the temporary install dir used for dependencies.
     # TODO(cmaloney): Move to an RAII wrapper.
@@ -933,17 +917,16 @@ def build(variant, package_dir, name, repository_url):
 
     print("Building package tarball")
 
+    # Check for forbidden services before packaging the tarball:
+    try:
+        check_forbidden_services(pkg_abs("result"), RESERVED_UNIT_NAMES)
+    except ValidationError as ex:
+        raise BuildError("Package validation failed: {}".format(ex))
+
     # TODO(cmaloney): Updating / filling last_build should be moved out of
     # the build function.
     check_call(["mkdir", "-p", pkg_abs("cache")])
     write_string(pkg_abs(last_build_filename(variant)), str(pkg_id))
-
-    # Check for forbidden services before packaging the tarball:
-    try:
-        check_forbidden_services(pkg_abs("result"), RESERVED_UNIT_NAMES)
-    except ValidationError as e:
-        print("Package validation failed: {}".format(e))
-        sys.exit(1)
 
     # Bundle the artifacts into the pkgpanda package
     tmp_name = pkg_path + "-tmp.tar.xz"

@@ -4,7 +4,8 @@
     "dcos-installer",
     "dcos-installer-ui",
     "mesos-metrics-module",
-    "mesos-modules-private"
+    "mesos-modules-private",
+    "networking_api"
   ]
 }
 

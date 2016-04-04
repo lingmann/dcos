@@ -63,10 +63,8 @@ root:
       Restart=always
       StartLimitInterval=0
       RestartSec=15
-      ExecStartPre=/bin/sh -ec "until df|grep /mnt;do echo waiting for /mnt;sleep 10;done"
-      # Disable unit default ExecStart statements with an empty assignment
       ExecStart=
-      ExecStart=/usr/bin/docker daemon -H fd:// --graph=/mnt/docker --storage-driver=overlay
+      ExecStart=/usr/bin/docker daemon -H fd:// --storage-driver=overlay
   - path: /etc/systemd/system/docker.socket
     permissions: "0644"
     content: |
@@ -116,3 +114,20 @@ runcmd:
     - [ systemctl, start, dcos-download.service ]
     - [ systemctl, start, dcos-setup.service ]
     - [ systemctl, start, dcos-config-writer.service ]
+bootcmd:
+  - bash -c "if [ ! -f /var/lib/sdb-gpt ];then echo Init sdb w/gpt see DCOS-5890;parted -s /dev/sdb mklabel gpt;touch /var/lib/sdb-gpt;fi"
+disk_setup:
+  ephemeral0:
+    table_type: gpt
+    layout: [ 50, 50 ]
+    overwrite: True
+fs_setup:
+  - device: ephemeral0.1
+    filesystem: ext4
+    overwrite: True
+  - device: ephemeral0.2
+    filesystem: ext4
+    overwrite: True
+mounts:
+  - [ ephemeral0.1, /var/lib/mesos ]
+  - [ ephemeral0.2, /var/lib/docker ]

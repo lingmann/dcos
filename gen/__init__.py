@@ -35,7 +35,7 @@ role_names = {"master", "slave", "slave_public"}
 
 role_template = '/etc/mesosphere/roles/{}'
 
-CLOUDCONFIG_KEYS = {'coreos', 'runcmd', 'apt_sources', 'root'}
+CLOUDCONFIG_KEYS = {'coreos', 'runcmd', 'apt_sources', 'root', 'mounts', 'disk_setup', 'fs_setup', 'bootcmd'}
 PACKAGE_KEYS = {'package', 'root'}
 
 

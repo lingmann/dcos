@@ -3,7 +3,8 @@
     "bouncer",
     "dcos-installer",
     "dcos-installer-ui",
-    "mesos-metrics-module"
+    "mesos-metrics-module",
+    "mesos-modules-private"
   ]
 }
 

@@ -25,7 +25,7 @@ UPLOAD_URL = ("https://az837203.vo.msecnd.net/dcos/{channel_commit_path}/azure/{
 INSTANCE_GROUPS = {
     'master': {
         'report_name': 'MasterServerGroup',
-        'roles': ['master', 'azure_master']
+        'roles': ['master']
     },
     'slave': {
         'report_name': 'SlaveServerGroup',
@@ -133,7 +133,7 @@ def gen_templates(user_args, arm_template):
         #     yaml.load(gen.template.parse_str(late_services).render(params)))
 
         # Add roles
-        cc_variant = results.utils.add_roles(cc_variant, params['roles'] + ['azure'])
+        cc_variant = results.utils.add_roles(cc_variant, params['roles'])
 
         # NOTE: If this gets printed in string stylerather than '|' the Azure
         # parameters which need to be split out for the arm to

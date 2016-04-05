@@ -12,6 +12,7 @@ cmake \
   -Dmesos_INCLUDE_DIR=/opt/mesosphere/include \
   -Ddefault_LIB_DIR=/opt/mesosphere/lib \
   -DUSE_LOCAL_PROTOBUF=False \
+  -DUSE_LOCAL_GLOG=False \
   /pkg/src/mesos-metrics-module/slave/
 
 # build/unittest module

@@ -93,8 +93,11 @@ docker build -t 127.0.0.1:5000/test_server -f ../../docker/test_server/Dockerfil
 # host insecure registry setting...
 vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:5000/test_server
 
+BASE=https://s3.amazonaws.com/downloads.mesosphere.io/pkgpanda-artifact-cache/
 for i in boot m1 m2 m3 a1 a2; do
-  vagrant ssh $i -c 'sudo yum install -y ipset'
+  vagrant ssh $i -c "/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/ipset.rpm ${BASE}ipset-6.19-4.el7.x86_64.rpm"
+  vagrant ssh $i -c "/usr/bin/curl --fail --retry 20 --continue-at - --location --silent --show-error --verbose --output /tmp/ipset-libs.rpm ${BASE}ipset-libs-6.19-4.el7.x86_64.rpm"
+  vagrant ssh $i -c 'sudo rpm -ivh /tmp/ipset.rpm /tmp/ipset-libs.rpm'
 done
 
 echo "Running integration test"

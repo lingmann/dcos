@@ -9,5 +9,5 @@ Description=Cluster ID: Generates anonymous DCOS Cluster ID
 Type=oneshot
 EnvironmentFile=/opt/mesosphere/environment
 ExecStartPre=/bin/mkdir -p /var/lib/dcos
-ExecStart=/opt/mesosphere/bin/python -c "import uuid; print(uuid.uuid4())"  | /opt/mesosphere/bin/zk-value-consensus /cluster-id > /var/lib/dcos/cluster-id
+ExecStart=/bin/sh -c "/opt/mesosphere/bin/python -c 'import uuid; print(uuid.uuid4())'  | /opt/mesosphere/bin/zk-value-consensus /cluster-id > /var/lib/dcos/cluster-id"
 EOF

@@ -5,7 +5,7 @@
     "minuteman": {
       "kind": "git",
       "git": "git@github.com:mesosphere/minuteman.git",
-      "ref": "2c636298316ec14305fd35260faec3846b7bee25",
+      "ref": "28295b1f89160c96b822c9b77a9e322270af667b",
       "ref_origin": "master"
     }
   }

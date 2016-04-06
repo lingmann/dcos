@@ -900,22 +900,24 @@ def test_if_minuteman_routes_to_vip(cluster, timeout=125):
                     retry_on_result=lambda ret: ret is False,
                     retry_on_exception=lambda x: False)
     def _wait_for_networking_api_up():
+        # we only want this to pass if the cluster is enterprise
+        successful_response = cluster.is_enterprise
         try:
             _ensure_routable()
             r = cluster.get('/networking/api/v1/vips')
             if r.status_code < 400 and len(r.json().get('array', [])) is 1:
                 logging.info("Networking api is probably up")
-                return True
+                return successful_response
             else:
                 msg = "Waiting for networking api, resp is: {}: {}"
                 logging.info(msg.format(r.status_code, r.text))
-                return False
+                return not successful_response
         except Exception as e:
             logging.info("Failed to query networking api: {}".format(e))
-            return False
+            return not successful_response
 
     try:
-        _wait_for_networking_api_up()
+        assert _wait_for_networking_api_up()
     except retrying.RetryError:
         pytest.fail("Network api query failed - operation was not "
                     "completed in {} seconds.".format(timeout))

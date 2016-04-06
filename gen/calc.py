@@ -370,6 +370,7 @@ entry = {
                     'mesos_hooks': __stats_hook_slave_module_name,
                     'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
                         __default_mesos_slave_modules + [__stats_slave_module]),
+                    'minuteman_forward_metrics': 'true',
                 },
                 'default': {
                     'ui_tracking': 'false',
@@ -384,6 +385,7 @@ entry = {
                     'mesos_hooks': '',
                     'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
                         __default_mesos_slave_modules),
+                    'minuteman_forward_metrics': 'false',
                 },
                 'default': {
                     'ui_tracking': 'true',

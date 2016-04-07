@@ -84,8 +84,14 @@ def test_configure_status(monkeypatch, mocker):
         'TRACE': [405, 'text/plain'],
         'CONNECT': [405, 'text/plain'],
     }
-    mocked_return_configure_status = mocker.patch('dcos_installer.backend.return_configure_status')
-    mocked_return_configure_status.return_value = {'errors': ['err1']}
+
+    mocked_do_validate_ssh_config = mocker.patch('dcos_installer.backend.do_validate_ssh_config')
+    mocked_do_validate_ssh_config.return_value = {
+        'ssh_user': 'error'
+    }
+
+    mocked_do_validate_gen_config = mocker.patch('dcos_installer.backend.do_validate_gen_config')
+    mocked_do_validate_gen_config.return_value = {}
 
     for method, expected in featured_methods.items():
         res = client.request(route, method=method, expect_errors=True)
@@ -107,7 +113,7 @@ def test_success(monkeypatch, mocker):
         'CONNECT': [405, 'text/plain'],
     }
     mocked_success = mocker.patch('dcos_installer.backend.success')
-    mocked_success.return_value = {}
+    mocked_success.return_value = {}, 200
 
     for method, expected in featured_methods.items():
         res = client.request(route, method=method, expect_errors=True)

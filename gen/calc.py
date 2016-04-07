@@ -185,10 +185,6 @@ def validate_master_list(master_list):
     return validate_host_list(master_list)
 
 
-def validate_agent_list(agent_list):
-    return validate_host_list(agent_list)
-
-
 def validate_resolvers(resolvers):
     return validate_host_list(resolvers)
 
@@ -310,7 +306,6 @@ entry = {
         validate_channel_name,
         validate_dns_search,
         validate_master_list,
-        validate_agent_list,
         validate_resolvers,
         validate_zk_hosts,
         validate_zk_path,

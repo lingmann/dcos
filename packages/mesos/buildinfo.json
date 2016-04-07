@@ -5,7 +5,7 @@
     "mesos": {
       "kind": "git",
       "git": "ssh://git@github.com/mesosphere/mesos",
-      "ref": "bca71a80843d65d7bffe402ebffde6b1d10f7ac0",
+      "ref": "ff9c1ffb2b6805677e0fcae7ea90ea5b1f65243d",
       "ref_origin" : "dcos-1.7"
     },
     "mesos-module-dvdi": {

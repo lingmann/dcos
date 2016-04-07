@@ -110,6 +110,11 @@ def validate_customer_key(customer_key):
     assert isinstance(customer_key, str), "Must be a string."
 
 
+def validate_auth_enabled(auth_enabled):
+    can_be = ['true', 'false']
+    assert auth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, auth_enabled)
+
+
 def validate_num_masters(num_masters):
     assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
@@ -310,10 +315,12 @@ entry = {
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
-        validate_mesos_dns_ip_sources,
-        validate_customer_key],
+        validate_customer_key,
+        validate_auth_enabled,
+        validate_mesos_dns_ip_sources],
     'default': {
         'weights': '',
+        'auth_enabled': 'true',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': '',

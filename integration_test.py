@@ -73,7 +73,7 @@ def _delete_ec2_volume(name, timeout=300):
         timeout: seconds to wait for volume to become available for deletion
 
     """
-    @retrying.retry(wait_fixed=1000, stop_max_delay=timeout*1000,
+    @retrying.retry(wait_fixed=30 * 1000, stop_max_delay=timeout * 1000,
                     retry_on_exception=lambda exc: isinstance(exc, botocore.exceptions.ClientError))
     def _delete_volume(volume):
         volume.delete()  # Raises ClientError if the volume is still attached.

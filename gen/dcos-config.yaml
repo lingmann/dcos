@@ -131,6 +131,9 @@ package:
       {
         "forward_metrics": {{ minuteman_forward_metrics }}
       }
+  - path: /etc/adminrouter.env
+    content: |
+      ADMINROUTER_ACTIVATE_AUTH_MODULE={{ auth_enabled }}
 {% switch master_discovery %}
 {% case "master_http_loadbalancer" %}
   - path: /etc/dns_config

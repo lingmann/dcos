@@ -85,3 +85,10 @@ def test_validate_duplicates(default_arguments):
         {'master_list': '["10.0.0.1", "10.0.0.2", "10.0.0.1"]'},
         'master_list',
         'List cannot contain duplicates: 10.0.0.1, 10.0.0.1')
+
+
+def test_invalid_auth_enabled(default_arguments):
+    validate_error(
+        {'auth_enabled': 'foo'},
+        'auth_enabled',
+        "Must be one of ['true', 'false']. Got foo")

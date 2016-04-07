@@ -3,7 +3,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:branden/rexray.git",
-    "ref": "1a522bd7d96eaccfcf0946918294e28790db077b",
+    "ref": "e6b91ee7ba367fbe97ee60fe0665eb981e060efe",
     "ref_origin": "v0.3.2-aws-sdk-go"
   }
 }

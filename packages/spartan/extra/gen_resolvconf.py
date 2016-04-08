@@ -4,7 +4,6 @@ import os
 import socket
 import sys
 import random
-from socket import inet_aton, error as socket_error
 
 import dns.query
 

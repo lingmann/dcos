@@ -1,11 +1,21 @@
 #!/opt/mesosphere/bin/python
 
-import sys
-import json
 import codecs
+import json
+import os
+import sys
 import urllib.request
 
+
 EXHIBITOR_STATUS_URL = 'http://127.0.0.1:8181/exhibitor/v1/cluster/status'
+
+# delete all proxy environment variables to never use it in requests
+os.environ.pop('HTTP_PROXY', None)
+os.environ.pop('http_proxy', None)
+os.environ.pop('HTTPS_PROXY', None)
+os.environ.pop('https_proxy', None)
+os.environ.pop('NO_PROXY', None)
+os.environ.pop('no_proxy', None)
 
 cluster_size = int(open('/opt/mesosphere/etc/master_count').read().strip())
 

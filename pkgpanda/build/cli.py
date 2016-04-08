@@ -80,7 +80,7 @@ def clean(package_dir):
     cmd.volumes = {
         package_dir: "/pkg/:rw",
     }
-    cmd.container = "ubuntu:14.04.4"
+    cmd.container = "alpine:3.3"
     cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
 
 

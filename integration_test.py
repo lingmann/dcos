@@ -1114,10 +1114,10 @@ def validate_units(units):
             assert required_field in unit, 'unit response must have field: {}'.format(required_field)
 
         # a unit must have all 3 fields not empty
-        assert unit['id']
-        assert unit['name']
-        assert unit['health'] in [0, 1]
-        assert unit['description']
+        assert unit['id'], 'id field cannot be empty'
+        assert unit['name'], 'name field cannot be empty'
+        assert unit['health'] in [0, 1], 'health must be 0 or 1'
+        assert unit['description'], 'description field cannot be empty'
 
 
 def validate_unit(unit):
@@ -1132,11 +1132,11 @@ def validate_unit(unit):
         assert required_field in unit, '{} must be in a unit'.format(required_field)
 
     # id, name, health, description, help should not be empty
-    assert unit['id']
-    assert unit['name']
-    assert unit['health'] in [0, 1]
-    assert unit['description']
-    assert unit['help']
+    assert unit['id'], 'id field cannot be empty'
+    assert unit['name'], 'name field cannot be empty'
+    assert unit['health'] in [0, 1], 'health must be 0 or 1'
+    assert unit['description'], 'description field cannot be empty'
+    assert unit['help'], 'help field cannot be empty'
 
 
 def test_3dt_nodes_node_units(cluster):
@@ -1283,10 +1283,10 @@ def test_3dt_units_unit_nodes_node(cluster):
                     assert required_node_field in node_response, 'field {} must be set'.format(required_node_field)
 
                 # host_ip, health, role, help cannot be empty
-                assert node_response['host_ip']
-                assert node_response['health'] in [0, 1]
-                assert node_response['role']
-                assert node_response['help']
+                assert node_response['host_ip'], 'host_ip field cannot be empty'
+                assert node_response['health'] in [0, 1], 'health must be 0 or 1'
+                assert node_response['role'], 'role field cannot be empty'
+                assert node_response['help'], 'help field cannot be empty'
 
 
 def test_3dt_report(cluster):

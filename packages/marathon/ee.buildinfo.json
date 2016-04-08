@@ -4,8 +4,8 @@
   "sources": {
     "marathon": {
       "kind": "url_extract",
-      "url": "http://downloads.mesosphere.io/marathon/v1.0.0-RC1/marathon-1.0.0-RC1.tgz",
-      "sha1": "954c0514717cfb29a3c6c7641b39f3ca75685585"
+      "url": "http://downloads.mesosphere.io/marathon/v1.1.0-RC1/marathon-1.1.0-RC1.tgz",
+      "sha1": "a891b31dbfeaf54c06dfa6e37bc799df8c9ad4d3"
     },
     "marathon-plugins": {
       "kind": "url",

@@ -8,7 +8,7 @@ export CXXFLAGS=CFLAGS
 mkdir -p $PKG_PATH/bin
 
 pushd /pkg/src/toybox
-cp /pkg/extra/config /.config
+cp /pkg/extra/config .config
 make
 cp toybox_unstripped $PKG_PATH/bin
 cp toybox $PKG_PATH/bin

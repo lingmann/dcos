@@ -54,6 +54,7 @@ export DCOS_DNS_ADDRESS=http://$MASTER_IP
 export MASTER_HOSTS=192.168.65.90,192.168.65.95,192.168.65.101
 
 cp VagrantConfig.yaml.example VagrantConfig.yaml
+export DCOS_INSTALL_METHOD="ssh_pull"
 export DCOS_CONFIG_PATH="etc/3_master.yaml"
 export DCOS_PRIVATE_REGISTRY="true"
 cat <<EOF > "$DCOS_CONFIG_PATH"
@@ -75,7 +76,7 @@ cleanup_vagrant_leftovers
 
 echo "Starting Vagrant VMs"
 
-vagrant up m1 m2 m3 a1 a2 boot 
+vagrant up m1 m2 m3 a1 a2 boot
 
 # TODO(cmaloney): Configure insecure registry inside the dcos-vagrant cluster
 
@@ -92,13 +93,6 @@ docker build -t 127.0.0.1:5000/test_server -f ../../docker/test_server/Dockerfil
 # Make an ssh tunnel to the vagrant machine then push the container over it to get around
 # host insecure registry setting...
 vagrant ssh boot -- -N -L 5000:192.168.65.50:5000 -f && docker push 127.0.0.1:5000/test_server
-
-BASE=https://s3.amazonaws.com/downloads.mesosphere.io/pkgpanda-artifact-cache/
-for i in boot m1 m2 m3 a1 a2; do
-  vagrant ssh $i -c "/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset.rpm ${BASE}ipset-6.19-4.el7.x86_64.rpm"
-  vagrant ssh $i -c "/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset-libs.rpm ${BASE}ipset-libs-6.19-4.el7.x86_64.rpm"
-  vagrant ssh $i -c 'sudo rpm -q ipset || sudo rpm -Uvh /tmp/ipset.rpm /tmp/ipset-libs.rpm'
-done
 
 echo "Running integration test"
 set +e # So we can potentially capture the logs

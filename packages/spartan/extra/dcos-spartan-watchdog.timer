@@ -2,4 +2,4 @@
 Description=Watchdog Spartan: Periodically check is Spartan is working
 [Timer]
 OnBootSec=5sec
-OnUnitActiveSec=1min
+OnUnitActiveSec=5min

@@ -5,7 +5,7 @@
   ],
   "single_source": {
     "kind": "url",
-    "url": "https://downloads.mesosphere.com/dcos/cosmos/0.2.0-SNAPSHOT-64-refs_heads_master-8bf20b1a57/cosmos-server-0.2.0-SNAPSHOT-64-refs_heads_master-8bf20b1a57-one-jar.jar",
-    "sha1": "45e5eed2746b464e54e99c10b992f13a59da3eaf"
+    "url": "https://downloads.mesosphere.com/dcos/cosmos/0.1.4-6/cosmos-server-0.1.4-6-one-jar.jar",
+    "sha1": "5d0cb7c8928f6b98c6091c2e906a93e010339469"
   }
 }

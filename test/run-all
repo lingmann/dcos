@@ -97,7 +97,7 @@ BASE=https://s3.amazonaws.com/downloads.mesosphere.io/pkgpanda-artifact-cache/
 for i in boot m1 m2 m3 a1 a2; do
   vagrant ssh $i -c "/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset.rpm ${BASE}ipset-6.19-4.el7.x86_64.rpm"
   vagrant ssh $i -c "/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset-libs.rpm ${BASE}ipset-libs-6.19-4.el7.x86_64.rpm"
-  vagrant ssh $i -c 'sudo rpm -ivh /tmp/ipset.rpm /tmp/ipset-libs.rpm'
+  vagrant ssh $i -c 'sudo rpm -q ipset || sudo rpm -Uvh /tmp/ipset.rpm /tmp/ipset-libs.rpm'
 done
 
 echo "Running integration test"

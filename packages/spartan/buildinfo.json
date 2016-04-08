@@ -1,6 +1,6 @@
 {
   "docker": "dcos-builder",
-  "requires": ["openssl", "ncurses", "erlang"],
+  "requires": ["openssl", "ncurses", "erlang", "toybox"],
   "sources": {
     "spartan": {
       "kind": "git",

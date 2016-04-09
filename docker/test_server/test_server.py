@@ -12,6 +12,7 @@ import requests
 
 LOG_LEVEL = logging.DEBUG
 TEST_UUID_VARNAME = "DCOS_TEST_UUID"
+TEST_DATA_CACHE = ""
 
 
 class RequestProcessingException(Exception):
@@ -107,6 +108,13 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
         data = {"test_uuid": os.environ[TEST_UUID_VARNAME],
                 "request_ip": self.address_string()}
         self._send_reply(data)
+
+    def _handle_path_signal_test_cache(self, set_data):
+        """Use the sever to cache results from application runs"""
+        global TEST_DATA_CACHE
+        if set_data:
+            TEST_DATA_CACHE = self.rfile.read(int(self.headers['Content-Length'])).decode()
+        self._send_reply(TEST_DATA_CACHE)
 
     def parse_POST_headers(self):
         """Parse request's POST headers in utf8 aware way
@@ -231,6 +239,8 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
             self._handle_path_reflect()
         elif self.path == '/dns_search':
             self._handle_path_dns_search()
+        elif self.path == '/signal_test_cache':
+            self._handle_path_signal_test_cache(False)
         else:
             self.send_error(404, 'Not found', 'Endpoint is not supported')
 
@@ -244,6 +254,8 @@ class TestHTTPRequestHandler(BaseHTTPRequestHandler):
                               "code: {}, reason: '{}', explanation: '{}'".format(
                                   e.code, e.reason, e.explanation))
                 self.send_error(e.code, e.reason, e.explanation)
+        elif self.path == '/signal_test_cache':
+            self._handle_path_signal_test_cache(True)
         else:
             self.send_error(404, 'Not found', 'Endpoint is not supported')
 

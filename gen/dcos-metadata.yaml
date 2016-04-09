@@ -23,7 +23,7 @@ package:
             "banner": {},
             "networking": {"enabled": {{ ui_networking }}},
             "organization": {"enabled": {{ ui_organization }}},
-            "tracking": {"enabled": {{ ui_tracking }}}
+            "tracking": {"enabled": {{ telemetry_enabled }}}
           }
         }
       }

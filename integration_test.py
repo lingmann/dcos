@@ -1300,3 +1300,113 @@ def test_3dt_report(cluster):
 
         assert 'Nodes' in report_response
         assert len(report_response['Nodes']) > 0
+
+
+def test_signal_service(cluster):
+    """
+    signal-service runs on an hourly timer, this test runs it as a one-off
+    and pushes the results to the test_server app for easy retrieval
+    """
+    test_server_app_definition, _ = cluster.get_base_testapp_definition()
+    service_points = cluster.deploy_marathon_app(test_server_app_definition)
+
+    @retrying.retry(wait_fixed=1000, stop_max_delay=120*1000)
+    def wait_for_endpoint():
+        """Make sure test server is available before posting to it"""
+        r = requests.get('http://{}:{}/signal_test_cache'.format(
+            service_points[0].host,
+            service_points[0].port))
+        assert r.status_code == 200
+
+    wait_for_endpoint()
+
+    cmd = """
+data=`/opt/mesosphere/bin/dcos-signal -report-host leader.mesos -test 2> /dev/null`;
+curl -H 'Content-Type: application/json' -X POST -d "$data" http://{}:{}/signal_test_cache;
+sleep 3600
+""".format(service_points[0].host, service_points[0].port)
+
+    test_uuid = uuid.uuid4().hex
+    signal_app_definition = {
+        'id': "/integration-test-signal-service-oneshot-%s" % test_uuid,
+        'cmd': cmd,
+        'cpus': 0.1,
+        'mem': 64,
+        'instances': 1}
+
+    cluster.deploy_marathon_app(signal_app_definition, check_health=False)
+
+    @retrying.retry(wait_fixed=1000, stop_max_delay=120*1000)
+    def get_cached_signal_data():
+        """It might take a while for the signal one-off job to trigger, so wait for it to populate"""
+        r = requests.get('http://{}:{}/signal_test_cache'.format(
+            service_points[0].host,
+            service_points[0].port))
+        assert r.text != ""
+        return r
+
+    r = get_cached_signal_data()
+    r_data = json.loads(r.json())
+
+    cluster.destroy_marathon_app(signal_app_definition['id'])
+    cluster.destroy_marathon_app(test_server_app_definition['id'])
+
+    # Cluster ID is uncheckable as this runs on an agent
+    r_data['ClusterId'] = ''
+    r_data['Properties']['clusterId'] = ''
+
+    exp_data = {
+            'Event': 'health',
+            'UserId': '12345' if cluster.is_enterprise else '',
+            'ClusterId': '',
+            'Properties': {
+                'provider': 'onprem',
+                'source': 'cluster',
+                'clusterId': '',
+                'customerKey': '12345' if cluster.is_enterprise else '',
+                'environmentVersion': '',
+                'variant': 'enterprise' if cluster.is_enterprise else 'open'}
+            }
+
+    master_units = [
+            'adminrouter-reload-service',
+            'adminrouter-reload-timer',
+            'adminrouter-service',
+            'cluster-id-service',
+            'cosmos-service',
+            'exhibitor-service',
+            'history-service-service',
+            'keepalived-service',
+            'marathon-service',
+            'mesos-dns-service',
+            'mesos-master-service',
+            'signal-service']
+    all_node_units = [
+            'ddt-service',
+            'epmd-service',
+            'gen-resolvconf-service',
+            'gen-resolvconf-timer',
+            'logrotate-service',
+            'logrotate-timer',
+            'minuteman-service',
+            'signal-timer',
+            'spartan-service']
+    slave_units = [
+            'mesos-slave-service',
+            'rexray-service']
+
+    if cluster.is_enterprise:
+        master_units.append('networking_api-service')
+        master_units.append('gunicorn-bouncer-service')
+
+    for unit in master_units:
+        exp_data['Properties']["health-unit-dcos-{}-total".format(unit)] = len(cluster.masters)
+        exp_data['Properties']["health-unit-dcos-{}-unhealthy".format(unit)] = 0
+    for unit in all_node_units:
+        exp_data['Properties']["health-unit-dcos-{}-total".format(unit)] = len(cluster.slaves+cluster.masters)
+        exp_data['Properties']["health-unit-dcos-{}-unhealthy".format(unit)] = 0
+    for unit in slave_units:
+        exp_data['Properties']["health-unit-dcos-{}-total".format(unit)] = len(cluster.slaves)
+        exp_data['Properties']["health-unit-dcos-{}-unhealthy".format(unit)] = 0
+
+    assert r_data == exp_data

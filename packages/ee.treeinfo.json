@@ -2,10 +2,10 @@
   "variants": {
     "adminrouter": "ee",
     "dcos-ui": "ee",
-    "marathon": "ee"
+    "marathon": "ee",
+    "dcos-signal": "ee"
   },
   "exclude": [
-    "dcos-signal",
     "dcos-installer",
     "dcos-installer-ui"
   ]

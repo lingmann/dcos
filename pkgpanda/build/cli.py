@@ -630,6 +630,7 @@ def build(variant, package_dir, name, repository_url):
     build_ids = {"sources": checkout_ids}
     build_ids['build'] = sha1(pkg_abs("build"))
     build_ids['pkgpanda_version'] = pkgpanda.build.constants.version
+    build_ids['variant'] = '' if variant is None else variant
 
     extra_dir = pkg_abs("extra")
     # Add the "extra" folder inside the package as an additional source if it

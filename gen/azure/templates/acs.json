@@ -847,7 +847,7 @@
           "osDisk": {
             "name": "[concat(variables('masterVMNamePrefix'), copyIndex(),'-osdisk')]",
             "vhd": {
-              "uri": "[concat('http://', variables('masterStorageAccountName'), '.blob.core.windows.net/vhds/', variables('masterVMNamePrefix'), copyIndex(), '-osdisk.vhd')]"
+              "uri": "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('masterStorageAccountName')),variables('apiVersionStorage')).primaryEndpoints.blob,'vhds/',variables('masterVMNamePrefix'),copyIndex(),'-osdisk.vhd')]"
             },
             "caching": "ReadWrite",
             "createOption": "FromImage"
@@ -1103,7 +1103,7 @@
           "storageProfile": {
             "osDisk": {
               "vhdContainers": [
-                "[concat('https://',variables('agentStoragePublicAccountName'),'.blob.core.windows.net/vmss1')]"
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('agentStoragePublicAccountName')),variables('apiVersionStorage')).primaryEndpoints.blob, 'osdisk')]"
               ],
               "name": "vmssosdisk",
               "caching": "ReadOnly",
@@ -1234,11 +1234,11 @@
           "storageProfile": {
             "osDisk": {
               "vhdContainers": [
-                "[concat('https://',variables('storageAccountPrefixes')[mod(0,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(0,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),0,'.blob.core.windows.net/vmss1')]",
-                "[concat('https://',variables('storageAccountPrefixes')[mod(1,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(1,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),1, '.blob.core.windows.net/vmss1')]",
-                "[concat('https://',variables('storageAccountPrefixes')[mod(2,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(2,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),2, '.blob.core.windows.net/vmss1')]",
-                "[concat('https://',variables('storageAccountPrefixes')[mod(3,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(3,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),3, '.blob.core.windows.net/vmss1')]",
-                "[concat('https://',variables('storageAccountPrefixes')[mod(4,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(4,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),4, '.blob.core.windows.net/vmss1')]"
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(0,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(0,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),0),variables('apiVersionStorage')).primaryEndpoints.blob,'osdisk')]",
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(1,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(1,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),1),variables('apiVersionStorage')).primaryEndpoints.blob,'osdisk')]",
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(2,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(2,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),2),variables('apiVersionStorage')).primaryEndpoints.blob,'osdisk')]",
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(3,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(3,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),3),variables('apiVersionStorage')).primaryEndpoints.blob,'osdisk')]",
+                "[concat(reference(concat('Microsoft.Storage/storageAccounts/',variables('storageAccountPrefixes')[mod(4,variables('storageAccountPrefixesCount'))],variables('storageAccountPrefixes')[div(4,variables('storageAccountPrefixesCount'))],variables('agentStoragePrivateAccountName'),4),variables('apiVersionStorage')).primaryEndpoints.blob,'osdisk')]"
               ],
               "name": "vmssosdisk",
               "caching": "ReadOnly",

@@ -243,6 +243,13 @@
         "description": "Allows user to enable/disable boot & vm diagnostics."
       },
       "type": "bool"
+    },
+    "enableNewStorageAccountNaming": {
+      "defaultValue": true,
+      "metadata": {
+        "description": "If true: uses DNS name prefix + Orchestrator name + Region to create storage account name to reduce name collision probability. If false: uses DNS name prefix + Orchestrator name to create storage account name to maintain template idempotency."
+      },
+      "type": "bool"
     }
   },
   "variables": {
@@ -478,7 +485,9 @@
       "4","a","g","m","s","y","5","b","h","n","t","z"
     ],
     "storageAccountPrefixesCount": "[length(variables('storageAccountPrefixes'))]",
-    "storageAccountBaseName": "[uniqueString(concat(variables('masterEndpointDNSNamePrefix'), resourceGroup().location, variables('orchestratorName')))]",
+    "storageAccountBaseName": "[uniqueString(concat(variables('masterEndpointDNSNamePrefix'),variables(concat('storageAccountBaseNameNewSuffix', '-', variables('enableNewStorageAccountNaming'))), variables('orchestratorName')))]",
+    "storageAccountBaseNameNewSuffix-false": "",
+    "storageAccountBaseNameNewSuffix-true": "[resourceGroup().location]",
     "agentStoragePublicAccountName": "[concat(variables('storageAccountBaseName'), 'agntpub')]",
     "agentStoragePrivateAccountName": "[concat(variables('storageAccountBaseName'), 'agntpri')]",
     "masterStorageAccountName": "[concat(variables('storageAccountBaseName'), 'mstr0')]",
@@ -502,7 +511,7 @@
     "masterFirstAddr": 5,
     "masterAvailabilitySet": "[concat(variables('orchestratorName'), '-master-availabilitySet-', variables('nameSuffix'))]",
     "masterLbName": "[concat(variables('orchestratorName'), '-master-lb-', variables('nameSuffix'))]",
-    "masterVMSize": "Standard_D2",
+    "masterVMSize": "[variables('masterSizes')[variables('isValidation')]]",
     "masterLbID": "[resourceId('Microsoft.Network/loadBalancers',variables('masterLbName'))]",
     "masterLbIPConfigName": "[concat(variables('orchestratorName'), '-master-lbFrontEnd-', variables('nameSuffix'))]",
     "masterLbIPConfigID": "[concat(variables('masterLbID'),'/frontendIPConfigurations/', variables('masterLbIPConfigName'))]",
@@ -525,7 +534,12 @@
     "agentsPerIPv4Octet": 200,
     "agentCustomScript": "[concat('/usr/bin/nohup /bin/bash -c \"/bin/bash /opt/azure/containers/configure-mesos-cluster.sh ',variables('clusterInstallParameters'),' >> /var/log/azure/cluster-bootstrap.log 2>&1 &\" &')]",
     "apiVersionDefault": "2016-03-30",
-    "apiVersionStorage": "2015-06-15"
+    "apiVersionStorage": "2015-06-15",
+    "enableNewStorageAccountNaming": "[parameters('enableNewStorageAccountNaming')]",
+    "masterSizes": [
+      "Standard_D2",
+      "Standard_A1"
+    ]
   },
   "resources": [
     {
@@ -545,6 +559,9 @@
       "name": "[variables('diagnosticsStorageAccountName')]",
       "apiVersion": "[variables('apiVersionStorage')]",
       "location": "[variables('storageLocation')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/publicIPAddresses/', variables('masterPublicIPAddressName'))]"
+      ],
       "properties": {
         "accountType": "[variables('vmSizesMap')[variables('masterVMSize')].storageAccountType]"
       }

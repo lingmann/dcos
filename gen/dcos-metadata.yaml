@@ -22,8 +22,8 @@ package:
             "authentication": {"enabled": {{ ui_authentication }}},
             "banner": {
               "enabled": {{ ui_banner }},
-              "backgroundColor": {{ ui_banner_background_color }},
-              "foregroundColor": {{ ui_banner_foreground_color }},
+              "backgroundColor": "{{ ui_banner_background_color }}",
+              "foregroundColor": "{{ ui_banner_foreground_color }}",
               "headerTitle": {{ ui_banner_header_title }},
               "headerContent": {{ ui_banner_header_content }},
               "footerContent": {{ ui_banner_footer_content }},

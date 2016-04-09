@@ -4,13 +4,13 @@
     "dcos-installer-ui": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-installer-ui.git",
-      "ref": "9e793f7873c01b1ab3e2faad8c8866f4c81d73d0",
+      "ref": "29aa3683ff92da0ea326f4ad51c03e22c267d949",
       "ref_origin": "master"
     },
     "dcos-installer-ui-plugins-private": {
       "kind": "git",
       "git": "git@github.com:mesosphere/dcos-installer-ui-plugins-private.git",
-      "ref": "b660a73284cea95cb62618ab9e3d45fee7fad9bf",
+      "ref": "5a3f71e734cd0f93f652611434ba35fcc3844c29",
       "ref_origin": "master"
     }
   }

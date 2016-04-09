@@ -2,6 +2,7 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
+from gen import ValidationError
 import logging
 import os
 import sys
@@ -10,40 +11,74 @@ from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
 from dcos_installer.config import DCOSConfig
-from dcos_installer.util import CONFIG_PATH
+from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH, REXRAY_CONFIG_PATH
+
+import ssh.validate as validate_ssh
 
 log = logging.getLogger()
 
 
 def do_configure(config_path=CONFIG_PATH):
-    config = DCOSConfig()
-    config.config_path = config_path
-    config.build()
-    # Get gen specific configuration (stringified, only gen keys)
-    gen_config = config.make_gen_config()
-    # Remove things Gen doesn't like
-    for key in list(gen_config.keys()):
-        if gen_config[key] is None or gen_config[key] == '[null]':
-                del gen_config[key]
-    # Do one final validation from gen itself, just to be sure
-    messages = configure.do_validate_gen_config(gen_config)
-    if 'errors' in messages:
-        return messages
-    configure.do_configure(gen_config)
-    return messages
+    """Returns error code
+
+    :param config_path: path to config.yaml
+    :type config_path: string | CONFIG_PATH (/genconf/config.yaml)
+    """
+    try:
+        config = DCOSConfig(config_path=config_path)
+        config.get_hidden_config()
+        config.update(config.hidden_config)
+        configure.do_configure(config.stringify_configuration())
+        return 0
+    except ValidationError as ex:
+        for key, value in ex.errors.items():
+            log.error('{}: {}'.format(key, value))
+        return 1
 
 
 def hash_password(string):
+    """Returns hash of string per passlib SHA512 encryption
+
+    :param string: password to hash
+    :type string: str | None
+    """
     new_hash = sha512_crypt.encrypt(string)
     byte_str = new_hash.encode('ascii')
     sys.stdout.buffer.write(byte_str+b'\n')
     return new_hash
 
 
-def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
+def write_external_config(data, path, mode=0o644):
+    """Returns None. Writes external configuration files (ssh_key, ip-detect).
+
+    :param data: configuration file data
+    :type data: string | None
+
+    :param path: path to configuration file
+    :type path: str | None
+
+    :param mode: file mode
+    :type mode: octal | 0o644
     """
-    Take POST data and form it into the dual dictionary we need
-    to pass it as overrides to DCOSConfig object.
+    log.warning('Writing {} with mode {}: {}'.format(path, mode, data))
+    if data is not None and data is not "":
+        f = open(path, 'w')
+        f.write(data)
+        os.chmod(path, mode)
+    else:
+        log.warning('Request to write file {} ignored.'.format(path))
+        log.warning('Cowardly refusing to write empty values or None data to disk.')
+
+
+def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
+    """Returns error code and validation messages for only keys POSTed
+    to the UI.
+
+    :param config_path: path to config.yaml
+    :type config_path: string | CONFIG_PATH (/genconf/config.yaml)
+
+    :param post_data: data from POST to UI
+    :type post_data: dict | {}
     """
     log.info("Creating new DCOSConfig object from POST data.")
     # Check for password in post_data, and if it exists hash it right away
@@ -51,23 +86,34 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
         hashed = hash_password(post_data['superuser_password_hash'])
         post_data['superuser_password_hash'] = hashed
 
-    # Get a blank config file object
-    config_obj = DCOSConfig(config_path=config_path)
-    # If the config file does not exist, write it.
-    if not os.path.exists(config_path):
-        log.warning('{} not found, writing default configuration.'.format(config_path))
-        config_obj.config_path = config_path
-        config_obj.write()
+    if 'ssh_key' in post_data:
+        write_external_config(post_data['ssh_key'], SSH_KEY_PATH, mode=0o600)
 
-    # Add overrides from POST to config
-    config_obj.overrides = post_data
-    config_obj.build()
+    if 'ip_detect_script' in post_data:
+        write_external_config(post_data['ip_detect_script'], IP_DETECT_PATH)
 
-    # Get validation messages
-    messages = config_obj.validate()
-    errors = messages.get('errors')
-    warnings = messages.get('warning')
-    errors.update(warnings)
+    if 'rexray_config' in post_data:
+        post_data['rexray_config_method'] = 'file'
+        post_data['rexray_config_filename'] = REXRAY_CONFIG_PATH
+        write_external_config(post_data['rexray_config'], REXRAY_CONFIG_PATH)
+
+    # TODO (malnick) remove when UI updates are complete
+    post_data = remap_post_data_keys(post_data)
+    # Create a new configuration object, pass it the config.yaml path and POSTed dictionary.
+    # Add in "hidden config" we don't present in the config.yaml, and then create a meta
+    # validation dictionary from gen and ssh validation libs.
+    # We do not use the already built methods for this since those are used to read the
+    # coniguration off disk, here we need to validate the configuration overridees, and
+    # return the key and message for the POSTed parameter.
+    config = DCOSConfig(config_path=config_path, overrides=post_data)
+    config.get_hidden_config()
+    config.update(config.hidden_config)
+    validation_messages = {}
+    ssh_messages = validate_ssh.validate_config(config)
+    gen_messages = normalize_config_validation(configure.do_validate_gen_config(config.stringify_configuration()))
+    validation_messages.update(ssh_messages)
+    validation_messages.update(gen_messages)
+    validation_messages = remap_validation_keys(validation_messages)
 
     # Return only keys sent in POST, do not write if validation
     # of config fails.
@@ -75,70 +121,161 @@ def create_config_from_post(post_data={}, config_path=CONFIG_PATH):
 
     # Create a dictionary of validation that only includes
     # the messages from keys POSTed for validation.
-    post_data_validation = {param: messages['errors'][param] for param in messages['errors'] if param in post_data}
+    post_data_validation = {key: validation_messages[key] for key in validation_messages if key in post_data}
 
     # If validation is successful, write the data to disk, otherwise, if
     # they keys POSTed failed, do not write to disk.
-    if len(post_data_validation) > 0:
-        log.warning("POSTed configuration has errors, not writing to disk.")
+    if post_data_validation is not None and len(post_data_validation) > 0:
+        log.error("POSTed configuration has errors, not writing to disk.")
         for key, value in post_data_validation.items():
             log.error('{}: {}'.format(key, value))
         validation_err = True
 
     else:
-        log.info("Success! POSTed configuration looks good, writing to disk.")
-        config_obj.config_path = config_path
-        config_obj.write()
+        log.debug("Success! POSTed configuration looks good, writing to disk.")
+        config.config_path = config_path
+        config.write()
 
     return validation_err, post_data_validation
 
 
-def do_validate_config(config_path=CONFIG_PATH, write_default_config=True):
-    config = DCOSConfig(
-        config_path=config_path,
-        write_default_config=write_default_config)
-    if os.path.isfile(config_path):
-        config.build()
-        messages = config.validate()
-        return_code = 0
-        if len(messages['errors']) > 0:
-            return_code = 1
-        elif len(messages['warning']) > 0:
-            return_code = 2
-    else:
-        messages = {}
-        return_code = 1
+def do_validate_config(config_path=CONFIG_PATH):
+    """Returns complete validation messages from both
+    SSH and Gen libraries.
 
-    return messages, return_code
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
+    """
+    ssh = do_validate_ssh_config(config_path)
+    gen = do_validate_gen_config(config_path)
+    gen.update(ssh)
+
+    # TODO REMOVE
+    gen = remap_validation_keys(gen)
+
+    return gen
+
+
+def do_validate_ssh_config(config_path=CONFIG_PATH):
+    """Returns SSH validation messages.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
+    """
+    config = DCOSConfig(config_path=config_path)
+    config.get_hidden_config()
+    config.update(config.hidden_config)
+    messages = validate_ssh.validate_config(config)
+    return messages
+
+
+def do_validate_gen_config(config_path=CONFIG_PATH):
+    """Returns Gen validation messages.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
+    """
+    config = DCOSConfig(config_path=config_path)
+    config.get_hidden_config()
+    config.update(config.hidden_config)
+    messages = configure.do_validate_gen_config(config.stringify_configuration())
+    validation = normalize_config_validation(messages)
+    return validation
+
+
+def remap_post_data_keys(post_data):
+    """Remap the post_data keys so we return the correct
+    values to the UI
+
+    TODO (malnick) remove when UI updates are in.
+    """
+    remap = {
+        'ssh_key': ['ssh_key_path', '/genconf/ssh_key'],
+        'ip_detect_script': ['ip_detect_path', '/genconf/ip-detect'],
+    }
+    for key, value in remap.items():
+        if key in post_data:
+            post_data[value[0]] = value[1]
+
+    return post_data
+
+
+def remap_validation_keys(messages):
+    """Accepts a complete dictionary of config, remapping the
+    keys to ones the UI currently supports.
+
+    TODO (malnick) will remove once UI updates are in place.
+
+    :param messages: dictionary of k,v's containing validation
+    :type messages: dict | {}
+    """
+    if "ssh_key_path" in messages:
+        messages["ssh_key"] = messages["ssh_key_path"]
+
+    if "ip_detect_contents" in messages:
+        messages['ip_detect_path'] = messages['ip_detect_contents']
+
+    if 'num_masters' in messages:
+        messages['master_list'] = messages['num_masters']
+
+    return messages
+
+
+def normalize_config_validation(messages):
+    """Accepts Gen error message format and returns a flattened dictionary
+    of validation messages.
+
+    :param messages: Gen validation messages
+    :type messages: dict | None
+    """
+    validation = {}
+    if 'errors' in messages:
+        for key, errors in messages['errors'].items():
+            validation[key] = errors['message']
+    else:
+        validation = {}
+
+    return validation
 
 
 def get_config(config_path=CONFIG_PATH):
+    """Returns config.yaml on disk as dict.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
+    """
     return DCOSConfig(config_path=config_path)
 
 
 def get_ui_config(config_path=CONFIG_PATH):
+    """Returns config.yaml plus externalized config data, which
+    includes ssh_key and ip-detect, to the UI.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
+    """
     config = DCOSConfig(config_path=config_path)
-    config._get_hidden_config()
-    config.update(config.hidden_config)
+    config.get_external_config()
+    config.get_hidden_config()
+    config.update(config.external_config)
     return config
 
 
 def return_configure_status(config_path=CONFIG_PATH):
+    """Returns validation messages for /configure/status/ endpoint.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
     """
-    Read configuration from disk and return validation messages.
-    """
-    messages = DCOSConfig(config_path=config_path).validate()
-    warning = messages.get('warning')
-    messages['errors'].update(warning)
-    return messages
+    return configure.do_validate_config()
 
 
 def determine_config_type(config_path=CONFIG_PATH):
-    """
-    Return the configuration type to HTTP endpoint. Possible types are
-    minimal and advanced. Messages are blank for minimal and detailed
-    in the case of advanced so we can warn users they need to remove the
-    current advanced config before moving on.
+    """Returns the configuration type to the UI. One of either 'minimal' or
+    'advanced'. 'advanced' blocks UI usage.
+
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
     """
     config = get_config(config_path=config_path)
     ctype = 'minimal'
@@ -154,14 +291,9 @@ def determine_config_type(config_path=CONFIG_PATH):
         "weights": None
     }
     for key, value in advanced_cluster_config.items():
-        # If the key is present in the config but we don't care what
-        # the default is, add it to the advanced found hash.
         if value is None and key in config:
             adv_found[key] = config[key]
 
-        # If the key is present in the config and we do care what the
-        # value is set to, and the value present in the config is not
-        # what we want it to be, add it to adv config hash.
         if value is not None and key in config and value != config[key]:
             log.error('Advanced configuration found in config.yaml: {}: value'.format(key, value))
             adv_found[key] = config[key]
@@ -177,29 +309,25 @@ def determine_config_type(config_path=CONFIG_PATH):
     }
 
 
-def success(config_path=CONFIG_PATH):
+def success(config={}):
+    """Returns the data for /success/ endpoint.
+    :param config_path: path to config.yaml
+    :type config_path: str | CONFIG_PATH (/genconf/config.yaml)
     """
-    Return the success URL, master and agent counts.
-    """
-    data = get_config(config_path=config_path)
-    # The config file will have None by default, but just in
-    # case we're setting it here to default.
-    master_ips = data.get('master_list', None)
-    agent_ips = data.get('agent_list', None)
-    url = 'http://{}'.format(master_ips[0])
-    master_count = 0
-    agent_count = 0
-
-    if master_ips[0] is not None:
-        master_count = len(data['master_list'])
-
-    if agent_ips[0] is not None:
-        agent_count = len(data['agent_list'])
-
-    return_success = {
-        'success': url,
-        'master_count': master_count,
-        'agent_count': agent_count
+    code = 200
+    msgs = {
+        'success': "",
+        'master_count': 0,
+        'agent_count': 0
     }
-
-    return return_success
+    if not config:
+        config = get_config()
+    master_ips = config.get('master_list', [])
+    agent_ips = config.get('agent_list', [])
+    if not master_ips or not agent_ips:
+        code = 400
+        return msgs, code
+    msgs['success'] = 'http://{}'.format(master_ips[0])
+    msgs['master_count'] = len(master_ips)
+    msgs['agent_count'] = len(agent_ips)
+    return msgs, code

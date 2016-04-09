@@ -59,6 +59,7 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=Admin Router: A high performance web server and a reverse proxy server
 After=dcos-gen-resolvconf.service
+ConditionPathExists=/var/lib/dcos/cluster-id
 
 [Service]
 Restart=always

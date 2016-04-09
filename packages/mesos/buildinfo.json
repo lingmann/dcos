@@ -4,9 +4,9 @@
   "sources" : {
     "mesos": {
       "kind": "git",
-      "git": "ssh://git@github.com/mesosphere/mesos-private",
-      "ref": "b3bdaddf5736400a100e82494a986dee9cfc91f0",
-      "ref_origin" : "dcos-pkg-builder-mesos-tag-0.28.0"
+      "git": "ssh://git@github.com/mesosphere/mesos",
+      "ref": "dfd0227bf504dba01780cd808332aa6b6f4629c4",
+      "ref_origin" : "dcos-1.7"
     },
     "mesos-module-dvdi": {
       "kind": "git",

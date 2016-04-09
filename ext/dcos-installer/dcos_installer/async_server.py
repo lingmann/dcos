@@ -20,8 +20,8 @@ options = None
 VERSION = '1'
 
 
-# Define the aiohttp web application framework and setup
-# the routes to be used in the API.
+"""Define the aiohttp web application framework and setup
+# the routes to be used in the API"""
 loop = asyncio.get_event_loop()
 app = web.Application(loop=loop)
 app['current_action'] = ''
@@ -29,7 +29,7 @@ ui_dist_path = os.getenv('INSTALLER_UI_PATH', pkg_resources.resource_filename(__
 index_path = '{}index.html'.format(ui_dist_path)
 assets_path = '{}assets/'.format(ui_dist_path)
 
-# Action map is a dict that contains an action name and an action handler from action_lib.
+# Dict containing action name to handler mappings.
 action_map = {
     'preflight': dcos_installer.action_lib.run_preflight,
     'deploy': dcos_installer.action_lib.install_dcos,
@@ -39,10 +39,12 @@ action_map = {
 remove_on_done = ['preflight', 'postflight']
 
 
-# Aiohttp route handlers. These methods are for the
-# aiohttp routes. Some are asyncio.coroutines and
-# some are not.
 def root(request):
+    """Return the root endpoint, serve the index.html.
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     log.info("Root page requested.")
     index_file = open(index_path)
     log.info("Serving %s", index_path)
@@ -51,20 +53,23 @@ def root(request):
     return resp
 
 
-# Redirect to root method handler
 def redirect_to_root(request):
+    """Return the redirect from /api/v1 to /
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     log.warning("/api/v{} -> redirecting -> /".format(VERSION))
     return web.HTTPFound('/'.format(VERSION))
 
 
-# Configure route method handler
 def configure(request):
+    """Return /api/v1/configure
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     if request.method == 'POST':
-        """
-        Overwrite the data in config.yaml with the data in POST. Return
-        the validation messages and config file. Concatonate the two
-        together and return a giant JSON of config + messages.
-        """
         new_config = yield from request.json()
         log.info('POST to configure: {}'.format(new_config))
         validation_err, messages = backend.create_config_from_post(new_config)
@@ -76,9 +81,6 @@ def configure(request):
         return resp
 
     elif request.method == 'GET':
-        """
-        Return the written configuration on disk.
-        """
         config = backend.get_ui_config()
         resp = web.json_response(config)
 
@@ -87,23 +89,39 @@ def configure(request):
 
 
 def configure_status(request):
-    log.info("Request for configuration validation made.")
-    messages = backend.return_configure_status()
-    resp = web.json_response({}, status=200)
-    if 'errors' in messages and len(messages['errors']) > 0:
-        resp = web.json_response(messages['errors'], status=400)
+    """Return /configure/status
 
+    :param request: a web requeest object.
+    :type request: request | None
+    """
+    log.info("Request for configuration validation made.")
+    code = 200
+    messages = backend.do_validate_config()
+    if messages:
+        code = 400
+    resp = web.json_response(messages, status=code)
     return resp
 
 
 def configure_type(request):
+    """Return /configure/type
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     log.info("Request for configuration type made.")
     return web.json_response(backend.determine_config_type())
 
 
 def success(request):
+    """Return /success
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     log.info("Request for success made.")
-    return web.json_response(backend.success())
+    msgs, code = backend.success()
+    return web.json_response(msgs, status=code)
 
 
 def unlink_state_file(action_name):
@@ -126,6 +144,11 @@ def read_json_state(action_name):
 
 
 def action_action_name(request):
+    """Return /action/<action_name>
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     action_name = request.match_info['action_name']
 
     # Update the global action
@@ -194,12 +217,22 @@ def action_action_name(request):
 
 
 def action_current(request):
+    """Return the current action /action/current endpoint.
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     action = app['current_action']
     return_json = {'current_action': action}
     return web.json_response(return_json)
 
 
 def logs_handler(request):
+    """Return the log file on disk.
+
+    :param request: a web requeest object.
+    :type request: request | None
+    """
     log.info("Request for logs endpoint made.")
     complete_log_path = '/genconf/state/complete.log'
     json_files = glob.glob('/genconf/state/*.json')
@@ -260,7 +293,6 @@ def start(cli_options):
     else:
         os.makedirs(STATE_DIR)
 
-    log.warn(assets_path)
     assert os.path.isdir(assets_path)
     assert os.path.isdir('/genconf/state/')
 

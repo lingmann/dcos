@@ -154,7 +154,7 @@
     },
     "linuxVersion": {
       "type": "string",
-      "defaultValue": "16.04.201603250",
+      "defaultValue": "latest",
       "metadata": {
         "description": "This is the linux version used by the linux cluster"
       }

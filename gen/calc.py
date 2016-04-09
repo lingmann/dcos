@@ -106,6 +106,15 @@ def calculate_mesos_slave_modules_json(mesos_slave_modules):
     return json_multiline.replace('\n', '\n' + injected_indent)
 
 
+def validate_customer_key(customer_key):
+    assert isinstance(customer_key, str), "Must be a string."
+
+
+def validate_auth_enabled(auth_enabled):
+    can_be = ['true', 'false']
+    assert auth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, auth_enabled)
+
+
 def validate_num_masters(num_masters):
     assert int(num_masters) in [1, 3, 5, 7, 9], "Must have 1, 3, 5, 7, or 9 masters. Found {}".format(num_masters)
 
@@ -179,10 +188,6 @@ def validate_duplicates(input_list):
 
 def validate_master_list(master_list):
     return validate_host_list(master_list)
-
-
-def validate_agent_list(agent_list):
-    return validate_host_list(agent_list)
 
 
 def validate_resolvers(resolvers):
@@ -279,7 +284,7 @@ __stats_slave_module = {
             {'key': 'dest_refresh_seconds', 'value': '60'},
             {'key': 'listen_host', 'value': '127.0.0.1'},
             {'key': 'listen_port_mode', 'value': 'ephemeral'},
-            {'key': 'annotations', 'value': 'true'},
+            {'key': 'annotation_mode', 'value': 'key_prefix'},
             {'key': 'chunking', 'value': 'true'},
             {'key': 'chunk_size_bytes', 'value': '512'},
         ]
@@ -306,14 +311,16 @@ entry = {
         validate_channel_name,
         validate_dns_search,
         validate_master_list,
-        validate_agent_list,
         validate_resolvers,
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
+        validate_customer_key,
+        validate_auth_enabled,
         validate_mesos_dns_ip_sources],
     'default': {
         'weights': '',
+        'auth_enabled': 'true',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': '',
@@ -370,6 +377,7 @@ entry = {
                     'mesos_hooks': __stats_hook_slave_module_name,
                     'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
                         __default_mesos_slave_modules + [__stats_slave_module]),
+                    'minuteman_forward_metrics': 'true',
                 },
                 'default': {
                     'ui_tracking': 'false',
@@ -384,6 +392,7 @@ entry = {
                     'mesos_hooks': '',
                     'mesos_slave_modules_json': calculate_mesos_slave_modules_json(
                         __default_mesos_slave_modules),
+                    'minuteman_forward_metrics': 'false',
                 },
                 'default': {
                     'ui_tracking': 'true',

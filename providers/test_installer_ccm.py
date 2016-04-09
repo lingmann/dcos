@@ -237,7 +237,7 @@ def integration_test(
     run_test_chain = CommandChain('run_test')
     dns_search = 'true' if test_dns_search else 'false'
     variant = 'ee' if use_ee else ''
-    run_test_chain.add_execute([
+    test_cmd = [
         'docker', 'run', '-v', '/home/centos/integration_test.py:/integration_test.py',
         '-e', 'DCOS_DNS_ADDRESS=http://'+dcos_dns,
         '-e', 'MASTER_HOSTS='+','.join(master_list),
@@ -250,7 +250,9 @@ def integration_test(
         '-e', 'AWS_SECRET_ACCESS_KEY='+AWS_SECRET_ACCESS_KEY,
         '-e', 'AWS_REGION='+region,
         '--net=host', 'py.test', 'py.test',
-        '-vv', ci_flags, marker_args, '/integration_test.py'])
+        '-vv', ci_flags, marker_args, '/integration_test.py']
+    print("To run this test again, ssh to test node and run:\n{}".format(' '.join(test_cmd)))
+    run_test_chain.add_execute(test_cmd)
 
     check_results(run_loop(ssh_runner, run_test_chain), force_print=True)
 
@@ -289,9 +291,9 @@ def make_vpc(use_bare_os=False):
         use_bare_os: if True, vanilla AMI is used. If False, custom AMI is used
             with much faster prereq satisfaction time
     """
-    print("Spinning up AWS VPC via CCM")
     random_identifier = ''.join(random.choice(string.ascii_uppercase + string.digits) for _ in range(10))
     unique_cluster_id = "installer-test-{}".format(random_identifier)
+    print("Spinning up AWS VPC via CCM with ID: {}".format(unique_cluster_id))
     if use_bare_os:
         os_name = "cent-os-7"
     else:
@@ -389,9 +391,11 @@ def main():
     remote_dir = '/home/centos'
 
     def make_runner(host_list):
+        """process_timeout must be large enough for integration_test.py to run
+        """
         return MultiRunner(
                 host_list, ssh_user=ssh_user, ssh_key_path=ssh_key_path,
-                process_timeout=600, async_delegate=SyncCmdDelegate())
+                process_timeout=1200, async_delegate=SyncCmdDelegate())
 
     all_host_runner = make_runner(host_list)
     test_host_runner = make_runner([host_list[0]])
@@ -503,6 +507,8 @@ def main():
     installer.postflight()
 
     # Runs dcos-image/integration_test.py inside the cluster
+    print("Test host: {}@{}:22".format(ssh_user, host_list[0]))
+    print("SSH key to access nodes:\n{}".format(ssh_key))
     integration_test(
         test_host_runner,
         region=vpc.get_region() if vpc else DEFAULT_AWS_REGION,

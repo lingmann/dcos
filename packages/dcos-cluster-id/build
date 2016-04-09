@@ -1,0 +1,13 @@
+#!/bin/bash
+master_service=${PKG_PATH}/dcos.target.wants_master/dcos-cluster-id.service
+mkdir -p $(dirname $master_service)
+
+cat <<EOF | tee $master_service
+[Unit]
+Description=Cluster ID: Generates anonymous DCOS Cluster ID
+[Service]
+Type=oneshot
+EnvironmentFile=/opt/mesosphere/environment
+ExecStartPre=/bin/mkdir -p /var/lib/dcos
+ExecStart=/bin/sh -c "/opt/mesosphere/bin/python -c 'import uuid; print(uuid.uuid4())'  | /opt/mesosphere/bin/zk-value-consensus /cluster-id > /var/lib/dcos/cluster-id"
+EOF

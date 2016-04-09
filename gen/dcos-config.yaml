@@ -126,6 +126,14 @@ package:
         "GUNICORN_BIND_ADDRESS": "127.0.0.1:8101",
         "GUNICORN_WORKER_TIMEOUT_SECONDS": 10
       }
+  - path: /etc/minuteman/overrides.json
+    content: |
+      {
+        "forward_metrics": {{ minuteman_forward_metrics }}
+      }
+  - path: /etc/adminrouter.env
+    content: |
+      ADMINROUTER_ACTIVATE_AUTH_MODULE={{ auth_enabled }}
 {% switch master_discovery %}
 {% case "master_http_loadbalancer" %}
   - path: /etc/dns_config

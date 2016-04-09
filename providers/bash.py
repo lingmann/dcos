@@ -307,6 +307,7 @@ function check_all() {
     check xz
     check unzip
     check ipset
+    check systemd-notify
 
     # $ systemctl --version ->
     # systemd nnn

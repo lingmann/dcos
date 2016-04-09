@@ -53,35 +53,44 @@ def do_validate_gen_config(gen_config, mixins=['bash', 'centos', 'onprem']):
 
 
 def fetch_bootstrap(bootstrap_id):
-    bootstrap_filename = "{}.bootstrap.tar.xz".format(bootstrap_id)
-    save_path = "/genconf/serve/bootstrap/{}".format(bootstrap_filename)
+    copy_set = [
+        "{}.bootstrap.tar.xz".format(bootstrap_id),
+        "{}.active.json".format(bootstrap_id)]
+    dest_dir = "/genconf/serve/bootstrap/"
+    container_cache_dir = "/artifacts/"
 
-    def cleanup_and_exit():
-        if os.path.exists(save_path):
-            try:
-                os.remove(save_path)
-            except OSError as ex:
-                log.error(ex.strerror)
-        sys.exit(1)
-
-    if os.path.exists(save_path):
+    # If all the targets already exist, no-op
+    dest_files = [dest_dir + filename for filename in copy_set]
+    if all(map(os.path.exists, dest_files)):
         return
 
-    # Check if there is an in-container copy of the bootstrap tarball, and
-    # if so copy it across
-    local_cache_filename = "/artifacts/" + bootstrap_filename
-    if not os.path.exists(local_cache_filename):
-        log.error("""
-genconf/serve/bootstrap/{} not found, please make sure the correct BOOTSTRAP_ID is set in the environment.
-""".format(bootstrap_filename))
-        log.warning(local_cache_filename)
-        raise FileNotFoundError
+    # Make sure the internal cache files exist
+    src_files = [container_cache_dir + filename for filename in copy_set]
+    for filename in src_files:
+        if not os.path.exists(filename):
+            log.error("Internal Error: %s not found. Should have been in the installer container.", filename)
+            raise FileNotFoundError()
 
-    log.info("Copying bootstrap out of cache")
+    def cleanup_and_exit():
+        for filename in dest_files:
+            try:
+                os.remove(filename)
+            except OSError as ex:
+                log.error("Internal error removing temporary file. Might have corrupted file %s: %s",
+                          filename, ex.strerror)
+        sys.exit(1)
+
+    # Copy out the files, rolling back if it fails
     try:
         subprocess.check_output(['mkdir', '-p', '/genconf/serve/bootstrap/'])
-        subprocess.check_output(['cp', local_cache_filename, save_path])
-    except (KeyboardInterrupt, subprocess.CalledProcessError) as ex:
-        log.error("Copy failed or interrupted %s", ex.cmd)
-        log.error("Failed commandoutput: %s", ex.output)
+
+        # Copy across
+        for filename in copy_set:
+            subprocess.check_output(['cp', container_cache_dir + filename, dest_dir + filename])
+    except subprocess.CalledProcessError as ex:
+        log.error("Copy failed: %s\nOutput:\n%s", ex.cmd, ex.output)
+        log.error("Removing partial artifacts")
+        cleanup_and_exit()
+    except KeyboardInterrupt:
+        log.error("Copy out of installer interrupted. Removing partial files.")
         cleanup_and_exit()

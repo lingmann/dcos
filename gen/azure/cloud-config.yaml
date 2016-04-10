@@ -106,6 +106,9 @@ runcmd:
     - [ systemctl, stop, lxc-net.service ]
     - [ systemctl, disable, lxc-net.service ]
     - [ systemctl, mask, lxc-net.service ]
+    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/libipset3_6.29-1_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/libipset3_6.29-1_amd64.deb
+    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset_6.29-1_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/ipset_6.29-1_amd64.deb
+    - bash -c "try=1; until dpkg -i /tmp/*ipset*.deb || ((try > 5)); do echo retry \$((try++)); sleep 120; done"
     - [ cp, -p, /etc/resolv.conf, /tmp/resolv.conf ]
     - [ rm, -f, /etc/resolv.conf ]
     - [ cp, -p, /tmp/resolv.conf, /etc/resolv.conf ]

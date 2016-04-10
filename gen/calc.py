@@ -370,6 +370,7 @@ entry = {
             'true': {
                 'must': {
                     'ui_authentication': 'true',
+                    'ui_external_links': 'true',
                     'ui_networking': 'true',
                     'ui_organization': 'true',
                     'mesos_isolation_modules': ','.join(__default_isolation_modules + [
@@ -380,12 +381,21 @@ entry = {
                     'minuteman_forward_metrics': 'true',
                 },
                 'default': {
-                    'ui_tracking': 'false',
+                    'ui_tracking': 'true',
+                    'ui_banner': 'false',
+                    'ui_banner_background_color': '#1E232F',
+                    'ui_banner_foreground_color': '#FFFFFF',
+                    'ui_banner_header_title': 'null',
+                    'ui_banner_header_content': 'null',
+                    'ui_banner_footer_content': 'null',
+                    'ui_banner_image_path': 'null',
+                    'ui_banner_dismissible': 'null'
                 }
             },
             'false': {
                 'must': {
                     'ui_authentication': 'false',
+                    'ui_external_links': 'false',
                     'ui_networking': 'false',
                     'ui_organization': 'false',
                     'mesos_isolation_modules': ','.join(__default_isolation_modules),
@@ -396,6 +406,14 @@ entry = {
                 },
                 'default': {
                     'ui_tracking': 'true',
+                    'ui_banner': 'false',
+                    'ui_banner_background_color': '#1E232F',
+                    'ui_banner_foreground_color': '#FFFFFF',
+                    'ui_banner_header_title': 'null',
+                    'ui_banner_header_content': 'null',
+                    'ui_banner_footer_content': 'null',
+                    'ui_banner_image_path': 'null',
+                    'ui_banner_dismissible': 'null'
                 }
             }
         },

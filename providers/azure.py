@@ -20,7 +20,7 @@ ILLEGAL_ARM_CHARS_PATTERN = re.compile("[']")
 
 TEMPLATE_PATTERN = re.compile('(?P<pre>.*?)\[\[\[(?P<inject>.*?)\]\]\]')
 
-UPLOAD_URL = ("http://az837203.vo.msecnd.net/dcos/{channel_commit_path}/azure/{arm_template_name}")
+UPLOAD_URL = ("https://az837203.vo.msecnd.net/dcos/{channel_commit_path}/azure/{arm_template_name}")
 
 INSTANCE_GROUPS = {
     'master': {

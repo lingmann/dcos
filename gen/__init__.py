@@ -280,7 +280,7 @@ class DFSArgumentCalculator():
 
     # Force calculation of all arguments by accessing the arguments in this
     # scope and recursively all sub-scopes.
-    def calculate(self, scope):
+    def calculate(self, scope, throw_on_error=True):
         def evaluate_var(name):
             try:
                 self._get(name)
@@ -306,9 +306,9 @@ class DFSArgumentCalculator():
                     choice, ", ".join(sorted(sub_scope.keys())))
                 continue
 
-            self.calculate(sub_scope[choice])
+            self.calculate(sub_scope[choice], throw_on_error=False)
 
-        if len(self._errors) or len(self._unset):
+        if throw_on_error and (len(self._errors) or len(self._unset)):
             raise ValidationError(self._errors, self._unset)
 
         return self._arguments

@@ -1004,7 +1004,7 @@ def get_prod_storage_providers(use_azure_storage):
         azure_account_name = os.environ['AZURE_STORAGE_ACCOUNT']
         azure_account_key = os.environ['AZURE_STORAGE_ACCESS_KEY']
         storage_providers['azure'] = AzureStorageProvider(azure_account_name, azure_account_key, 'dcos',
-                                                          'http://az837203.vo.msecnd.net/dcos/')
+                                                          'https://az837203.vo.msecnd.net/dcos/')
 
     for name, provider in storage_providers.items():
         assert provider.name == name

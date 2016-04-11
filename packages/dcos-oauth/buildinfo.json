@@ -3,7 +3,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/dcos-oauth.git",
-    "ref": "a336d7c8e491c9f489235a279a27c30d26483c5e",
+    "ref": "0d79d728585bd4f4e275db8f9ce8b56e02520cf3",
     "ref_origin": "master"
   }
 }

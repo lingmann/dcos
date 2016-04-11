@@ -11,7 +11,7 @@
     "mesos-module-dvdi": {
       "kind": "git",
       "git": "git@github.com:mesosphere/mesos-module-dvdi-private",
-      "ref": "0abfc284a63d765f584cfc0ddfe08cb60fe52920",
+      "ref": "73f09e71a4ce1af76b9b0b37f0f0bf8f01785df3",
       "ref_origin": "v0.4.1-dcos"
     },
     "dvdcli": {

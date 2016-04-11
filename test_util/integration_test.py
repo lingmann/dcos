@@ -1411,7 +1411,10 @@ sleep 3600
             'logrotate-timer',
             'minuteman-service',
             'signal-timer',
-            'spartan-service']
+            'spartan-service',
+            'spartan-watchdog-service',
+            'spartan-watchdog-timer',
+            'vol-discovery-priv-agent-service']
     slave_units = [
             'mesos-slave-service',
             'rexray-service']

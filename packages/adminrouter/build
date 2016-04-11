@@ -59,7 +59,6 @@ cat <<EOF > "$systemd_master"
 [Unit]
 Description=Admin Router: A high performance web server and a reverse proxy server
 After=dcos-gen-resolvconf.service
-ConditionPathExists=/var/lib/dcos/cluster-id
 
 [Service]
 Restart=always
@@ -75,6 +74,7 @@ StandardError=journal
 ExecStartPre=/bin/ping -c1 ready.spartan
 ExecStartPre=/bin/ping -c1 marathon.mesos
 ExecStartPre=/bin/ping -c1 leader.mesos
+ExecStartPre=/usr/bin/test -f /var/lib/dcos/cluster-id
 ExecStart=$PKG_PATH/nginx/sbin/nginx
 ExecReload=/usr/bin/kill -HUP \$MAINPID
 KillSignal=SIGQUIT

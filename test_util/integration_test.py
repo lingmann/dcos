@@ -1414,11 +1414,11 @@ sleep 3600
             'signal-timer',
             'spartan-service',
             'spartan-watchdog-service',
-            'spartan-watchdog-timer',
-            'vol-discovery-priv-agent-service']
+            'spartan-watchdog-timer']
     slave_units = [
             'mesos-slave-service',
-            'rexray-service']
+            'rexray-service',
+            'vol-discovery-priv-agent-service']
 
     if cluster.is_enterprise:
         master_units.append('networking_api-service')

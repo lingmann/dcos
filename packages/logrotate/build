@@ -49,7 +49,7 @@ logrotate_timer="$PKG_PATH/dcos.target.wants/dcos-logrotate.timer"
 mkdir -p "$(dirname "$logrotate_timer")"
 cat <<'EOF' > "$logrotate_timer"
 [Unit]
-Description=Logrotate: Timer to trigger every 2 minutes
+Description=Logrotate Timer: Timer to trigger every 2 minutes
 [Timer]
 OnBootSec=2min
 OnUnitActiveSec=2min

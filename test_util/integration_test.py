@@ -1401,8 +1401,7 @@ sleep 3600
             'marathon-service',
             'mesos-dns-service',
             'mesos-master-service',
-            'signal-service',
-            'oauth-service']
+            'signal-service']
     all_node_units = [
             'ddt-service',
             'epmd-service',
@@ -1419,6 +1418,9 @@ sleep 3600
             'mesos-slave-service',
             'rexray-service',
             'vol-discovery-priv-agent-service']
+
+    if not cluster.is_enterprise:
+        master_units.append('oauth-service')
 
     if cluster.is_enterprise:
         master_units.append('networking_api-service')

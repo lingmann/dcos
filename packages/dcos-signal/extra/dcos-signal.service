@@ -2,7 +2,9 @@
 Description=Signal: DCOS Telemetry and Tracking Service
 After=dcos-mesos-master.service
 [Service]
-Type=oneshot
+Type=simple
+Restart=always
+RestartSec=20
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=-/opt/mesosphere/etc/cfn_signal_metadata
 ExecStartPre=/bin/bash -c '[ -f /var/lib/dcos/cluster-id ] || exit 1'

@@ -54,6 +54,13 @@ def enterprise_cluster(cluster):
     return cluster
 
 
+@pytest.fixture(scope='module')
+def auth_cluster(cluster):
+    if not cluster.is_enterprise and not cluster.is_oauth:
+        pytest.skip("Skipped because not running against cluster with auth.")
+    return cluster
+
+
 def _setup_logging():
     """Setup logging for the script"""
     logger = logging.getLogger()
@@ -186,18 +193,31 @@ class Cluster:
     def _wait_for_DCOS(self):
         self._wait_for_leader_election()
         self._wait_for_adminrouter_up()
-        # The following "tests" require authentication.
-        if self.is_enterprise:
-            self._authenticate()
+        self._authenticate()
         self._wait_for_Marathon_up()
         self._wait_for_slaves_to_join()
         self._wait_for_DCOS_history_up()
 
     def _authenticate(self):
-        r = requests.post(
-            self.dcos_uri + '/acs/api/v1/auth/login',
-            json={'uid': 'testadmin', 'password': 'testpassword'}
-            )
+        if self.is_enterprise:
+            js = {'uid': 'testadmin', 'password': 'testpassword'}
+        elif self.is_oauth:
+            # token valid until 2036 for user albert@bekstil.net
+            # {
+            #   "email": "albert@bekstil.net",
+            #   "email_verified": true,
+            #   "iss": "https://dcos.auth0.com/",
+            #   "sub": "google-oauth2|109964499011108905050",
+            #   "aud": "3yF5TOSzdlI45Q1xspxzeoGBe9fNxm9m",
+            #   "exp": 2090884974,
+            #   "iat": 1460164974
+            # }
+            js = {'token': 'eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsImtpZCI6Ik9UQkVOakZFTWtWQ09VRTRPRVpGTlRNMFJrWXlRa015Tnprd1JrSkVRemRCTWpBM1FqYzVOZyJ9.eyJlbWFpbCI6ImFsYmVydEBiZWtzdGlsLm5ldCIsImVtYWlsX3ZlcmlmaWVkIjp0cnVlLCJpc3MiOiJodHRwczovL2Rjb3MuYXV0aDAuY29tLyIsInN1YiI6Imdvb2dsZS1vYXV0aDJ8MTA5OTY0NDk5MDExMTA4OTA1MDUwIiwiYXVkIjoiM3lGNVRPU3pkbEk0NVExeHNweHplb0dCZTlmTnhtOW0iLCJleHAiOjIwOTA4ODQ5NzQsImlhdCI6MTQ2MDE2NDk3NH0.OxcoJJp06L1z2_41_p65FriEGkPzwFB_0pA9ULCvwvzJ8pJXw9hLbmsx-23aY2f-ydwJ7LSibL9i5NbQSR2riJWTcW4N7tLLCCMeFXKEK4hErN2hyxz71Fl765EjQSO5KD1A-HsOPr3ZZPoGTBjE0-EFtmXkSlHb1T2zd0Z8T5Z2-q96WkFoT6PiEdbrDA-e47LKtRmqsddnPZnp0xmMQdTr2MjpVgvqG7TlRvxDcYc-62rkwQXDNSWsW61FcKfQ-TRIZSf2GS9F9esDF4b5tRtrXcBNaorYa9ql0XAWH5W_ct4ylRNl3vwkYKWa4cmPvOqT5Wlj9Tf0af4lNO40PQ'}  # noqa
+        else:
+            # no authentication required
+            return
+
+        r = requests.post(self.dcos_uri + '/acs/api/v1/auth/login', json=js)
         assert r.status_code == 200
         self.superuser_auth_header = {
             'Authorization': 'token=%s' % r.json()['token']
@@ -235,6 +255,7 @@ class Cluster:
         self.dcos_uri = dcos_uri.rstrip('/')
 
         self.is_enterprise = os.environ.get('DCOS_VARIANT', None) == 'ee'
+        self.is_oauth = os.environ.get('DCOS_OAUTH', 'true') == 'true' and not self.is_enterprise
         self._wait_for_DCOS()
 
     @staticmethod
@@ -242,7 +263,7 @@ class Cluster:
         return {'Accept': 'application/json, text/plain, */*'}
 
     def _suheader(self, disable_suauth):
-        if not disable_suauth and self.is_enterprise:
+        if not disable_suauth and (self.is_enterprise or self.is_oauth):
             return self.superuser_auth_header
         return {}
 
@@ -434,10 +455,10 @@ def test_if_DCOS_UI_is_up(cluster):
         assert link_response.status_code == 200
 
 
-def test_adminrouter_access_control_enforcement(enterprise_cluster):
-    r = enterprise_cluster.get('/acs/api/v1', disable_suauth=True)
+def test_adminrouter_access_control_enforcement(auth_cluster):
+    r = auth_cluster.get('/acs/api/v1', disable_suauth=True)
     assert r.status_code == 401
-    assert r.headers['WWW-Authenticate'] == 'acsjwt'
+    assert r.headers['WWW-Authenticate'] in ('acsjwt', 'oauthjwt')
     # Make sure that this is UI's error page body,
     # including some JavaScript.
     assert '<html>' in r.text
@@ -446,16 +467,16 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
     # Verify that certain locations are forbidden to access
     # when not authed, but are reachable as superuser.
     for path in ('/mesos_dns/v1/config', '/service/marathon/', '/mesos/'):
-        r = enterprise_cluster.get(path, disable_suauth=True)
+        r = auth_cluster.get(path, disable_suauth=True)
         assert r.status_code == 401
-        r = enterprise_cluster.get(path)
+        r = auth_cluster.get(path)
         assert r.status_code == 200
 
     # Test authentication with auth cookie instead of Authorization header.
     authcookie = {
-        'dcos-acs-auth-cookie': enterprise_cluster.superuser_auth_cookie
+        'dcos-acs-auth-cookie': auth_cluster.superuser_auth_cookie
         }
-    r = enterprise_cluster.get(
+    r = auth_cluster.get(
         '/service/marathon/',
         disable_suauth=True,
         cookies=authcookie
@@ -463,15 +484,15 @@ def test_adminrouter_access_control_enforcement(enterprise_cluster):
     assert r.status_code == 200
 
 
-def test_bouncer_logout(enterprise_cluster):
+def test_bouncer_logout(auth_cluster):
     """Test bouncer's logout endpoint. It's a soft logout, instructing
     the user agent to delete the authentication cookie, i.e. this test
     does not have side effects on other tests.
     """
-    r = enterprise_cluster.get('/acs/api/v1/auth/logout')
+    r = auth_cluster.get('/acs/api/v1/auth/logout')
     cookieheader = r.headers['set-cookie']
     assert 'dcos-acs-auth-cookie=;' in cookieheader
-    assert 'expires' in cookieheader
+    assert 'expires' in cookieheader.lower()
 
 
 def test_if_Mesos_is_up(cluster):

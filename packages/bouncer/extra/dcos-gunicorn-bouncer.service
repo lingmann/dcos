@@ -1,5 +1,5 @@
 [Unit]
-Description=Identity and Access Management: DCOS Identity and Access Management Service/API 
+Description=Identity and Access Management: DCOS Identity and Access Management Service/API
 # TODO(cmaloney): Make sure that bouncer is running when nginx comes up
 # We currently don't because systemd unit ordering / dependencies can break
 # startup entirely, whereas "just restart always" and catch things in the right
@@ -21,6 +21,7 @@ EnvironmentFile=/opt/mesosphere/environment
 # Wait for ZK cluster to be up and running.
 ExecStartPre=/bin/ping -c1 ready.spartan
 ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
+ExecStartPre=/bin/mkdir -p /var/lib/dcos
 
 WorkingDirectory=${PKG_PATH}
 ExecStart=${PKG_PATH}/bouncer/bin/bouncer-gunicorn.sh

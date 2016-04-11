@@ -5,9 +5,9 @@ import uuid
 
 import pytest
 
-import providers.aws_config
-import providers.release as release
-import providers.util as util
+import gen.installer.aws_config
+import gen.installer.util as util
+import release
 from pkgpanda.util import write_json, write_string
 
 
@@ -230,7 +230,7 @@ s3_test_bucket_all_read_policy = """{
 # TODO(cmaloney): Add skipping when not run under CI with the environment variables
 # So devs without the variables don't see expected failures https://pytest.org/latest/skipping.html
 def test_storage_provider_aws(tmpdir):
-    s3_bucket = providers.aws_config.session_dev.resource('s3').Bucket('dcos-image-unit-tests')
+    s3_bucket = gen.installer.aws_config.session_dev.resource('s3').Bucket('dcos-image-unit-tests')
 
     # Make the bucket if it doesn't exist / was cleaned up. S3 doesn't error on repeated creation.
     s3_bucket.create()
@@ -545,15 +545,15 @@ stable_artifacts_metadata = {
 # TODO(cmaloney): Add test for do_build_packages returning multiple bootstraps
 # containing overlapping
 def test_make_stable_artifacts(monkeypatch, tmpdir):
-    monkeypatch.setattr("providers.release.do_build_packages", mock_do_build_packages)
-    monkeypatch.setattr("providers.util.dcos_image_commit", "commit_sha1")
+    monkeypatch.setattr("release.do_build_packages", mock_do_build_packages)
+    monkeypatch.setattr("gen.installer.util.dcos_image_commit", "commit_sha1")
 
     with tmpdir.as_cwd():
         metadata = release.make_stable_artifacts("http://test", False)
         assert metadata == stable_artifacts_metadata
 
 
-# NOTE: Implicitly tests all providers do_create functions since it calls them.
+# NOTE: Implicitly tests all gen.installer do_create functions since it calls them.
 # TODO(cmaloney): Test make_channel_artifacts, module do_create functions
 def mock_build_installers(bootstrap_dict, installer_bootstrap_id):
     return {
@@ -565,7 +565,7 @@ def mock_build_installers(bootstrap_dict, installer_bootstrap_id):
 # Test that the do_create functions for each provider output data in the right
 # shape.
 def test_make_channel_artifacts(monkeypatch):
-    monkeypatch.setattr('providers.release.build_installers', mock_build_installers)
+    monkeypatch.setattr('release.build_installers', mock_build_installers)
 
     metadata = {
         'commit': 'sha-1',

@@ -13,8 +13,8 @@ from pkg_resources import resource_string
 from retrying import retry
 
 import gen
-import providers.util as util
-from providers.aws_config import session_dev
+import gen.installer.util as util
+from gen.installer.aws_config import session_dev
 
 aws_region_names = [
     {

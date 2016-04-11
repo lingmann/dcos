@@ -5,7 +5,7 @@ import sys
 
 import gen
 import pkgpanda
-import providers.bash
+import gen.installer.bash
 from dcos_installer.util import SERVE_DIR
 
 log = logging.getLogger(__name__)
@@ -24,7 +24,7 @@ def do_configure(gen_config):
                 del gen_config[optional_key]
 
     gen_out = gen.generate(arguments=gen_config)
-    providers.bash.generate(gen_out, SERVE_DIR)
+    gen.installer.bash.generate(gen_out, SERVE_DIR)
 
     # Get bootstrap from artifacts
     fetch_bootstrap(gen_out.arguments['bootstrap_id'])

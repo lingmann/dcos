@@ -10,8 +10,8 @@ from copy import deepcopy
 import yaml
 
 import gen
+import gen.installer.util as util
 import gen.template
-import providers.util as util
 
 # TODO(cmaloney): Make it so the template only completes when services are properly up.
 late_services = ""

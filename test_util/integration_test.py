@@ -1401,7 +1401,8 @@ sleep 3600
             'marathon-service',
             'mesos-dns-service',
             'mesos-master-service',
-            'signal-service']
+            'signal-service',
+            'oauth-service']
     all_node_units = [
             'ddt-service',
             'epmd-service',

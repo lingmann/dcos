@@ -131,6 +131,13 @@ package:
       {
         "forward_metrics": {{ minuteman_forward_metrics }}
       }
+  - path: /etc/dcos-signal-config.json
+    content: |
+      {
+        "customer_key": "{{ customer_key }}",
+        "gen_provider": "{{ provider }}",
+        "enabled": "{{ telemetry_enabled }}"
+      }
   - path: /etc/adminrouter.env
     content: |
       ADMINROUTER_ACTIVATE_AUTH_MODULE={{ auth_enabled }}

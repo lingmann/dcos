@@ -96,7 +96,7 @@ class DcosApiInstaller(AbstractDcosInstaller):
     def genconf(
             self, master_list, agent_list, ssh_user, ssh_key,
             ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            zk_host=None, expect_errors=False):
+            zk_host=None, expect_errors=False, customer_key=None):
         """Runs configuration generation.
 
         Args:
@@ -109,6 +109,7 @@ class DcosApiInstaller(AbstractDcosInstaller):
             rexray_config (str): complete contents of REX-Ray config file
             zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
+            customer_key (optional): used in EE mode for customer tracking
 
         Raises:
             AssertionError: "error" present in returned json keys when error
@@ -128,6 +129,8 @@ class DcosApiInstaller(AbstractDcosInstaller):
             payload["superuser_username"] = superuser
         if su_passwd:
             payload["superuser_password_hash"] = su_passwd
+        if customer_key:
+            payload['customer_key'] = customer_key
         response = requests.post(self.url + '/api/v1/configure', headers=headers, data=json.dumps(payload))
         assert response.status_code == 200
         response_json_keys = list(response.json().keys())
@@ -235,7 +238,7 @@ class DcosCliInstaller(AbstractDcosInstaller):
     def genconf(
             self, master_list, agent_list, ssh_user, ssh_key,
             ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            zk_host=None, expect_errors=False):
+            zk_host=None, expect_errors=False, customer_key=None):
         """Runs configuration generation.
 
         Args:
@@ -248,6 +251,7 @@ class DcosCliInstaller(AbstractDcosInstaller):
             rexray_config (str): complete contents of REX-Ray config file
             zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
+            customer_key (optional): used in EE mode for customer tracking
 
         Raises:
             AssertionError: "error" present in returned json keys when error
@@ -274,6 +278,8 @@ class DcosCliInstaller(AbstractDcosInstaller):
             test_config['superuser_username'] = superuser
         if su_passwd:
             test_config['superuser_password_hash'] = su_passwd
+        if customer_key:
+            test_config['customer_key'] = customer_key
         with open('config.yaml', 'w') as config_fh:
             config_fh.write(yaml.dump(test_config))
         with open('ip-detect', 'w') as ip_detect_fh:

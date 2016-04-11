@@ -106,6 +106,11 @@ def calculate_mesos_slave_modules_json(mesos_slave_modules):
     return json_multiline.replace('\n', '\n' + injected_indent)
 
 
+def validate_telemetry_enabled(telemetry_enabled):
+    can_be = ['true', 'false']
+    assert telemetry_enabled in can_be, 'Must be one of {}. Got {}.'.format(can_be, telemetry_enabled)
+
+
 def validate_customer_key(customer_key):
     assert isinstance(customer_key, str), "Must be a string."
 
@@ -315,12 +320,15 @@ entry = {
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
-        validate_customer_key,
         validate_auth_enabled,
-        validate_mesos_dns_ip_sources],
+        validate_mesos_dns_ip_sources,
+        validate_telemetry_enabled,
+        validate_customer_key],
     'default': {
         'weights': '',
         'auth_enabled': 'true',
+        'customer_key': '',
+        'telemetry_enabled': 'true',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': '',

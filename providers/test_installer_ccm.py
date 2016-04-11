@@ -454,6 +454,10 @@ def main():
     else:
         zk_host = registry_host + ':2181'
     # use first node as independent test/bootstrap node, second node as master, all others as slaves
+    if options.variant == 'ee':
+        customer_key = '12345'
+    else:
+        customer_key = None
     installer.genconf(
             zk_host=zk_host,
             master_list=master_list,
@@ -463,7 +467,8 @@ def main():
             ssh_key=ssh_key,
             superuser='testadmin',
             su_passwd=hash_passwd,
-            rexray_config=REXRAY_CONFIG)
+            rexray_config=REXRAY_CONFIG,
+            customer_key=customer_key)
 
     # Test install-prereqs. This may take up 15 minutes...
     if options.test_install_prereqs:

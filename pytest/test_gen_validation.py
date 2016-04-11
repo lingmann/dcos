@@ -14,6 +14,7 @@ def validate_helper(arguments):
 def default_arguments():
     return copy.deepcopy({
         'cluster_id': 'TODO',
+        'customer_key': '1234',
         'ip_detect_filename': pkg_resources.resource_filename('providers', '../scripts/ip-detect/aws.sh'),
         'bootstrap_id': '123',
         'exhibitor_zk_path': '/dcos',
@@ -43,6 +44,14 @@ def validate_error(new_arguments, key, message):
     validated = validate_helper(arguments)
     assert validated['status'] == 'errors'
     assert validated == expected
+
+
+def test_invalid_telemetry_enabled(default_arguments):
+    err_msg = "Must be one of ['true', 'false']. Got foo."
+    validate_error(
+        {'telemetry_enabled': 'foo'},
+        'telemetry_enabled',
+        err_msg)
 
 
 def test_invalid_ipv4(default_arguments):

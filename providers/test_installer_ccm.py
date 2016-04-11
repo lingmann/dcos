@@ -39,6 +39,7 @@ CI_FLAGS: string (default=None)
     py.test -vv CI_FLAGS integration_test.py
 """
 import asyncio
+import copy
 import logging
 import multiprocessing
 import os
@@ -142,11 +143,15 @@ def get_local_addresses(ssh_runner, remote_dir):
     ip_map_chain.add_execute(['bash', remote('ip-detect.sh')])
     mapping = {}
     result = run_loop(ssh_runner, ip_map_chain)
+
+    # Check the running was successful
+    check_results(copy.deepcopy(result))
+
+    # Gather the local IP addresses
     for host_result in result:
         host, data = host_result[-1].popitem()  # Grab the last command trigging the script
-        assert data['returncode'] == 0
         local_ip = data['stdout'][0].rstrip()
-        assert local_ip != ''
+        assert local_ip != '', "Didn't get a valid IP for host {}:\n{}".format(host, data)
         mapping[host.split(":")[0]] = local_ip
     return mapping
 

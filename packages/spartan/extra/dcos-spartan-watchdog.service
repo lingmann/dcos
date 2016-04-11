@@ -1,5 +1,5 @@
 [Unit]
-Description=Watchdog spartan: Make sure spartan is running
+Description=DNS Dispatcher Watchdog: Make sure spartan is running
 After=dcos-spartan.service
 
 [Service]

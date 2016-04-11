@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Generates a bash script for installing DCOS On-Prem."""
 
+import gen.installer.util as util
 import gen.template
-import providers.util as util
 from pkgpanda.util import write_string
 
 
@@ -306,6 +306,7 @@ function check_all() {
     check tar
     check xz
     check unzip
+    check ipset
     check systemd-notify
 
     # $ systemctl --version ->

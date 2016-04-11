@@ -4,7 +4,7 @@
 1. Build and upload a DCOS release to a release URL
 2. Move a latest version of a release from one place to another
 
-Co-ordinates across all providers.
+Co-ordinates across all gen installers.
 """
 
 import abc
@@ -22,11 +22,11 @@ import azure.storage.blob
 import botocore.client
 import requests
 
+import gen.installer.aws_config as aws_config
+import gen.installer.util as util
 import pkgpanda
 import pkgpanda.build
 import pkgpanda.util
-import providers.aws_config as aws_config
-import providers.util as util
 
 provider_names = ['aws', 'azure']
 
@@ -93,7 +93,7 @@ def get_bootstrap_packages(bootstrap_id):
 def load_providers():
     modules = dict()
     for name in provider_names:
-        modules[name] = importlib.import_module("providers." + name)
+        modules[name] = importlib.import_module("gen.installer." + name)
     return modules
 
 

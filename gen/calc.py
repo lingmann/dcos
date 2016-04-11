@@ -106,6 +106,11 @@ def calculate_mesos_slave_modules_json(mesos_slave_modules):
     return json_multiline.replace('\n', '\n' + injected_indent)
 
 
+def validate_telemetry_enabled(telemetry_enabled):
+    can_be = ['true', 'false']
+    assert telemetry_enabled in can_be, 'Must be one of {}. Got {}.'.format(can_be, telemetry_enabled)
+
+
 def validate_customer_key(customer_key):
     assert isinstance(customer_key, str), "Must be a string."
 
@@ -297,6 +302,7 @@ __default_mesos_slave_modules = [
 ]
 
 __default_isolation_modules = [
+    'filesystem/linux',
     'cgroups/cpu',
     'cgroups/mem',
     'posix/disk',
@@ -315,12 +321,15 @@ entry = {
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
-        validate_customer_key,
         validate_auth_enabled,
-        validate_mesos_dns_ip_sources],
+        validate_mesos_dns_ip_sources,
+        validate_telemetry_enabled,
+        validate_customer_key],
     'default': {
         'weights': '',
         'auth_enabled': 'true',
+        'customer_key': '',
+        'telemetry_enabled': 'true',
         'docker_remove_delay': '1hrs',
         'gc_delay': '2days',
         'dns_search': '',
@@ -330,6 +339,10 @@ entry = {
         'mesos_dns_ip_sources': '["host", "netinfo"]',
         'rexray_config_method': 'empty',
         'mesos_container_logger': __logrotate_slave_module_name,
+        'oauth_issuer_url': 'https://dcos.auth0.com/',
+        'oauth_client_id': '3yF5TOSzdlI45Q1xspxzeoGBe9fNxm9m',
+        'oauth_auth_redirector': 'https://auth.dcos.io',
+        'oauth_auth_host': 'https://dcos.auth0.com',
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),
@@ -369,7 +382,6 @@ entry = {
         'is_ee': {
             'true': {
                 'must': {
-                    'ui_authentication': 'true',
                     'ui_external_links': 'true',
                     'ui_networking': 'true',
                     'ui_organization': 'true',
@@ -394,7 +406,6 @@ entry = {
             },
             'false': {
                 'must': {
-                    'ui_authentication': 'false',
                     'ui_external_links': 'false',
                     'ui_networking': 'false',
                     'ui_organization': 'false',

@@ -25,12 +25,13 @@ from docopt import docopt
 import pkgpanda.build.constants
 from pkgpanda import expand_require as expand_require_exceptions
 from pkgpanda import Install, PackageId, Repository
-from pkgpanda.build import hash_checkout, src_fetchers, sha1
+from pkgpanda.build import hash_checkout, sha1, src_fetchers
 from pkgpanda.cli import add_to_repository
 from pkgpanda.constants import RESERVED_UNIT_NAMES
 from pkgpanda.exceptions import FetchError, PackageError, ValidationError
-from pkgpanda.util import (check_forbidden_services, download, load_json, load_string, make_file, make_tar,
-                           rewrite_symlinks, write_json, write_string)
+from pkgpanda.util import (check_forbidden_services, download, load_json,
+                           load_string, make_file, make_tar, rewrite_symlinks,
+                           write_json, write_string)
 
 
 class BuildError(Exception):
@@ -80,7 +81,7 @@ def clean(package_dir):
     cmd.volumes = {
         package_dir: "/pkg/:rw",
     }
-    cmd.container = "ubuntu:14.04.4"
+    cmd.container = "alpine:3.3"
     cmd.run(["rm", "-rf", "/pkg/src", "/pkg/result"])
 
 

@@ -2,8 +2,8 @@
   "docker": "golang:1.6",
   "single_source" : {
     "kind": "git",
-    "git": "git@github.com:branden/rexray.git",
-    "ref": "5b282f55247e41a8820e12252990b1ff64ecf935",
-    "ref_origin": "v0.3.2-getauth"
+    "git": "git@github.com:jdef/rexray.git",
+    "ref": "11de108f9819ff092e687ca9d700a26560608f0d",
+    "ref_origin": "jdef_fix_implicit_iops"
   }
 }

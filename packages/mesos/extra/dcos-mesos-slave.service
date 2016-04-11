@@ -1,5 +1,5 @@
 [Unit]
-Description=Mesos Slave: DCOS Mesos Slave Service
+Description=Mesos Agent: DCOS Mesos Agent Service
 
 [Service]
 Restart=always

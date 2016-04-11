@@ -39,6 +39,6 @@ def test_error_during_validate():
             },
             'unset': {
                 'bootstrap_id',
-                'provider'
+                'provider',
             }
         }

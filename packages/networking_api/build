@@ -59,7 +59,7 @@ service=${PKG_PATH}/dcos.target.wants_master/dcos-networking_api.service
 mkdir -p $(dirname $service)
 cat <<EOF > $service
 [Unit]
-Description=Network Metric Aggregator: DCOS Network Metric Aggregation Service and API
+Description=Network Metrics Aggregator: DCOS Network Metrics Aggregation Service and API
 After=dcos-mesos-dns.service
 After=dcos-epmd.service
 BindsTo=dcos-epmd.service

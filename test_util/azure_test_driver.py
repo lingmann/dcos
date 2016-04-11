@@ -3,15 +3,15 @@
 import json
 import os
 import re
-import requests
 import sys
 import traceback
 
-from gen.azure.azure_client import (AzureClient,
-                                    AzureClientException,
-                                    TemplateProvisioningState,
-                                    AzureClientTemplateException)
+import requests
 from retrying import retry
+
+from gen.azure.azure_client import (AzureClient, AzureClientException,
+                                    AzureClientTemplateException,
+                                    TemplateProvisioningState)
 
 
 def verify_template_syntax(client, template_body_json, template_parameters):

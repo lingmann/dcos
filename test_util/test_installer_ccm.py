@@ -39,6 +39,7 @@ CI_FLAGS: string (default=None)
     py.test -vv CI_FLAGS integration_test.py
 """
 import asyncio
+import copy
 import logging
 import multiprocessing
 import os
@@ -51,8 +52,8 @@ import passlib.hash
 import pkg_resources
 from retrying import retry
 
-import providers.ccm
-import providers.installer_api_test
+import test_util.ccm
+import test_util.installer_api_test
 from ssh.ssh_runner import MultiRunner
 from ssh.utils import CommandChain, SyncCmdDelegate
 
@@ -136,17 +137,21 @@ def get_local_addresses(ssh_runner, remote_dir):
     def remote(path):
         return remote_dir + '/' + path
 
-    ip_detect_script = pkg_filename('../scripts/ip-detect/aws.sh')
+    ip_detect_script = pkg_resources.resource_filename('gen', 'ip-detect/aws.sh')
     ip_map_chain = CommandChain('ip_map')
     ip_map_chain.add_copy(ip_detect_script, remote('ip-detect.sh'))
     ip_map_chain.add_execute(['bash', remote('ip-detect.sh')])
     mapping = {}
     result = run_loop(ssh_runner, ip_map_chain)
+
+    # Check the running was successful
+    check_results(copy.deepcopy(result))
+
+    # Gather the local IP addresses
     for host_result in result:
         host, data = host_result[-1].popitem()  # Grab the last command trigging the script
-        assert data['returncode'] == 0
         local_ip = data['stdout'][0].rstrip()
-        assert local_ip != ''
+        assert local_ip != '', "Didn't get a valid IP for host {}:\n{}".format(host, data)
         mapping[host.split(":")[0]] = local_ip
     return mapping
 
@@ -175,10 +180,10 @@ def test_setup(ssh_runner, registry, remote_dir, use_zk_backend):
     Returns:
         result from async chain that can be checked later for success
     """
-    test_server_docker = pkg_filename('../docker/test_server/Dockerfile')
-    test_server_script = pkg_filename('../docker/test_server/test_server.py')
-    pytest_docker = pkg_filename('../docker/py.test/Dockerfile')
-    test_script = pkg_filename('../integration_test.py')
+    test_server_docker = pkg_filename('docker/test_server/Dockerfile')
+    test_server_script = pkg_filename('docker/test_server/test_server.py')
+    pytest_docker = pkg_filename('docker/py.test/Dockerfile')
+    test_script = pkg_filename('integration_test.py')
     test_setup_chain = CommandChain('test_setup')
     if use_zk_backend:
         test_setup_chain.add_execute([
@@ -298,7 +303,7 @@ def make_vpc(use_bare_os=False):
         os_name = "cent-os-7"
     else:
         os_name = "cent-os-7-dcos-prereqs"
-    ccm = providers.ccm.Ccm()
+    ccm = test_util.ccm.Ccm()
     vpc = ccm.create_vpc(
         name=unique_cluster_id,
         time=60,
@@ -411,12 +416,12 @@ def main():
     agent_list = [local_ip[_] for _ in host_list[2:]]
 
     if options.use_api:
-        installer = providers.installer_api_test.DcosApiInstaller()
+        installer = test_util.installer_api_test.DcosApiInstaller()
         if not options.test_install_prereqs:
             # If we dont want to test the prereq install, use offline mode to avoid it
             installer.offline_mode = True
     else:
-        installer = providers.installer_api_test.DcosCliInstaller()
+        installer = test_util.installer_api_test.DcosCliInstaller()
 
     # If installer_url is not set, then no downloading occurs
     installer.setup_remote(
@@ -444,7 +449,7 @@ def main():
         installer.start_web_server()
 
     print("Configuring install...")
-    with open(pkg_filename("../scripts/ip-detect/aws.sh")) as ip_detect_fh:
+    with open(pkg_resources.resource_filename("gen", "ip-detect/aws.sh")) as ip_detect_fh:
         ip_detect_script = ip_detect_fh.read()
     with open('ssh_key', 'r') as key_fh:
         ssh_key = key_fh.read()
@@ -454,6 +459,10 @@ def main():
     else:
         zk_host = registry_host + ':2181'
     # use first node as independent test/bootstrap node, second node as master, all others as slaves
+    if options.variant == 'ee':
+        customer_key = '12345'
+    else:
+        customer_key = None
     installer.genconf(
             zk_host=zk_host,
             master_list=master_list,
@@ -463,7 +472,8 @@ def main():
             ssh_key=ssh_key,
             superuser='testadmin',
             su_passwd=hash_passwd,
-            rexray_config=REXRAY_CONFIG)
+            rexray_config=REXRAY_CONFIG,
+            customer_key=customer_key)
 
     # Test install-prereqs. This may take up 15 minutes...
     if options.test_install_prereqs:

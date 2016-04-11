@@ -1,5 +1,5 @@
 [Unit]
-Description=Generate resolv.conf: Update systemd-resolved for MesosDNS
+Description=DNS Dispatcher Watchdog: Make sure spartan is running
 After=dcos-spartan.service
 
 [Service]
@@ -11,4 +11,5 @@ EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=/opt/mesosphere/etc/dns_config
 EnvironmentFile=/opt/mesosphere/etc/dns_search_config
 EnvironmentFile=-/opt/mesosphere/etc/dns_config_master
-ExecStart=/opt/mesosphere/bin/gen_resolvconf.py /etc/resolv.conf
+ExecStartPre=/bin/sleep 60
+ExecStart=/opt/mesosphere/active/toybox/bin/toybox timeout -k 1m 1m /bin/bash -c "/opt/mesosphere/active/toybox/bin/toybox host ready.spartan 198.51.100.1 || /opt/mesosphere/active/toybox/bin/toybox pkill -l 9 -f spartan"

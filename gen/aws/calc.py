@@ -13,7 +13,7 @@ entry = {
         'slave_instance_type': 'm3.xlarge',
         'public_slave_instance_type': 'm3.xlarge',
         'nat_instance_type': 'm3.medium',
-        'ip_detect_filename': 'scripts/ip-detect/aws.sh',
+        'ip_detect_filename': 'gen/ip-detect/aws.sh',
 
         # If set to empty strings / unset then no spot instances will be used.
         'master_spot_price': '',

@@ -1019,7 +1019,9 @@ def make_3dt_request(ip, endpoint, cluster, port=80):
     if port == 80:
         assert endpoint.startswith('/'), 'endpoint {} must start with /'.format(endpoint)
         logging.info('GET {}'.format(endpoint))
-        return cluster.get(path=endpoint).json()
+        json_response = cluster.get(path=endpoint).json()
+        logging.info('Response: {}'.format(json_response))
+        return json_response
 
     url = 'http://{}:{}/{}'.format(ip, port, endpoint.lstrip('/'))
     logging.info('GET {}'.format(url))
@@ -1027,6 +1029,7 @@ def make_3dt_request(ip, endpoint, cluster, port=80):
     assert request.ok
     try:
         json_response = request.json()
+        logging.info('Response: {}'.format(json_response))
     except ValueError:
         logging.error('Coult not deserialized json response from {}'.format(url))
         raise
@@ -1043,7 +1046,6 @@ def test_3dt_health(cluster):
 
     for host in cluster.masters + cluster.slaves:
         response = make_3dt_request(host, BASE_ENDPOINT_3DT, cluster, port=PORT_3DT)
-        logging.info('{} response: {}'.format(BASE_ENDPOINT_3DT, response))
         assert len(response) == len(required_fields), 'response must have the following fields: {}'.format(
             ', '.join(required_fields)
         )
@@ -1095,7 +1097,6 @@ def test_3dt_nodes(cluster):
     """
     for master in cluster.masters:
         response = make_3dt_request(master, BASE_ENDPOINT_3DT + '/nodes', cluster)
-        logging.info('{} response: {}'.format(BASE_ENDPOINT_3DT + '/nodes', response))
         assert len(response) == 1, 'nodes response must have only one field: nodes'
         assert 'nodes' in response
         assert isinstance(response['nodes'], list)

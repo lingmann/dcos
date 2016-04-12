@@ -1341,11 +1341,12 @@ def test_signal_service(cluster):
 
     wait_for_endpoint()
 
+    test_cache_url = "http://{}:{}/signal_test_cache".format(service_points[0].host, service_points[0].port)
     cmd = """
 data=`/opt/mesosphere/bin/dcos-signal -report-host leader.mesos -test 2> /dev/null`;
-curl -H 'Content-Type: application/json' -X POST -d "$data" http://{}:{}/signal_test_cache;
+curl -H 'Content-Type: application/json' -X POST -d "$data" {};
 sleep 3600
-""".format(service_points[0].host, service_points[0].port)
+""".format(test_cache_url)
 
     test_uuid = uuid.uuid4().hex
     signal_app_definition = {
@@ -1353,28 +1354,27 @@ sleep 3600
         'cmd': cmd,
         'cpus': 0.1,
         'mem': 64,
-        'instances': 1}
+        'instances': 1,
+        'healthChecks': [{
+            'protocol': 'COMMAND',
+            'command': {
+                'value': 'curl {} > tmp; test -s tmp'.format(test_cache_url)
+            },
+            'gracePeriodSeconds': 0,
+            'intervalSeconds': 10,
+            'timeoutSeconds': 10,
+            'maxConsecutiveFailures': 1,
+            'ignoreHttp1xx': False}]
+    }
 
-    cluster.deploy_marathon_app(signal_app_definition, check_health=False)
+    cluster.deploy_marathon_app(signal_app_definition, ignore_failed_tasks=True)
 
-    @retrying.retry(wait_fixed=1000, stop_max_delay=120*1000)
-    def get_cached_signal_data():
-        """It might take a while for the signal one-off job to trigger, so wait for it to populate"""
-        r = requests.get('http://{}:{}/signal_test_cache'.format(
-            service_points[0].host,
-            service_points[0].port))
-        assert r.text != ""
-        return r
+    r = requests.get(test_cache_url)
 
-    r = get_cached_signal_data()
     r_data = json.loads(r.json())
 
     cluster.destroy_marathon_app(signal_app_definition['id'])
     cluster.destroy_marathon_app(test_server_app_definition['id'])
-
-    # Cluster ID is uncheckable as this runs on an agent
-    r_data['ClusterId'] = ''
-    r_data['Properties']['clusterId'] = ''
 
     exp_data = {
             'Event': 'health',
@@ -1435,5 +1435,9 @@ sleep 3600
     for unit in slave_units:
         exp_data['Properties']["health-unit-dcos-{}-total".format(unit)] = len(cluster.slaves)
         exp_data['Properties']["health-unit-dcos-{}-unhealthy".format(unit)] = 0
+
+    # Cluster ID is uncheckable as this runs on an agent
+    r_data['ClusterId'] = ''
+    r_data['Properties']['clusterId'] = ''
 
     assert r_data == exp_data

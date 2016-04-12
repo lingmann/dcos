@@ -1,4 +1,5 @@
 {
+  "requires": ["exhibitor"],
   "docker": "golang:1.6",
   "single_source" : {
     "kind": "git",

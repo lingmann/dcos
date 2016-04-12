@@ -34,5 +34,6 @@ EnvironmentFile=/opt/mesosphere/environment
 Restart=always
 StartLimitInterval=0
 RestartSec=5
+ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 ExecStart=/opt/mesosphere/bin/3dt -pull
 EOF

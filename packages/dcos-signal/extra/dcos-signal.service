@@ -3,7 +3,7 @@ Description=Signal: DCOS Telemetry and Tracking Service
 After=dcos-mesos-master.service
 [Service]
 Type=simple
-Restart=always
+Restart=on-failure
 RestartSec=20
 EnvironmentFile=/opt/mesosphere/environment
 EnvironmentFile=-/opt/mesosphere/etc/cfn_signal_metadata

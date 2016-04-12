@@ -4,7 +4,7 @@
   "single_source" : {
     "kind": "git",
     "git": "git@github.com:mesosphere/3dt.git",
-    "ref": "7c0908e40305e0bf78ea7144892f960347e5169e",
+    "ref": "81ede844308407fc0e0c0f9cc4a1aa894fa08dd8",
     "ref_origin": "master"
   }
 }

@@ -128,7 +128,8 @@ class Ccm():
         return self.get("/api/cluster/").json()
 
     def get_ssh_key(self, pk):
-        return self.get("/api/key/{}".format(pk)).text
+        r = self.get("/api/key/{}".format(pk))
+        return r.text, r.url
 
     def delete_cluster(self, pk):
         return self.delete("/api/cluster/{}/".format(pk)).text

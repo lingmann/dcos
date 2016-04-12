@@ -314,9 +314,11 @@ def make_vpc(use_bare_os=False):
         key_pair_name=unique_cluster_id
         )
 
+    ssh_key, ssh_key_url = vpc.get_ssh_key()
+    print("Download cluster SSH key: {}".format(ssh_key_url))
     # Write out the ssh key to the local filesystem for the ssh lib to pick up.
     with open("ssh_key", "w") as ssh_key_fh:
-        ssh_key_fh.write(vpc.get_ssh_key())
+        ssh_key_fh.write(ssh_key)
 
     return vpc
 
@@ -518,7 +520,6 @@ def main():
 
     # Runs dcos-image/integration_test.py inside the cluster
     print("Test host: {}@{}:22".format(ssh_user, host_list[0]))
-    print("SSH key to access nodes:\n{}".format(ssh_key))
     integration_test(
         test_host_runner,
         region=vpc.get_region() if vpc else DEFAULT_AWS_REGION,

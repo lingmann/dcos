@@ -2,7 +2,6 @@
 Glue code for logic around calling associated backend
 libraries to support the dcos installer.
 """
-from gen import ValidationError
 import logging
 import os
 import sys
@@ -24,16 +23,17 @@ def do_configure(config_path=CONFIG_PATH):
     :param config_path: path to config.yaml
     :type config_path: string | CONFIG_PATH (/genconf/config.yaml)
     """
-    try:
+    validate_gen = do_validate_gen_config()
+    if len(validate_gen) > 0:
+        for key, error in validate_gen.items():
+            log.error('{}: {}'.format(key, error))
+        return 1
+    else:
         config = DCOSConfig(config_path=config_path)
         config.get_hidden_config()
         config.update(config.hidden_config)
         configure.do_configure(config.stringify_configuration())
         return 0
-    except ValidationError as ex:
-        for key, value in ex.errors.items():
-            log.error('{}: {}'.format(key, value))
-        return 1
 
 
 def hash_password(string):
@@ -232,8 +232,10 @@ def normalize_config_validation(messages):
     if 'errors' in messages:
         for key, errors in messages['errors'].items():
             validation[key] = errors['message']
-    else:
-        validation = {}
+
+    if 'unset' in messages:
+        for key in messages['unset']:
+            validation[key] = 'Must set {}, no way to calculate value.'.format(key)
 
     return validation
 

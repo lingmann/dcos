@@ -382,6 +382,7 @@ entry = {
         'is_ee': {
             'true': {
                 'must': {
+                    'ui_branding': 'true',
                     'ui_external_links': 'true',
                     'ui_networking': 'true',
                     'ui_organization': 'true',
@@ -406,6 +407,7 @@ entry = {
             },
             'false': {
                 'must': {
+                    'ui_branding': 'false',
                     'ui_external_links': 'false',
                     'ui_networking': 'false',
                     'ui_organization': 'false',

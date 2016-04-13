@@ -95,8 +95,8 @@ class DcosApiInstaller(AbstractDcosInstaller):
 
     def genconf(
             self, master_list, agent_list, ssh_user, ssh_key,
-            ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            zk_host=None, expect_errors=False, customer_key=None):
+            ip_detect_script, superuser=None, su_passwd=None, zk_host=None,
+            expect_errors=False, customer_key=None):
         """Runs configuration generation.
 
         Args:
@@ -106,7 +106,6 @@ class DcosApiInstaller(AbstractDcosInstaller):
             ssh_user (str): name of SSH user that has access to targets
             ssh_key (str): complete public SSH key for ssh_user. Must already
                 be installed on tagets as authorized_key
-            rexray_config (str): complete contents of REX-Ray config file
             zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
             customer_key (optional): used in EE mode for customer tracking
@@ -121,8 +120,7 @@ class DcosApiInstaller(AbstractDcosInstaller):
             'agent_list': agent_list,
             'ssh_user': ssh_user,
             'ssh_key': ssh_key,
-            'ip_detect_script': ip_detect_script,
-            'rexray_config': rexray_config}
+            'ip_detect_script': ip_detect_script}
         if zk_host:
             payload['exhibitor_zk_hosts'] = zk_host
         if superuser:
@@ -237,8 +235,8 @@ class DcosCliInstaller(AbstractDcosInstaller):
 
     def genconf(
             self, master_list, agent_list, ssh_user, ssh_key,
-            ip_detect_script, superuser=None, su_passwd=None, rexray_config='',
-            zk_host=None, expect_errors=False, customer_key=None):
+            ip_detect_script, superuser=None, su_passwd=None, zk_host=None,
+            expect_errors=False, customer_key=None):
         """Runs configuration generation.
 
         Args:
@@ -248,7 +246,6 @@ class DcosCliInstaller(AbstractDcosInstaller):
             ssh_user (str): name of SSH user that has access to targets
             ssh_key (str): complete public SSH key for ssh_user. Must already
                 be installed on tagets as authorized_key
-            rexray_config (str): complete contents of REX-Ray config file
             zk_host (optional): if provided, zk is used for exhibitor backend
             expect_errors (optional): raises error if result is unexpected
             customer_key (optional): used in EE mode for customer tracking
@@ -265,9 +262,7 @@ class DcosCliInstaller(AbstractDcosInstaller):
             'master_list': master_list,
             'ssh_user': ssh_user,
             'agent_list': agent_list,
-            'process_timeout': 900,
-            'rexray_config_method': 'file',
-            'rexray_config_filename': 'genconf/rexray.yaml'}
+            'process_timeout': 900}
         if zk_host:
             test_config['exhibitor_storage_backend'] = 'zookeeper'
             test_config['exhibitor_zk_hosts'] = zk_host
@@ -286,11 +281,8 @@ class DcosCliInstaller(AbstractDcosInstaller):
             ip_detect_fh.write(ip_detect_script)
         with open('ssh_key', 'w') as key_fh:
             key_fh.write(ssh_key)
-        with open('rexray.yaml', 'w') as rexray_fh:
-            rexray_fh.write(rexray_config)
         remote_dir = os.path.dirname(self.installer_path)
         subprocess.check_call(self.ssh(['mkdir', '-p', os.path.join(remote_dir, 'genconf')]))
-        subprocess.check_call(self.scp('rexray.yaml', os.path.join(remote_dir, 'genconf/rexray.yaml')))
         subprocess.check_call(self.scp('config.yaml', os.path.join(remote_dir, 'genconf/config.yaml')))
         subprocess.check_call(self.scp('ip-detect', os.path.join(remote_dir, 'genconf/ip-detect')))
         subprocess.check_call(self.scp('ssh_key', os.path.join(remote_dir, 'genconf/ssh_key')))

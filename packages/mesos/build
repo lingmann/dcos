@@ -63,33 +63,3 @@ envsubst '$PKG_PATH' < /pkg/extra/dcos-vol-discovery-priv-agent.service > "$priv
 disk_resource_script="$PKG_PATH/bin/make_disk_resources.py"
 cp /pkg/extra/make_disk_resources.py "$disk_resource_script"
 chmod +x "$disk_resource_script"
-
-
-# TODO(branden): dvdi is built here rather than in its own package because it
-# builds against private interfaces that mesos does not install. See
-# https://issues.apache.org/jira/browse/MESOS-3388.
-
-echo "Building dvdi"
-
-export ISOLATOR_VERSION=0.28.0
-export LD_LIBRARY_PATH=/opt/mesosphere/lib
-
-. /opt/mesosphere/active/mesos-buildenv/activate
-
-pushd /pkg/src/mesos-module-dvdi/isolator
-./bootstrap
-
-mkdir -p build
-pushd build
-"/pkg/src/mesos-module-dvdi/isolator/configure" \
-  --prefix="$PKG_PATH" \
-  --with-mesos-root=/pkg/src/mesos \
-  --with-mesos-build-dir=/pkg/src/mesos/build \
-  --with-protobuf=/opt/mesosphere/active/mesos-buildenv
-
-make install
-popd
-popd
-
-
-tar -xf /pkg/src/dvdcli/* -C $PKG_PATH/bin/

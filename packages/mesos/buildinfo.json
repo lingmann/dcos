@@ -1,24 +1,11 @@
 {
   "requires": ["mesos-buildenv", "exhibitor", "openssl", "libevent", "curl"],
   "docker": "dcos-builder",
-  "sources" : {
-    "mesos": {
-      "kind": "git",
-      "git": "ssh://git@github.com/mesosphere/mesos",
-      "ref": "76c87d55a78e8cbb380fc0c71388ccec53ed1dc8",
-      "ref_origin" : "dcos-1.7"
-    },
-    "mesos-module-dvdi": {
-      "kind": "git",
-      "git": "git@github.com:mesosphere/mesos-module-dvdi-private",
-      "ref": "73f09e71a4ce1af76b9b0b37f0f0bf8f01785df3",
-      "ref_origin": "v0.4.1-dcos"
-    },
-    "dvdcli": {
-      "kind": "url",
-      "url": "https://dl.bintray.com/emccode/dvdcli/stable/0.1.0/dvdcli-Linux-x86_64-0.1.0.tar.gz",
-      "sha1": "a0d7757939eefdf1ad28bc44919cdba5b6310528"
-    }
+  "single_source" : {
+    "kind": "git",
+    "git": "ssh://git@github.com/mesosphere/mesos",
+    "ref": "76c87d55a78e8cbb380fc0c71388ccec53ed1dc8",
+    "ref_origin" : "dcos-1.7"
   },
   "environment": {
     "JAVA_LIBRARY_PATH": "/opt/mesosphere/lib",

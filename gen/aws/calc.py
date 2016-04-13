@@ -36,7 +36,5 @@ entry = {
         # template variable for the generating advanced template cloud configs
         'cloud_config': '{{ cloud_config }}',
         'cluster_id': '{ "Ref" : "AWS::StackId" }',
-        # Use IAM Instance profile for auth
-        'rexray_config_method': 'aws'
     }
 }

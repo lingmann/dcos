@@ -441,7 +441,7 @@ def test_if_DCOS_UI_is_up(cluster):
 
     assert r.status_code == 200
     assert len(r.text) > 100
-    assert 'Mesosphere DC/OS' in r.text
+    assert 'DC/OS' in r.text
 
     # Not sure if it's really needed, seems a bit of an overkill:
     soup = bs4.BeautifulSoup(r.text, "html.parser")

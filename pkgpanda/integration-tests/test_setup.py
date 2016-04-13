@@ -1,7 +1,5 @@
 from shutil import copytree
-from subprocess import CalledProcessError, check_call, check_output
-
-import pytest
+from subprocess import check_call, check_output
 
 from pkgpanda.util import expect_fs
 from util import run
@@ -14,34 +12,15 @@ def tmp_repository(tmpdir, repo_dir="../tests/resources/packages"):
 
 
 def test_setup(tmpdir):
-    top_dir = tmpdir
-    tmpdir = tmpdir.join('work')
     repo_path = tmp_repository(tmpdir)
     tmpdir.join("root", "bootstrap").write("", ensure=True)
-    conf_dir = top_dir.join("etc")
-    copytree("resources/etc-active", str(conf_dir))
-
-    extra_role = conf_dir.join("roles/slave")
-    # setting up two folders should fail
-    with pytest.raises(CalledProcessError):
-        extra_role.write("")
-        check_call(["pkgpanda",
-                    "setup",
-                    "--root={0}/root".format(tmpdir),
-                    "--rooted-systemd",
-                    "--repository={}".format(repo_path),
-                    "--config-dir={}".format(conf_dir),
-                    "--no-systemd"
-                    ])
-
-    extra_role.remove()
 
     check_call(["pkgpanda",
                 "setup",
                 "--root={0}/root".format(tmpdir),
                 "--rooted-systemd",
                 "--repository={}".format(repo_path),
-                "--config-dir={}".format(conf_dir),
+                "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
     # TODO(cmaloney): Validate things got placed correctly.
@@ -72,7 +51,7 @@ def test_setup(tmpdir):
         "--root={0}/root".format(tmpdir),
         "--rooted-systemd",
         "--repository={}".format(repo_path),
-        "--config-dir={}".format(conf_dir),
+        "--config-dir=resources/etc-active"
         ]).decode("utf-8").split())
 
     assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
@@ -83,7 +62,7 @@ def test_setup(tmpdir):
                 "--root={0}/root".format(tmpdir),
                 "--rooted-systemd",
                 "--repository={}".format(repo_path),
-                "--config-dir={}".format(conf_dir),
+                "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
     # TODO(cmaloney): Validate things got placed correctly.
@@ -127,7 +106,7 @@ def test_setup(tmpdir):
         "--root={0}/root".format(tmpdir),
         "--rooted-systemd",
         "--repository={}".format(repo_path),
-        "--config-dir={}".format(conf_dir)
+        "--config-dir=resources/etc-active"
         ]).decode('utf-8').split())
     assert active == set(["env--setup", "mesos--0.22.0", "mesos-config--ffddcfb53168d42f92e4771c6f8a8a9a818fd6b8"])
 
@@ -146,7 +125,7 @@ def test_setup(tmpdir):
                 "--root={0}/root".format(tmpdir),
                 "--rooted-systemd",
                 "--repository={}".format(repo_path),
-                "--config-dir={}".format(conf_dir),
+                "--config-dir=resources/etc-active",
                 "--no-systemd"
                 ])
 

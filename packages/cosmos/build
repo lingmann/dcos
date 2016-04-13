@@ -29,5 +29,5 @@ ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 ExecStartPre=-/usr/bin/mkdir -p /var/lib/cosmos
 ## Ubuntu
 ExecStartPre=-/bin/mkdir -p /var/lib/cosmos
-ExecStart=/opt/mesosphere/bin/java -Xmx2G -classpath ${PKG_PATH}/lib/default-repositories.json:${PKG_PATH}/usr/cosmos.jar com.simontuffs.onejar.Boot
+ExecStart=/opt/mesosphere/bin/java -Xmx2G -classpath ${PKG_PATH}/lib/:${PKG_PATH}/usr/cosmos.jar com.simontuffs.onejar.Boot
 EOF

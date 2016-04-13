@@ -768,6 +768,7 @@ def make_installer_docker(variant, bootstrap_id, installer_bootstrap_id):
     genconf_tar = "dcos-genconf." + image_version + ".tar"
     installer_filename = "dcos_generate_config." + util.variant_prefix(variant) + "sh"
     bootstrap_filename = bootstrap_id + ".bootstrap.tar.xz"
+    bootstrap_active_filename = bootstrap_id + ".active.json"
     installer_bootstrap_filename = installer_bootstrap_id + '.bootstrap.tar.xz'
     docker_image_name = 'mesosphere/dcos-genconf:' + image_version
 
@@ -790,7 +791,8 @@ def make_installer_docker(variant, bootstrap_id, installer_bootstrap_id):
 
         fill_template('Dockerfile', {
             'installer_bootstrap_filename': installer_bootstrap_filename,
-            'bootstrap_filename': bootstrap_filename})
+            'bootstrap_filename': bootstrap_filename,
+            'bootstrap_active_filename': bootstrap_active_filename})
 
         fill_template('installer_internal_wrapper', {
             'variant': variant,
@@ -801,6 +803,7 @@ def make_installer_docker(variant, bootstrap_id, installer_bootstrap_id):
 
         copy_to_build('packages', bootstrap_filename)
         copy_to_build('packages', installer_bootstrap_filename)
+        copy_to_build('packages', bootstrap_active_filename)
 
         print("Building docker container in " + build_dir)
         subprocess.check_call(['docker', 'build', '-t', docker_image_name, build_dir])

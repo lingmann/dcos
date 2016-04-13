@@ -224,6 +224,7 @@ def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_argum
                 gen_args = deepcopy(gen_arguments)
                 if arm_t == 'acs':
                     gen_args['ui_tracking'] = 'false'
+                    gen_args['telemetry_enabled'] = 'false'
                 dcos_template, artifact = make_template(num_masters,
                                                         gen_args,
                                                         arm_t,

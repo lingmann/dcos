@@ -13,3 +13,4 @@ ENTRYPOINT ["/installer_internal_wrapper"]
 ADD {installer_bootstrap_filename} /opt/mesosphere/
 COPY installer_internal_wrapper /installer_internal_wrapper
 COPY {bootstrap_filename} /artifacts/{bootstrap_filename}
+COPY {bootstrap_active_filename} /artifacts/{bootstrap_active_filename}

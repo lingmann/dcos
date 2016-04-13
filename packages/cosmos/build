@@ -1,11 +1,14 @@
 #!/bin/bash
 
+mkdir -p "$PKG_PATH/lib/"
 mkdir -p "$PKG_PATH/usr/"
 
-cp -rp /pkg/src/cosmos/cosmos-*-one-jar.jar "$PKG_PATH/usr/cosmos.jar"
-sudo chmod -R o+r "$PKG_PATH/usr"
+cp -rp /pkg/extra/default-repositories.json "${PKG_PATH}/lib/default-repositories.json"
+cp -rp /pkg/src/cosmos/cosmos-*-one-jar.jar "${PKG_PATH}/usr/cosmos.jar"
+sudo chmod -R o+r "${PKG_PATH}/lib"
+sudo chmod -R o+r "${PKG_PATH}/usr"
 
-cosmos_service="$PKG_PATH/dcos.target.wants_master/dcos-cosmos.service"
+cosmos_service="${PKG_PATH}/dcos.target.wants_master/dcos-cosmos.service"
 mkdir -p $(dirname "$cosmos_service")
 
 cat <<EOF > "$cosmos_service"
@@ -26,5 +29,5 @@ ExecStartPre=/opt/mesosphere/bin/exhibitor_wait.py
 ExecStartPre=-/usr/bin/mkdir -p /var/lib/cosmos
 ## Ubuntu
 ExecStartPre=-/bin/mkdir -p /var/lib/cosmos
-ExecStart=/opt/mesosphere/bin/java -Xmx2G -jar "$PKG_PATH/usr/cosmos.jar"
+ExecStart=/opt/mesosphere/bin/java -Xmx2G -classpath ${PKG_PATH}/lib/:${PKG_PATH}/usr/cosmos.jar com.simontuffs.onejar.Boot
 EOF

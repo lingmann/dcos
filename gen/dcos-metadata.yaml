@@ -29,6 +29,7 @@ package:
               "imagePath": {{ ui_banner_image_path }},
               "dismissible": {{ ui_banner_dismissible }}
             },
+            "branding": {"enabled": {{ ui_branding }}},
             "external-links": {"enabled": {{ ui_external_links }}},
 {% switch is_ee %}
 {% case "true" %}

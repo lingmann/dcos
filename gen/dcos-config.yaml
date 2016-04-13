@@ -79,7 +79,6 @@ package:
       MESOS_MODULES=file:///opt/mesosphere/etc/mesos-slave-modules.json
       MESOS_CONTAINER_LOGGER={{ mesos_container_logger }}
       MESOS_ISOLATION={{ mesos_isolation_modules }}
-      MESOS_EXECUTOR_REGISTRATION_TIMEOUT=5mins
       MESOS_WORK_DIR=/var/lib/mesos/slave
       MESOS_SLAVE_SUBSYSTEMS=cpu,memory
       MESOS_EXECUTOR_ENVIRONMENT_VARIABLES=file:///opt/mesosphere/etc/mesos-executor-environment.json

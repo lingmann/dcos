@@ -427,13 +427,11 @@ class Install:
         self.__block_systemd = block_systemd
 
         # Look up the machine roles
-        self.__role = None
+        self.__roles = []
         if self.__config_dir:
-            roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
-            if roles is not None:
-                if len(roles) != 1:
-                    raise InstallError("Machines can only have one role. Found {}".format(roles))
-                self.__role = roles[0]
+            self.__roles = if_exists(os.listdir, os.path.join(self.__config_dir, "roles"))
+            if self.__roles is None:
+                self.__roles = []
 
         self.__well_known_dirs = ["bin", "etc", "include", "lib"]
         if not skip_systemd_dirs:
@@ -492,7 +490,7 @@ class Install:
     # place as atomically as possible.
     def activate(self, packages):
         # Ensure the new set is reasonable.
-        validate_compatible(packages, self.__role)
+        validate_compatible(packages, self.__roles)
 
         # Build the absolute paths for the running config, new config location,
         # and where to archive the config.
@@ -546,8 +544,9 @@ class Install:
                 symlink_all(pkg_dir, new)
 
                 # Symlink all applicable role-based config
-                role_dir = os.path.join(package.path, "{0}_{1}".format(dir_name, self.__role))
-                symlink_all(role_dir, new)
+                for role in self.__roles:
+                    role_dir = os.path.join(package.path, "{0}_{1}".format(dir_name, role))
+                    symlink_all(role_dir, new)
 
             # Add to the active folder
             os.symlink(package.path, os.path.join(self._make_abs("active.new"), package.name))

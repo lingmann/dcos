@@ -394,7 +394,7 @@ class Cluster:
                 logging.info('Application deployed, running on {}'.format(res))
                 return res
             else:
-                logging.info('Waiting for application to be deployed')
+                logging.info('Waiting for application to be deployed %s', repr(data))
                 return None
 
         try:

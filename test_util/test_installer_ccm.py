@@ -62,21 +62,6 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 
 DEFAULT_AWS_REGION = 'us-west-2'
 
-REXRAY_CONFIG = """
-rexray:
-  loglevel: info
-  storageDrivers:
-    - ec2
-  volume:
-    mount:
-      preempt: true
-    unmount:
-      ignoreusedcount: true
-aws:
-  accessKey: {}
-  secretKey: {}
-""".format(AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY)
-
 
 def pkg_filename(relative_path):
     return pkg_resources.resource_filename(__name__, relative_path)
@@ -472,7 +457,6 @@ def main():
             ssh_key=ssh_key,
             superuser='testadmin',
             su_passwd=hash_passwd,
-            rexray_config=REXRAY_CONFIG,
             customer_key=customer_key)
 
     # Test install-prereqs. This may take up 15 minutes...

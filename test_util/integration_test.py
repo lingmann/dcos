@@ -944,72 +944,6 @@ def test_if_minuteman_routes_to_vip(cluster, timeout=125):
                     "completed in {} seconds.".format(timeout))
 
 
-@pytest.mark.ccm
-def test_move_external_volume_to_new_agent(cluster):
-    """Test that an external volume is successfully attached to a new agent.
-
-    If the cluster has only one agent, the volume will be detached and
-    reattached to the same agent.
-
-    """
-    hosts = cluster.slaves[0], cluster.slaves[-1]
-    test_uuid = uuid.uuid4().hex
-    test_label = 'integration-test-move-external-volume-{}'.format(test_uuid)
-    test_file = '/var/lib/rexray/volumes/{}/data/test'.format(test_label)
-    base_app = {
-        'mem': 32,
-        'cpus': 0.1,
-        'instances': 1,
-        'env': {
-            'DVDI_VOLUME_NAME': test_label,
-            'DVDI_VOLUME_DRIVER': 'rexray',
-            'DVDI_VOLUME_OPTS': 'size=1,volumetype=standard,newfstype=ext4,overwritefs=false',
-        },
-    }
-
-    write_app = base_app.copy()
-    write_app.update({
-        'id': '/{}/write'.format(test_label),
-        'cmd': (
-            # Check that the volume is empty.
-            '[ $(ls -A "$(dirname "{test_file}")" | grep -v --line-regexp "lost+found" | wc -l) -eq 0 ] && '
-            # Write the test UUID to a file.
-            'echo "{test_uuid}" >> "{test_file}" && '
-            'while true; do sleep 1000; done'
-        ).format(test_uuid=test_uuid, test_file=test_file),
-        'constraints': [['hostname', 'LIKE', hosts[0]]],
-    })
-
-    read_app = base_app.copy()
-    read_app.update({
-        'id': '/{}/read'.format(test_label),
-        'cmd': (
-            # Diff the file and the UUID.
-            'echo "{test_uuid}" | diff - "{test_file}" && '
-            'while true; do sleep 1000; done'
-        ).format(test_uuid=test_uuid, test_file=test_file),
-        'constraints': [['hostname', 'LIKE', hosts[1]]],
-    })
-
-    deploy_kwargs = {
-        'check_health': False,
-        # A volume might fail to attach because EC2. We can tolerate that and retry.
-        'ignore_failed_tasks': True,
-    }
-
-    try:
-        cluster.deploy_marathon_app(write_app, **deploy_kwargs)
-        cluster.destroy_marathon_app(write_app['id'])
-
-        cluster.deploy_marathon_app(read_app, **deploy_kwargs)
-        cluster.destroy_marathon_app(read_app['id'])
-    finally:
-        try:
-            _delete_ec2_volume(test_label)
-        except Exception:
-            logging.exception("Failed to clean up volume %s", test_label)
-
-
 def make_3dt_request(ip, endpoint, cluster, port=80):
     """
     a helper function to get info from 3dt endpoint. Default port is 80 for pulled data from agents.
@@ -1416,7 +1350,6 @@ sleep 3600
             'spartan-watchdog-timer']
     slave_units = [
             'mesos-slave-service',
-            'rexray-service',
             'vol-discovery-priv-agent-service']
 
     if not cluster.is_enterprise:

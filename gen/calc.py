@@ -13,19 +13,6 @@ from pkgpanda import PackageId
 from pkgpanda.build import hash_checkout
 
 
-AWS_REXRAY_CONFIG = """
-rexray:
-  loglevel: info
-  storageDrivers:
-    - ec2
-  volume:
-    mount:
-      preempt: true
-    unmount:
-      ignoreusedcount: true
-"""
-
-
 def calculate_is_ee():
     variant = os.getenv('BOOTSTRAP_VARIANT')
     return 'true' if variant == 'ee' else 'false'
@@ -75,14 +62,6 @@ def calculate_mesos_dns_resolvers_str(resolvers):
 def calculate_ip_detect_contents(ip_detect_filename):
     assert os.path.exists(ip_detect_filename), "ip-detect script: {} must exist".format(ip_detect_filename)
     return yaml.dump(open(ip_detect_filename, encoding='utf-8').read())
-
-
-def calculate_rexray_config_contents(rexray_config_filename):
-    try:
-        with open(rexray_config_filename, encoding='utf-8') as f:
-            return yaml.dump(f.read())
-    except IOError as err:
-        raise Exception('REX-Ray config file {}: {}'.format(rexray_config_filename, err))
 
 
 def calculate_gen_resolvconf_search(dns_search):
@@ -263,18 +242,6 @@ __logrotate_slave_module = {
     }]
 }
 
-__dvdi_slave_module_name = 'com_emccode_mesos_DockerVolumeDriverIsolator'
-__dvdi_slave_module = {
-    'file': '/opt/mesosphere/lib/mesos/libmesos_dvdi_isolator.so',
-    'modules': [{
-        'name': __dvdi_slave_module_name,
-        'parameters': [
-            {'key': 'work_dir', 'value': '/var/lib/mesos/slave'},
-            {'key': 'dvdcli', 'value': '/opt/mesosphere/bin/dvdcli'},
-        ]
-    }]
-}
-
 __stats_isolator_slave_module_name = 'com_mesosphere_StatsIsolatorModule'
 __stats_hook_slave_module_name = 'com_mesosphere_StatsEnvHook'
 __stats_slave_module = {
@@ -298,7 +265,6 @@ __stats_slave_module = {
 
 __default_mesos_slave_modules = [
     __logrotate_slave_module,
-    __dvdi_slave_module,
 ]
 
 __default_isolation_modules = [
@@ -306,7 +272,6 @@ __default_isolation_modules = [
     'cgroups/cpu',
     'cgroups/mem',
     'posix/disk',
-    __dvdi_slave_module_name,
 ]
 
 
@@ -337,7 +302,6 @@ entry = {
         'superuser_password_hash': '',
         'auth_cookie_secure_flag': 'false',
         'mesos_dns_ip_sources': '["host", "netinfo"]',
-        'rexray_config_method': 'empty',
         'mesos_container_logger': __logrotate_slave_module_name,
         'oauth_issuer_url': 'https://dcos.auth0.com/',
         'oauth_client_id': '3yF5TOSzdlI45Q1xspxzeoGBe9fNxm9m',
@@ -427,17 +391,6 @@ entry = {
                     'ui_banner_dismissible': 'null'
                 }
             }
-        },
-        'rexray_config_method': {
-            'file': {
-                'must': {'rexray_config_contents': calculate_rexray_config_contents},
-            },
-            'aws': {
-                'must': {'rexray_config_contents': yaml.dump(AWS_REXRAY_CONFIG)},
-            },
-            'empty': {
-                'must': {'rexray_config_contents': yaml.dump('')},
-            },
         }
     }
 }

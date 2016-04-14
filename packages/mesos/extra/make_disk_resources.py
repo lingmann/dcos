@@ -8,20 +8,25 @@ import subprocess
 import sys
 
 from datetime import datetime
+from itertools import chain
 from math import floor
 from string import Template
 
 
 PROG = os.path.basename(__file__)
 
-JSON_TEMPLATE = Template('''
+JSON_COMMON_TEMPLATE = Template('''
 {
     "name": "disk",
     "role": "*",
     "scalar": {
         "value": $free_space
-    },
-    "type": "SCALAR",
+    }
+}
+''')
+
+JSON_DISK_TEMPLATE = Template('''
+{
     "disk": {
         "source": {
             "type": "MOUNT",
@@ -71,8 +76,10 @@ def make_disk_resources_json(mounts):
     @type mounts: tuple(mount_point, free_space_in_mb)
     @rtype: list
     '''
-    disk_resources = [json.loads(JSON_TEMPLATE.substitute(free_space=fs, mp=mp)) for (mp, fs) in mounts]
-    return disk_resources
+    for (mp, fs) in mounts:
+        common = JSON_COMMON_TEMPLATE.substitute(free_space=fs)
+        disk = JSON_DISK_TEMPLATE.substitute(mp=mp)
+        yield json.loads(common), json.loads(disk)
 
 
 def get_disk_free(path):
@@ -84,8 +91,8 @@ def get_disk_free(path):
     return (path, floor(float(shutil.disk_usage(path).free) / MB))
 
 
-def get_mounts_and_freespace():
-    for mount, free_space in map(get_disk_free, find_mounts_matching(MOUNT_PATTERN)):
+def get_mounts_and_freespace(matching_mounts):
+    for mount, free_space in map(get_disk_free, matching_mounts):
         net_free_space = free_space - TOLERANCE_MB
         if net_free_space <= 0:
             # Per @cmaloney and @lingmann, we should hard exit here if volume
@@ -96,6 +103,17 @@ def get_mounts_and_freespace():
         yield (mount, net_free_space)
 
 
+def _handle_root_volume(root_volume):
+    for common, _ in make_disk_resources_json(get_mounts_and_freespace([root_volume])):
+        yield common, {}
+
+
+def stitch(parts):
+    common, disk = parts
+    common.update(disk)
+    return common
+
+
 def main(output_env_file):
     '''
     Find mounts and freespace matching MOUNT_PATTERN, create RESOURCES for the
@@ -104,12 +122,17 @@ def main(output_env_file):
 
     @type output_env_file: str, filename to write resources
     '''
-    mounts_dfree = list(get_mounts_and_freespace())
+    mounts_dfree = list(get_mounts_and_freespace(find_mounts_matching(MOUNT_PATTERN)))
     print('Found matching mounts : {}'.format(mounts_dfree))
 
-    mounts_dfree.append(os.environ['MESOS_WORK_DIR'])
-
-    disk_resources = make_disk_resources_json(mounts_dfree)
+    disk_resources = list(
+        map(
+            stitch, chain(
+                make_disk_resources_json(mounts_dfree),
+                _handle_root_volume(os.environ['MESOS_WORK_DIR'])
+            )
+        )
+    )
     print('Generated disk resources map: {}'.format(disk_resources))
 
     # write contents to a temporary file
@@ -142,6 +165,9 @@ def main(output_env_file):
 if __name__ == '__main__':
     try:
         main(sys.argv[1])
-    except (KeyError, VolumeDiscoveryException) as e:
+    except KeyError as e:
+        print('ERROR: Missing key {}'.format(e), file=sys.stderr)
+        sys.exit(1)
+    except VolumeDiscoveryException as e:
         print('ERROR: {}'.format(e), file=sys.stderr)
         sys.exit(1)

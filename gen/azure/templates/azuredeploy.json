@@ -852,8 +852,8 @@
             "name": "http_probe",
             "properties": {
               "protocol": "Http",
-              "port": 80,
-              "requestPath": "/",
+              "port": 9090,
+              "requestPath": "/_haproxy_health_check",
               "intervalInSeconds": 5,
               "numberOfProbes": 2
             }

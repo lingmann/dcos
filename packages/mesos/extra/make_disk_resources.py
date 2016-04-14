@@ -105,6 +105,7 @@ def get_mounts_and_freespace(matching_mounts):
 
 
 def _handle_root_volume(root_volume):
+    os.makedirs(root_volume, exist_ok=True)
     for common, _ in make_disk_resources_json(get_mounts_and_freespace([root_volume])):
         yield common, {}
 

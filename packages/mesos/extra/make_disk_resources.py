@@ -107,7 +107,7 @@ def main(output_env_file):
     mounts_dfree = list(get_mounts_and_freespace())
     print('Found matching mounts : {}'.format(mounts_dfree))
 
-    mounts_dfree.append(os.environ['MESOS_ROOT_DIR'])
+    mounts_dfree.append(os.environ['MESOS_WORK_DIR'])
 
     disk_resources = make_disk_resources_json(mounts_dfree)
     print('Generated disk resources map: {}'.format(disk_resources))

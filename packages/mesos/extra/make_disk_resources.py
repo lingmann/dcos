@@ -21,7 +21,8 @@ JSON_COMMON_TEMPLATE = Template('''
     "role": "*",
     "scalar": {
         "value": $free_space
-    }
+    },
+    "type": "SCALAR"
 }
 ''')
 

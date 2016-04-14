@@ -107,6 +107,9 @@ def main(output_env_file):
     mounts_dfree = list(get_mounts_and_freespace())
     print('Found matching mounts : {}'.format(mounts_dfree))
 
+    if mounts_dfree:
+        mounts_dfree.append(os.environ['MESOS_ROOT_DIR'])
+
     disk_resources = make_disk_resources_json(mounts_dfree)
     print('Generated disk resources map: {}'.format(disk_resources))
 
@@ -140,6 +143,6 @@ def main(output_env_file):
 if __name__ == '__main__':
     try:
         main(sys.argv[1])
-    except VolumeDiscoveryException as e:
+    except (KeyError, VolumeDiscoveryException) as e:
         print('ERROR: {}'.format(e), file=sys.stderr)
         sys.exit(1)

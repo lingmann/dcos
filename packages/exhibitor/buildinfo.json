@@ -5,7 +5,7 @@
     "exhibitor": {
       "kind": "git",
       "git": "https://github.com/mesosphere/exhibitor.git",
-      "ref": "2b8e9031de69e01f2c2bad0a8289c56232df8bfe",
+      "ref": "5114a287d87974667b471055e2ad71768378c236",
       "ref_origin": "master"
     },
     "zookeeper": {

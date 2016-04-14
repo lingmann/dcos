@@ -2,48 +2,14 @@
 set -o errexit -o nounset -o pipefail
 
 mkdir -p "$PKG_PATH/usr"
-cp -rp "/pkg/src/jre" "$PKG_PATH/usr"
+cp -rp "/pkg/src/java" "$PKG_PATH/usr"
 
 #edit JVM DNS caching timeout
-echo "" >> $PKG_PATH/usr/jre/lib/security/java.security
-echo "#Updated DNS cache ttl" >> $PKG_PATH/usr/jre/lib/security/java.security
-echo "networkaddress.cache.ttl=10" >> $PKG_PATH/usr/jre/lib/security/java.security
+echo "" >> $PKG_PATH/usr/java/jre/lib/security/java.security
+echo "#Updated DNS cache ttl" >> $PKG_PATH/usr/java/jre/lib/security/java.security
+echo "networkaddress.cache.ttl=10" >> $PKG_PATH/usr/java/jre/lib/security/java.security
 
 mkdir -p "$PKG_PATH/bin"
-ln -s "$PKG_PATH/usr/jre/bin/java" "$PKG_PATH/bin/java"
-
-# Copy across tools.jar from the JDK as allowed by the Java redistributino license
-cp /pkg/src/jdk/lib/tools.jar $PKG_PATH/usr/jre/lib/tools.jar
-
-# Rmove optional parts of the JRE as allowed by the JRE 8 redistribution readme
-
-# JavaFX
-rm -rf $PKG_PATH/usr/jre/lib/ant-javafx.jar
-rm -rf $PKG_PATH/usr/jre/lib/javafx.properties
-rm -rf $PKG_PATH/usr/jre/lib/jfxswt.jar
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libdecora_sse.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libprism_common.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libprism_es2.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libprism_sw.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libfxplugins.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libglass.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libgstreamer-lite.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjavafx_font_freetype.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjavafx_font_pango.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjavafx_font_t2k.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjavafx-font.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjavafx-iio.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjfxmedia.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libjfxwebkit.so
-rm -rf $PKG_PATH/usr/jre/lib/amd64/libprism-es2.so
-
-# lib/ext all files allowed but jce / jca providers
-rm -rf $PKG_PATH/usr/jre/lib/ext/jfxrt.jar
-rm -rf $PKG_PATH/usr/jre/lib/ext/cidrdata.jar
-rm -rf $PKG_PATH/usr/jre/lib/ext/localedata.jar
-rm -rf $PKG_PATH/usr/jre/lib/ext/nashorn.jar
-
-# Generally allowed
-rm -rf $PKG_PATH/usr/jre/lib/oblique-fonts/*
-rm -rf $PKG_PATH/usr/jre/lib/desktop/*
-rm -rf $PKG_PATH/usr/jre/plugin/*
+ln -s "$PKG_PATH/usr/java/bin/java" "$PKG_PATH/bin/java"
+ln -s "$PKG_PATH/usr/java/bin/java_vm" "$PKG_PATH/bin/java_vm"
+ln -s "$PKG_PATH/usr/java/bin/jps" "$PKG_PATH/bin/jps"

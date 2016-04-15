@@ -250,7 +250,13 @@
         "description": "If true: uses DNS name prefix + Orchestrator name + Region to create storage account name to reduce name collision probability. If false: uses DNS name prefix + Orchestrator name to create storage account name to maintain template idempotency."
       },
       "type": "bool"
-    },
+    }
+{% switch is_ee %}
+{% case "true" %}
+{% case "false" %}
+{% switch oauth_available %}
+{% case "true" %}
+    ,
     "oauthEnabled": {
       "type": "string",
       "defaultValue": "false",
@@ -262,6 +268,9 @@
         "description": "Enable OAuth authentication"
       }
     }
+{% case "false" %}
+{% endswitch %}
+{% endswitch %}
   },
   "variables": {
     "accountid": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',variables('diagnosticsStorageAccountResourceGroup'),'/providers/','Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]",
@@ -550,8 +559,17 @@
     "masterSizes": [
       "Standard_D2",
       "Standard_A1"
-    ],
+    ]
+{% switch is_ee %}
+{% case "true" %}
+{% case "false" %}
+{% switch oauth_available %}
+{% case "true" %}
+    ,
     "oauthEnabled": "[parameters('oauthEnabled')]"
+{% case "false" %}
+{% endswitch %}
+{% endswitch %}
   },
   "resources": [
     {

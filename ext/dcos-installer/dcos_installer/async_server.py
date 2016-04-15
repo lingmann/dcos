@@ -254,6 +254,11 @@ try:
 except ValueError as err:
     log.warning(err)
 
+
+def no_caching(request, response):
+    response.headers['Cache-Control'] = 'no-cache'
+
+
 app.router.add_route('GET', '/', root)
 app.router.add_route('GET', '/api/v{}'.format(VERSION), redirect_to_root)
 app.router.add_route('GET', '/api/v{}/configure'.format(VERSION), configure)
@@ -267,6 +272,8 @@ app.router.add_route('GET', '/api/v1/action/{action_name:preflight|postflight|de
 app.router.add_route('POST', '/api/v1/action/{action_name:preflight|postflight|deploy}', action_action_name)
 app.router.add_route('GET', '/api/v{}/action/current'.format(VERSION), action_current)
 app.router.add_route('GET', '/api/v{}/logs'.format(VERSION), logs_handler)
+
+app.on_response_prepare.append(no_caching)
 
 
 def start(cli_options):

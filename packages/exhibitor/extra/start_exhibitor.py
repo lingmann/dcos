@@ -35,6 +35,8 @@ def invoke_detect_ip():
             "inet_aton exited with {}. {} is not a valid IPv4 address".format(e, ip))
         sys.exit(1)
 
+detected_ip = invoke_detect_ip()
+
 # TODO(cmaloney): Move exhibitor_defaults to a temp runtime conf dir.
 # Base for building up the command line
 exhibitor_cmdline = [
@@ -42,7 +44,7 @@ exhibitor_cmdline = [
     '-jar', '$PKG_PATH/usr/exhibitor/exhibitor.jar',
     '--port', '8181',
     '--defaultconfig', '/run/dcos_exhibitor/exhibitor_defaults.conf',
-    '--hostname', invoke_detect_ip()
+    '--hostname', detected_ip
 ]
 
 # Make necessary exhibitor runtime directories
@@ -51,6 +53,12 @@ check_call(['mkdir', '-p', '/var/lib/zookeeper/transactions'])
 
 # Older systemd doesn't support RuntimeDirectory, make one if systemd didn't.
 check_call(['mkdir', '-p', '/run/dcos_exhibitor'])
+
+zookeeper_cluster_size = int(open('/opt/mesosphere/etc/master_count').read().strip())
+
+check_ms = 30000
+if zookeeper_cluster_size == 1:
+    check_ms = 2000
 
 # Write out base exhibitor configuration
 write_str('/run/dcos_exhibitor/exhibitor_defaults.conf', """
@@ -62,7 +70,7 @@ zookeeper-install-directory=/opt/mesosphere/active/exhibitor/usr/zookeeper
 zookeeper-log-directory=/var/lib/zookeeper/transactions
 log-index-directory=/var/lib/zookeeper/transactions
 cleanup-period-ms=300000
-check-ms=30000
+check-ms={check_ms}
 backup-period-ms=600000
 client-port=2181
 cleanup-max-files=20
@@ -75,7 +83,8 @@ auto-manage-instances-settling-period-ms=0
 auto-manage-instances=1
 auto-manage-instances-fixed-ensemble-size={zookeeper_cluster_size}
 """.format(
-    zookeeper_cluster_size=int(open('/opt/mesosphere/etc/master_count').read().strip())
+    zookeeper_cluster_size=zookeeper_cluster_size,
+    check_ms=check_ms
 ))
 
 # Make a custom /etc/resolv.conf and mount it for exhibitor
@@ -95,7 +104,13 @@ check_call(
 
 # Add backend specific arguments
 exhibitor_backend = get_var_assert_set('EXHIBITOR_BACKEND')
-if exhibitor_backend == 'AWS_S3':
+if zookeeper_cluster_size == 1:
+    print("Exhibitor configured for single master/static backend")
+    exhibitor_cmdline += [
+        '--configtype=static',
+        '--staticensemble=1:' + detected_ip
+    ]
+elif exhibitor_backend == 'AWS_S3':
     print("Exhibitor configured for AWS S3")
     exhibitor_cmdline += [
         '--configtype=s3',

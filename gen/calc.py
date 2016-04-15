@@ -102,8 +102,8 @@ def validate_oauth_enabled(oauth_enabled):
     assert oauth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, oauth_enabled)
 
 
-def calculate_oauth_enabled(oauth_available):
-    return oauth_available
+def calculate_oauth_available(oauth_enabled):
+    return oauth_enabled
 
 
 def validate_num_masters(num_masters):
@@ -299,7 +299,8 @@ entry = {
         validate_customer_key],
     'default': {
         'weights': '',
-        'oauth_enabled': calculate_oauth_enabled,
+        'oauth_enabled': 'true',
+        'oauth_available': calculate_oauth_available,
         'customer_key': '',
         'telemetry_enabled': 'true',
         'docker_remove_delay': '1hrs',
@@ -314,7 +315,6 @@ entry = {
         'oauth_client_id': '3yF5TOSzdlI45Q1xspxzeoGBe9fNxm9m',
         'oauth_auth_redirector': 'https://auth.dcos.io',
         'oauth_auth_host': 'https://dcos.auth0.com',
-        'oauth_available': 'true'
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),

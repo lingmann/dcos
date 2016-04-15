@@ -70,7 +70,7 @@ master_list:
   - 192.168.65.90
   - 192.168.65.95
   - 192.168.65.101
-oauth_available: false
+oauth_available: 'false'
 EOF
 
 cleanup_vagrant_leftovers

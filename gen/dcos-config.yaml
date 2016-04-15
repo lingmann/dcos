@@ -139,7 +139,12 @@ package:
       }
   - path: /etc/adminrouter.env
     content: |
-      ADMINROUTER_ACTIVATE_AUTH_MODULE={{ auth_enabled }}
+{% switch is_ee %}
+{% case "true" %}
+      ADMINROUTER_ACTIVATE_AUTH_MODULE=true
+{% case "false" %}
+      ADMINROUTER_ACTIVATE_AUTH_MODULE={{ oauth_enabled }}
+{% endswitch %}
   - path: /etc/dcos-oauth.env
     content: |
       OAUTH_ISSUER_URL={{ oauth_issuer_url }}
@@ -235,9 +240,9 @@ package:
       "authentication":{"enabled":true},"oauth":{"enabled":false},
 {% case "false" %}
       "authentication":{"enabled":false},
-{% switch auth_enabled %}
+{% switch oauth_available %}
 {% case "true" %}
-      "oauth":{"enabled":true,"authHost":"{{ oauth_auth_host }}"},
+      "oauth":{"enabled":{{ oauth_enabled }},"authHost":"{{ oauth_auth_host }}"},
 {% case "false" %}
       "oauth":{"enabled":false},
 {% endswitch %}

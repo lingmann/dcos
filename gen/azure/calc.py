@@ -7,7 +7,7 @@ entry = {
         'master_cloud_config': '{{ master_cloud_config }}',
         'slave_cloud_config': '{{ slave_cloud_config }}',
         'slave_public_cloud_config': '{{ slave_public_cloud_config }}',
-        'oauth_enabled': '[[[variables("oauthEnabled")]]]',
+        'oauth_enabled': "[[[variables('oauthEnabled')]]]",
         'oauth_available': 'true'
     }
 }

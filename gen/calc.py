@@ -96,7 +96,7 @@ def validate_customer_key(customer_key):
 
 def validate_oauth_enabled(oauth_enabled):
     # Should correspond with oauth_enabled in gen/azure/calc.py
-    if oauth_enabled in ['[[[variables("oauthEnabled")]]]']:
+    if oauth_enabled in ["[[[variables('oauthEnabled')]]]"]:
         return
     can_be = ['true', 'false']
     assert oauth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, oauth_enabled)
@@ -300,7 +300,6 @@ entry = {
     'default': {
         'weights': '',
         'oauth_enabled': calculate_oauth_enabled,
-        'auth_enabled': 'true',
         'customer_key': '',
         'telemetry_enabled': 'true',
         'docker_remove_delay': '1hrs',

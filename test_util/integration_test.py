@@ -601,6 +601,13 @@ def test_if_all_exhibitors_are_in_sync(cluster):
         assert correct_data == tested_data
 
 
+def test_if_uiconfig_is_available(cluster):
+    r = cluster.get('/dcos-metadata/ui-config.json')
+
+    assert r.status_code == 200
+    assert 'uiConfiguration' in r.json()
+
+
 def test_if_DCOSHistoryService_is_up(cluster):
     r = cluster.get('/dcos-history-service/ping')
 

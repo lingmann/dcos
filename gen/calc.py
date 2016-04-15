@@ -314,6 +314,7 @@ entry = {
         'oauth_client_id': '3yF5TOSzdlI45Q1xspxzeoGBe9fNxm9m',
         'oauth_auth_redirector': 'https://auth.dcos.io',
         'oauth_auth_host': 'https://dcos.auth0.com',
+        'oauth_available': 'true'
     },
     'must': {
         'master_quorum': lambda num_masters: str(floor(int(num_masters) / 2) + 1),

@@ -22,8 +22,7 @@ def test_error_during_calc():
                 'cluster_id',
                 'cluster_name',
                 'exhibitor_storage_backend',
-                'master_discovery',
-                'oauth_available'
+                'master_discovery'
             }
         }
 

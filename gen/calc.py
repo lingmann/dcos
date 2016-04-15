@@ -96,7 +96,7 @@ def validate_customer_key(customer_key):
 
 def validate_oauth_enabled(oauth_enabled):
     # Should correspond with oauth_enabled in gen/azure/calc.py
-    if oauth_enabled in ["[[[variables('oauthEnabled')]]]"]:
+    if oauth_enabled in ["[[[variables('oauthEnabled')]]]", '{ "Ref" : "OAuthEnabled" }']:
         return
     can_be = ['true', 'false']
     assert oauth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, oauth_enabled)

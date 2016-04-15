@@ -251,6 +251,26 @@
       },
       "type": "bool"
     }
+{% switch is_ee %}
+{% case "true" %}
+{% case "false" %}
+{% switch oauth_available %}
+{% case "true" %}
+    ,
+    "oauthEnabled": {
+      "type": "string",
+      "defaultValue": "false",
+      "allowedValues": [
+        "true",
+        "false"
+      ],
+      "metadata": {
+        "description": "Enable OAuth authentication"
+      }
+    }
+{% case "false" %}
+{% endswitch %}
+{% endswitch %}
   },
   "variables": {
     "accountid": "[concat('/subscriptions/',subscription().subscriptionId,'/resourceGroups/',variables('diagnosticsStorageAccountResourceGroup'),'/providers/','Microsoft.Storage/storageAccounts/', variables('diagnosticsStorageAccountName'))]",
@@ -540,6 +560,16 @@
       "Standard_D2",
       "Standard_A1"
     ]
+{% switch is_ee %}
+{% case "true" %}
+{% case "false" %}
+{% switch oauth_available %}
+{% case "true" %}
+    ,
+    "oauthEnabled": "[parameters('oauthEnabled')]"
+{% case "false" %}
+{% endswitch %}
+{% endswitch %}
   },
   "resources": [
     {

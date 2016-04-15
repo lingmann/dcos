@@ -37,6 +37,21 @@
       "Type" : "Number",
       "Default" : "{{ num_public_slaves }}"
     }
+{% switch is_ee %}
+{% case "true" %}
+{% case "false" %}
+{% switch oauth_available %}
+{% case "true" %}
+    ,
+    "OAuthEnabled": {
+      "Description": "\nEnable OAuth authentication",
+      "Type": "String",
+      "Default": "true",
+      "AllowedValues": ["true", "false"]
+    }
+{% case "false" %}
+{% endswitch %}
+{% endswitch %}
   },
   "Mappings": {
     "RegionToAmi": {

@@ -252,7 +252,7 @@ def gen_advanced_template(arguments, variant_prefix, channel_commit_path):
                         resource_string("gen", "aws/templates/advanced/zen.json").decode(),
                         variant_prefix=variant_prefix,
                         channel_commit_path=channel_commit_path,
-                        num_masters=num_masters
+                        **bunch.results.arguments
                         ),
                     # TODO(cmaloney): This is hacky but quickest for now. Should not have to add
                     # extra info that there are no cluster_packages
@@ -271,6 +271,8 @@ def gen_templates(arguments):
         extra_templates=extra_templates + ['aws/templates/cloudformation.json'],
         cc_package_files=[
             '/etc/cfn_signal_metadata',
+            '/etc/adminrouter.env',
+            '/etc/ui-config.json',
             '/etc/dns_config',
             '/etc/exhibitor',
             '/etc/mesos-master-provider'])

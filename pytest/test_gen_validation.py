@@ -26,7 +26,9 @@ def default_arguments():
         'master_list': '["52.37.192.49", "52.37.181.230", "52.37.163.105"]',
         'exhibitor_storage_backend': 'zookeeper',
         'bootstrap_url': 'file:///opt/dcos_install_tmp',
-        'cluster_name': 'Mesosphere: The Data Center Operating System'})
+        'cluster_name': 'Mesosphere: The Data Center Operating System',
+        'oauth_available': 'true',
+        'oauth_enabled': 'true'})
 
 
 def validate_error(new_arguments, key, message):
@@ -96,8 +98,8 @@ def test_validate_duplicates(default_arguments):
         'List cannot contain duplicates: 10.0.0.1, 10.0.0.1')
 
 
-def test_invalid_auth_enabled(default_arguments):
+def test_invalid_oauth_enabled(default_arguments):
     validate_error(
-        {'auth_enabled': 'foo'},
-        'auth_enabled',
+        {'oauth_enabled': 'foo'},
+        'oauth_enabled',
         "Must be one of ['true', 'false']. Got foo")

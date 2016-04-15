@@ -36,5 +36,7 @@ entry = {
         # template variable for the generating advanced template cloud configs
         'cloud_config': '{{ cloud_config }}',
         'cluster_id': '{ "Ref" : "AWS::StackId" }',
+        'oauth_available': 'true',
+        'oauth_enabled': '{ "Ref" : "OAuthEnabled" }'
     }
 }

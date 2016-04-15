@@ -94,9 +94,16 @@ def validate_customer_key(customer_key):
     assert isinstance(customer_key, str), "Must be a string."
 
 
-def validate_auth_enabled(auth_enabled):
+def validate_oauth_enabled(oauth_enabled):
+    # Should correspond with oauth_enabled in gen/azure/calc.py
+    if oauth_enabled in ["[[[variables('oauthEnabled')]]]", '{ "Ref" : "OAuthEnabled" }']:
+        return
     can_be = ['true', 'false']
-    assert auth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, auth_enabled)
+    assert oauth_enabled in can_be, 'Must be one of {}. Got {}'.format(can_be, oauth_enabled)
+
+
+def calculate_oauth_available(oauth_enabled):
+    return oauth_enabled
 
 
 def validate_num_masters(num_masters):
@@ -286,13 +293,14 @@ entry = {
         validate_zk_hosts,
         validate_zk_path,
         validate_cluster_packages,
-        validate_auth_enabled,
+        validate_oauth_enabled,
         validate_mesos_dns_ip_sources,
         validate_telemetry_enabled,
         validate_customer_key],
     'default': {
         'weights': '',
-        'auth_enabled': 'true',
+        'oauth_enabled': 'true',
+        'oauth_available': calculate_oauth_available,
         'customer_key': '',
         'telemetry_enabled': 'true',
         'docker_remove_delay': '1hrs',
@@ -314,7 +322,7 @@ entry = {
         'dcos_image_commit': calulate_dcos_image_commit,
         'ip_detect_contents': calculate_ip_detect_contents,
         'mesos_dns_resolvers_str': calculate_mesos_dns_resolvers_str,
-        'dcos_version': '1.7-dev',
+        'dcos_version': '1.7.0',
         'dcos_gen_resolvconf_search_str': calculate_gen_resolvconf_search,
         'curly_pound': '{#',
         'cluster_packages': calculate_cluster_packages,

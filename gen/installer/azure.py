@@ -116,6 +116,8 @@ def gen_templates(user_args, arm_template):
         cc_package_files=[
             '/etc/exhibitor',
             '/etc/exhibitor.properties',
+            '/etc/adminrouter.env',
+            '/etc/ui-config.json',
             '/etc/mesos-master-provider',
             '/etc/master_list']
         )

@@ -250,6 +250,17 @@
         "description": "If true: uses DNS name prefix + Orchestrator name + Region to create storage account name to reduce name collision probability. If false: uses DNS name prefix + Orchestrator name to create storage account name to maintain template idempotency."
       },
       "type": "bool"
+    },
+    "oauthEnabled": {
+      "type": "string",
+      "defaultValue": "false",
+      "allowedValues": [
+        "true",
+        "false"
+      ],
+      "metadata": {
+        "description": "Enable OAuth authentication"
+      }
     }
   },
   "variables": {
@@ -539,7 +550,8 @@
     "masterSizes": [
       "Standard_D2",
       "Standard_A1"
-    ]
+    ],
+    "oauthEnabled": "[parameters('oauthEnabled')]"
   },
   "resources": [
     {

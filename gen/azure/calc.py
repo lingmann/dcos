@@ -6,6 +6,8 @@ entry = {
         'exhibitor_storage_backend': 'azure',
         'master_cloud_config': '{{ master_cloud_config }}',
         'slave_cloud_config': '{{ slave_cloud_config }}',
-        'slave_public_cloud_config': '{{ slave_public_cloud_config }}'
+        'slave_public_cloud_config': '{{ slave_public_cloud_config }}',
+        'oauth_enabled': '[[[variables("authEnabled")]]]',
+        'oauth_available': 'true'
     }
 }

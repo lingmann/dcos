@@ -465,10 +465,13 @@ class ValidationError(Exception):
     def __init__(self, errors, unset):
         self.errors = errors
         self.unset = unset
-        super().__init__(str(errors))
+        super().__init__(str(errors), str(unset))
+
+    def __str__(self):
+        return "<ValidationError errors: {}; unset: {}".format(self.errors, self.unset)
 
     def __repr__(self):
-        print("<ValidationError errors: {}; unset: {}".format(self.errors, self.unset))
+        return "<ValidationError errors: {}; unset: {}".format(self.errors, self.unset)
 
 
 def validate_all_arguments_match_parameters(parameters, setters, arguments):

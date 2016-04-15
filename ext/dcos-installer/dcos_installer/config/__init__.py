@@ -151,6 +151,11 @@ bootstrap_url: file:///opt/dcos_install_tmp
             elif isinstance(value, int):
                 log.debug("Caught int for genconf configuration, transforming to string: %s", value)
                 value = str(value)
+            elif isinstance(value, bool):
+                if value:
+                    value = 'true'
+                else:
+                    value = 'false'
 
             gen_config[key] = value
 

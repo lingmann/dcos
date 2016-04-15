@@ -54,8 +54,8 @@ root:
       Environment=DEBIAN_FRONTEND=noninteractive
       StandardOutput=journal+console
       StandardError=journal+console
-      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0~rc2-0~xenial_amd64.deb
-      ExecStart=/usr/bin/bash -c "try=1; until dpkg -D3 -i /tmp/docker-engine_1.11.0~rc2-0~xenial_amd64.deb || ((try > 5)); do echo retry $((try++)); sleep 120; done; systemctl --now start docker"
+      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/docker-engine_1.11.0-0~xenial_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0-0~xenial_amd64.deb
+      ExecStart=/usr/bin/bash -c "try=1; until dpkg -D3 -i /tmp/docker-engine_1.11.0-0~xenial_amd64.deb || ((try > 5)); do echo retry $((try++)); sleep 120; done; systemctl --now start docker"
   - path: /etc/systemd/system/docker.service.d/execstart.conf
     permissions: "0644"
     content: |

@@ -901,6 +901,7 @@
         "[concat('Microsoft.Compute/virtualMachines/', variables('masterVMNamePrefix'), sub(variables('masterCount'), 1))]"
       ],
       "properties": {
+        "autoUpgradeMinorVersion": true,
         "publisher": "Microsoft.OSTCExtensions",
         "type": "CustomScriptForLinux",
         "typeHandlerVersion": "1.4",

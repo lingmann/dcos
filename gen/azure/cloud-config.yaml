@@ -14,7 +14,6 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Pkgpanda: Download the DCOS
       After=network-online.target
       Wants=network-online.target
       ConditionPathExists=!/opt/mesosphere/
@@ -31,7 +30,6 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Pkgpanda: Specialize DCOS for this host.
       Requires=dcos-download.service
       After=dcos-download.service
       [Service]
@@ -46,7 +44,6 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Install Docker Daemon
       After=network-online.target
       Wants=network-online.target
       [Service]
@@ -54,8 +51,8 @@ root:
       Environment=DEBIAN_FRONTEND=noninteractive
       StandardOutput=journal+console
       StandardError=journal+console
-      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/docker-engine_1.11.0-0~xenial_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0-0~xenial_amd64.deb
-      ExecStart=/usr/bin/bash -c "try=1; until dpkg -D3 -i /tmp/docker-engine_1.11.0-0~xenial_amd64.deb || ((try > 5)); do echo retry $((try++)); sleep 120; done; systemctl --now start docker"
+      ExecStartPre=/usr/bin/curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/d.deb https://az837203.vo.msecnd.net/dcos-deps/docker-engine_1.11.0-0~xenial_amd64.deb
+      ExecStart=/usr/bin/bash -c "try=1;until dpkg -D3 -i /tmp/d.deb || ((try > 5));do echo retry $((try++));sleep 120;done;systemctl --now start docker"
   - path: /etc/systemd/system/docker.service.d/execstart.conf
     permissions: "0644"
     content: |
@@ -83,7 +80,6 @@ root:
     permissions: "0644"
     content: |
       [Unit]
-      Description=Pkgpanda: Write out dynamic config values
       Requires=dcos-setup.service
       After=dcos-setup.service
       [Service]
@@ -105,10 +101,10 @@ runcmd:
     - [ systemctl, stop, lxc-net.service ]
     - [ systemctl, disable, lxc-net.service ]
     - [ systemctl, mask, lxc-net.service ]
-    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/libipset3_6.29-1_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/libipset3_6.29-1_amd64.deb
-    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/ipset_6.29-1_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/ipset_6.29-1_amd64.deb
-    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/unzip_6.0-20ubuntu1_amd64.deb https://az837203.vo.msecnd.net/dcos-deps/unzip_6.0-20ubuntu1_amd64.deb
-    - bash -c "try=1; until dpkg -i /tmp/*ipset*.deb /tmp/unzip*.deb || ((try > 5)); do echo retry \$((try++)); sleep 120; done"
+    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/1.deb https://az837203.vo.msecnd.net/dcos-deps/libipset3_6.29-1_amd64.deb
+    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/2.deb https://az837203.vo.msecnd.net/dcos-deps/ipset_6.29-1_amd64.deb
+    - curl -fLsSv --retry 20 -Y 100000 -y 60 -o /tmp/3.deb https://az837203.vo.msecnd.net/dcos-deps/unzip_6.0-20ubuntu1_amd64.deb
+    - bash -c "try=1;until dpkg -i /tmp/{1,2,3}.deb || ((try > 5));do echo retry \$((try++));sleep 120;done"
     - [ cp, -p, /etc/resolv.conf, /tmp/resolv.conf ]
     - [ rm, -f, /etc/resolv.conf ]
     - [ cp, -p, /tmp/resolv.conf, /etc/resolv.conf ]
@@ -118,7 +114,7 @@ runcmd:
     - [ systemctl, start, dcos-setup.service ]
     - [ systemctl, start, dcos-config-writer.service ]
 bootcmd:
-  - bash -c "if [ ! -f /var/lib/sdb-gpt ];then echo Init sdb w/gpt see DCOS-5890;parted -s /dev/sdb mklabel gpt;touch /var/lib/sdb-gpt;fi"
+  - bash -c "if [ ! -f /var/lib/sdb-gpt ];then echo DCOS-5890;parted -s /dev/sdb mklabel gpt;touch /var/lib/sdb-gpt;fi"
 disk_setup:
   ephemeral0:
     table_type: gpt

@@ -275,7 +275,6 @@ __default_mesos_slave_modules = [
 ]
 
 __default_isolation_modules = [
-    'filesystem/linux',
     'cgroups/cpu',
     'cgroups/mem',
     'posix/disk',

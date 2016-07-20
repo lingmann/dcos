@@ -1,4 +1,5 @@
 import os
+import pprint
 import shutil
 from datetime import datetime
 from subprocess import check_output
@@ -40,8 +41,13 @@ def do_bundle_onprem(extra_files, gen_out, output_dir):
     output_dir = output_dir + '/'
 
     # Copy the extra_files
+    print("CWD: {}".format(os.getcwd()))
+    pprint.pprint(os.listdir('.'))
     for filename in extra_files:
         shutil.copy(filename, output_dir + filename)
+
+    print("COPY TEMPLATES HERE? gen_out:")
+    pprint.pprint(gen_out)
 
     # Copy the cluster packages
     for name, info in gen_out.cluster_packages.items():

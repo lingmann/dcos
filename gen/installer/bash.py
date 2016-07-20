@@ -446,7 +446,7 @@ fi
 def generate(gen_out, output_dir):
     print("Generating Bash configuration files for DC/OS")
     make_bash(gen_out)
-    util.do_bundle_onprem(['dcos_install.sh'], gen_out, output_dir)
+    util.do_bundle_onprem(['dcos_install.sh', 'cloudformation/infra.json'], gen_out, output_dir)
 
 
 def make_bash(gen_out):

@@ -18,6 +18,7 @@ import json
 import logging as log
 import os
 import os.path
+import pprint
 from copy import copy, deepcopy
 from subprocess import check_call
 from tempfile import TemporaryDirectory
@@ -790,9 +791,16 @@ def generate(
 
     utils.add_services = add_services
 
-    return Bunch({
+    b = Bunch({
         'arguments': arguments,
         'cluster_packages': cluster_package_info,
         'templates': rendered_templates,
         'utils': utils
     })
+
+    print("###############################################################################")
+    pprint.pprint(b.arguments)
+    pprint.pprint(b.cluster_packages)
+    pprint.pprint(b.templates)
+
+    return b

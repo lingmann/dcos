@@ -1,5 +1,6 @@
 import logging
 import os
+import pprint
 import subprocess
 import sys
 
@@ -18,6 +19,8 @@ def do_configure(gen_config):
 
     do_validate_gen_config(gen_config)
 
+    print("Calling gen from dcos-installer with following gen_config:")
+    pprint.pprint(gen_config)
     gen_out = gen.generate(arguments=gen_config)
     gen.installer.bash.generate(gen_out, SERVE_DIR)
 

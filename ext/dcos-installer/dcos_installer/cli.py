@@ -52,6 +52,7 @@ Install Mesosophere's Data Center Operating System
 dcos_installer [-h] [-f LOG_FILE] [--hash-password HASH_PASSWORD] [--cli-telemetry-disabled] [-v]
 --web [--offline]
 --genconf
+--aws-cloudformation
 --preflight
 --deploy
 --postflight

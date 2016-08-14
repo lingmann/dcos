@@ -710,7 +710,7 @@ def generate(
     # Validate all new / calculated arguments are strings.
     validate_arguments_strings(arguments)
 
-    log.info("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
+    log.debug("Final arguments:" + json.dumps(arguments, **json_prettyprint_args))
 
     # expanded_config is a special result which contains all other arguments. It has to come after
     # the calculation of all the other arguments so it can be filled with everything which was

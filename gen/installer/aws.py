@@ -276,6 +276,15 @@ def make_advanced_bunch(variant_args, template_name, cc_params):
 
 
 def gen_advanced_template(arguments, variant_prefix, channel_commit_path, os_type):
+    if 'cloudformation_s3_url' in arguments:
+        cloudformation_s3_url = arguments['cloudformation_s3_url']
+    else:
+        cloudformation_s3_url = get_cloudformation_s3_url()
+
+    # Prevent '//' from appearing in URL if channel_commit_path is an empty string
+    cloudformation_full_s3_url = '/'.join(
+            [x for x in [cloudformation_s3_url, channel_commit_path, 'cloudformation'] if x != ''])
+
     for node_type in ['master', 'priv-agent', 'pub-agent']:
         node_template_id, node_args = groups[node_type]
         node_args = deepcopy(node_args)
@@ -302,8 +311,7 @@ def gen_advanced_template(arguments, variant_prefix, channel_commit_path, os_typ
                     'cloudformation': render_cloudformation_transform(
                         resource_string("gen", "aws/templates/advanced/zen.json").decode(),
                         variant_prefix=variant_prefix,
-                        channel_commit_path=channel_commit_path,
-                        cloudformation_s3_url=get_cloudformation_s3_url(),
+                        cloudformation_full_s3_url=cloudformation_full_s3_url,
                         **bunch.results.arguments
                         ),
                     # TODO(cmaloney): This is hacky but quickest for now. Should not have to add
@@ -374,7 +382,7 @@ def gen_templates(arguments):
     })
 
 
-button_template = "<a href='https://console.aws.amazon.com/cloudformation/home?region={region_id}#/stacks/new?templateURL={cloudformation_s3_url}/{channel_commit_path}/cloudformation/{template_name}.cloudformation.json'><img src='https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png' alt='Launch stack button'></a>"  # noqa
+button_template = "<a href='https://console.aws.amazon.com/cloudformation/home?region={region_id}#/stacks/new?templateURL={cloudformation_full_s3_url}/{template_name}.cloudformation.json'><img src='https://s3.amazonaws.com/cloudformation-examples/cloudformation-launch-stack.png' alt='Launch stack button'></a>"  # noqa
 region_line_template = "<tr><td>{region_name}</td><td>{region_id}</td><td>{single_master_button}</td><td>{multi_master_button}</td></tr>"  # noqa
 
 
@@ -383,6 +391,15 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit, variant_arg
     # TODO(cmaloney): Switch to package_resources
     variant_list = list(sorted(pkgpanda.util.variant_prefix(x) for x in variant_arguments.keys()))
     regular_buttons = list()
+    # Pull out the cloudformation_s3_url if it was provided in the default variant args, otherwise detect.
+    if None in variant_arguments and 'cloudformation_s3_url' in variant_arguments[None]:
+        cloudformation_s3_url = variant_arguments[None]['cloudformation_s3_url']
+    else:
+        cloudformation_s3_url = get_cloudformation_s3_url()
+
+    # Prevent '//' from appearing in URL if channel_commit_path is an empty string
+    cloudformation_full_s3_url = '/'.join(
+            [x for x in [cloudformation_s3_url, channel_commit_path, 'cloudformation'] if x != ''])
 
     for region in aws_region_names:
         def get_button(template_name):
@@ -390,7 +407,7 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit, variant_arg
                 region_id=region['id'],
                 channel_commit_path=channel_commit_path,
                 template_name=template_name,
-                cloudformation_s3_url=get_cloudformation_s3_url())
+                cloudformation_full_s3_url=cloudformation_full_s3_url)
 
         button_line = ""
         for variant in variant_list:

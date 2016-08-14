@@ -5,11 +5,13 @@ libraries to support the dcos installer.
 import logging
 import os
 import sys
+import yaml
 
+from copy import deepcopy
 from passlib.hash import sha512_crypt
 
 from dcos_installer.action_lib import configure
-from dcos_installer.config import DCOSConfig
+from dcos_installer.config import DCOSConfig, stringify_configuration
 from dcos_installer.util import CONFIG_PATH, SSH_KEY_PATH, IP_DETECT_PATH, REXRAY_CONFIG_PATH
 
 import ssh.validate as validate_ssh
@@ -34,6 +36,26 @@ def do_configure(config_path=CONFIG_PATH):
         config.update(config.hidden_config)
         configure.do_configure(config.stringify_configuration())
         return 0
+
+
+def do_aws_cf_configure():
+    """Returns error code
+
+    Generates AWS templates using a custom config.yaml
+    """
+
+    try:
+        with open(CONFIG_PATH, 'r') as f:
+            yaml_config = yaml.load(f)
+    except FileNotFoundError:
+        log.error("Configuration file '{}' not found".format(CONFIG_PATH))
+        return 1
+
+    yaml_config['provider'] = 'aws'
+    yaml_config['bootstrap_id'] = os.environ['BOOTSTRAP_ID']
+    yaml_config['bootstrap_url'] = deepcopy(yaml_config['cloudformation_s3_url'])
+
+    configure.do_aws_cf_configure(stringify_configuration(yaml_config))
 
 
 def hash_password(string):

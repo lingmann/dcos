@@ -430,6 +430,7 @@ def gen_buttons(repo_channel_path, channel_commit_path, tag, commit, variant_arg
         })
 
 
+@util.dumpArgs
 def do_create(tag, repo_channel_path, channel_commit_path, commit, variant_arguments, all_bootstraps):
     # Generate the single-master and multi-master templates.
 

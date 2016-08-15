@@ -8,11 +8,13 @@ import gen
 import pkgpanda
 import gen.installer.aws
 import gen.installer.bash
+import gen.installer.util as util
 from dcos_installer.util import SERVE_DIR
 
 log = logging.getLogger(__name__)
 
 
+@util.dumpArgs
 def do_configure(gen_config):
     gen_config.update(get_gen_extra_args())
 
@@ -29,6 +31,7 @@ def do_configure(gen_config):
     pkgpanda.util.write_json('/genconf/cluster_packages.json', gen_out.cluster_packages)
 
 
+@util.dumpArgs
 def do_aws_cf_configure(gen_config):
     gen_out = gen.installer.aws.do_create(
             channel_commit_path='',
